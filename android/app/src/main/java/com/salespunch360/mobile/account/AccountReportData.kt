@@ -29,16 +29,17 @@ fun accountReportSpecificFilters(options:JsonObject,key:String):Set<String>? {
  return filters.mapNotNull{(it as? JsonPrimitive)?.contentOrNull}.toSet()
 }
 
-fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases|expenses)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}
+fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases|expenses|transactions)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}
 
 /** Preserve an explicit money-type scope on the initial request before metadata arrives. */
 fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<String,String>):Map<String,String> {
  val supported=accountReportSpecificFilters(options,report)
  val lifetime=report=="projects"||report=="budget-vs-actual"
- val known=setOf("from","to","branchId","projectId","ledgerId","customerId","vendorId","ownerId","productId","accountType","categoryId","itemStatus","moneyAccountId","loanId","stockLevel","itemSearch")
+ val known=setOf("orderType","orderStatus","from","to","branchId","projectId","ledgerId","customerId","vendorId","ownerId","productId","accountType","categoryId","itemStatus","moneyAccountId","loanId","stockLevel","itemSearch")
  return candidates.filter{(key,value)->
   value.isNotBlank()&&key in known&&
   (!lifetime||key=="branchId"||key=="projectId")&&
+  (key !in setOf("orderType","orderStatus")||report in setOf("order-transactions","order-items"))&&
   (key!="stockLevel"||report=="stock-summary")&&
   (key!="loanId"||report=="loan-statement")&&
   (key!="moneyAccountId"||report=="bank-statement")&&

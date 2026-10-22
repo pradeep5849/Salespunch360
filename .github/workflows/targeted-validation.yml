@@ -35,7 +35,7 @@ jobs:
       - name: Money mutation validation boundaries
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
       - name: Order quantity and estimate billing domains
-        run: npx vitest run src/lib/account/orders/fulfilment.test.ts src/lib/quotations/billing.test.ts
+        run: npx vitest run src/lib/account/orders/fulfilment.test.ts src/lib/quotations/billing.test.ts src/lib/account/reports/order-reports.test.ts src/lib/account/reports/catalogue.test.ts src/lib/account/reports/queries.test.ts
       - name: Exact unit quantity and immutable snapshot guards
         run: npx vitest run src/lib/account/unit-quantities.test.ts src/lib/account/item-selected-unit-pricing.test.ts src/lib/account/retained-line-discount.test.ts src/lib/account/commercial-unit-snapshot.test.ts src/lib/account/commercial-stock-quantity.test.ts src/lib/account/project-purchase-returns.test.ts src/lib/account/commercial-project-input.test.ts
       - name: Report selectors and exact financial breakdowns

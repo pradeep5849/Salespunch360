@@ -1,3 +1,4 @@
+import {orderReport} from "./order-reports";
 import {WITHHOLDING_REPORTS,withholdingReport} from "./withholding";
 import {loanStatementReport} from "./loan-statement";
 import {itemDiscountReport} from "./item-discount";
@@ -71,6 +72,8 @@ const D = Prisma.Decimal.clone({precision:48}),
       stockLevel: z.preprocess(blankFilter,z.enum(["AVAILABLE","LOW","NEGATIVE"]).optional()),
       itemSearch: z.preprocess(blankFilter,z.string().trim().max(240).optional()),
       itemStatus: z.preprocess(blankFilter, z.enum(["ACTIVE", "INACTIVE"]).optional()),
+      orderType:z.preprocess(blankFilter,z.enum(["SALES_ORDER","PURCHASE_ORDER"]).optional()),
+      orderStatus:z.preprocess(blankFilter,z.enum(["OPEN","CLOSED","DRAFT","CANCELLED","UNRESOLVED"]).optional()),
       accountType:z.preprocess(blankFilter,z.enum(["CASH","BANK","PETTY_CASH"]).optional()),
     })
     .strict();
@@ -229,6 +232,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
+  if(["order-transactions","order-items"].includes(name))return orderReport(await context(raw,false,actor),name==="order-items");
   if(name==="item-discount")return itemDiscountReport(await context(raw,false,actor));
   if(name==="item-serial")return itemSerialReport(await context(raw,false,actor));
   if(name==="gst-rate")return gstRateReport(await context(raw,false,actor));

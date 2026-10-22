@@ -1,5 +1,7 @@
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["order-transactions", "Order Transaction Report", "Order reports"],
+  ["order-items", "Order Item Report", "Order reports"],
   ["expense-transactions", "Expense Transactions", "Expense reports"],
   ["expense-category", "Expense Category Report", "Expense reports"],
   ["expense-items", "Expense Item Report", "Expense reports"],
@@ -61,6 +63,8 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "order-transactions":["orderType","orderStatus","customerId","vendorId"],
+  "order-items":["orderType","orderStatus","customerId","vendorId"],
   "cash-bank":["accountType"],
   "tcs-collected": ["customerId"],
   "tds-receivable": ["customerId"],

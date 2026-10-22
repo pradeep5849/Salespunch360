@@ -137,6 +137,12 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val levels = listOf("" to "All", "AVAILABLE" to "Available", "LOW" to "Low", "NEGATIVE" to "Negative").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
             Option("Stock level",state.stockLevel,levels){vm.filter("stockLevel",it)}
         }
+        if(state.report in setOf("order-transactions","order-items")){
+            val types=listOf("SALES_ORDER" to "Sale Orders","PURCHASE_ORDER" to "Purchase Orders").map{(id,name)->buildJsonObject{put("id",id);put("name",name)}}
+            val statuses=listOf("" to "All","OPEN" to "Open orders","CLOSED" to "Closed orders","DRAFT" to "Draft orders","CANCELLED" to "Cancelled orders","UNRESOLVED" to "Unresolved orders").map{(id,name)->buildJsonObject{put("id",id);put("name",name)}}
+            Option("Order type",state.orderType.ifBlank{"SALES_ORDER"},types){vm.filter("orderType",it)}
+            Option("Order status",state.orderStatus,statuses){vm.filter("orderStatus",it)}
+        }
         if (state.report=="cash-bank" && applicable?.contains("accountType")==true) {
             LazyRow { items(listOf("" to "All accounts", "CASH" to "Cash", "BANK" to "Bank", "PETTY_CASH" to "Petty cash")) { (value,label) ->
                 FilterChip(selected=state.accountType==value,onClick={vm.filter("accountType",value);vm.run()},label={Text(label)})

@@ -56,6 +56,7 @@ export default async function Page({
             productId: q.productId,
             ledgerId: q.ledgerId,
             ownerId: q.ownerId,
+            orderType:q.orderType,orderStatus:q.orderStatus,
             accountType:q.accountType,
             loanId:q.loanId,
             moneyAccountId:q.moneyAccountId,
@@ -147,6 +148,7 @@ export default async function Page({
               />}
             </>
           )}
+          {["order-transactions","order-items"].includes(report)&&<><Select name="orderType" label="Order type" value={q.orderType??"SALES_ORDER"} rows={[{id:"SALES_ORDER",name:"Sale Orders"},{id:"PURCHASE_ORDER",name:"Purchase Orders"}]}/><Select name="orderStatus" label="Order status" value={q.orderStatus} rows={[{id:"OPEN",name:"Open orders"},{id:"CLOSED",name:"Closed orders"},{id:"DRAFT",name:"Draft orders"},{id:"CANCELLED",name:"Cancelled orders"},{id:"UNRESOLVED",name:"Unresolved orders"}]}/></>}
           {report==="cash-bank"&&q.accountType&&<input type="hidden" name="accountType" value={q.accountType}/>}
           {report==="loan-statement"&&<Select name="loanId" label="Loan account" value={q.loanId} rows={loans}/>}
           {report === "bank-statement" && <Select name="moneyAccountId" label="Bank account" value={q.moneyAccountId} rows={banks}/>}

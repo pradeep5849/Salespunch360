@@ -153,4 +153,12 @@ class AccountReportDataTest {
         assertEquals(listOf("18/10/2026","Customer","CREDIT_NOTE"),row.drop(6))
         assertEquals("/workspace/account/sales/$id",accountReportDestination(accountReportLinks(data).single()))
     }
+    @Test fun orderReportsRetainExplicitTypeStatusAndSafeDestination(){
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"order-items","filters":["orderType","orderStatus","customerId","vendorId"]}]}""").jsonObject
+        assertEquals(mapOf("orderType" to "PURCHASE_ORDER","orderStatus" to "OPEN","vendorId" to "vendor"),accountReportRequestFilters(options,"order-items",mapOf("orderType" to "PURCHASE_ORDER","orderStatus" to "OPEN","vendorId" to "vendor","productId" to "stale")))
+        assertEquals(emptyMap<String,String>(),accountReportRequestFilters(options,"profit-loss",mapOf("orderType" to "PURCHASE_ORDER","orderStatus" to "OPEN")))
+        val route="/workspace/account/transactions/11111111-1111-4111-8111-111111111111"
+        assertEquals(route,accountReportDestination(route))
+        assertEquals(null,accountReportDestination("https://example.test$route"))
+    }
 }

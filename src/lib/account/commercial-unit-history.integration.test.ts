@@ -1,3 +1,4 @@
+import {runFinancialReportForActor} from "./reports/service";
 import {orderSalePreparationForActor,orderPurchasePreparationForActor} from "./orders/preparation";
 import {orderStateForActor,closeRemainingOrderForActor} from "./orders/lifecycle";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
@@ -414,8 +415,14 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
   const make=(quantity:string,num:string)=>createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",purchaseClassification:"GENERAL_EXPENSES",sourcePurchaseOrderId:order.id,vendorInvoiceNumber:num,vendorInvoiceDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:draft.lines[0].sourceOrderLineId,itemName:"Purchase order work",quantity,rate:"1",taxRate:"0"}]});
   await expect(createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",purchaseClassification:"GENERAL_EXPENSES",sourcePurchaseOrderId:order.id,vendorInvoiceNumber:"PO-VALUE-LIMIT",vendorInvoiceDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:draft.lines[0].sourceOrderLineId,itemName:"Purchase order work",quantity:"1",rate:"1001",taxRate:"0"}]})).rejects.toThrow("PURCHASE_ORDER_OVERBILLED");
   await expect(createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",branchId,partyId:vendorId,issueDate:"2026-10-20",purchasePurpose:"GENERAL_OFFICE",sourcePurchaseOrderId:order.id,vendorInvoiceNumber:"PO-CLASS-REQUIRED",vendorInvoiceDate:"2026-10-20",lines:[{lineType:"CUSTOM",sourceOrderLineId:draft.lines[0].sourceOrderLineId,itemName:"Purchase order work",quantity:"1",rate:"1",taxRate:"0"}]})).rejects.toThrow("PURCHASE_CLASSIFICATION_REQUIRED");
+  const filters={from:"2026-10-20",to:"2026-10-20",orderType:"PURCHASE_ORDER",vendorId};
+  const reportBefore=await runFinancialReportForActor(actor,"order-items",{...filters,orderStatus:"OPEN"});expect(reportBefore.rows.find(r=>r[0]===order.documentNumber)?.slice(4,7)).toEqual(["10.0000","0.0000","10.0000"]);
+  expect((await runFinancialReportForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},"order-items",filters)).rows).toEqual([]);
   const first=await make("4","PO-PART-1");expect((await orderStateForActor(actor,order.id)).lines[0].remaining).toBe("10.0000");await postCommercialDocumentForActor(actor,{documentId:first.id});expect((await orderPurchasePreparationForActor(actor,order.id)).lines[0].quantity).toBe("6");
   const final=await make("6","PO-PART-2");await postCommercialDocumentForActor(actor,{documentId:final.id});expect(await orderStateForActor(actor,order.id)).toMatchObject({status:"CLOSED",reason:"FULFILLED"});await expect(orderPurchasePreparationForActor(actor,order.id)).rejects.toThrow("ORDER_NOT_OPEN");await expect(make("1","PO-OVER")).rejects.toThrow("ORDER_QUANTITY_EXCEEDED");
+  const reportAfter=await runFinancialReportForActor(actor,"order-items",{...filters,orderStatus:"CLOSED"});const reportRow=reportAfter.rows.find(r=>r[0]===order.documentNumber);expect(reportRow?.slice(4,8)).toEqual(["10.0000","10.0000","0.0000","1000.00"]);expect(reportAfter.rowLinks?.[reportAfter.rows.indexOf(reportRow!)]).toBe(`/workspace/account/transactions/${order.id}`);
+  expect((await runFinancialReportForActor(actor,"order-transactions",{...filters,orderStatus:"OPEN"})).rows.some(r=>r[1]===order.documentNumber)).toBe(false);
+
  });
 
 });
