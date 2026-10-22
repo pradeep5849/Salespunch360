@@ -5,6 +5,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AccountReportDataTest {
+    @Test fun sacTransactionScopeIsAppliedOnlyToSacReport(){
+        val options=Json.parseToJsonElement("""{"catalogue":[{"key":"sac-sales","name":"SAC Report","group":"Tax","filters":["classificationSide"]}]}""").jsonObject
+        assertEquals(mapOf("classificationSide" to "PURCHASES"),accountReportRequestFilters(options,"sac-sales",mapOf("classificationSide" to "PURCHASES","productId" to "stale")))
+        assertFalse(accountReportRequestFilters(buildJsonObject{},"hsn-sales",mapOf("classificationSide" to "PURCHASES")).containsKey("classificationSide"))
+    }
+
     @Test fun withholdingReportsUseDeclaredPartyFilters(){
         for(key in listOf("tcs-collected","tds-receivable","tds-payable","tcs-receivable")){
             val field=if(key in listOf("tds-receivable","tcs-collected"))"customerId" else "vendorId"

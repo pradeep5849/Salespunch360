@@ -1,7 +1,7 @@
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
   ["hsn-sales", "Sale Summary by HSN", "Tax"],
-  ["sac-sales", "SAC Sales Report", "Tax"],
+  ["sac-sales", "SAC Report", "Tax"],
   ["order-transactions", "Order Transaction Report", "Order reports"],
   ["order-items", "Order Item Report", "Order reports"],
   ["expense-transactions", "Expense Transactions", "Expense reports"],
@@ -65,6 +65,7 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "sac-sales":["classificationSide"],
   "order-transactions":["orderType","orderStatus","customerId","vendorId"],
   "order-items":["orderType","orderStatus","customerId","vendorId"],
   "cash-bank":["accountType"],

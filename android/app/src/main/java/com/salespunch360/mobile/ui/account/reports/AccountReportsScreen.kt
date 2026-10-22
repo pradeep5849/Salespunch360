@@ -137,6 +137,10 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val levels = listOf("" to "All", "AVAILABLE" to "Available", "LOW" to "Low", "NEGATIVE" to "Negative").map { (id,name) -> buildJsonObject { put("id",id);put("name",name) } }
             Option("Stock level",state.stockLevel,levels){vm.filter("stockLevel",it)}
         }
+        if(state.report=="sac-sales"){
+            val types=listOf("SALES" to "Sales","PURCHASES" to "Purchases").map{(id,name)->buildJsonObject{put("id",id);put("name",name)}}
+            Option("Transaction type",state.classificationSide.ifBlank{"SALES"},types){vm.filter("classificationSide",it)}
+        }
         if(state.report in setOf("order-transactions","order-items")){
             val types=listOf("SALES_ORDER" to "Sale Orders","PURCHASE_ORDER" to "Purchase Orders").map{(id,name)->buildJsonObject{put("id",id);put("name",name)}}
             val statuses=listOf("" to "All","OPEN" to "Open orders","CLOSED" to "Closed orders","DRAFT" to "Draft orders","CANCELLED" to "Cancelled orders","UNRESOLVED" to "Unresolved orders").map{(id,name)->buildJsonObject{put("id",id);put("name",name)}}
