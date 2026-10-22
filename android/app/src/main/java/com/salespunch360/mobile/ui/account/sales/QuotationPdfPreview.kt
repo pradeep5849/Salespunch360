@@ -26,15 +26,8 @@ import kotlinx.coroutines.withContext
 
 private data class QuotationPdfPage(val bitmap:Bitmap,val count:Int)
 
-/** Renders the exact authorized customer PDF; never reconstructs a private detail DTO. */
-@Composable
-fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,documentName:String="Quotation"){
- val context=LocalContext.current
- var printError by remember(bytes){mutableStateOf<String?>(null)}
- var number by remember(bytes){mutableIntStateOf(0)}
- var page by remember(bytes,number){mutableStateOf<Result<QuotationPdfPage>?>(null)}
- LaunchedEffect(bytes,number){
-  page=try{Result.success(withContext(Dispatchers.IO){
+private suspend fun renderQuotationPage(context:android.content.Context,bytes:ByteArray,number:Int):Result<QuotationPdfPage>{
+ return try{Result.success(withContext(Dispatchers.IO){
    val file=File.createTempFile("quotation-preview-",".pdf",context.cacheDir)
    try{
     file.writeBytes(bytes)
@@ -51,6 +44,27 @@ fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,docume
     }
    }finally{file.delete()}
   })}catch(error:CancellationException){throw error}catch(error:Exception){Result.failure(error)}
+}
+
+@Composable
+fun QuotationPdfThumbnail(bytes:ByteArray,modifier:Modifier=Modifier){
+ val context=LocalContext.current
+ var page by remember(bytes){mutableStateOf<Result<QuotationPdfPage>?>(null)}
+ LaunchedEffect(bytes){page=renderQuotationPage(context,bytes,0)}
+ Box(modifier,contentAlignment=androidx.compose.ui.Alignment.Center){
+  when{page==null->CircularProgressIndicator();page!!.isFailure->Text("Could not display PDF. Retry the preview.",color=MaterialTheme.colorScheme.error);else->Image(page!!.getOrThrow().bitmap.asImageBitmap(),"Selected quotation theme preview",Modifier.fillMaxSize())}
+ }
+}
+
+/** Renders the exact authorized customer PDF; never reconstructs a private detail DTO. */
+@Composable
+fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,documentName:String="Quotation"){
+ val context=LocalContext.current
+ var printError by remember(bytes){mutableStateOf<String?>(null)}
+ var number by remember(bytes){mutableIntStateOf(0)}
+ var page by remember(bytes,number){mutableStateOf<Result<QuotationPdfPage>?>(null)}
+ LaunchedEffect(bytes,number){
+  page=renderQuotationPage(context,bytes,number)
  }
  Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)){
   Surface(Modifier.fillMaxSize()){
