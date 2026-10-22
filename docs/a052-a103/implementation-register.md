@@ -10466,3 +10466,9 @@ Final native compilation, 48 quotation JVM tests and lintDebug passed in 4m37s: 
 A084-F03/A085-F02: `149ca81debfb803d3c5d83d384d30997532a8fe9` adds Sale Summary by HSN and SAC Sales Report to shared Web/native report/export destinations. Immutable posted-line classifications and tax components are net of returns; item identities and units remain separate. SAC purchase-side controls and other original report scope remain pending; both findings retain PARTIAL. No migration/ledger write.
 
 Grouped report regressions:201PASS/26files,0fail/skip. Final desktop/mobile Chromium with real local PostgreSQL:2PASS48.9s,covering saved classification after master edit,return totals,CSV/XLSX/PDF,AxeAA/no overflow,branch/role rejection and unchanged journals. Initial currency and core-module fixture expectations failed and were corrected;those runs are not passed evidence. Final TypeScript and focused ESLint passed. Native device runtime and final199-finding complete-head validation remain pending. Prior96baf819 targetedCI39714969799 Web/Android/migration allSUCCESS;does not certify later code.
+
+## SAC transaction selection and opening loan-fee decision —22October2026
+
+A084-F03/A085-F02: `18638e2ec362357e2f7dd98a343647bbd5ca3fbf` connects Sales/Purchases selection on Web/native and exports;purchase bills net debit notes retain saved classification snapshots.203report tests passed;2desktop/mobile browser cases passed2.0m with real PostgreSQL;Android compile+27report JVM tests passed3m41s;fullTypeScript/focusedESLint passed. No device runtime or final199verification claimed. Findings remain PARTIAL for remaining original report scope. Prior7e6cfb6f CI39718393021 allSUCCESS.
+
+A067-F03 decision received:user may choose per loan whether opening processing fee is deducted from gross receipt or paid separately after gross receipt. Opening-fee implementation remains pending;this decision is not implementation evidence.

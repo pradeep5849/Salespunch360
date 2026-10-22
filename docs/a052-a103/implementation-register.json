@@ -42794,6 +42794,10 @@
           },
           "remaining": "Opening processing fee remains pending explicit gross/net fee-source policy; user question sent. Original A067-F03 remains PARTIAL. Native emulator/device runtime and complete final-head validation remain pending.",
           "commit_sha": "b0216353fa5a436ef4d036a672419ae85d0682dc"
+        },
+        "opening_fee_decision_2026_10_22": {
+          "user_decision": "Let user choose per loan:deduct opening fee from gross receipt OR receive gross principal and pay fee separately.",
+          "status": "Decision received;opening-fee implementation still pending. Existing standalone charge work preserved. No financial implementation/verification claimed by this decision."
         }
       }
     },
@@ -60119,6 +60123,20 @@
             "final_199_validation": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL. Other report destinations/reference controls remain;SAC purchase-side report/filter is not implemented or implied by this explicitly sales-only destination. Full HSN reference UI/gross-value presentation and populated goods browser matrix,device runtime and final checkpoint verification remain. No A104,merge,deploy or production changes."
+        },
+        "sac_purchase_scope_2026_10_22": {
+          "implementation_commit": "18638e2ec362357e2f7dd98a343647bbd5ca3fbf",
+          "work": "SAC Report now has Sales/Purchases transaction selection on Web and Android. Existing sac-sales URLs remain valid;default sales behaviour retained. Purchase bills net of debit notes use saved service classifications and signed quantities/taxes. Scope propagates through native applied requests and Web/native exports;HSN sales rejects purchase filter. No migration/ledger write.",
+          "tests": {
+            "reports": "203PASS/26files,0fail/skip. Focused24PASS overlaps.",
+            "browser_database": "2PASS2.0m desktop/mobileChromium with real isolated PostgreSQL:posted service purchase120/debit40 yields80,selector changes heading,original sales snapshots retained,purchase/sales nativeHTTP,CSV/XLSX/PDF,AxeAA/no overflow,branch/role denial andunchanged journals.",
+            "android": "compileDebugKotlin +27AccountReportDataTest JVM PASS,0fail/errors/skips,3m41s. New filter-scope test included. No native device/runtime or current-slice lintDebug.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "ci": "Prior7e6cfb6f targetedCI39718393021 Web/Android/migration allSUCCESS;newhead CI pending.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL:other report destinations and reference controls,HSN gross presentation/populated goods browser matrix,full device andfinalcheckpoint verification. SAC purchase-selector implementation gap is resolved;prior evidence retained."
         }
       }
     },
@@ -64797,6 +64815,20 @@
             "final_199_validation": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL. Other report destinations/reference controls remain;SAC purchase-side report/filter is not implemented or implied by this explicitly sales-only destination. Full HSN reference UI/gross-value presentation and populated goods browser matrix,device runtime and final checkpoint verification remain. No A104,merge,deploy or production changes."
+        },
+        "sac_purchase_scope_2026_10_22": {
+          "implementation_commit": "18638e2ec362357e2f7dd98a343647bbd5ca3fbf",
+          "work": "SAC Report now has Sales/Purchases transaction selection on Web and Android. Existing sac-sales URLs remain valid;default sales behaviour retained. Purchase bills net of debit notes use saved service classifications and signed quantities/taxes. Scope propagates through native applied requests and Web/native exports;HSN sales rejects purchase filter. No migration/ledger write.",
+          "tests": {
+            "reports": "203PASS/26files,0fail/skip. Focused24PASS overlaps.",
+            "browser_database": "2PASS2.0m desktop/mobileChromium with real isolated PostgreSQL:posted service purchase120/debit40 yields80,selector changes heading,original sales snapshots retained,purchase/sales nativeHTTP,CSV/XLSX/PDF,AxeAA/no overflow,branch/role denial andunchanged journals.",
+            "android": "compileDebugKotlin +27AccountReportDataTest JVM PASS,0fail/errors/skips,3m41s. New filter-scope test included. No native device/runtime or current-slice lintDebug.",
+            "typescript": "Final full tsc --noEmit PASS.",
+            "eslint": "Final focused ESLint PASS.",
+            "ci": "Prior7e6cfb6f targetedCI39718393021 Web/Android/migration allSUCCESS;newhead CI pending.",
+            "final_199_validation": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL:other report destinations and reference controls,HSN gross presentation/populated goods browser matrix,full device andfinalcheckpoint verification. SAC purchase-selector implementation gap is resolved;prior evidence retained."
         }
       }
     },
