@@ -585,9 +585,9 @@ private fun DirectSaleInvoiceEditor(
             if(draft.paymentType=="CHEQUE"&&draft.editingSourceId.isBlank()){
                 item{OutlinedTextField(draft.chequeNumber,{onDraft(draft.copy(chequeNumber=it.take(80)))},enabled=!saving,label={Text("Cheque number")},modifier=Modifier.fillMaxWidth())}
                 item{OutlinedTextField(draft.chequeDate,{onDraft(draft.copy(chequeDate=it))},enabled=!saving,label={Text("Cheque date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())}
-                item{OutlinedTextField(draft.paymentReference,{onDraft(draft.copy(paymentReference=it.take(160)))},enabled=!saving,label={Text("Payment reference")},modifier=Modifier.fillMaxWidth())}
                 item{Text("The invoice stays unpaid until this cheque is closed.")}
             }
+            if(draft.editingSourceId.isBlank())item{OutlinedTextField(draft.paymentReference,{onDraft(draft.copy(paymentReference=it.take(160)))},enabled=!saving&&(cash||draft.receivedEnabled),label={Text("Payment Ref No.")},modifier=Modifier.fillMaxWidth())}
             item{
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                     Text("Total Amount",fontWeight=FontWeight.Bold)

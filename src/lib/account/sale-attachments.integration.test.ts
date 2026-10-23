@@ -71,6 +71,12 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     await client.$disconnect();
   });
 
+  it.each([true,false])("blank and omitted payment references preserve file Save retry identity in both orders (%s)",async blankFirst=>{
+    const input=raw(),first=await submitSaleForActor(actor,input,blankFirst?{reference:""}:{},"sale-save-receipt",[pdf()]);
+    const replay=await submitSaleForActor(actor,input,blankFirst?{}:{reference:""},"sale-save-receipt",[pdf()]);
+    expect(replay.id).toBe(first.id);expect(await client.commercialAttachment.count({where:{companyId,documentId:first.id}})).toBe(1);expect(await client.journalEntry.count({where:{companyId,sourceId:first.id}})).toBe(1);
+  });
+
   it("posts one balanced Sale with one private file under concurrent retry", async () => {
     const input = raw(); put.mockClear();
     const [first, replay] = await Promise.all([save(input), save(input)]);

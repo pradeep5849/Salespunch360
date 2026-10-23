@@ -14,7 +14,7 @@ function n(v:string){const x=Number(v);return Number.isFinite(x)?x:0}
 export function useSaleBottomDetails({recordedPayments,advanceBalance=0,subtotal,taxTotal,defaultStateCode,roundingEnabled=false,roundingStep=1,termsEnabled=true,defaultTerms="",cashSale=false,showStateOfSupply=true,initialRoundOff,initialStateCode,editMode=false}:{recordedPayments?:SaleEditInitial["recordedPayments"];initialRoundOff?:string;initialStateCode?:string;editMode?:boolean;advanceBalance?:number;subtotal:number;taxTotal:number;defaultStateCode?:string|null;roundingEnabled?:boolean;roundingStep?:number;termsEnabled?:boolean;defaultTerms?:string;cashSale?:boolean;showStateOfSupply?:boolean}){
  const [roundOffEnabled,setRoundOffEnabled]=useState(initialRoundOff!==undefined?n(initialRoundOff)!==0:roundingEnabled),[roundOff,setRoundOff]=useState(initialRoundOff??""),[receivedEnabled,setReceivedEnabled]=useState(false),[received,setReceived]=useState(""),[paymentType,setPaymentType]=useState("CASH"),[stateOfSupplyCode,setStateOfSupplyCode]=useState(initialStateCode??"");
  const[notes,setNotes]=useState(defaultTerms);
- const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState("");
+ const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState(""),[paymentReference,setPaymentReference]=useState("");
  const effectiveStateCode=showStateOfSupply?stateOfSupplyCode||defaultStateCode||"":defaultStateCode||"";
  const roundedAdjustment=roundOffEnabled?(roundOff!==""?n(roundOff):Math.round(subtotal/roundingStep)*roundingStep-subtotal):0;
  const total=useMemo(()=>subtotal+roundedAdjustment,[subtotal,roundedAdjustment]);
@@ -37,8 +37,9 @@ export function useSaleBottomDetails({recordedPayments,advanceBalance=0,subtotal
    </section>:<>
    <div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={cashSale||receivedEnabled} disabled={cashSale||editMode} onChange={e=>toggleReceived(e.target.checked)}/><span>Received</span></label><label className={styles.moneyInput}><AccountCurrencySymbol/><input type="number" step="0.01" min="0" max={remaining} value={cashSale?remaining.toFixed(2):received} disabled={cashSale||editMode||!receivedEnabled} onChange={e=>setReceived(e.target.value)}/></label></div>
    <div className={`${styles.row} ${styles.balance}`}><strong>Balance Due</strong><strong><Money value={balanceDue}/></strong></div>
-   <div className={styles.payment}><span>Payment Type</span><select disabled={editMode} value={paymentType} onChange={e=>setPaymentType(e.target.value)}><option value="CASH">💵 Cash</option><option value="BANK">Bank</option><option value="CHEQUE">Cheque</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></div>
+   <div className={styles.payment}><span>Payment Type</span><select aria-label="Payment Type" disabled={editMode} value={paymentType} onChange={e=>setPaymentType(e.target.value)}><option value="CASH">💵 Cash</option><option value="BANK">Bank</option><option value="CHEQUE">Cheque</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></div>
    {paymentType==="CHEQUE"&&!editMode&&<><label>Cheque number<input value={chequeNumber} onChange={event=>setChequeNumber(event.target.value)} maxLength={80} required={receivedAmount>0}/></label><label>Cheque date<input type="date" value={chequeDate} onChange={event=>setChequeDate(event.target.value)} required={receivedAmount>0}/></label><p>The invoice stays unpaid until this cheque is closed.</p></>}
+   {!editMode&&<label className={styles.reference}>Payment Ref No.<input aria-label="Payment Ref No." maxLength={160} value={paymentReference} disabled={receivedAmount<=0} onChange={event=>setPaymentReference(event.target.value)}/></label>}
    {editMode&&<p>Save invoice changes first, then record any new payment from Sale Details.</p>}
    </>}
    <Link className={styles.addPayment} href="/workspace/account/money/accounts">＋ Add Payment Type</Link>
@@ -46,5 +47,5 @@ export function useSaleBottomDetails({recordedPayments,advanceBalance=0,subtotal
    {termsEnabled&&<details className={styles.terms}><summary>Terms &amp; Conditions</summary><textarea aria-label="Terms & Conditions" maxLength={5000} value={notes} onChange={event=>setNotes(event.target.value)}/></details>}
    {taxTotal>0&&!effectiveStateCode&&<p className={styles.hint}>Select State of Supply for GST-taxed sales.</p>}
  </section>;
- return{stateOfSupplyCode:effectiveStateCode,roundOffAmount:roundedAdjustment.toFixed(2),notes:termsEnabled?notes:"",receivedAmount,paymentType,chequeNumber,chequeDate,total,balanceDue,node};
+ return{stateOfSupplyCode:effectiveStateCode,roundOffAmount:roundedAdjustment.toFixed(2),notes:termsEnabled?notes:"",receivedAmount,paymentType,chequeNumber,chequeDate,paymentReference,total,balanceDue,node};
 }

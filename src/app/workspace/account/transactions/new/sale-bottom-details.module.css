@@ -2,3 +2,5 @@
 .terms{background:#fff;padding:24px 18px 100px;border-top:12px solid #f3f4f6;scroll-margin-block:100px}.terms summary{cursor:pointer;font-size:18px;font-weight:600;scroll-margin-block:100px}.terms textarea{display:block;box-sizing:border-box;width:100%;min-height:120px;margin-top:20px;padding:14px;border:1.5px solid #aab0b7;border-radius:8px;font:inherit;scroll-margin-block:100px}
 
 .recorded{background:#fff;color:#374151}.recorded p{margin:0;padding:12px 18px;color:#374151}
+
+.reference{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;background:#fff;color:#374151}.reference input{min-width:0;max-width:58%;font:inherit;border:1px solid #6b7280;padding:8px;border-radius:4px}

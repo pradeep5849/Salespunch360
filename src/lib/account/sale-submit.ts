@@ -9,7 +9,7 @@ import {chequePaymentDetails} from "./cheque-payment-input";
 import {prepareSaleAttachments,saleAttachmentManifest,storeSaleAttachmentsInTx,cleanSaleAttachmentAttempts} from "./sale-attachments";
 import {commercialCreationHash} from "./commercial-request-identity";
 type Actor=Parameters<typeof createCommercialDocumentForActor>[0];
-const paymentInput=z.object({receivedAmount:z.union([z.number(),z.string()]).default("0").refine(value=>/^-?\d+(?:\.\d+)?$/.test(String(value)),"Invalid received amount"),receivedInFull:z.boolean().default(false),paymentType:z.string().default("CASH"),chequeNumber:z.string().optional(),chequeDate:z.string().optional(),moneyAccountId:z.string().uuid().optional(),reference:z.string().optional()});
+const paymentInput=z.object({receivedAmount:z.union([z.number(),z.string()]).default("0").refine(value=>/^-?\d+(?:\.\d+)?$/.test(String(value)),"Invalid received amount"),receivedInFull:z.boolean().default(false),paymentType:z.enum(["CASH","BANK","CHEQUE","UPI","CARD"]).default("CASH"),chequeNumber:z.string().optional(),chequeDate:z.string().optional(),moneyAccountId:z.string().uuid().optional(),reference:z.string().max(160).optional().transform(value=>value===""?undefined:value)});
 /** Sale Save is one commit: invoice, posting and any receipt. No independent draft survives failure. */
 export async function submitSaleForActor(actor:Actor,raw:unknown,payment:unknown={},receiptPrefix:"sale-save-receipt"|"mobile-sale-receipt"="sale-save-receipt",files:File[]=[]){
  if(!raw||typeof raw!=="object"||Array.isArray(raw)||(raw as {type?:unknown}).type!=="SALES_INVOICE")throw new Error("INVALID_INPUT");

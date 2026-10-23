@@ -35,3 +35,6 @@ it.each(["not money","",-1])("invalid received amount %s cannot create an invoic
 it("invalid cheque details cannot create or post an invoice",async()=>{
  await expect(submitSaleForActor(actor,input,{receivedAmount:"10",paymentType:"CHEQUE",chequeNumber:"",chequeDate:"bad"})).rejects.toThrow();expect(m.scope).not.toHaveBeenCalled();
 });
+
+it.each(["CASH","BANK","UPI","CARD"])("preserves the supplied %s payment reference in the same receipt transaction",async paymentType=>{await submitSaleForActor(actor,input,{receivedAmount:"10",paymentType,reference:"Saved reference / 123"});expect(m.receipt).toHaveBeenCalledWith(actor,expect.objectContaining({reference:"Saved reference / 123",paymentMode:paymentType==="CASH"?"CASH":"BANK",amount:"10.00"}),m.tx)});
+it("rejects oversized reference or unknown payment type before any document transaction",async()=>{for(const payment of [{receivedAmount:"10",reference:"x".repeat(161)},{receivedAmount:"10",paymentType:"UNKNOWN"}])await expect(submitSaleForActor(actor,input,payment)).rejects.toThrow();expect(m.scope).not.toHaveBeenCalled();expect(m.create).not.toHaveBeenCalled()});
