@@ -67410,7 +67410,11 @@
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-return-revisions.ts",
         "src/lib/account/sale-lifecycle.ts",
-        "prisma/migrations/20261023150000_sale_return_revision_carry/migration.sql"
+        "prisma/migrations/20261023150000_sale_return_revision_carry/migration.sql",
+        "src/lib/account/service-reminders.ts",
+        "src/lib/account/service-reminder-lineage.ts",
+        "src/lib/account/sale-return-revisions.integration.test.ts",
+        "src/lib/mobile/sale-revision-errors.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -67803,6 +67807,21 @@
           "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
           "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
           "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
+        },
+        "sale_consumer_regression_2026_10_23": {
+          "code_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
+          "scope": "A086-F05 correction consumers;shared A086-F06/A087-F02 and A101-F01 reminder dependency",
+          "work": "Superseded Sale outstanding is zero so a second payment cannot target its retired journal. Reminder queries exclude retired/reversed Sales and fully credited quantities using primary-unit direct+carried returns. Immutable explicit retained-line aliases preserve completed service work for same party/project and covered quantity; extra units remain due. Edit preserves saved service period when settings are later disabled; duplicate uses current settings without bypassing override controls. Plain native PATCH exposes controlled correction domain errors400/409 rather than generic500. Original posted credit stays unchanged.",
+          "tests": "22PASS/3focused mobile/settings suites1.27s;86PASS/5database suites23.46s with maxWorkers1;294PASS/27commercial suites6.83s. Earlier49PASS/3focused financial/settings/runtime10.65s includes27 correction cases. Actual desktop+mobile-web browser2PASS1.0m:Web100to80 edit,original100credit unchanged,20advance,PDF/native details/Homev1/v2,AxeAA/nooverflow;plain nativePATCH below returned quantity400 with actionable message and unchanged journal count. Initial grouped parallel DB run39FAIL/40PASS/7SKIP due shared-database write conflicts; sequential rerun86PASS/0FAIL/0SKIP. Results overlap;do not add counts.",
+          "ci": "Last exact-head targeted SUCCESS40001844563 at e9a44e809686936bad4d0d2d9339836e8ecb2b3a,all3jobs. New source head requires fresh CI.",
+          "remaining": "No status promotion or final199-head claim. Android source unchanged; no emulator/device runtime. Production migration/deployment prohibited. Remaining partial report/recovery/production findings and final validation remain."
+        },
+        "retained_stock_cost_2026_10_23": {
+          "code_commit": "31f6f554507ef4e3cef194dff89df480eed36369",
+          "scope": "A086-F05 retained stock cost correction, shared A086-F06/A087-F02 dependency",
+          "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
+          "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
+          "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
         }
       }
     },
@@ -67884,7 +67903,11 @@
         "src/lib/account/sale-submit.test.ts",
         "src/lib/account/sale-return-revisions.ts",
         "src/lib/account/sale-lifecycle.ts",
-        "prisma/migrations/20261023150000_sale_return_revision_carry/migration.sql"
+        "prisma/migrations/20261023150000_sale_return_revision_carry/migration.sql",
+        "src/lib/account/service-reminders.ts",
+        "src/lib/account/service-reminder-lineage.ts",
+        "src/lib/account/sale-return-revisions.integration.test.ts",
+        "src/lib/mobile/sale-revision-errors.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -68494,6 +68517,21 @@
           "tests": "16financialintegrationPASS7.10s:secondarysaved-unit mapping aftermasterchange;role/company/branch denial andAccountantallowed;previousperiodP&Lunchanged/correctionday-20/BalanceSheetdifference0;physicalbatchstock1/netCOGS25. Overlapsprevious12;notadditive. TypeScript/focusedESLintPASS.",
           "ci": "39999035042 exactc602c401SUCCESS:Web,Migration,Android. Newtest/evidencecommitdoesnotinheritexact-headCIverification;rerunonfinalhead.",
           "remaining": "All originalfindingIDs/statuses preserved;193implemented/resolvedbutnotfinallyverified,6PARTIAL. No final199-headsuite or emulator/device certification."
+        },
+        "sale_consumer_regression_2026_10_23": {
+          "code_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
+          "scope": "A086-F05 correction consumers;shared A086-F06/A087-F02 and A101-F01 reminder dependency",
+          "work": "Superseded Sale outstanding is zero so a second payment cannot target its retired journal. Reminder queries exclude retired/reversed Sales and fully credited quantities using primary-unit direct+carried returns. Immutable explicit retained-line aliases preserve completed service work for same party/project and covered quantity; extra units remain due. Edit preserves saved service period when settings are later disabled; duplicate uses current settings without bypassing override controls. Plain native PATCH exposes controlled correction domain errors400/409 rather than generic500. Original posted credit stays unchanged.",
+          "tests": "22PASS/3focused mobile/settings suites1.27s;86PASS/5database suites23.46s with maxWorkers1;294PASS/27commercial suites6.83s. Earlier49PASS/3focused financial/settings/runtime10.65s includes27 correction cases. Actual desktop+mobile-web browser2PASS1.0m:Web100to80 edit,original100credit unchanged,20advance,PDF/native details/Homev1/v2,AxeAA/nooverflow;plain nativePATCH below returned quantity400 with actionable message and unchanged journal count. Initial grouped parallel DB run39FAIL/40PASS/7SKIP due shared-database write conflicts; sequential rerun86PASS/0FAIL/0SKIP. Results overlap;do not add counts.",
+          "ci": "Last exact-head targeted SUCCESS40001844563 at e9a44e809686936bad4d0d2d9339836e8ecb2b3a,all3jobs. New source head requires fresh CI.",
+          "remaining": "No status promotion or final199-head claim. Android source unchanged; no emulator/device runtime. Production migration/deployment prohibited. Remaining partial report/recovery/production findings and final validation remain."
+        },
+        "retained_stock_cost_2026_10_23": {
+          "code_commit": "31f6f554507ef4e3cef194dff89df480eed36369",
+          "scope": "A086-F05 retained stock cost correction, shared A086-F06/A087-F02 dependency",
+          "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
+          "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
+          "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
         }
       },
       "push_checkpoint_evidence": {
@@ -69068,7 +69106,11 @@
         "src/lib/quotations/attachment-http.ts",
         "src/lib/account/sale-return-revisions.ts",
         "src/lib/account/sale-lifecycle.ts",
-        "prisma/migrations/20261023150000_sale_return_revision_carry/migration.sql"
+        "prisma/migrations/20261023150000_sale_return_revision_carry/migration.sql",
+        "src/lib/account/service-reminders.ts",
+        "src/lib/account/service-reminder-lineage.ts",
+        "src/lib/account/sale-return-revisions.integration.test.ts",
+        "src/lib/mobile/sale-revision-errors.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -69647,6 +69689,21 @@
           "tests": "16financialintegrationPASS7.10s:secondarysaved-unit mapping aftermasterchange;role/company/branch denial andAccountantallowed;previousperiodP&Lunchanged/correctionday-20/BalanceSheetdifference0;physicalbatchstock1/netCOGS25. Overlapsprevious12;notadditive. TypeScript/focusedESLintPASS.",
           "ci": "39999035042 exactc602c401SUCCESS:Web,Migration,Android. Newtest/evidencecommitdoesnotinheritexact-headCIverification;rerunonfinalhead.",
           "remaining": "All originalfindingIDs/statuses preserved;193implemented/resolvedbutnotfinallyverified,6PARTIAL. No final199-headsuite or emulator/device certification."
+        },
+        "sale_consumer_regression_2026_10_23": {
+          "code_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
+          "scope": "A086-F05 correction consumers;shared A086-F06/A087-F02 and A101-F01 reminder dependency",
+          "work": "Superseded Sale outstanding is zero so a second payment cannot target its retired journal. Reminder queries exclude retired/reversed Sales and fully credited quantities using primary-unit direct+carried returns. Immutable explicit retained-line aliases preserve completed service work for same party/project and covered quantity; extra units remain due. Edit preserves saved service period when settings are later disabled; duplicate uses current settings without bypassing override controls. Plain native PATCH exposes controlled correction domain errors400/409 rather than generic500. Original posted credit stays unchanged.",
+          "tests": "22PASS/3focused mobile/settings suites1.27s;86PASS/5database suites23.46s with maxWorkers1;294PASS/27commercial suites6.83s. Earlier49PASS/3focused financial/settings/runtime10.65s includes27 correction cases. Actual desktop+mobile-web browser2PASS1.0m:Web100to80 edit,original100credit unchanged,20advance,PDF/native details/Homev1/v2,AxeAA/nooverflow;plain nativePATCH below returned quantity400 with actionable message and unchanged journal count. Initial grouped parallel DB run39FAIL/40PASS/7SKIP due shared-database write conflicts; sequential rerun86PASS/0FAIL/0SKIP. Results overlap;do not add counts.",
+          "ci": "Last exact-head targeted SUCCESS40001844563 at e9a44e809686936bad4d0d2d9339836e8ecb2b3a,all3jobs. New source head requires fresh CI.",
+          "remaining": "No status promotion or final199-head claim. Android source unchanged; no emulator/device runtime. Production migration/deployment prohibited. Remaining partial report/recovery/production findings and final validation remain."
+        },
+        "retained_stock_cost_2026_10_23": {
+          "code_commit": "31f6f554507ef4e3cef194dff89df480eed36369",
+          "scope": "A086-F05 retained stock cost correction, shared A086-F06/A087-F02 dependency",
+          "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
+          "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
+          "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
         }
       },
       "push_checkpoint_evidence": {
@@ -72851,7 +72908,12 @@
       "expected_behavior": "Exclude fully credited source lines, retain partially credited lines and ignore draft credits.",
       "root_cause": "Due query does not subtract posted credit quantities by source line.",
       "affected_files": [
-        "src/lib/account/service-reminders.ts"
+        "src/lib/account/service-reminders.ts",
+        "src/lib/account/service-reminder-lineage.ts",
+        "src/lib/account/sale-amendments.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/sale-return-revisions.integration.test.ts",
+        "src/lib/mobile/sale-revision-errors.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -72936,6 +72998,16 @@
         ],
         "verification_status": "IMPLEMENTED BUT NOT VERIFIED",
         "final_status": null
+      },
+      "checkpoint_work": {
+        "sale_consumer_regression_2026_10_23": {
+          "code_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
+          "scope": "A086-F05 correction consumers;shared A086-F06/A087-F02 and A101-F01 reminder dependency",
+          "work": "Superseded Sale outstanding is zero so a second payment cannot target its retired journal. Reminder queries exclude retired/reversed Sales and fully credited quantities using primary-unit direct+carried returns. Immutable explicit retained-line aliases preserve completed service work for same party/project and covered quantity; extra units remain due. Edit preserves saved service period when settings are later disabled; duplicate uses current settings without bypassing override controls. Plain native PATCH exposes controlled correction domain errors400/409 rather than generic500. Original posted credit stays unchanged.",
+          "tests": "22PASS/3focused mobile/settings suites1.27s;86PASS/5database suites23.46s with maxWorkers1;294PASS/27commercial suites6.83s. Earlier49PASS/3focused financial/settings/runtime10.65s includes27 correction cases. Actual desktop+mobile-web browser2PASS1.0m:Web100to80 edit,original100credit unchanged,20advance,PDF/native details/Homev1/v2,AxeAA/nooverflow;plain nativePATCH below returned quantity400 with actionable message and unchanged journal count. Initial grouped parallel DB run39FAIL/40PASS/7SKIP due shared-database write conflicts; sequential rerun86PASS/0FAIL/0SKIP. Results overlap;do not add counts.",
+          "ci": "Last exact-head targeted SUCCESS40001844563 at e9a44e809686936bad4d0d2d9339836e8ecb2b3a,all3jobs. New source head requires fresh CI.",
+          "remaining": "No status promotion or final199-head claim. Android source unchanged; no emulator/device runtime. Production migration/deployment prohibited. Remaining partial report/recovery/production findings and final validation remain."
+        }
       }
     }
   ],
@@ -75769,6 +75841,21 @@
       "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
       "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
       "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
+    },
+    {
+      "code_commit": "31f6f554507ef4e3cef194dff89df480eed36369",
+      "scope": "A086-F05 retained stock cost correction, shared A086-F06/A087-F02 dependency",
+      "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
+      "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
+      "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
+    },
+    {
+      "code_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
+      "scope": "A086-F05 correction consumers;shared A086-F06/A087-F02 and A101-F01 reminder dependency",
+      "work": "Superseded Sale outstanding is zero so a second payment cannot target its retired journal. Reminder queries exclude retired/reversed Sales and fully credited quantities using primary-unit direct+carried returns. Immutable explicit retained-line aliases preserve completed service work for same party/project and covered quantity; extra units remain due. Edit preserves saved service period when settings are later disabled; duplicate uses current settings without bypassing override controls. Plain native PATCH exposes controlled correction domain errors400/409 rather than generic500. Original posted credit stays unchanged.",
+      "tests": "22PASS/3focused mobile/settings suites1.27s;86PASS/5database suites23.46s with maxWorkers1;294PASS/27commercial suites6.83s. Earlier49PASS/3focused financial/settings/runtime10.65s includes27 correction cases. Actual desktop+mobile-web browser2PASS1.0m:Web100to80 edit,original100credit unchanged,20advance,PDF/native details/Homev1/v2,AxeAA/nooverflow;plain nativePATCH below returned quantity400 with actionable message and unchanged journal count. Initial grouped parallel DB run39FAIL/40PASS/7SKIP due shared-database write conflicts; sequential rerun86PASS/0FAIL/0SKIP. Results overlap;do not add counts.",
+      "ci": "Last exact-head targeted SUCCESS40001844563 at e9a44e809686936bad4d0d2d9339836e8ecb2b3a,all3jobs. New source head requires fresh CI.",
+      "remaining": "No status promotion or final199-head claim. Android source unchanged; no emulator/device runtime. Production migration/deployment prohibited. Remaining partial report/recovery/production findings and final validation remain."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75805,7 +75892,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
+    "code_head_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,

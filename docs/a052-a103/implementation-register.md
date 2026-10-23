@@ -10633,3 +10633,5 @@ Android compile/eight JVM passes. Runs overlap; counts are not additive.
 PARTIAL. No final status was promoted. The machine-readable register retains all
 199 original IDs and the remaining validation limitations. A104 and merging stay
 on hold.
+
+2026-10-23 retained-cost/consumer follow-up: see machine-readable register entries for commits31f6f554 andf3f98064, and sale-return-revision-verification.md.86 sequential financial tests,294 commercial regressions,22 mobile/settings tests,2 desktop/mobile-web cases passed (overlapping groups). Original credits remain immutable; stock cost and reminder/payment consumers follow correction history.193 implemented/resolved but not finally verified;6 PARTIAL;199 original IDs retained. No final status promotion.

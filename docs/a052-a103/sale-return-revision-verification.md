@@ -136,3 +136,11 @@ TypeScript/ESLintPASS. Browser4PASS1.3m:PartyHome layout/scope/empty/Axe and
 returnedSaleEdit plus actual nativeHomev1/v2 balance-20/no supersededSale.
 Original Edit/Details controls also reran8PASS2.7m before this Home-only change.
 All199IDs/statuses unchanged;not final-head or physical-device certification.
+
+### Retained stock and consumer follow-up — 2026-10-23
+
+Source commits `31f6f554507ef4e3cef194dff89df480eed36369` and `f3f980646e2fa5b81a3f82782024e9724e6f5d42` preserve original inventory cost, retire old payment targets, and preserve service completion through explicit immutable line bindings. Additional quantity remains eligible for service; changed reminder settings do not rewrite a saved period. Plain mobile correction errors now return actionable 400/409 responses. No new migration.
+
+Grouped sequential database validation: **86 passed, 0 failed, 0 skipped / 5 suites / 23.46s**. The first parallel attempt failed from write conflicts between suites sharing the local test database (39 failed,40 passed,7 skipped); no guard was weakened and sequential rerun passed. Commercial regression: **294 passed /27 suites/6.83s**. Focused mobile/settings: **22 passed/3 suites/1.27s**. These overlap earlier evidence and must not be added into a total.
+
+Desktop + mobile-web: **2 passed/1.0m**, including original ₹100 credit unchanged after ₹80 edit, ₹20 advance, printed PDF/native details, scoped Home balances, Axe AA/no horizontal overflow, and plain native PATCH quantity rejection with no journal writes. Earlier stock-cost slice original controls/return browser:4 passed/1.7m. Last successful CI is run40001844563 at e9a44e80; new head still requires CI. No device/emulator runtime or complete final199-head validation claimed. All199 finding IDs and193 implemented-not-finally-verified/6 PARTIAL counts remain unchanged.
