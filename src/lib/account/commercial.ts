@@ -1689,6 +1689,7 @@ async function commercialInventoryInTx(
     include: { lines: { include: { purchaseAllocations: true } } };
   }>,
   correctionDate?:Date,
+  revisionStockCosts?:ReadonlyMap<string,Prisma.Decimal>,
 ) {
   if (doc.type === "PURCHASE_BILL")
     return purchaseInventoryFromAllocationsInTx(tx, actor, doc);
@@ -1792,6 +1793,8 @@ async function commercialInventoryInTx(
     if (doc.type === "SALES_INVOICE") {
       movementType = "SALE";
       unitCost = valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost;
+      const retainedCost=revisionStockCosts?.get(line.id);
+      if(retainedCost!==undefined){if(!retainedCost.isFinite()||retainedCost.lt(0))throw new Error("SALE_STOCK_SOURCE_HISTORY_REQUIRED");unitCost=retainedCost.div(quantity)}
       cogs = cogs.add(quantity.mul(unitCost));
     } else if (doc.type === "DEBIT_NOTE") {
       movementType = "PURCHASE_RETURN";
@@ -1801,7 +1804,7 @@ async function commercialInventoryInTx(
       movementType = "SALES_RETURN";
       // Reverse the original cost, even after a serial or batch is sold out.
       const sourceSale = prior.find(movement => movement.movementType === "SALE" && movement.sourceId === doc.sourceDocumentId && movement.sourceLineId === line.sourceCommercialLineId);
-      unitCost = sourceSale?.unitCost ?? (valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost);
+      unitCost = sourceSale&&quantity.eq(sourceSale.quantity)?sourceSale.totalCost.div(quantity):sourceSale?.unitCost ?? (valuation.quantity.gt(0) ? valuation.stockValue.div(valuation.quantity) : valuation.averageUnitCost);
       returnCost = returnCost.add(quantity.mul(unitCost));
     }
     if (
@@ -2035,7 +2038,7 @@ export async function postCommercialDocumentForActor(
   actor: Actor,
   raw: unknown,
   transaction?: Prisma.TransactionClient,
-  correction?:{sourceInvoiceId:string;postingDate:Date},
+  correction?:{sourceInvoiceId:string;postingDate:Date;stockCosts:ReadonlyMap<string,Prisma.Decimal>},
 ) {
   const { documentId } = z
     .object({ documentId: z.string().uuid() })
@@ -2055,8 +2058,10 @@ export async function postCommercialDocumentForActor(
         if(correction){
           if(doc.type!=="SALES_INVOICE"||!Number.isFinite(correction.postingDate.getTime())||correction.postingDate<doc.issueDate)throw new Error("INVALID_SALE_CORRECTION_DATE");
           const identity=await saleInvoiceIdentity(tx,doc);
-          const event=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,entityType:"SALES_INVOICE",entityId:correction.sourceInvoiceId,eventType:"SALE_AMENDED",metadata:{path:["replacementId"],equals:doc.id}},select:{id:true}});
+          const event=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,entityType:"SALES_INVOICE",entityId:correction.sourceInvoiceId,eventType:"SALE_AMENDED",metadata:{path:["replacementId"],equals:doc.id}},select:{id:true,metadata:true}});
           if(identity.previousInvoiceId!==correction.sourceInvoiceId||!event)throw new Error("SALE_CORRECTION_WORKFLOW_REQUIRED");
+          const expectedStockHash=(event.metadata as {stockRevisionCostHash?:unknown}|null)?.stockRevisionCostHash;
+          if(expectedStockHash!==commercialCreationHash({lines:[...correction.stockCosts].map(([id,cost])=>({id,cost:cost.toFixed(2)})).sort((a,b)=>a.id.localeCompare(b.id))}))throw new Error("SALE_CORRECTION_WORKFLOW_REQUIRED");
           financialDate=correction.postingDate;
         }
         const p = policies[doc.type];
@@ -2191,6 +2196,7 @@ export async function postCommercialDocumentForActor(
             actor,
             inventoryDocument,
             correction?financialDate:undefined,
+            correction?.stockCosts,
           ),
           sale = doc.type === "SALES_INVOICE" || doc.type === "CREDIT_NOTE",
           classification = purchaseClassificationForPosting(

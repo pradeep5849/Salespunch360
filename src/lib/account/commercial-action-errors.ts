@@ -8,6 +8,7 @@ const messages: Record<string, string> = {
   SALE_RETURN_LINE_HISTORY_REQUIRED: "This return is missing its original item history. Ask your Account administrator to review it; saved records have not changed." ,
   SALE_RETURN_HISTORY_INCONSISTENT: "This Sale has inconsistent return or revision history. Ask your Account administrator to review it; saved records have not changed." ,
   RETURN_REVISION_STOCK_CONFIGURATION_CHANGED: "Restore stock tracking for this retained item before correcting its Sale." ,
+  SALE_STOCK_COST_HISTORY_INCONSISTENT: "Original stock costs differ from the posted journal. Ask your Account administrator to reconcile that history before editing; saved records have not changed.",
   SALE_STOCK_SOURCE_HISTORY_REQUIRED: "This Sale is missing its original stock history. Ask your Account administrator to review it; saved records have not changed." ,
   INVALID_SALE_CORRECTION_DATE: "Use a correction date on or after the original invoice and its posted transactions." ,
   SALE_CORRECTION_WORKFLOW_REQUIRED: "Open the saved Sale and use Edit to create its audited correction." ,

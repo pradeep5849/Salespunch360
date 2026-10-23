@@ -1,5 +1,5 @@
 import {randomUUID} from "node:crypto";
-import {PrismaClient} from "@prisma/client";
+import {Prisma,PrismaClient} from "@prisma/client";
 import {beforeAll,afterAll,describe,it,expect,vi} from "vitest";
 const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
@@ -57,6 +57,9 @@ describe.skipIf(!url)("A086 immutable posted return correction",()=>{
   expect(carry.excessAdvance).toMatchObject({paymentMode:"ACCOUNT_CREDIT",moneyAccountId:null});expect(carry.excessAdvance!.amount.toString()).toBe("20");expect(carry.excessAdvance!.journalEntry!.lines.reduce((sum,row)=>sum.add(row.debit).sub(row.credit),carry.originalAmount.mul(0)).toString()).toBe("0");
   const detail=await saleDetailForActor(actor,replacement.id);expect(detail.documentNumber).toBe(source.documentNumber);expect(detail.paymentSummary).toMatchObject({outstanding:"0.00",credits:"80.00",originalReturnCredits:"100.00",returnCreditsTransferred:"20.00",canChange:true,canDelete:false});
   expect((await replacePostedSaleForActor(actor,source.id,request)).id).toBe(replacement.id);
+  const revision=await client.saleReturnRevision.findUniqueOrThrow({where:{companyId_invoiceId:{companyId,invoiceId:replacement.id}}}),count=await client.journalEntry.count({where:{companyId}});
+  await expect(postCommercialDocumentForActor(actor,{documentId:replacement.id},undefined,{sourceInvoiceId:source.id,postingDate:revision.postingDate,stockCosts:new Map([[randomUUID(),new Prisma.Decimal(100)]])})).rejects.toThrow("SALE_CORRECTION_WORKFLOW_REQUIRED");expect(await client.journalEntry.count({where:{companyId}})).toBe(count);
+
   const home=await accountMobileHomeData(actor,{mode:"BRANCH",branchId,branchName:"Main"},{types:["SALES_INVOICE"]});
   expect(home.transactions.some(row=>row.id===source.id)).toBe(false);
   expect(home.transactions.find(row=>row.id===replacement.id)).toMatchObject({documentNumber:source.documentNumber,balanceDue:"0",showBalance:true});
@@ -198,6 +201,44 @@ describe.skipIf(!url)("A086 immutable posted return correction",()=>{
   const current=await postedPartyBalances({companyId,partyIds:[customerId],customer:true,branches:[branchId]});expect(current.get(customerId)!.toFixed(2)).toBe(await currentPartyBalanceForActor(actor,customerId));
   for(const scope of [{companyId,branches:[randomUUID()]},{companyId:randomUUID(),branches:undefined},{companyId,branches:[]}])expect((await postedPartyBalances({...scope,partyIds:[customerId],customer:true})).get(customerId)!.toString()).toBe("0");
   expect((await postedPartyBalances({companyId,partyIds:[customerId],customer:true,branches:[branchId],asOf:new Date("2026-10-19")})).get(customerId)!.toString()).toBe("0");
+ });
+
+ it.each([{quantity:"2",expectedCost:"10.00"},{quantity:"3",expectedCost:"67.37"},{quantity:"1",expectedCost:"0.00"}])("preserves original COGS after later purchases with replacement quantity $quantity",async({quantity,expectedCost})=>{
+  const suffix=randomUUID().slice(0,8),warehouse=await client.warehouse.create({data:{companyId,branchId,name:`Cost ${suffix}`,code:`C${suffix}`}}),product=await client.accountProduct.create({data:{companyId,name:`Cost return ${suffix}`,trackInventory:true}});
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"10",unitCost:"10",movementDate:"2026-10-19",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const {source,line,credit}=await returned("2","1",product.id,"1",warehouse.id);
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"10",unitCost:"100",movementDate:"2026-10-21",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const replacement=await replacePostedSaleForActor(actor,source.id,{...raw("80",quantity),lines:[{...raw("80",quantity).lines[0],sourceId:product.id,warehouseId:warehouse.id,originalLineId:line.id}]});
+  const revision=await client.saleReturnRevision.findUniqueOrThrow({where:{companyId_invoiceId:{companyId,invoiceId:replacement.id}}});
+  const documents=await client.commercialDocument.findMany({where:{companyId,id:{in:[source.id,credit.id,replacement.id]}},select:{journalEntryId:true}}),ids=[...documents.map(doc=>doc.journalEntryId!),revision.reversalJournalId];
+  const costs=await client.journalLine.findMany({where:{companyId,journalEntryId:{in:ids},ledgerAccount:{systemKey:"COGS"}}});expect(costs.reduce((sum,row)=>sum.add(row.debit).sub(row.credit),new Prisma.Decimal(0)).toFixed(2)).toBe(expectedCost);
+ });
+
+ it("preserves the original whole stock cost when the stored unit cost was rounded",async()=>{
+  const suffix=randomUUID().slice(0,8),warehouse=await client.warehouse.create({data:{companyId,branchId,name:`Rounded ${suffix}`,code:`R${suffix}`}}),product=await client.accountProduct.create({data:{companyId,name:`Rounded cost ${suffix}`,trackInventory:true}});
+  for(const [quantity,unitCost]of [["10000","0.01"],["20000","0.02"]])await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity,unitCost,movementDate:"2026-10-19",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const item={...raw("1","10000").lines[0],sourceId:product.id,warehouseId:warehouse.id},source=await createCommercialDocumentForActor(actor,{...raw(),lines:[item]});await postCommercialDocumentForActor(actor,{documentId:source.id});const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}}),original=await client.stockMovement.findFirstOrThrow({where:{companyId,sourceId:source.id,movementType:"SALE"}});expect(original.totalCost.toString()).toBe("166.67");expect(original.unitCost.mul(original.quantity).toFixed(2)).toBe("167.00");
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"10000",unitCost:"2",movementDate:"2026-10-21",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const replacement=await replacePostedSaleForActor(actor,source.id,{...raw(),lines:[{...item,rate:"0.8",originalLineId:line.id}]});
+  const lifecycle=await client.saleLifecycleSnapshot.findUniqueOrThrow({where:{companyId_invoiceId:{companyId,invoiceId:source.id}}});
+  const credit=await client.stockMovement.findFirstOrThrow({where:{companyId,sourceId:lifecycle.correctionCreditId!,movementType:"SALES_RETURN"}}),posted=await client.stockMovement.findFirstOrThrow({where:{companyId,sourceId:replacement.id,movementType:"SALE"}});expect(credit.totalCost.toFixed(2)).toBe("166.67");expect(posted.totalCost.toFixed(2)).toBe("166.67");
+ });
+ it("moving retained quantity between duplicate stock lines does not revalue the same units",async()=>{
+  const suffix=randomUUID().slice(0,8),warehouse=await client.warehouse.create({data:{companyId,branchId,name:`Pooled ${suffix}`,code:`P${suffix}`}}),product=await client.accountProduct.create({data:{companyId,name:`Pooled cost ${suffix}`,trackInventory:true}});
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"10",unitCost:"10",movementDate:"2026-10-19",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const item={...raw("100","2").lines[0],sourceId:product.id,warehouseId:warehouse.id},source=await createCommercialDocumentForActor(actor,{...raw(),lines:[item,item]});await postCommercialDocumentForActor(actor,{documentId:source.id});const lines=await client.commercialDocumentLine.findMany({where:{documentId:source.id},orderBy:{position:"asc"}});
+  const credit=await createCommercialDocumentForActor(actor,{...raw(),type:"CREDIT_NOTE",sourceDocumentId:source.id,lines:[{...item,quantity:"1",sourceCommercialLineId:lines[0].id,stockReturnQuantity:"1"}]});await postCommercialDocumentForActor(actor,{documentId:credit.id});
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"10",unitCost:"100",movementDate:"2026-10-21",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const replacement=await replacePostedSaleForActor(actor,source.id,{...raw(),lines:[{...item,quantity:"1",rate:"80",originalLineId:lines[0].id},{...item,quantity:"3",rate:"80",originalLineId:lines[1].id}]});const movement=await client.stockMovement.aggregate({where:{companyId,sourceId:replacement.id,movementType:"SALE"},_sum:{totalCost:true}});expect(movement._sum.totalCost!.toString()).toBe("40");
+ });
+
+ it("does not silently change a historical stock-to-ledger cost discrepancy",async()=>{
+  const suffix=randomUUID().slice(0,8),warehouse=await client.warehouse.create({data:{companyId,branchId,name:`Tiny ${suffix}`,code:`T${suffix}`}}),product=await client.accountProduct.create({data:{companyId,name:`Tiny cost ${suffix}`,trackInventory:true}});
+  await createStockMovementForActor(actor,"OPENING",{warehouseId:warehouse.id,productId:product.id,quantity:"4",unitCost:"0.005",movementDate:"2026-10-19",sourceType:"RETURN_REVISION_FIXTURE",sourceId:randomUUID()});
+  const item={...raw().lines[0],sourceId:product.id,warehouseId:warehouse.id},source=await createCommercialDocumentForActor(actor,{...raw(),lines:[item,item,item,item]});await postCommercialDocumentForActor(actor,{documentId:source.id});
+  const before=await client.journalEntry.count({where:{companyId}}),lines=await client.commercialDocumentLine.findMany({where:{documentId:source.id},orderBy:{position:"asc"}});
+  await expect(replacePostedSaleForActor(actor,source.id,{...raw(),lines:lines.map(line=>({...item,originalLineId:line.id,rate:"80"}))})).rejects.toThrow("SALE_STOCK_COST_HISTORY_INCONSISTENT");
+  expect(await client.journalEntry.count({where:{companyId}})).toBe(before);expect(await client.saleLifecycleSnapshot.count({where:{companyId,invoiceId:source.id}})).toBe(0);
  });
 
 });

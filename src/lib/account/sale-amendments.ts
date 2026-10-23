@@ -1,3 +1,4 @@
+import {saleRevisionStockCostsInTx} from "./sale-revision-stock-cost";
 import {retainedSaleReturnsInTx,retainedSaleReturnAmount,carrySaleReturnsInTx,saleCorrectionFamilyInTx} from "./sale-return-revisions";
 import {recordSaleInvoiceIdentity} from "./sale-invoice-identity";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
@@ -414,6 +415,7 @@ export async function replacePostedSaleForActor(
 
         const correctionDate=new Date([businessToday(),sale.issueDate.toISOString().slice(0,10),sale.journalEntry!.entryDate.toISOString().slice(0,10),replacement.issueDate.toISOString().slice(0,10),...sale.retainedReturns.map(item=>item.note.issueDate.toISOString().slice(0,10)),...sale.allocations.map(row=>row.settlement.transactionDate.toISOString().slice(0,10)),...sale.advanceApplications.map(row=>row.applicationDate.toISOString().slice(0,10))].sort().at(-1)!);
         await ensureOpenFinancialYearForDate(actor.companyId,correctionDate,tx);
+        const stockRevision=await saleRevisionStockCostsInTx(tx,actor.companyId,sale,replacement.id);
         let correctionCreditId:string|null=null;
         if(sale.retainedReturns.length){
           for(const row of sale.allocations)await receiptAdvanceCreditInTx(tx,actor,{allocationId:row.id,entryDate:correctionDate});
@@ -431,6 +433,8 @@ export async function replacePostedSaleForActor(
               requestKey,
               requestHash,
               replacementId: replacement.id,
+              stockRevisionCosts:stockRevision.snapshot,
+              stockRevisionCostHash:commercialCreationHash({lines:[...stockRevision.costs].map(([id,cost])=>({id,cost:cost.toFixed(2)})).sort((a,b)=>a.id.localeCompare(b.id))}),
             },
           },
         });
@@ -439,7 +443,7 @@ export async function replacePostedSaleForActor(
           actor,
           { documentId: replacement.id },
           tx,
-          {sourceInvoiceId:sale.id,postingDate:correctionDate},
+          {sourceInvoiceId:sale.id,postingDate:correctionDate,stockCosts:stockRevision.costs},
         );
         // Preserve actual previous payments even when automatic linking is disabled.
         // Posting may already have applied them; use current remaining/outstanding.
