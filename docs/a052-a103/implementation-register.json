@@ -54939,7 +54939,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -55273,6 +55273,99 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A080-F01 remains PARTIAL pending complete visual/reference/device matrix and checkpoint-wide final validation. These focused passes are not a final verification claim."
+        },
+        "all_fifteen_rendered_theme_visual_matrix_2026_10_23": {
+          "implementation_commit": "93bd0969295d77ff7261c941546035df86d7ca70",
+          "work": "Retain all15 authenticated theme PDFs as Playwright output artifacts for reproducible visual verification. Independently inspected rendered first pages and15-layout contact sheet:fixture fits1page in every layout,portrait/landscape correct,distinct headers/grid/extended tax/acknowledgement/dual-tone/monochrome treatments present without observed clipping. Existing prior slices complete15-theme Web/native full-page picker,temporary preview,arrows,palette,Apply/Cancel,private PDF,PrintManager/share andsafe scoped settings. No additional product change in this artifact slice.",
+          "files": [
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "browser": "Final1PASS1.0m desktopChromium:all15Web+15authenticatednativePDF requests,retained source values/orientations/private headers,Apply/Cancel/permissions/Axe/nooverflow. Additional earlier1PASS1.0m emitted body-only attachments which line reporter did not persist;test now writes explicit outputPaths before attach. No functional failure. Prior2desktop/mobile profiles passed atsame product code.",
+            "visual": "ActualPDFfirstpages rendered withpdftoppm;contactsheet inspected23October2026.15/15singlepagefixture. This is a visual functional inspection,not pixel-perfect screenshot equivalence or Android device rendering.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused ESLint andgitdiff--check PASS.",
+            "android": "No native source changed in this slice;prior48quotation JVM+compile+lint evidence retained,device/PrintManager/TalkBack not executed.",
+            "final_199_head": "NOT RUN"
+          },
+          "artifact_manifest": [
+            {
+              "theme": "DOUBLE_DIVINE",
+              "pages": 1,
+              "sha256": "dc601594690c69cf630e464227f602ac4508c22d4f7496792c79eb4272be298d"
+            },
+            {
+              "theme": "FRENCH_ELITE",
+              "pages": 1,
+              "sha256": "0e689c18b8f53775389f0f1df15bfe008182742e45139c3c2b55d44690d9a1f0"
+            },
+            {
+              "theme": "GST_1",
+              "pages": 1,
+              "sha256": "86b2957b285c5ac847f1f1656473e6815b38b41974b547014d545ec16efd9e99"
+            },
+            {
+              "theme": "GST_2",
+              "pages": 1,
+              "sha256": "f297fd1d7bc1573fe4ae916480b0de941494b922f2e57e23c17776f60ef51caa"
+            },
+            {
+              "theme": "GST_3",
+              "pages": 1,
+              "sha256": "44251a2bf87d8d53823c1c5cf1a90d278dbe5e7b7f2bb58be6f2b5a3b1c532fb"
+            },
+            {
+              "theme": "GST_4",
+              "pages": 1,
+              "sha256": "bdbf17cca966da73d6a4bcd8628bf8cda15e45eab0c49bd7dd961d15724a16df"
+            },
+            {
+              "theme": "GST_5",
+              "pages": 1,
+              "sha256": "920954beb8dcae471ff1aafc7672a4a6a10cecc60cfb46db7eaf23ff6db153cf"
+            },
+            {
+              "theme": "GST_6",
+              "pages": 1,
+              "sha256": "e42c67a4df3ad9657cf3a88ee5a3bbe3757e750b0c775e26202e50c7379b02da"
+            },
+            {
+              "theme": "LANDSCAPE_1",
+              "pages": 1,
+              "sha256": "5d84f8e8e3fd2bc23585564d5a0702498603ce49a591c715239b72c06f7be126"
+            },
+            {
+              "theme": "LANDSCAPE_2",
+              "pages": 1,
+              "sha256": "3758b58073f5e505855be331326373ad6302068a3da110fbbae1b5cd67072de3"
+            },
+            {
+              "theme": "SIMPLE_1",
+              "pages": 1,
+              "sha256": "cf790baf3f73695b541f61ef3b956c1aff8f7206561626672385b15d3ecb3f6a"
+            },
+            {
+              "theme": "SIMPLE_2",
+              "pages": 1,
+              "sha256": "72ab09eef40661529f4f2a31646153b496e7898183f494c9b883bf384fcd2630"
+            },
+            {
+              "theme": "SIMPLE_3",
+              "pages": 1,
+              "sha256": "ec1f22d7a7e16d6947e66fe10d7fdb100311e3ee0058b8f3d51424e2234a5082"
+            },
+            {
+              "theme": "SIMPLE_4",
+              "pages": 1,
+              "sha256": "c229313fb5c226495c355c6baab52953ae50ce3676159e4bf9dac3f000a3a240"
+            },
+            {
+              "theme": "TALLY",
+              "pages": 1,
+              "sha256": "af5424b959fb6ab3be735e23f2242c2da8de3a1d73a56abbfe37f571cf19cfdb"
+            }
+          ],
+          "remaining": "Code implementation status IMPLEMENTED BUT NOT VERIFIED. Exact reference pixel parity is not certified;Android physical/emulator/Compose/PrintManager/TalkBack and complete final-head regressions remain pending. No final_status promotion."
         }
       }
     },
@@ -74675,6 +74768,102 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "Code implementation status IMPLEMENTED BUT NOT VERIFIED. Hindi intentionally deferred by user. Final complete-head regressions and Android device/runtime limitations must receive explicit final disposition;no final_status promotion."
+    },
+    {
+      "finding_ids": [
+        "A080-F01"
+      ],
+      "implementation_commit": "93bd0969295d77ff7261c941546035df86d7ca70",
+      "work": "Retain all15 authenticated theme PDFs as Playwright output artifacts for reproducible visual verification. Independently inspected rendered first pages and15-layout contact sheet:fixture fits1page in every layout,portrait/landscape correct,distinct headers/grid/extended tax/acknowledgement/dual-tone/monochrome treatments present without observed clipping. Existing prior slices complete15-theme Web/native full-page picker,temporary preview,arrows,palette,Apply/Cancel,private PDF,PrintManager/share andsafe scoped settings. No additional product change in this artifact slice.",
+      "files": [
+        "e2e/a090-settings.spec.ts"
+      ],
+      "tests": {
+        "browser": "Final1PASS1.0m desktopChromium:all15Web+15authenticatednativePDF requests,retained source values/orientations/private headers,Apply/Cancel/permissions/Axe/nooverflow. Additional earlier1PASS1.0m emitted body-only attachments which line reporter did not persist;test now writes explicit outputPaths before attach. No functional failure. Prior2desktop/mobile profiles passed atsame product code.",
+        "visual": "ActualPDFfirstpages rendered withpdftoppm;contactsheet inspected23October2026.15/15singlepagefixture. This is a visual functional inspection,not pixel-perfect screenshot equivalence or Android device rendering.",
+        "typescript": "Final full tsc PASS.",
+        "eslint": "Focused ESLint andgitdiff--check PASS.",
+        "android": "No native source changed in this slice;prior48quotation JVM+compile+lint evidence retained,device/PrintManager/TalkBack not executed.",
+        "final_199_head": "NOT RUN"
+      },
+      "artifact_manifest": [
+        {
+          "theme": "DOUBLE_DIVINE",
+          "pages": 1,
+          "sha256": "dc601594690c69cf630e464227f602ac4508c22d4f7496792c79eb4272be298d"
+        },
+        {
+          "theme": "FRENCH_ELITE",
+          "pages": 1,
+          "sha256": "0e689c18b8f53775389f0f1df15bfe008182742e45139c3c2b55d44690d9a1f0"
+        },
+        {
+          "theme": "GST_1",
+          "pages": 1,
+          "sha256": "86b2957b285c5ac847f1f1656473e6815b38b41974b547014d545ec16efd9e99"
+        },
+        {
+          "theme": "GST_2",
+          "pages": 1,
+          "sha256": "f297fd1d7bc1573fe4ae916480b0de941494b922f2e57e23c17776f60ef51caa"
+        },
+        {
+          "theme": "GST_3",
+          "pages": 1,
+          "sha256": "44251a2bf87d8d53823c1c5cf1a90d278dbe5e7b7f2bb58be6f2b5a3b1c532fb"
+        },
+        {
+          "theme": "GST_4",
+          "pages": 1,
+          "sha256": "bdbf17cca966da73d6a4bcd8628bf8cda15e45eab0c49bd7dd961d15724a16df"
+        },
+        {
+          "theme": "GST_5",
+          "pages": 1,
+          "sha256": "920954beb8dcae471ff1aafc7672a4a6a10cecc60cfb46db7eaf23ff6db153cf"
+        },
+        {
+          "theme": "GST_6",
+          "pages": 1,
+          "sha256": "e42c67a4df3ad9657cf3a88ee5a3bbe3757e750b0c775e26202e50c7379b02da"
+        },
+        {
+          "theme": "LANDSCAPE_1",
+          "pages": 1,
+          "sha256": "5d84f8e8e3fd2bc23585564d5a0702498603ce49a591c715239b72c06f7be126"
+        },
+        {
+          "theme": "LANDSCAPE_2",
+          "pages": 1,
+          "sha256": "3758b58073f5e505855be331326373ad6302068a3da110fbbae1b5cd67072de3"
+        },
+        {
+          "theme": "SIMPLE_1",
+          "pages": 1,
+          "sha256": "cf790baf3f73695b541f61ef3b956c1aff8f7206561626672385b15d3ecb3f6a"
+        },
+        {
+          "theme": "SIMPLE_2",
+          "pages": 1,
+          "sha256": "72ab09eef40661529f4f2a31646153b496e7898183f494c9b883bf384fcd2630"
+        },
+        {
+          "theme": "SIMPLE_3",
+          "pages": 1,
+          "sha256": "ec1f22d7a7e16d6947e66fe10d7fdb100311e3ee0058b8f3d51424e2234a5082"
+        },
+        {
+          "theme": "SIMPLE_4",
+          "pages": 1,
+          "sha256": "c229313fb5c226495c355c6baab52953ae50ce3676159e4bf9dac3f000a3a240"
+        },
+        {
+          "theme": "TALLY",
+          "pages": 1,
+          "sha256": "af5424b959fb6ab3be735e23f2242c2da8de3a1d73a56abbfe37f571cf19cfdb"
+        }
+      ],
+      "remaining": "Code implementation status IMPLEMENTED BUT NOT VERIFIED. Exact reference pixel parity is not certified;Android physical/emulator/Compose/PrintManager/TalkBack and complete final-head regressions remain pending. No final_status promotion."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -74711,14 +74900,14 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "5ee7646727741252096813b355d449b39ebda71e",
+    "code_head_commit": "93bd0969295d77ff7261c941546035df86d7ca70",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 9,
-      "IMPLEMENTED BUT NOT VERIFIED": 190
+      "PARTIAL": 8,
+      "IMPLEMENTED BUT NOT VERIFIED": 191
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "Finding code implementation status only. A090 English scope code-complete;Hindi explicitly user-deferred. No final-head completion claim;historical snapshots retained."
+    "scope_note": "Finding code implementation status only:191implemented but not verified/8partial. A080 fifteen-theme code scope complete with visual functional inspection,not pixel/device certification. A090 English scope complete;Hindi user-deferred. No final-head completion claim;historical evidence retained."
   }
 }

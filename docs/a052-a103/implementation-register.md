@@ -6850,7 +6850,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** All themes and colours; tax breakup/amount words/logo/signature; multi-page items; export matches preview; no private fields.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A079-A083_Estimate_Quotation_Audit.md"], "final_head_regression": "NOT RUN"}
 
@@ -10572,3 +10572,8 @@ Implementation commit `eb72a4678c4494f0a3bec16ef207bc076c239456` includes saved 
 ### A090-F01 — remaining consumer matrix and current status, 2026-10-23
 
 `5ee7646727741252096813b355d449b39ebda71e`:2desktop/mobile-webPASS1.0m for remainingasset,inventoryprice,journalhistoryandbackup displays atUSD0/4decimals/twocalendars;sourceamount/date/journalcount unchanged.20focused timestamp/displaytestsPASS;7AndroidJVMtestsPASS14s,0fail/errors/skips;native compilationup-to-dateatprecedingvalidatedSalehead;no device runtime. FullTypeScript/focusedESLint/diffPASS. Approved English implementation scope now IMPLEMENTED BUT NOT VERIFIED;Hindi intentionally deferred by user. Final-head and device dispositions remain pending;no final_status set. Current199status:190implemented but not verified,9partial,0notstarted. Historical evidence/snapshots retained. Corrected stale Party Transfer decision annotation to point to its completed financial/Web/native/reversal implementation;original199IDs unchanged.
+
+
+### A080-F01 — all15 rendered theme matrix, 2026-10-23
+
+`93bd0969295d77ff7261c941546035df86d7ca70` retains actual authenticated theme PDFs in Playwright artifacts.1desktop casePASS1.0m with15Web/15nativeendpoint requests;earlier2profiles passedsameproductcode. Rendered all15firstpages withpdftoppm andinspectedcontactsheet:one-item fixture1pageeach,orientation/header/grid/extendedtax/acknowledgement/dual-tone/Tallymonochrome treatments visible without observedclipping. ArtifactSHA256manifest retainedinJSON. FullTypeScript/focusedESLint/diffPASS. Combined with original finding-specific Web/native picker/ApplyCancel/printshare/48nativeJVM+lint andPDFunit evidence,code scope now IMPLEMENTED BUT NOT VERIFIED. Pixel-perfect reference parity,Androiddevice/PrintManager/TalkBack,andfinalcompletehead remain unverified. Current199status:191implemented but not verified/8partial/0notstarted;no final_status promoted.
