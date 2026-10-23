@@ -69898,6 +69898,22 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A088-F01 staysPARTIAL. This is operational public-schema database recovery,not applicationJSONbundle import or provider/private-file/deleted-history recovery. Roles/grants/ownership,nonpublicschemas,externalextensionfiles,sequencecurrentpositions andproduction-scale performance notcertified. Full checkpoint/device/finalhead validation pending."
+        },
+        {
+          "evidence_key": "recovery_ci_runner_image_compatibility_2026_10_23",
+          "implementation_commit": "c99c5fccd495943a9e435e3f528309047e3415b1",
+          "work": "Replaced runner apt installation with temporary PostgreSQL clients from the exact cached CI service image. Docker clients run with runner UID/GID, read-only root filesystem and only the temporary dump directory mounted. No version mismatch or Ubuntu package dependency. Application/database recovery logic unchanged.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "docs/a052-a103/recovery-verification.md"
+          ],
+          "tests": {
+            "prior_ci": "39965827235 exacteddf37ca73b0d1cd43cb41294fb6cdb55f65504d:WebSUCCESS,AndroidSUCCESS,migrationFAILat client setup exit100,before recovery tests. Runner ubuntu-latest migratingtoUbuntu26; PostgreSQL16 aptclient availability notportable.",
+            "local_exact_workflow_step": "Extracted actual YAML run step,substituted only local service container name;all9recovery/guard tests PASS9.84s,0fail/skip,using actual local PostgreSQL17.11 service image. Includes real standalone Docker-client dump/restore over host networking,read-only root and UID/GID/directory mounts.",
+            "workflow": "YAMLparse,bash-n andgitdiff--check PASS. No Web/native product source or migration changed.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "Exact new PRhead CI must passonPG16 service. A088remainsPARTIALfor application bundle/provider/private-file recovery and final validation."
         }
       ],
       "push_checkpoint_evidence": {
@@ -72781,7 +72797,7 @@
   "validation": {
     "final_head_status": "NOT RUN",
     "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
-    "ci_status": "TargetedCI39961596089 succeeded on exact prior head9fc181bbd8f9e66f27cb0b95137c7ab99c95a1d3. New isolated recovery checkpoint awaits ownCI;full final199head NOT RUN.",
+    "ci_status": "CI39965827235 exacteddf37ca:Web/Android passed;migration client apt setup failedexit100 beforetests. Service-image Docker client fix locally verified9PASS;newhead CI pending. Fullfinal199head NOT RUN.",
     "migration_status": "147-migration isolated clean-chain preservation/replay rehearsal passed on 23 October; no migration changed in latest UI slices. Complete final-head rehearsal pending; no production database change.",
     "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
@@ -75545,6 +75561,25 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A088-F01 staysPARTIAL. This is operational public-schema database recovery,not applicationJSONbundle import or provider/private-file/deleted-history recovery. Roles/grants/ownership,nonpublicschemas,externalextensionfiles,sequencecurrentpositions andproduction-scale performance notcertified. Full checkpoint/device/finalhead validation pending."
+    },
+    {
+      "finding_ids": [
+        "A088-F01"
+      ],
+      "evidence_key": "recovery_ci_runner_image_compatibility_2026_10_23",
+      "implementation_commit": "c99c5fccd495943a9e435e3f528309047e3415b1",
+      "work": "Replaced runner apt installation with temporary PostgreSQL clients from the exact cached CI service image. Docker clients run with runner UID/GID, read-only root filesystem and only the temporary dump directory mounted. No version mismatch or Ubuntu package dependency. Application/database recovery logic unchanged.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "docs/a052-a103/recovery-verification.md"
+      ],
+      "tests": {
+        "prior_ci": "39965827235 exacteddf37ca73b0d1cd43cb41294fb6cdb55f65504d:WebSUCCESS,AndroidSUCCESS,migrationFAILat client setup exit100,before recovery tests. Runner ubuntu-latest migratingtoUbuntu26; PostgreSQL16 aptclient availability notportable.",
+        "local_exact_workflow_step": "Extracted actual YAML run step,substituted only local service container name;all9recovery/guard tests PASS9.84s,0fail/skip,using actual local PostgreSQL17.11 service image. Includes real standalone Docker-client dump/restore over host networking,read-only root and UID/GID/directory mounts.",
+        "workflow": "YAMLparse,bash-n andgitdiff--check PASS. No Web/native product source or migration changed.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "Exact new PRhead CI must passonPG16 service. A088remainsPARTIALfor application bundle/provider/private-file recovery and final validation."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75581,7 +75616,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "8e951b8e1a6d1809e58b741ae853645fbaf6b4c6",
+    "code_head_commit": "c99c5fccd495943a9e435e3f528309047e3415b1",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
