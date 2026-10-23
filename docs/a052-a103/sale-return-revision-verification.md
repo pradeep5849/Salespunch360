@@ -103,3 +103,12 @@ tables and manually enforced constraints/index names) were preserved rather than
 removed or misreported as a clean comparison. Final release validation must
 retain this explicit limitation. Latest browser rerun after Home integration:
 twoPASS,1.1minutes. No final199-finding status was promoted.
+
+## CI regression follow-up
+
+Guard-order fix source: `51e1533e6338215e1b0aed64c7b6e09b22a4616a`. CI39998410891 on6e7342cb found
+a Web commercial runtime regression: quantity validation ran before the existing
+cumulative-value guard. Restored value validation first without weakening either
+check. Exact CI selection:294PASS/27suites6.95s. Twelve financial integration
+cases rerunPASS4.83s;TypeScript/focusedESLintPASS. Migration job of that CI run
+passed;new exact-head CI is required rather than reusing a failed run.

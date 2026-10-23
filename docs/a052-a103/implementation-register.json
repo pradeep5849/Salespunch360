@@ -67763,10 +67763,15 @@
             "final_199_head": "NOT RUN",
             "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
             "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
-            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
+            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation.",
+            "ci_regression": "CI39998410891 on6e7342cb:Webfailed commercial runtime cumulative-limit test;MigrationSUCCESS;Androidrunningwhenrecorded. Quantity validation moved after existing cumulative-value check (business guard preserved);exact27-suite294test Webgroup PASS6.95s. New12financialintegration tests rerunPASS4.83s;TypeScript/focusedESLintPASS. Requiresnew exact-headCI."
           },
           "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
-          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
+          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc",
+          "code_commits": [
+            "8e8f5ca780b379acb207983205fa5dc5934268fc",
+            "51e1533e6338215e1b0aed64c7b6e09b22a4616a"
+          ]
         }
       }
     },
@@ -68442,10 +68447,15 @@
             "final_199_head": "NOT RUN",
             "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
             "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
-            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
+            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation.",
+            "ci_regression": "CI39998410891 on6e7342cb:Webfailed commercial runtime cumulative-limit test;MigrationSUCCESS;Androidrunningwhenrecorded. Quantity validation moved after existing cumulative-value check (business guard preserved);exact27-suite294test Webgroup PASS6.95s. New12financialintegration tests rerunPASS4.83s;TypeScript/focusedESLintPASS. Requiresnew exact-headCI."
           },
           "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
-          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
+          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc",
+          "code_commits": [
+            "8e8f5ca780b379acb207983205fa5dc5934268fc",
+            "51e1533e6338215e1b0aed64c7b6e09b22a4616a"
+          ]
         }
       },
       "push_checkpoint_evidence": {
@@ -69583,10 +69593,15 @@
             "final_199_head": "NOT RUN",
             "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
             "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
-            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
+            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation.",
+            "ci_regression": "CI39998410891 on6e7342cb:Webfailed commercial runtime cumulative-limit test;MigrationSUCCESS;Androidrunningwhenrecorded. Quantity validation moved after existing cumulative-value check (business guard preserved);exact27-suite294test Webgroup PASS6.95s. New12financialintegration tests rerunPASS4.83s;TypeScript/focusedESLintPASS. Requiresnew exact-headCI."
           },
           "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
-          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
+          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc",
+          "code_commits": [
+            "8e8f5ca780b379acb207983205fa5dc5934268fc",
+            "51e1533e6338215e1b0aed64c7b6e09b22a4616a"
+          ]
         }
       },
       "push_checkpoint_evidence": {
@@ -72874,7 +72889,7 @@
   "validation": {
     "final_head_status": "NOT RUN",
     "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
-    "ci_status": "CI39965827235 exacteddf37ca:Web/Android passed;migration client apt setup failedexit100 beforetests. Service-image Docker client fix locally verified9PASS;newhead CI pending. Fullfinal199head NOT RUN.",
+    "ci_status": "New exact-head CI required after credit guard-order fix;prior6e7342cb WebFAIL/MigrationSUCCESS,not a passing head.",
     "migration_status": "New148migration successfully rehearsed locally,123existingtables unchanged. Pre-existing536line migration/datamodel drift identical to pre-change baseline;not repaired or hidden. Production migrations not executed.",
     "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
@@ -74271,7 +74286,7 @@
   "push_checkpoint": {
     "date": "2026-10-14",
     "timezone": "Asia/Calcutta",
-    "code_head": "8e8f5ca780b379acb207983205fa5dc5934268fc",
+    "code_head": "51e1533e6338215e1b0aed64c7b6e09b22a4616a",
     "base_commit": "a3e284bca56db3608193a3833b986bb57450d86c",
     "status": "DRAFT CHECKPOINT; NOT READY FOR MERGE",
     "counts": {
@@ -75676,10 +75691,15 @@
           "final_199_head": "NOT RUN",
           "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
           "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
-          "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
+          "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation.",
+          "ci_regression": "CI39998410891 on6e7342cb:Webfailed commercial runtime cumulative-limit test;MigrationSUCCESS;Androidrunningwhenrecorded. Quantity validation moved after existing cumulative-value check (business guard preserved);exact27-suite294test Webgroup PASS6.95s. New12financialintegration tests rerunPASS4.83s;TypeScript/focusedESLintPASS. Requiresnew exact-headCI."
         },
         "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
-        "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
+        "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc",
+        "code_commits": [
+          "8e8f5ca780b379acb207983205fa5dc5934268fc",
+          "51e1533e6338215e1b0aed64c7b6e09b22a4616a"
+        ]
       }
     }
   ],
@@ -75717,7 +75737,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc",
+    "code_head_commit": "51e1533e6338215e1b0aed64c7b6e09b22a4616a",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
