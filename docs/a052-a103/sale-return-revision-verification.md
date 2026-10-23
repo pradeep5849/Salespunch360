@@ -112,3 +112,13 @@ cumulative-value guard. Restored value validation first without weakening either
 check. Exact CI selection:294PASS/27suites6.95s. Twelve financial integration
 cases rerunPASS4.83s;TypeScript/focusedESLintPASS. Migration job of that CI run
 passed;new exact-head CI is required rather than reusing a failed run.
+
+## Extended matrix after CI fix
+
+Sixteen financial integration cases PASS7.10s. Added historical secondary-unit
+conversion after master changes, role/company/branch denial with no side effects,
+Accountant authority, prior-periodP&L stability, correction-date profit difference
+minus20, balanced BalanceSheet, physicalbatchstock1 and netCOGS25. Full TypeScript
+and focused ESLintPASS. These overlap earlier12case runs, not additive counts.
+CI39999035042 exactc602c401SUCCESS(Web,Migration,Android). A later test/evidence
+commit must not be reported as that exactCIhead. Final199headvalidationNOTRUN.
