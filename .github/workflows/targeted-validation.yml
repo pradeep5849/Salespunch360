@@ -135,3 +135,14 @@ jobs:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
           ACCOUNT_INTEGRATION_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/account/party-transfers.integration.test.ts src/lib/account/home-noncommercial.integration.test.ts src/lib/account/implementation.integration.test.ts src/lib/account/expense-summary.integration.test.ts --maxWorkers=1
+
+      - name: Actual isolated backup restore and data-integrity regression
+        env:
+          ACCOUNT_RECOVERY_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+        run: |
+          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client-16
+          fi
+          export PATH=/usr/lib/postgresql/16/bin:$PATH
+          npx vitest run scripts/recovery-drill.test.ts scripts/recovery-drill.integration.test.ts --maxWorkers=1
