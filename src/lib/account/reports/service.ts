@@ -1,3 +1,4 @@
+import {itemBatchReport} from "./item-batch";
 import {dayBookFilterDates,dayBookReport} from "./day-book";
 import {classificationSalesReport} from "./classification-sales";
 import {orderReport} from "./order-reports";
@@ -239,6 +240,7 @@ export async function runFinancialReportForActor(
   if(["order-transactions","order-items"].includes(name))return orderReport(await context(raw,false,actor),name==="order-items");
   if(["hsn-sales","sac-sales"].includes(name))return classificationSalesReport(await context(raw,false,actor),name==="sac-sales");
   if(name==="item-discount")return itemDiscountReport(await context(raw,false,actor));
+  if(name==="item-batch")return itemBatchReport(await context(raw,false,actor));
   if(name==="item-serial")return itemSerialReport(await context(raw,false,actor));
   if(name==="gst-rate")return gstRateReport(await context(raw,false,actor));
   if(["sale-purchase-party","discount-party","gst-party"].includes(name))return partyTradeReport(await context(raw,false,actor),name==="gst-party"?"GST":name==="discount-party"?"DISCOUNT":"TRADE");

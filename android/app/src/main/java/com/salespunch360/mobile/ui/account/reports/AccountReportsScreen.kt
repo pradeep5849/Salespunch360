@@ -88,7 +88,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
         if(state.report=="day-book"){
             OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("Date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
-        }else if(state.report in setOf("stock-category","stock-summary","low-stock-summary","item-serial")){
+        }else if(state.report in setOf("stock-category","stock-summary","low-stock-summary","item-serial","item-batch")){
             OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("As of (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
         }else if(state.report !in listOf("projects","budget-vs-actual")){
         var periodOpen by remember{mutableStateOf(false)}
@@ -128,7 +128,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val choose = buildJsonObject { put("id", "");put("name", "Select bank account") }
             Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
         }
-        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-discount")) {
+        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","item-discount")) {
             OutlinedTextField(state.itemSearch,{vm.filter("itemSearch",it.take(240))},label={Text(if(state.report=="item-discount")"Item name" else "Search items")},singleLine=true,trailingIcon={if(state.itemSearch.isNotEmpty())TextButton(onClick={vm.filter("itemSearch","");vm.run()}){Text("Clear")}})
         }
         if(state.report=="item-discount"){

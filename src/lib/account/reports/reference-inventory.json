@@ -235,9 +235,11 @@
     {
       "name": "Item Batch Report",
       "group": "Item/Stock reports",
-      "destinations": [],
+      "destinations": [
+        "item-batch"
+      ],
       "requirement": "STOCK",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Item Serial Report",

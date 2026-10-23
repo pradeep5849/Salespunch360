@@ -49,7 +49,7 @@ fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<
   (key!="moneyAccountId"||report=="bank-statement")&&
   (key!="categoryId"||report in setOf("stock-detail","stock-summary","low-stock-summary","item-discount"))&&
   (key!="itemStatus"||report in setOf("stock-detail","stock-summary","low-stock-summary"))&&
-  (key!="itemSearch"||report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-discount"))&&
+  (key!="itemSearch"||report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","item-discount"))&&
   (key!="accountType"||report=="cash-bank")&&
   (key!="ownerId"||report=="owner-capital"||report=="profit-withdrawal")&&
   (key in setOf("from","to","branchId")||(key=="accountType"&&report=="cash-bank")||supported?.contains(key)!=false)

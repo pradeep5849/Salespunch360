@@ -94,7 +94,7 @@ export default async function Page({
               Project profitability and budget-versus-actual figures are
               lifetime-to-date. Date filters do not apply.
             </p>
-          ) : report === "day-book" ? (<label>Date <input type="date" name="to" defaultValue={to} required/></label>) : ["stock-category","stock-summary","low-stock-summary","item-serial"].includes(report) ? (
+          ) : report === "day-book" ? (<label>Date <input type="date" name="to" defaultValue={to} required/></label>) : ["stock-category","stock-summary","low-stock-summary","item-serial","item-batch"].includes(report) ? (
             <label>As of <input type="date" name="to" defaultValue={to} required/></label>
           ) : (
             <ReportDateRange initialFrom={from} initialTo={to} today={reportCalendarDate()}/>
