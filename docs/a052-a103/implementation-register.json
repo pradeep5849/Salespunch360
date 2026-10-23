@@ -59405,7 +59405,12 @@
         "src/lib/account/reports/order-reports.test.ts",
         "src/lib/account/reports/order-reports.ts",
         "src/lib/account/reports/classification-sales.ts",
-        "src/lib/account/reports/classification-sales.test.ts"
+        "src/lib/account/reports/classification-sales.test.ts",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "src/components/account/report-hub.tsx",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "src/lib/account/reports/reference-inventory.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -60636,6 +60641,37 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other original report destinations/reference controls and full final-head/device verification. This resolves HSN saved gross presentation and populated goods runtime gap only."
+        },
+        "reference_inventory_exposes_remaining_computations_2026_10_23": {
+          "implementation_commit": "5cb6555e3f8bd2615dd8bc5eb787db9cc7bba6cb",
+          "work": "A085 catalogue now explicitly maps all45reference names;14unavailable destinations are not claimed implemented. Existing A084 financial/report computation and reference controls remain PARTIAL.",
+          "unavailable_reference_names": [
+            "Day Book",
+            "All Transactions",
+            "All Parties Report",
+            "Party Report by Items",
+            "GSTR-1",
+            "GSTR-2",
+            "GSTR-3B",
+            "GST Transaction report",
+            "GSTR-9",
+            "Item Report by Party",
+            "Item Detail Report",
+            "Sale/Purchase By Item Category",
+            "Item Batch Report",
+            "Form No. 27EQ"
+          ],
+          "tests": {
+            "focused": "18PASS/2inventory/catalogue suites,0fail/skip.",
+            "grouped_reports": "208PASS/27suites,0fail;11DB tests/2suites skipped without explicit DB URL,12.03s. Exact favourites9tests then separately PASS with isolated PostgreSQL,0fail/skip,875ms;date-storage2 already separately PASS in preceding A084-F13 unchanged-date scope,not relabelled finalhead.",
+            "database": "9PASS/1suite including newtenant/principal-role/module/Items-OFF metadata checks,unsupported-favourite denial/no writes;existing favourites/source gating retained.",
+            "browser": "2PASS1.3m desktop/mobile Chromium:aliases route to real Customer/Vendor Ledgers;GSTR3B visible as non-clickable unavailable explanation,no link/button;nativeoptions sameinventory,unsupportedfavourite403;existing favourite persistence,module ON/OFF,project-manager restriction,AxeAA/nooverflow,journalcount unchanged.",
+            "android": "compileDebugKotlin +30JVM PASS2m14s,0fail/errors/skips;AccountReportData27 +ReferenceReportCatalogue3 newalias/unavailable/non-executable/backwards-compatibility tests. No device/Compose/TalkBack or local current-slice lint claim.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint andgitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "Implement outstanding approved report calculations/reference controls with honest limitations;do not infer A084 completion from catalogue mapping."
         }
       }
     },
@@ -64241,7 +64277,12 @@
         "src/lib/account/reports/order-reports.test.ts",
         "src/lib/account/reports/order-reports.ts",
         "src/lib/account/reports/classification-sales.ts",
-        "src/lib/account/reports/classification-sales.test.ts"
+        "src/lib/account/reports/classification-sales.test.ts",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "src/components/account/report-hub.tsx",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "src/lib/account/reports/reference-inventory.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -64330,7 +64371,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -65369,6 +65410,54 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL for other original report destinations/reference controls and full final-head/device verification. This resolves HSN saved gross presentation and populated goods runtime gap only."
+        },
+        "complete_reference_inventory_and_unavailable_clients_2026_10_23": {
+          "implementation_commit": "5cb6555e3f8bd2615dd8bc5eb787db9cc7bba6cb",
+          "work": "One machine-readable inventory preserves all45 supplied reference report names exactly once:31map to existing real shared destinations,14carry explicit unavailable explanations. Supported reference aliases search Web/native and point to real keys (Party Statement resolves customer/vendor ledgers). Unavailable rows contain no executable key/link/favourite;statutory filing outputs explicitly distinguished from activity reports. Existing47supported services/routes preserved. Authenticated optional mobile unavailableCatalogue metadata is backwards-compatible;old native server metadata fallback preserved. Company/role/module/stock-enabled guards enforced. No schema or financial write.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/page.tsx",
+            "src/components/account/report-hub.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/reference-inventory.ts",
+            "src/lib/mobile/account-reports.ts"
+          ],
+          "reference_name_count": 45,
+          "mapped_reference_names": 31,
+          "unavailable_reference_names": [
+            "Day Book",
+            "All Transactions",
+            "All Parties Report",
+            "Party Report by Items",
+            "GSTR-1",
+            "GSTR-2",
+            "GSTR-3B",
+            "GST Transaction report",
+            "GSTR-9",
+            "Item Report by Party",
+            "Item Detail Report",
+            "Sale/Purchase By Item Category",
+            "Item Batch Report",
+            "Form No. 27EQ"
+          ],
+          "tests": {
+            "focused": "18PASS/2inventory/catalogue suites,0fail/skip.",
+            "grouped_reports": "208PASS/27suites,0fail;11DB tests/2suites skipped without explicit DB URL,12.03s. Exact favourites9tests then separately PASS with isolated PostgreSQL,0fail/skip,875ms;date-storage2 already separately PASS in preceding A084-F13 unchanged-date scope,not relabelled finalhead.",
+            "database": "9PASS/1suite including newtenant/principal-role/module/Items-OFF metadata checks,unsupported-favourite denial/no writes;existing favourites/source gating retained.",
+            "browser": "2PASS1.3m desktop/mobile Chromium:aliases route to real Customer/Vendor Ledgers;GSTR3B visible as non-clickable unavailable explanation,no link/button;nativeoptions sameinventory,unsupportedfavourite403;existing favourite persistence,module ON/OFF,project-manager restriction,AxeAA/nooverflow,journalcount unchanged.",
+            "android": "compileDebugKotlin +30JVM PASS2m14s,0fail/errors/skips;AccountReportData27 +ReferenceReportCatalogue3 newalias/unavailable/non-executable/backwards-compatibility tests. No device/Compose/TalkBack or local current-slice lint claim.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint andgitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A085-F02 catalogue mapping scope IMPLEMENTED BUT NOT VERIFIED under original explicit-unavailable requirement. This does not mark14unsupported reports implemented:their missing computations/reference workflows remain A084-F03 PARTIAL,except approved separation of official27EQ filing. Final-head/device validation pending;no final_status promoted."
         }
       }
     },
@@ -74902,6 +74991,58 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "Code-scope resolution complete without unnecessary application mutation;IMPLEMENTED BUT NOT VERIFIED denotes completed correction/resolution scope,not a fictitious code fix. Final-head regression and native device limitations remain;original withdrawal and finding ID retained."
+    },
+    {
+      "finding_ids": [
+        "A085-F02",
+        "A084-F03"
+      ],
+      "implementation_commit": "5cb6555e3f8bd2615dd8bc5eb787db9cc7bba6cb",
+      "work": "One machine-readable inventory preserves all45 supplied reference report names exactly once:31map to existing real shared destinations,14carry explicit unavailable explanations. Supported reference aliases search Web/native and point to real keys (Party Statement resolves customer/vendor ledgers). Unavailable rows contain no executable key/link/favourite;statutory filing outputs explicitly distinguished from activity reports. Existing47supported services/routes preserved. Authenticated optional mobile unavailableCatalogue metadata is backwards-compatible;old native server metadata fallback preserved. Company/role/module/stock-enabled guards enforced. No schema or financial write.",
+      "files": [
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/reports/page.tsx",
+        "src/components/account/report-hub.tsx",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.integration.test.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "src/lib/account/reports/reference-inventory.ts",
+        "src/lib/mobile/account-reports.ts"
+      ],
+      "reference_name_count": 45,
+      "mapped_reference_names": 31,
+      "unavailable_reference_names": [
+        "Day Book",
+        "All Transactions",
+        "All Parties Report",
+        "Party Report by Items",
+        "GSTR-1",
+        "GSTR-2",
+        "GSTR-3B",
+        "GST Transaction report",
+        "GSTR-9",
+        "Item Report by Party",
+        "Item Detail Report",
+        "Sale/Purchase By Item Category",
+        "Item Batch Report",
+        "Form No. 27EQ"
+      ],
+      "tests": {
+        "focused": "18PASS/2inventory/catalogue suites,0fail/skip.",
+        "grouped_reports": "208PASS/27suites,0fail;11DB tests/2suites skipped without explicit DB URL,12.03s. Exact favourites9tests then separately PASS with isolated PostgreSQL,0fail/skip,875ms;date-storage2 already separately PASS in preceding A084-F13 unchanged-date scope,not relabelled finalhead.",
+        "database": "9PASS/1suite including newtenant/principal-role/module/Items-OFF metadata checks,unsupported-favourite denial/no writes;existing favourites/source gating retained.",
+        "browser": "2PASS1.3m desktop/mobile Chromium:aliases route to real Customer/Vendor Ledgers;GSTR3B visible as non-clickable unavailable explanation,no link/button;nativeoptions sameinventory,unsupportedfavourite403;existing favourite persistence,module ON/OFF,project-manager restriction,AxeAA/nooverflow,journalcount unchanged.",
+        "android": "compileDebugKotlin +30JVM PASS2m14s,0fail/errors/skips;AccountReportData27 +ReferenceReportCatalogue3 newalias/unavailable/non-executable/backwards-compatibility tests. No device/Compose/TalkBack or local current-slice lint claim.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused ESLint andgitdiff--check PASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A085-F02 catalogue mapping scope IMPLEMENTED BUT NOT VERIFIED under original explicit-unavailable requirement. This does not mark14unsupported reports implemented:their missing computations/reference workflows remain A084-F03 PARTIAL,except approved separation of official27EQ filing. Final-head/device validation pending;no final_status promoted."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -74938,14 +75079,14 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "ea5e32301037a7fb321095fae744890e1a4d34e6",
+    "code_head_commit": "5cb6555e3f8bd2615dd8bc5eb787db9cc7bba6cb",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 7,
-      "IMPLEMENTED BUT NOT VERIFIED": 192
+      "PARTIAL": 6,
+      "IMPLEMENTED BUT NOT VERIFIED": 193
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "192implemented/resolved but not finally verified;7partial;0notstarted. A084-F13 completed via original required no-code-change resolution;withdrawal preserved. A090 Hindi user-deferred. No final-head completion claim."
+    "scope_note": "193implemented/resolved but not finally verified;6partial;0notstarted. A085 catalogue complete with14explicit unavailable report computations still under A084-F03. A084-F13 withdrawal retained;Hindi user-deferred. No final-head completion claim."
   }
 }

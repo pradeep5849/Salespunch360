@@ -8218,7 +8218,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Catalogue-to-route/API coverage; Purchase register reachable; Sale vs Bill Wise Profit distinct; source permissions/modules and export format support.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED — catalogue mapping, not missing calculations.. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Reports Menu own audit completed; report destinations, shared scope/date/display and export changes recorded in the report follow-up. Shared report fixes do not certify every destination.", "tests": "Related report follow-up: 29 selected unit/contract tests, 2 withdrawal browser cases and 2 native JVM tests passed. No additional standalone whole-menu verification claimed.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -10582,3 +10582,8 @@ Implementation commit `eb72a4678c4494f0a3bec16ef207bc076c239456` includes saved 
 ### A084-F13 — native DATE and export cutoff resolution, 2026-10-23
 
 `ea5e32301037a7fb321095fae744890e1a4d34e6`:36focused/databasePASS4suites,including2realPostgreSQL metadata/Kolkata start/noon/end/nextday/single-day/as-of tests;2desktop/mobile-webPASS1.1m withfinal-day sale/return andnext-day posted goods excluded fromnative rowsandparsedCSV/XLSX/PDF. TypeScript/focusedESLint/diffPASS. Original allegation remains WITHDRAWN;no application query,financial,schema or migration change justified or made. Code-scope resolution complete;IMPLEMENTED BUT NOT VERIFIED reflects resolved required scope,not a fabricated code correction. Final-head/device verification remains. Current199status:192implemented/resolved butnotfinallyverified/7partial/0notstarted.
+
+
+### A085-F02 — all45 reference report names mapped, 2026-10-23
+
+`5cb6555e3f8bd2615dd8bc5eb787db9cc7bba6cb`:sharedmachine-readableinventory45names,31mappedtoexistingrealdestinations/14explicitunavailable;no fake links/favourite/actions. Supportedaliases searchableWeb/native,optionalnativeunavailablemetadata backwards-compatible.208groupedreportsPASS11DBskipped;favourites9DBseparatelyPASS875ms;2dateDBpreviousslicePASSnotnewfinalheadclaim.2desktop/mobile-webPASS1.3m includingaliases/unsupportedexplanation/nativeoptions/favourite403/module/role/Axe/nooverflow;journalsunchanged. Androidcompile+30JVM PASS2m14s,0fail/errors/skips;fullTypeScript/focusedESLint/diffPASS. A085catalogue scopeIMPLEMENTED BUT NOT VERIFIED;14missingreportcalculations remainexplicit A084-F03 PARTIAL andnotclaimedimplemented.193implemented/resolved butnotfinallyverified/6partial/0notstarted. No device/final199validation/merge/deploy/A104.
