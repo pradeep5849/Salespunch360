@@ -59310,7 +59310,9 @@
         "src/app/api/v1/mobile/account/purchases/[id]/confirm/route.ts",
         "src/components/account/use-editor-ready.ts",
         "src/lib/account/reports/order-reports.test.ts",
-        "src/lib/account/reports/order-reports.ts"
+        "src/lib/account/reports/order-reports.ts",
+        "src/lib/account/reports/classification-sales.ts",
+        "src/lib/account/reports/classification-sales.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -60520,6 +60522,27 @@
             "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/MoneyScreen.kt",
             ".github/workflows/targeted-validation.yml"
           ]
+        },
+        "hsn_saved_gross_and_populated_export_matrix_2026_10_23": {
+          "implementation_commit": "55362bc93db7395ca07c5563ec7f1422a5aed00c",
+          "work": "Complete HSN gross presentation using immutable saved CommercialDocumentLine.baseAmount, signed for posted credit notes and accumulated with precision48 Decimal. Explicit Gross before discount/tax label distinguishes it from taxable and tax-inclusive amounts. Shared authorized Web/native report/export results and money formatter carry the column;SAC column compatibility retained. Extend prior empty-only goods browser coverage with posted discounted taxable goods and return,then change master name/code to prove saved snapshots. No schema,ledger write or new migration.",
+          "files": [
+            "src/lib/account/reports/classification-sales.ts",
+            "src/lib/account/reports/classification-sales.test.ts",
+            "src/lib/account/reports/display.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "20PASS/2suites,0fail/skip,1.33s;gross vs taxable,return signs,USD display/export currency header plus existing classifier scope/precision/units tests.",
+            "report_regression": "204PASS/26suites,0FAIL;10DB tests/2suites initially skipped without explicit local DB URL,13.70s. Those exact10 then ran separately:10PASS/2suites,0fail/skip,1.25s with isolated PostgreSQL and maxWorkers1.",
+            "browser_database": "2PASS/1.1m desktop/mobile Chromium with real local PostgreSQL:HSN goods sale2x100 less10percent,return1 yields gross100/taxable90/tax-inclusive106.20;native authenticated rows agree;master changes do not change saved codes/names;WebCSV/XLSX/PDF parse retained codes/names/amounts;existing SAC sales/purchase,branch/role checks,Axe/nooverflow,journal count unchanged. Earlier populated test before gross source fix also2PASS1.1m,not additive.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint and gitdiff--check PASS.",
+            "android": "No native source change;existing generic server-driven columns receive new HSN field. No emulator/device runtime executed or implied.",
+            "prior_ci": "Exactc3b097463510b1f1b131dbfc192d44882cf8b368 targetedCI39921020454 SUCCESS;this report change awaits CI.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other original report destinations/reference controls and full final-head/device verification. This resolves HSN saved gross presentation and populated goods runtime gap only."
         }
       }
     },
@@ -64105,7 +64128,9 @@
         "src/app/api/v1/mobile/account/purchases/[id]/confirm/route.ts",
         "src/components/account/use-editor-ready.ts",
         "src/lib/account/reports/order-reports.test.ts",
-        "src/lib/account/reports/order-reports.ts"
+        "src/lib/account/reports/order-reports.ts",
+        "src/lib/account/reports/classification-sales.ts",
+        "src/lib/account/reports/classification-sales.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -65212,6 +65237,27 @@
             "final_199_validation": "NOT RUN"
           },
           "remaining": "A084-F03/A085-F02 remain PARTIAL:other report destinations and reference controls,HSN gross presentation/populated goods browser matrix,full device andfinalcheckpoint verification. SAC purchase-selector implementation gap is resolved;prior evidence retained."
+        },
+        "hsn_saved_gross_and_populated_export_matrix_2026_10_23": {
+          "implementation_commit": "55362bc93db7395ca07c5563ec7f1422a5aed00c",
+          "work": "Complete HSN gross presentation using immutable saved CommercialDocumentLine.baseAmount, signed for posted credit notes and accumulated with precision48 Decimal. Explicit Gross before discount/tax label distinguishes it from taxable and tax-inclusive amounts. Shared authorized Web/native report/export results and money formatter carry the column;SAC column compatibility retained. Extend prior empty-only goods browser coverage with posted discounted taxable goods and return,then change master name/code to prove saved snapshots. No schema,ledger write or new migration.",
+          "files": [
+            "src/lib/account/reports/classification-sales.ts",
+            "src/lib/account/reports/classification-sales.test.ts",
+            "src/lib/account/reports/display.ts",
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused": "20PASS/2suites,0fail/skip,1.33s;gross vs taxable,return signs,USD display/export currency header plus existing classifier scope/precision/units tests.",
+            "report_regression": "204PASS/26suites,0FAIL;10DB tests/2suites initially skipped without explicit local DB URL,13.70s. Those exact10 then ran separately:10PASS/2suites,0fail/skip,1.25s with isolated PostgreSQL and maxWorkers1.",
+            "browser_database": "2PASS/1.1m desktop/mobile Chromium with real local PostgreSQL:HSN goods sale2x100 less10percent,return1 yields gross100/taxable90/tax-inclusive106.20;native authenticated rows agree;master changes do not change saved codes/names;WebCSV/XLSX/PDF parse retained codes/names/amounts;existing SAC sales/purchase,branch/role checks,Axe/nooverflow,journal count unchanged. Earlier populated test before gross source fix also2PASS1.1m,not additive.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint and gitdiff--check PASS.",
+            "android": "No native source change;existing generic server-driven columns receive new HSN field. No emulator/device runtime executed or implied.",
+            "prior_ci": "Exactc3b097463510b1f1b131dbfc192d44882cf8b368 targetedCI39921020454 SUCCESS;this report change awaits CI.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03/A085-F02 remain PARTIAL for other original report destinations/reference controls and full final-head/device verification. This resolves HSN saved gross presentation and populated goods runtime gap only."
         }
       }
     },
@@ -74478,6 +74524,31 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A080-F01 remains PARTIAL pending complete visual/reference/device matrix and checkpoint-wide final validation. These focused passes are not a final verification claim."
+    },
+    {
+      "finding_ids": [
+        "A084-F03",
+        "A085-F02"
+      ],
+      "implementation_commit": "55362bc93db7395ca07c5563ec7f1422a5aed00c",
+      "work": "Complete HSN gross presentation using immutable saved CommercialDocumentLine.baseAmount, signed for posted credit notes and accumulated with precision48 Decimal. Explicit Gross before discount/tax label distinguishes it from taxable and tax-inclusive amounts. Shared authorized Web/native report/export results and money formatter carry the column;SAC column compatibility retained. Extend prior empty-only goods browser coverage with posted discounted taxable goods and return,then change master name/code to prove saved snapshots. No schema,ledger write or new migration.",
+      "files": [
+        "src/lib/account/reports/classification-sales.ts",
+        "src/lib/account/reports/classification-sales.test.ts",
+        "src/lib/account/reports/display.ts",
+        "e2e/a090-settings.spec.ts"
+      ],
+      "tests": {
+        "focused": "20PASS/2suites,0fail/skip,1.33s;gross vs taxable,return signs,USD display/export currency header plus existing classifier scope/precision/units tests.",
+        "report_regression": "204PASS/26suites,0FAIL;10DB tests/2suites initially skipped without explicit local DB URL,13.70s. Those exact10 then ran separately:10PASS/2suites,0fail/skip,1.25s with isolated PostgreSQL and maxWorkers1.",
+        "browser_database": "2PASS/1.1m desktop/mobile Chromium with real local PostgreSQL:HSN goods sale2x100 less10percent,return1 yields gross100/taxable90/tax-inclusive106.20;native authenticated rows agree;master changes do not change saved codes/names;WebCSV/XLSX/PDF parse retained codes/names/amounts;existing SAC sales/purchase,branch/role checks,Axe/nooverflow,journal count unchanged. Earlier populated test before gross source fix also2PASS1.1m,not additive.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused ESLint and gitdiff--check PASS.",
+        "android": "No native source change;existing generic server-driven columns receive new HSN field. No emulator/device runtime executed or implied.",
+        "prior_ci": "Exactc3b097463510b1f1b131dbfc192d44882cf8b368 targetedCI39921020454 SUCCESS;this report change awaits CI.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A084-F03/A085-F02 remain PARTIAL for other original report destinations/reference controls and full final-head/device verification. This resolves HSN saved gross presentation and populated goods runtime gap only."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
