@@ -6142,7 +6142,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Payment-In/Out, expenses and estimate filters with actual records; mixed category selection; empty results without UUID error; branch/permission/module checks.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "NOT STARTED", "work": "Historical partial work is recorded in linked source reports; finding-level verification pending.", "tests": "Historical evidence only; shared test passes do not independently close this page.", "finding_status": null, "evidence": ["SalesPunch360_A071_Source_Checkpoint.md", "SalesPunch360_A071_Audit_Report.md"], "final_head_regression": "NOT RUN"}
 
@@ -6150,7 +6150,9 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Linked finding IDs:** None explicitly linked.
 
-**Expense/Home context continuation:** Noncommercial-only filters now use an empty UUID set, preserving tenant/branch/search scope; five new query regressions passed. Real noncommercial data sources remain pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
+**Historical Expense/Home context continuation:** Noncommercial-only filters now use an empty UUID set, preserving tenant/branch/search scope; five new query regressions passed. Real noncommercial data sources remain pending. 19 grouped focused tests, TypeScript and focused lint passed. Browser slice: 2 passed in 27.2s.
+
+**23 October scope completion:** Supported normalized sources and scoped routes/printing now implemented and runtime-tested. Unsupported FA/job-work-out/repeating reference categories explicitly say they are unavailable, using the original finding’s unavailable-state alternative; their underlying financial workflows are not implemented. Code commit `fbfbfe8153acb2d3a6cf2b3ed15071ae43791b5e`. 18 focused tests passed, 2 desktop/mobile browser cases passed (1.3m), Android compile plus5 focused/regression JVM cases passed (2m3s), full TypeScript/lint passed. Complete final-head and native device verification pending; no final_status promotion.
 
 ## A071-F06 — Submitting Home search loses filter and explicit branch query
 
@@ -10546,3 +10548,7 @@ Code commit `049257c53a9df2f74676d604d7c7a3a4d7c0101f` completes the Party Trans
 Final focused checks: 19 PostgreSQL cases passed; 39 API/route cases passed; 2 desktop/mobile Chromium cases passed (1.2m) covering actual direction/autofill/save/retry/abandon/reversal/Home and mobile multipart/options, Axe/no overflow and ledger/history. Android compiled with3 focused money/request JVM tests passing (2m2s). Full TypeScript, focused ESLint and whitespace checks passed. No native UI/device/picker/TalkBack runtime claim.
 
 Exact code mappings corrected in the machine register: core/API b6cf0f63; Web326ba1de with fixture correctioncd74af6b; whole-source reversal898c739b; Home/native-detailsba008df8; native entry/control049257c5. A071-F05 remains PARTIAL for the other accepted Home variants/final matrix. A090-F01 remains PARTIAL for remaining consumers/Hindi deferral/final matrix. A088 recovery remains independently PARTIAL; newer Party Transfer UI evidence does not certify backup recovery. All199 original IDs retained; no final status promotion.
+
+### Current code-status snapshot — 23 October 2026
+
+199 original findings retained:189 IMPLEMENTED BUT NOT VERIFIED,10 PARTIAL,0 NOT STARTED. No final-head verified status added. A071-F05 is now code-complete against its original supported-source/unavailable-state scope after its own targeted runtime/permission/branch/module checks; this does not claim implementation of the explicitly unavailable FA/job-work-out/repeating workflows. Full199 validation, remaining10 partial findings, main conflicts and merge approval remain outstanding. A104/deploy/merge remain on hold.

@@ -51347,7 +51347,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -51583,6 +51583,16 @@
             "A090-F01 remains PARTIAL for remaining original consumers/final matrix; Hindi explicitly user-deferred.",
             "Native creation, picker, correction and photo rendering need physical/emulator runtime verification.",
             "Other partial original findings, final199 complete validation, current-main conflicts and merge approval remain outstanding."
+          ]
+        },
+        {
+          "evidence_key": "home_supported_sources_and_explicit_gaps_2026_10_23",
+          "implementation_commit": "fbfbfe8153acb2d3a6cf2b3ed15071ae43791b5e",
+          "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+          "summary": "Original Home finding correction complete in code: real authorized normalized commercial/settlement/expense/quotation/party-transfer sources with type-specific details/print behavior and safe empty UUID sets. Existing unsupported reference categories SALE_FA/PURCHASE_FA/JOB_WORK_OUT/SALE_REPEATING explicitly report unavailable on Web/native/API rather than pretending no matching transactions exist. This uses the original finding alternative of clearly exposing unavailable categories; does not implement those financial workflows. Existing first-three menu UI preserved.",
+          "remaining_limitations": [
+            "Final complete-head regression and physical/emulator native UI/accessibility/printing matrix remain unverified.",
+            "Unsupported category workflows are explicitly unavailable, not newly implemented or counted as transactions."
           ]
         }
       ],
@@ -72112,10 +72122,10 @@
   ],
   "validation": {
     "final_head_status": "NOT RUN",
-    "pr_url": null,
-    "ci_status": "NOT RUN",
-    "migration_status": "NOT RUN",
-    "conflict_status": "main fetched; same as baseline before branch creation",
+    "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
+    "ci_status": "Targeted CI39903674240 exact c2a564980e3810b5d3b8f17a2646fc0a8c9d581b in progress at update; Web/migration passed, Android pending. Newer unavailable-category code requires its own CI.",
+    "migration_status": "147-migration isolated clean-chain preservation/replay rehearsal passed on 23 October; no migration changed in latest UI slices. Complete final-head rehearsal pending; no production database change.",
+    "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
   },
   "intermediate_validation": {
@@ -73339,6 +73349,36 @@
         "Native creation, picker, correction and photo rendering need physical/emulator runtime verification.",
         "Other partial original findings, final199 complete validation, current-main conflicts and merge approval remain outstanding."
       ]
+    },
+    "home_supported_sources_and_explicit_gaps_2026_10_23": {
+      "date": "2026-10-23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "implementation_commit": "fbfbfe8153acb2d3a6cf2b3ed15071ae43791b5e",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+      "actual_implementation": "Original Home finding correction complete in code: real authorized normalized commercial/settlement/expense/quotation/party-transfer sources with type-specific details/print behavior and safe empty UUID sets. Existing unsupported reference categories SALE_FA/PURCHASE_FA/JOB_WORK_OUT/SALE_REPEATING explicitly report unavailable on Web/native/API rather than pretending no matching transactions exist. This uses the original finding alternative of clearly exposing unavailable categories; does not implement those financial workflows. Existing first-three menu UI preserved.",
+      "files": [
+        "src/lib/account/mobile-home.ts",
+        "src/lib/account/mobile-home.query.test.ts",
+        "src/components/account/account-mobile-home.tsx",
+        "src/app/workspace/account/page.tsx",
+        "android/app/src/main/java/com/salespunch360/mobile/data/Models.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "e2e/a090-settings.spec.ts"
+      ],
+      "tests": {
+        "focused": "18 Home/query/source tests passed, 0 failed/skipped, 1.10s. Includes no fake UUID query and explicit unsupported category contract.",
+        "browser": "2 desktop/mobile Chromium passed, 1.3m, full Party Transfer and Home flow including native API unavailable category metadata and visible Web notice. Earlier source adapter DB/module/isolation and runtime evidence linked in preceding A071 entries.",
+        "android": "compileDebugKotlin +PartyTransferDraft3 and DashboardParity2 JVM passed (5 tests, 0 failures/errors/skips), BUILD SUCCESSFUL2m3s. No emulator/device/TalkBack claim.",
+        "typescript": "Full tsc --noEmit PASS before runtime on unchanged sources.",
+        "eslint": "Focused ESLint --max-warnings=0 PASS; git diff --check PASS.",
+        "final_head_regression": "NOT RUN for complete199 checkpoint"
+      },
+      "remaining_limitations": [
+        "Final complete-head regression and physical/emulator native UI/accessibility/printing matrix remain unverified.",
+        "Unsupported category workflows are explicitly unavailable, not newly implemented or counted as transactions."
+      ]
     }
   },
   "approved_business_decisions": {
@@ -74391,6 +74431,14 @@
       ],
       "status": "PARTIAL",
       "evidence": "intermediate_validation.party_transfer_native_entry_and_controls_2026_10_23"
+    },
+    {
+      "key": "home_supported_sources_and_explicit_gaps_2026_10_23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "status": "IMPLEMENTED BUT NOT VERIFIED",
+      "evidence": "intermediate_validation.home_supported_sources_and_explicit_gaps_2026_10_23"
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -74423,5 +74471,17 @@
   },
   "checkpoint_pending_questions_2026_10_23": {
     "home_party_to_party": "RESOLVED by reference and user replies: actual cash/bank pass-through, default matching amounts, retained difference recorded under OtherIncome. Implementation remains partial."
+  },
+  "current_implementation_counts": {
+    "as_of_date": "2026-10-23",
+    "code_head_commit": "fbfbfe8153acb2d3a6cf2b3ed15071ae43791b5e",
+    "finding_count": 199,
+    "by_status": {
+      "PARTIAL": 10,
+      "IMPLEMENTED BUT NOT VERIFIED": 189
+    },
+    "not_started": 0,
+    "final_status_verified": 0,
+    "scope_note": "Finding code status only; no final-head completion claim. Historical checkpoint counts retained unchanged."
   }
 }
