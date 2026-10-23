@@ -3851,7 +3851,7 @@ test("A084 purchase order prepares unsaved Bills and fulfils only after posting"
  }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}});await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}})}
 });
 
-test("A080 fifteen quotation themes preview cancel apply and native authorization preserve document values",async({page})=>{
+test("A080 fifteen quotation themes preview cancel apply and native authorization preserve document values",async({page},testInfo)=>{
  test.setTimeout(240000);const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
  const quote=await createQuotationForActor(actor,{branchId,customerId,documentType:"ESTIMATE",issueDate:"2026-10-22",terms:"Retained theme terms",lines:[{lineType:"CUSTOM",itemName:"Theme work",quantity:"2",rate:"100",taxRate:"18"}]});
  const before=JSON.stringify(await db.quotationRevision.findFirstOrThrow({where:{documentId:quote.id},include:{lines:true}})),journals=await db.journalEntry.count({where:{companyId}}),original=await db.accountSettings.findUniqueOrThrow({where:{companyId}});let tokenHash="";
@@ -3864,7 +3864,7 @@ test("A080 fifteen quotation themes preview cancel apply and native authorizatio
    const query=`theme=${theme.id}&color=%23998BDF`;
    for(const [url,auth] of [[`/workspace/account/quotations/${quote.id}/pdf?preview=1&${query}`,undefined],[`/api/v1/mobile/account/quotations/${quote.id}/pdf?${query}`,headers]] as const){
     const res=await page.request.get(url,{headers:auth});expect(res.status()).toBe(200);expect(res.headers()["cache-control"]).toContain("private");expect(res.headers()["cache-control"]).toContain("no-store");expect(res.headers()["x-content-type-options"]).toBe("nosniff");
-    const bytes=await res.body(),pdf=await PDFDocument.load(bytes);expect(pdf.getPage(0).getWidth()>pdf.getPage(0).getHeight()).toBe(theme.id.startsWith("LANDSCAPE"));const text=(await extractPdfText(bytes)).text;expect(text).toContain("Theme work");expect(text).toContain("Retained theme terms");expect(text).toContain("236");
+    const bytes=await res.body();if(!auth){const path=testInfo.outputPath(`${theme.id}.pdf`);await(await import("node:fs/promises")).writeFile(path,bytes);await testInfo.attach(`${theme.id}.pdf`,{path,contentType:"application/pdf"})}const pdf=await PDFDocument.load(bytes);expect(pdf.getPage(0).getWidth()>pdf.getPage(0).getHeight()).toBe(theme.id.startsWith("LANDSCAPE"));const text=(await extractPdfText(bytes)).text;expect(text).toContain("Theme work");expect(text).toContain("Retained theme terms");expect(text).toContain("236");
    }
   }
   expect((await db.accountSettings.findUniqueOrThrow({where:{companyId}})).transactionDefaults).toEqual(original.transactionDefaults);
