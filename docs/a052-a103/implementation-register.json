@@ -69912,7 +69912,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -70746,6 +70746,22 @@
             "Native creation, picker, correction and photo rendering need physical/emulator runtime verification.",
             "Other partial original findings, final199 complete validation, current-main conflicts and merge approval remain outstanding."
           ]
+        },
+        "remaining_display_consumer_matrix_2026_10_23": {
+          "implementation_commit": "5ee7646727741252096813b355d449b39ebda71e",
+          "work": "Independently completed the recorded remaining consumer runtime matrix:asset money/calendar,inventory price money and effective date range,journal history date,backup generated date,USD0/4decimals andtwo calendars. No new product-code change:existing company-scoped formatters consumed correctly. Historical money/date source values and journal count unchanged. Combined with finding-specific prior General/expense/money/report/stock/commercial/quotation/native consumer evidence,approved English code scope is implemented;Hindi remains explicitly user-deferred. Final-head/device verification remains unexecuted.",
+          "files": [
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "browser_database": "2PASS1.0m desktop/mobile Chromium with isolated PostgreSQL. Each profile exercises4remainingpageconsumers at0/4decimals andMM/DD/YYYY/YYYY-MM-DD;actualsaved12.35asset/1.20salvage/12.34price anddate13/20 retained;backup scopedlink andjournal record visible;no overflow on final page and unchanged persisted asset/price/date/journalcount. This does not assert full accessibility on every page or native device runtime.",
+            "focused": "20PASS/2existingtimestamp/display-preference suites,0fail/skip.",
+            "android": "7JVM tests PASS:AccountDisplayPreferences5 +ExpenseLegacyJson2,0fail/errors/skips,14s;compilation task up-to-date after previous successful13SaleJVM/compile2m17s atsame native source. No native source changes in this test slice;no device/Compose/TalkBack runtime.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint and gitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "Code implementation status IMPLEMENTED BUT NOT VERIFIED. Hindi intentionally deferred by user. Final complete-head regressions and Android device/runtime limitations must receive explicit final disposition;no final_status promotion."
         }
       },
       "intermediate_validation": {
@@ -73631,7 +73647,11 @@
       "source": "User reference and replies23October2026",
       "ui": "Party-to-Party Transfer date/firm/two parties Received/Paid amount/note/image/Save&New/Save. Entering amount initially mirrors it for second party; paid amount may differ for commission case.",
       "accounting": "Actual cash/bank movement. Received600/paid500 =>commission100underOtherIncome,500pass-throughexcludedfromincomeandexpense. Received600/paid600 =>noincome. Default800/800 =>noincome.",
-      "implementation": "Calculation/validation foundation only in bee3a9c9111cba370942ec9e063d364528cc3c82; complete financial workflow not yet implemented."
+      "implementation": "Foundationbee3a9c9 retained;atomicfinancialworkflowb6cf0f63,Webform326ba1de/nativeentry049257c5,whole-source reversal898c739b,Home sourcesfbfbfe81 implemented. Finding A071-F05 code-complete under original supported-source/explicit-unavailable alternative;final/device verification pending."
+    },
+    "hindi_translation_deferral": {
+      "decision": "User explicitly deferred Hindi translation;continue English implementation.",
+      "scope": "A090-F01 approved English code scope;Hindi translation intentionally deferred,not claimed implemented."
     }
   },
   "push_checkpoint": {
@@ -74636,6 +74656,25 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference actions/cheque workflow,posted-return edit valuation policy and full final-head/device validation. A086-F05 return-value decision requested separately;guard retained until answered. No A104/merge/deploy/production action."
+    },
+    {
+      "finding_ids": [
+        "A090-F01"
+      ],
+      "implementation_commit": "5ee7646727741252096813b355d449b39ebda71e",
+      "work": "Independently completed the recorded remaining consumer runtime matrix:asset money/calendar,inventory price money and effective date range,journal history date,backup generated date,USD0/4decimals andtwo calendars. No new product-code change:existing company-scoped formatters consumed correctly. Historical money/date source values and journal count unchanged. Combined with finding-specific prior General/expense/money/report/stock/commercial/quotation/native consumer evidence,approved English code scope is implemented;Hindi remains explicitly user-deferred. Final-head/device verification remains unexecuted.",
+      "files": [
+        "e2e/a090-settings.spec.ts"
+      ],
+      "tests": {
+        "browser_database": "2PASS1.0m desktop/mobile Chromium with isolated PostgreSQL. Each profile exercises4remainingpageconsumers at0/4decimals andMM/DD/YYYY/YYYY-MM-DD;actualsaved12.35asset/1.20salvage/12.34price anddate13/20 retained;backup scopedlink andjournal record visible;no overflow on final page and unchanged persisted asset/price/date/journalcount. This does not assert full accessibility on every page or native device runtime.",
+        "focused": "20PASS/2existingtimestamp/display-preference suites,0fail/skip.",
+        "android": "7JVM tests PASS:AccountDisplayPreferences5 +ExpenseLegacyJson2,0fail/errors/skips,14s;compilation task up-to-date after previous successful13SaleJVM/compile2m17s atsame native source. No native source changes in this test slice;no device/Compose/TalkBack runtime.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused ESLint and gitdiff--check PASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "Code implementation status IMPLEMENTED BUT NOT VERIFIED. Hindi intentionally deferred by user. Final complete-head regressions and Android device/runtime limitations must receive explicit final disposition;no final_status promotion."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -74667,18 +74706,19 @@
     }
   },
   "checkpoint_pending_questions_2026_10_23": {
-    "home_party_to_party": "RESOLVED by reference and user replies: actual cash/bank pass-through, default matching amounts, retained difference recorded under OtherIncome. Implementation remains partial."
+    "home_party_to_party": "RESOLVED;atomic pass-through/commission workflow implemented and focused tested under originalA071-F05;final-head/device verification pending.",
+    "posted_return_valuation": "DECISION REQUIRED:keep original100creditnote unchanged when edited sale price80,or audited reversal/replacement80. Asked23October2026;no answer yet. Existing posted-return edit guard retained."
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "fbfbfe8153acb2d3a6cf2b3ed15071ae43791b5e",
+    "code_head_commit": "5ee7646727741252096813b355d449b39ebda71e",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 10,
-      "IMPLEMENTED BUT NOT VERIFIED": 189
+      "PARTIAL": 9,
+      "IMPLEMENTED BUT NOT VERIFIED": 190
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "Finding code status only; no final-head completion claim. Historical checkpoint counts retained unchanged."
+    "scope_note": "Finding code implementation status only. A090 English scope code-complete;Hindi explicitly user-deferred. No final-head completion claim;historical snapshots retained."
   }
 }
