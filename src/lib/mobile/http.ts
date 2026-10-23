@@ -52,6 +52,16 @@ export function mobileUnexpected(category: string, error: unknown) {
     return mobileJson(
       { error: error.message, message: accountErrorMessage(error) },
       [
+        "SALE_ALREADY_REVISED",
+        "SALE_RETURN_LINE_HISTORY_REQUIRED",
+        "SALE_RETURN_HISTORY_INCONSISTENT",
+        "SALE_STOCK_SOURCE_HISTORY_REQUIRED",
+        "SALE_STOCK_COST_HISTORY_INCONSISTENT",
+        "RETURN_REVISION_STOCK_CONFIGURATION_CHANGED",
+        "SALE_HAS_PENDING_CHEQUE",
+        "SALE_HAS_PAYMENTS_OR_ADJUSTMENTS",
+        "SALE_NOT_EDITABLE",
+        "SALE_REPLACEMENT_ALREADY_POSTED",
         "OWNER_CORRECTION_ALREADY_POSTED",
         "IDEMPOTENCY_KEY_REUSED",
         "IDEMPOTENCY_CONFLICT",

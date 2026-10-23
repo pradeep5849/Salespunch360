@@ -523,7 +523,7 @@ async function snapshotLine(
   purchaseInventory = true,
   transactionDefaults?:Prisma.JsonValue,
   documentTaxMode: "EXCLUSIVE"|"INCLUSIVE"="EXCLUSIVE",
-  retainedSaleLine?: {documentId:string;lineId:string},
+  retainedSaleLine?: {documentId:string;lineId:string;preserveServicePeriod?:boolean},
   orderSourceUnits?:ReadonlyMap<string,{unitConversionSnapshot:Prisma.JsonValue;unitName:string|null;unitSymbol:string|null}>,
 ) {
   assertCommercialItemLine(itemSettings, row);
@@ -760,13 +760,17 @@ async function snapshotLine(
     };
   }
   let servicePeriodDays:number|undefined;
-  if(type==="SALES_INVOICE"&&row.sourceId){
+  const savedServicePeriod=retainedLine?.servicePeriodDays??undefined;
+  if(retainedSaleLine?.preserveServicePeriod===true&&retainedLine&&(row.servicePeriodDays===undefined||row.servicePeriodDays===savedServicePeriod))servicePeriodDays=savedServicePeriod;
+  else if(type==="SALES_INVOICE"&&row.sourceId){
     const service=((transactionDefaults as {reminderSettings?:{service?:{enabled?:boolean;selectedItemIds?:string[];periodDays?:number;allowSalePeriodOverride?:boolean}}}|null)?.reminderSettings?.service);
+    const copiedSavedPeriod=retainedSaleLine&&retainedSaleLine.preserveServicePeriod!==true&&retainedLine&&row.servicePeriodDays===savedServicePeriod;
+    const requestedPeriod=copiedSavedPeriod&&service?.allowSalePeriodOverride!==true?undefined:row.servicePeriodDays;
     if(service?.enabled===true&&service.selectedItemIds?.includes(row.sourceId)&&Number.isInteger(service.periodDays)){
-      if(row.servicePeriodDays!==undefined&&service.allowSalePeriodOverride!==true)throw new Error("SERVICE_PERIOD_OVERRIDE_DISABLED");
-      servicePeriodDays=row.servicePeriodDays??service.periodDays;
+      if(requestedPeriod!==undefined&&service.allowSalePeriodOverride!==true)throw new Error("SERVICE_PERIOD_OVERRIDE_DISABLED");
+      servicePeriodDays=requestedPeriod??service.periodDays;
       if(servicePeriodDays===undefined||servicePeriodDays<1||servicePeriodDays>3650)throw new Error("INVALID_SERVICE_PERIOD");
-    }else if(row.servicePeriodDays!==undefined)throw new Error("INVALID_SERVICE_REMINDER_ITEM");
+    }else if(requestedPeriod!==undefined)throw new Error("INVALID_SERVICE_REMINDER_ITEM");
   }else if(row.servicePeriodDays!==undefined)throw new Error("INVALID_SERVICE_REMINDER_ITEM");
   return {
     companyId: a.companyId,
@@ -1145,7 +1149,7 @@ export async function createCommercialDocumentForActor(
                     )),
                 settings?.transactionDefaults??undefined,
                 d.taxMode,
-                retainedSale?.lineIds.has(i)?{documentId:retainedSale.documentId,lineId:retainedSale.lineIds.get(i)!}:d.copiedFromSaleId&&x.copiedFromSaleLineId?{documentId:d.copiedFromSaleId,lineId:x.copiedFromSaleLineId}:undefined,
+                retainedSale?.lineIds.has(i)?{documentId:retainedSale.documentId,lineId:retainedSale.lineIds.get(i)!,preserveServicePeriod:true}:d.copiedFromSaleId&&x.copiedFromSaleLineId?{documentId:d.copiedFromSaleId,lineId:x.copiedFromSaleLineId}:undefined,
                 orderSourceUnits,
               ),
             ),
@@ -2429,7 +2433,7 @@ export async function documentOutstandingInTx(
 ) {
   const doc = await tx.commercialDocument.findFirst({
     where: { id: documentId, companyId, status: "POSTED" },
-    select: { grandTotal: true, payableAmount: true, type: true, returnRevisionTarget:{select:{credits:{where:{creditNote:{status:"POSTED",journalEntry:{is:{status:"POSTED"}}}},select:{originalAmount:true,appliedAmount:true}}}} },
+    select: { grandTotal: true, payableAmount: true, type: true,journalEntry:{select:{status:true}},lifecycleSnapshot:{select:{state:true}}, returnRevisionTarget:{select:{credits:{where:{creditNote:{status:"POSTED",journalEntry:{is:{status:"POSTED"}}}},select:{originalAmount:true,appliedAmount:true}}}} },
   });
   if (!doc || !["SALES_INVOICE", "PURCHASE_BILL"].includes(doc.type))
     throw new Error("INVALID_FINANCIAL_DOCUMENT");
@@ -2473,7 +2477,8 @@ export async function documentOutstandingInTx(
     retainedRows=doc.returnRevisionTarget?.credits??[],
     carriedApplied=retainedRows.reduce((sum,row)=>sum.add(row.appliedAmount),new D(0)),
     carriedOriginal=retainedRows.reduce((sum,row)=>sum.add(row.originalAmount),new D(0)),
-    outstanding = base
+    retired=doc.type==="SALES_INVOICE"&&(doc.journalEntry?.status==="REVERSED"||Boolean(doc.lifecycleSnapshot)),
+    outstanding = retired?new D(0):base
       .sub(adjusted).sub(carriedApplied)
       .sub(allocations._sum.amount ?? 0)
       .sub(applications._sum.amount ?? 0);

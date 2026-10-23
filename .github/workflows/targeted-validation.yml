@@ -33,7 +33,7 @@ jobs:
       - name: Backup snapshot and scheduling regression
         run: npx vitest run src/lib/account/backup-private-files.test.ts src/app/api/account/utilities/backup/route.test.ts src/app/api/v1/mobile/account/backup/route.test.ts src/lib/account/backup-snapshot.runtime.test.ts src/lib/account/backup-settings.runtime.test.ts
       - name: Private Sale multipart, authorization and explicit Save transport
-        run: npx vitest run src/lib/account/sale-return-revisions.test.ts src/lib/account/sale-attachment-http.test.ts src/lib/account/sale-attachment-routes.test.ts src/lib/account/sale-attachment-upload.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/creation-attachments-route.test.ts
+        run: npx vitest run src/lib/mobile/sale-revision-errors.test.ts src/lib/account/sale-return-revisions.test.ts src/lib/account/sale-attachment-http.test.ts src/lib/account/sale-attachment-routes.test.ts src/lib/account/sale-attachment-upload.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/creation-attachments-route.test.ts
       - name: Party-to-party net commission policy
         run: npx vitest run src/lib/account/posted-party-balances.test.ts src/lib/account/party-transfer-policy.test.ts src/lib/account/party-transfer-photo.test.ts src/lib/account/party-transfer-http.test.ts src/lib/account/party-transfer-routes.test.ts src/lib/account/home-noncommercial.test.ts src/lib/account/mobile-home.query.test.ts src/lib/account/mobile-home.test.ts src/lib/account/transaction-retry.test.ts src/lib/accounting/service.runtime.test.ts
       - name: Money mutation validation boundaries

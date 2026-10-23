@@ -7,6 +7,7 @@ const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {createCommercialDocumentForActor,postCommercialDocumentForActor,documentOutstandingInTx} from "./commercial";
+import {dueServiceReminders,completeServiceReminder} from "./service-reminders";
 import {postedPartyBalances} from "./posted-party-balances";
 import {currentPartyBalanceForActor} from "./party-balance";
 import {runFinancialReportForActor} from "./reports/service";
@@ -41,6 +42,7 @@ describe.skipIf(!url)("A086 immutable posted return correction",()=>{
    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
    await tx.saleLifecycleSnapshot.deleteMany({where:{companyId}});
    await tx.saleRevisionCreditLine.deleteMany({where:{companyId}});await tx.saleRevisionCredit.deleteMany({where:{companyId}});await tx.saleReturnRevision.deleteMany({where:{companyId}});
+   await tx.serviceReminderCompletion.deleteMany({where:{companyId}});
    await tx.stockMovement.deleteMany({where:{companyId}});
    await tx.commercialAttachment.deleteMany({where:{companyId}});await tx.commercialAuditEvent.deleteMany({where:{companyId}});await tx.accountOperationalAudit.deleteMany({where:{companyId}});await tx.accountingAuditEvent.deleteMany({where:{companyId}});
    await tx.advanceApplication.deleteMany({where:{companyId}});await tx.settlementAllocation.deleteMany({where:{companyId}});await tx.accountSettlement.deleteMany({where:{companyId}});await tx.commercialDocumentLine.deleteMany({where:{companyId}});await tx.commercialDocument.deleteMany({where:{companyId}});await tx.journalLine.deleteMany({where:{companyId}});await tx.journalEntry.deleteMany({where:{companyId}});await tx.numberingSeries.deleteMany({where:{companyId}});await tx.ledgerAccount.deleteMany({where:{companyId}});await tx.financialYear.deleteMany({where:{companyId}});await tx.inventorySerialNumber.deleteMany({where:{companyId}});await tx.inventoryBatch.deleteMany({where:{companyId}});await tx.accountProduct.deleteMany({where:{companyId}});await tx.warehouse.deleteMany({where:{companyId}});await tx.accountUnit.deleteMany({where:{companyId}});await tx.customer.deleteMany({where:{companyId}});await tx.accountSettings.deleteMany({where:{companyId}});await tx.user.deleteMany({where:{companyId}});await tx.branch.deleteMany({where:{companyId}});await tx.company.delete({where:{id:companyId}});
@@ -239,6 +241,48 @@ describe.skipIf(!url)("A086 immutable posted return correction",()=>{
   const before=await client.journalEntry.count({where:{companyId}}),lines=await client.commercialDocumentLine.findMany({where:{documentId:source.id},orderBy:{position:"asc"}});
   await expect(replacePostedSaleForActor(actor,source.id,{...raw(),lines:lines.map(line=>({...item,originalLineId:line.id,rate:"80"}))})).rejects.toThrow("SALE_STOCK_COST_HISTORY_INCONSISTENT");
   expect(await client.journalEntry.count({where:{companyId}})).toBe(before);expect(await client.saleLifecycleSnapshot.count({where:{companyId,invoiceId:source.id}})).toBe(0);
+ });
+
+ it("does not accept another receipt against the retired source invoice",async()=>{
+  const {source,line}=await returned("2");await replacePostedSaleForActor(actor,source.id,{...raw("80","2"),lines:[{...raw("80","2").lines[0],originalLineId:line.id}]});
+  expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,source.id))).outstanding.toString()).toBe("0");
+  const {createSettlementForActor}=await import("./commercial"),before=await client.journalEntry.count({where:{companyId}});
+  await expect(createSettlementForActor(actor,{type:"CUSTOMER_RECEIPT",idempotencyKey:randomUUID(),branchId,partyId:customerId,paymentMode:"CASH",amount:"1",transactionDate:new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()),allocations:[{documentId:source.id,amount:"1"}]})).rejects.toThrow();
+  expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+ });
+ it("stops service reminders for the retired source and a fully returned replacement",async()=>{
+  const saved=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  try{
+   await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{...(saved.transactionDefaults as Prisma.JsonObject),reminderSettings:{service:{enabled:true,selectedItemIds:[productId],periodDays:1}}}}});
+   const {source,line}=await returned("2");expect((await dueServiceReminders(actor)).some(row=>row.documentId===source.id)).toBe(true);
+   const replacement=await replacePostedSaleForActor(actor,source.id,{...raw("80"),lines:[{...raw("80").lines[0],originalLineId:line.id}]});const count=await client.journalEntry.count({where:{companyId}}),reminders=await dueServiceReminders(actor);
+   expect(reminders.some(row=>[source.id,replacement.id].includes(row.documentId))).toBe(false);expect(await client.journalEntry.count({where:{companyId}})).toBe(count);
+  }finally{await client.accountSettings.update({where:{companyId},data:{transactionDefaults:saved.transactionDefaults as Prisma.InputJsonValue}})}
+ });
+
+ it("preserves completed service work on a price edit without completing additional units",async()=>{
+  const saved=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  try{
+   await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{...(saved.transactionDefaults as Prisma.JsonObject),reminderSettings:{service:{enabled:true,selectedItemIds:[productId],periodDays:1}}}}});
+   const {source,line}=await returned("2");await completeServiceReminder(actor,line.id);
+   const replacement=await replacePostedSaleForActor(actor,source.id,{...raw("80","2"),lines:[{...raw("80","2").lines[0],originalLineId:line.id}]});expect((await dueServiceReminders(actor)).some(row=>[source.id,replacement.id].includes(row.documentId))).toBe(false);
+   const current=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:replacement.id}}),additional=await replacePostedSaleForActor(actor,replacement.id,{...raw("80","3"),lines:[{...raw("80","3").lines[0],originalLineId:current.id}]});expect((await dueServiceReminders(actor)).some(row=>row.documentId===additional.id)).toBe(true);
+   expect(await client.serviceReminderCompletion.count({where:{companyId,lineId:line.id}})).toBe(1);expect(await client.serviceReminderCompletion.count({where:{companyId,lineId:current.id}})).toBe(0);
+  }finally{await client.accountSettings.update({where:{companyId},data:{transactionDefaults:saved.transactionDefaults as Prisma.InputJsonValue}})}
+ });
+
+ it("retains the saved service period after settings are disabled while rejecting new overrides",async()=>{
+  const saved=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
+  try{
+   const defaults={...(saved.transactionDefaults as Prisma.JsonObject),reminderSettings:{service:{enabled:true,selectedItemIds:[productId],periodDays:1,allowSalePeriodOverride:false}}};await client.accountSettings.update({where:{companyId},data:{transactionDefaults:defaults}});
+   const source=await createCommercialDocumentForActor(actor,raw());await postCommercialDocumentForActor(actor,{documentId:source.id});const line=await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:source.id}});expect(line.servicePeriodDays).toBe(1);
+   const before=await client.journalEntry.count({where:{companyId}});await expect(replacePostedSaleForActor(actor,source.id,{...raw("80"),lines:[{...raw("80").lines[0],originalLineId:line.id,servicePeriodDays:2}]})).rejects.toThrow("SERVICE_PERIOD_OVERRIDE_DISABLED");expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+   await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{...defaults,reminderSettings:{service:{...defaults.reminderSettings.service,periodDays:60}}}}});
+   const copy=await createCommercialDocumentForActor(actor,{...raw(),copiedFromSaleId:source.id,lines:[{...raw().lines[0],copiedFromSaleLineId:line.id,servicePeriodDays:line.servicePeriodDays}]});expect((await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:copy.id}})).servicePeriodDays).toBe(60);
+   await client.accountSettings.update({where:{companyId},data:{transactionDefaults:{...defaults,reminderSettings:{service:{...defaults.reminderSettings.service,enabled:false}}}}});
+   const replacement=await replacePostedSaleForActor(actor,source.id,{...raw("80"),lines:[{...raw("80").lines[0],originalLineId:line.id}]});expect((await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:replacement.id}})).servicePeriodDays).toBe(1);expect(await dueServiceReminders(actor)).toEqual([]);
+   const disabledCopy=await createCommercialDocumentForActor(actor,{...raw(),copiedFromSaleId:source.id,lines:[{...raw().lines[0],copiedFromSaleLineId:line.id,servicePeriodDays:line.servicePeriodDays}]});expect((await client.commercialDocumentLine.findFirstOrThrow({where:{documentId:disabledCopy.id}})).servicePeriodDays).toBeNull();
+  }finally{await client.accountSettings.update({where:{companyId},data:{transactionDefaults:saved.transactionDefaults as Prisma.InputJsonValue}})}
  });
 
 });

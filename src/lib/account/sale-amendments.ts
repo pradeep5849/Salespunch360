@@ -1,3 +1,4 @@
+import {commercialBaseQuantity} from "./commercial-stock-quantity";
 import {saleRevisionStockCostsInTx} from "./sale-revision-stock-cost";
 import {retainedSaleReturnsInTx,retainedSaleReturnAmount,carrySaleReturnsInTx,saleCorrectionFamilyInTx} from "./sale-return-revisions";
 import {recordSaleInvoiceIdentity} from "./sale-invoice-identity";
@@ -422,6 +423,8 @@ export async function replacePostedSaleForActor(
           for(const row of sale.advanceApplications)await advanceApplicationCreditInTx(tx,actor,{applicationId:row.id,entryDate:correctionDate});
           await carrySaleReturnsInTx(tx,actor,sale,replacement,sale.retainedReturns,retainedUnitLineIds,correctionDate);
         }else correctionCreditId=(await creditInTx(tx,actor,sale)).id;
+        const revisionLines=await tx.commercialDocumentLine.findMany({where:{companyId:actor.companyId,documentId:replacement.id},select:{id:true,position:true,quantity:true,baseQuantity:true}});
+        const retainedLineBindings=revisionLines.flatMap(line=>{const originalId=retainedUnitLineIds.get(line.position);if(!originalId)return[];const original=sale.lines.find(row=>row.id===originalId);if(!original)throw new Error("INVALID_SALE_LINE_SOURCE");return[{invoiceLineId:line.id,sourceLineId:original.id,inheritServiceCompletion:sale.partyId===replacement.partyId&&sale.projectId===replacement.projectId&&commercialBaseQuantity(line).lte(commercialBaseQuantity(original))}]});
         const lifecycleAudit=await tx.accountOperationalAudit.create({
           data: {
             companyId: actor.companyId,
@@ -433,6 +436,7 @@ export async function replacePostedSaleForActor(
               requestKey,
               requestHash,
               replacementId: replacement.id,
+              retainedLineBindings,
               stockRevisionCosts:stockRevision.snapshot,
               stockRevisionCostHash:commercialCreationHash({lines:[...stockRevision.costs].map(([id,cost])=>({id,cost:cost.toFixed(2)})).sort((a,b)=>a.id.localeCompare(b.id))}),
             },

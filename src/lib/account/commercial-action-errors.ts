@@ -81,6 +81,10 @@ const messages: Record<string, string> = {
     "A selected reference is no longer available. Refresh and select the customer, item and warehouse again.",
   P2034: "Another transaction changed this record. Refresh and try again.",
 };
+export function commercialDomainMessage(code: string): string | undefined {
+  return Object.hasOwn(messages, code) ? messages[code] : undefined;
+}
+
 export type CommercialCreateResult =
   | { ok: true; id: string; documentNumber: string }
   | { ok: false; errorCode: string; message: string };

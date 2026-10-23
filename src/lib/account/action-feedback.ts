@@ -1,3 +1,4 @@
+import { commercialDomainMessage } from "./commercial-action-errors";
 import { z } from "zod";
 import { AuthorizationError } from "@/lib/auth/authorization";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
@@ -338,6 +339,7 @@ const messages: Record<string, string> = {
 export const isAccountDomainError = (error: unknown): error is Error =>
   error instanceof Error &&
   (Object.hasOwn(messages, error.message) ||
+    commercialDomainMessage(error.message) !== undefined ||
     /^(CUSTOM_FIELDS_REQUIRED|INVALID_CUSTOM_FIELD):[a-zA-Z0-9_]+$/.test(
       error.message,
     ));
@@ -359,6 +361,7 @@ export function accountErrorMessage(error: unknown) {
     return "Your permission or module settings do not allow this action.";
   return error instanceof Error
     ? (messages[error.message] ??
+        commercialDomainMessage(error.message) ??
         "Unable to save. Check the details and try again.")
     : "Unable to save. Check the details and try again.";
 }
