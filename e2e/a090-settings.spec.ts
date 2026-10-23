@@ -3939,7 +3939,7 @@ test("A071 party transfer mirrors amounts posts net Other Income and preserves s
  test.setTimeout(120000);page.on("pageerror",error=>{throw new Error(`Party transfer browser error: ${error.message}`)});
  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Party transfer browser year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
  const definition=DEFAULT_LEDGER_ACCOUNTS.find(row=>row.systemKey==="OTHER_INCOME")!;
- if(!await db.ledgerAccount.findFirst({where:{companyId,systemKey:"OTHER_INCOME"}}))await db.ledgerAccount.create({data:{...definition,companyId}});
+ if(!await db.ledgerAccount.findFirst({where:{companyId,systemKey:"OTHER_INCOME"}}))await db.ledgerAccount.create({data:{companyId,code:definition.code,name:definition.name,accountClass:definition.accountClass,normalBalance:definition.normalBalance,systemKey:definition.systemKey,isSystem:true,allowPosting:true}});
  const ledger=await db.ledgerAccount.create({data:{companyId,code:`P2P-${randomUUID().slice(0,8)}`,name:"Party transfer test cash",accountClass:"ASSET",normalBalance:"DEBIT"}});
  const account=await db.moneyAccount.create({data:{companyId,branchId,name:"Party transfer test cash",type:"CASH",ledgerAccountId:ledger.id}}),vendor=await db.vendor.create({data:{companyId,name:"Party transfer test recipient"}});
  await signInSettings(page);await page.goto("/workspace/account/money/party-transfers");

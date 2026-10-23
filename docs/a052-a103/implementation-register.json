@@ -73162,8 +73162,9 @@
       "test_evidence": [
         "Desktop and mobile Chromium: 2 passed, 43.3s; mirrored800/800 and600/500, net100 Other Income, balanced3journals, reload retained source, Save & New equal800/800 with no income and cleared fields, leave unsaved creates no transaction, Axe and no horizontal overflow.",
         "Earlier browser run timed out on selector label; explicit accessible labels corrected. Next run failed contrast4.49:1 on commission summary; text contrast corrected; final assertions retained.",
-        "Full tsc --noEmit PASS; focused ESLint --max-warnings=0 PASS.",
-        "Previous exact pushed core head b6cf0f636234dac9f7fc49f25462b59af05b010e: CI39899395942 Web/migration/Android all SUCCESS. This does not certify the newer Web commit."
+        "Focused ESLint --max-warnings=0 PASS. Initial final tsc reported TS2322 in the new ledger fixture: spreading a nested-create input with companyId mixed Prisma checked/unchecked inputs. Corrected fixture to explicitly select scalar fields; rerun result recorded separately.",
+        "Previous exact pushed core head b6cf0f636234dac9f7fc49f25462b59af05b010e: CI39899395942 Web/migration/Android all SUCCESS. This does not certify the newer Web commit.",
+        "Corrected final tsc --noEmit PASS (exit0); explicit scalar ledger fixture ESLint --max-warnings=0 PASS. Browser application code unchanged after the 2 passing profiles."
       ],
       "remaining_limitations": [
         "Home transaction-source list/filter integration still pending.",
