@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   storageGet: vi.fn(),
@@ -184,4 +185,8 @@ it("embeds and verifies private bytes only on explicit file-inclusive backup",as
 it("never records successful backup when a required private file cannot be read",async()=>{
  m.identity.mockResolvedValue({id:"company-a",name:"A",slug:"a",logoObjectKey:"companies/company-a/logo",customers:[],vendors:[],accountProducts:[],projects:[],ledgerAccounts:[],financialYears:[]});m.storageGet.mockRejectedValue(new Error("missing"));
  await expect(createAccountBackupForActor(actor,false,true)).rejects.toThrow("BACKUP_FILE_UNAVAILABLE");expect(m.record).not.toHaveBeenCalled();expect(m.audit).not.toHaveBeenCalled();
+});
+
+it("includes immutable party-transfer photo references in the private file inventory",async()=>{
+ const key="companies/company-a/party-transfers/source/photo.webp";m.reads.set("accountOperationalAudit",vi.fn().mockResolvedValue([{entityId:"source",entityType:"PARTY_TRANSFER",eventType:"PARTY_TRANSFER_POSTED",metadata:{photoObjectKey:key,photoSha256:createHash("sha256").update("photo").digest("hex")}}]));m.storageGet.mockResolvedValue(Buffer.from("photo"));const bundle=JSON.parse(new TextDecoder().decode((await createAccountBackupForActor(actor,false,true)).bytes));expect(bundle.data.partyTransferPhotos).toEqual([{sourceId:"source",photoObjectKey:key,expectedSha256:createHash("sha256").update("photo").digest("hex")}]);expect(bundle.privateFiles).toEqual(expect.arrayContaining([expect.objectContaining({objectKey:key,data:Buffer.from("photo").toString("base64")})]));expect(bundle.manifest.recordCounts.partyTransferPhotos).toBe(1);
 });

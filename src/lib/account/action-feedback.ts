@@ -8,6 +8,12 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  PARTY_TRANSFER_SOURCE_REQUIRED:"This income or cash entry belongs to a party transfer and must be corrected together with that transfer.",
+  INVALID_PARTY_TRANSFER_PARTY:"Select active parties available to this firm.",
+  INVALID_PARTY_TRANSFER_CLEARING:"The pass-through clearing account is unavailable. Ask your administrator to review it.",
+  INVALID_TRANSFER_COMMISSION_CATEGORY:"The Party Transfer Commission category must be active and linked to Other Income.",
+  INVALID_PARTY_TRANSFER_PHOTO:"Choose a JPEG, PNG or WebP image no larger than 5 MB.",
+  PARTY_TRANSFER_PHOTO_INTEGRITY_FAILED:"The saved photo could not be verified. Ask your administrator to restore its original file.",
   ORDER_PURPOSE_UNAVAILABLE:"This order has no saved purchase purpose. Create a standalone bill with an explicit purpose and close the remaining order manually.",
   PURCHASE_CLASSIFICATION_REQUIRED:"Select a purchase classification for this source-linked bill before saving or posting.",
   PURCHASE_ORDER_OVERBILLED:"This bill exceeds the purchase order’s value after existing bills and drafts. Review those bills before continuing.",

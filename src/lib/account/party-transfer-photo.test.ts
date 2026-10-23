@@ -1,0 +1,5 @@
+import sharp from "sharp";
+import {it,expect} from "vitest";
+import {preparePartyTransferPhoto} from "./party-transfer-photo";
+it("normalizes supported private raster photos into bounded WebP with a content hash",async()=>{const bytes=await sharp({create:{width:1000,height:800,channels:3,background:"#123456"}}).png().toBuffer(),photo=await preparePartyTransferPhoto(new File([bytes],"image.png",{type:"image/png"}));expect(photo.mimeType).toBe("image/webp");expect(photo.sha256).toMatch(/^[0-9a-f]{64}$/);const meta=await sharp(photo.bytes).metadata();expect(meta.width).toBeLessThanOrEqual(720);expect(meta.height).toBeLessThanOrEqual(720);expect(meta.exif).toBeUndefined()});
+it("rejects unsupported, empty, oversized and disguised vector payloads",async()=>{for(const file of [new File(["<svg/>"],"image.svg",{type:"image/svg+xml"}),new File(["<svg/>"],"image.png",{type:"image/png"}),new File([],"empty.png",{type:"image/png"}),new File([new Uint8Array(5*1024*1024+1)],"large.png",{type:"image/png"}),new File(["pdf"],"file.pdf",{type:"application/pdf"})])await expect(preparePartyTransferPhoto(file)).rejects.toThrow("INVALID_PARTY_TRANSFER_PHOTO")});

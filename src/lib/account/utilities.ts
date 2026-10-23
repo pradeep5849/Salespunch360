@@ -606,7 +606,13 @@ export async function createAccountBackupForActor(actor: {
       tx.asset.findMany({where:{companyId}}),
       tx.assetAssignmentHistory.findMany({where:{companyId}}),
     ]);
+    // Financial source snapshots are immutable; these image references remain live.
+    const partyTransferPhotos=accountOperationalAudit.flatMap(row=>{
+      const metadata=row.metadata as Record<string,unknown>|null;
+      return row.entityType==="PARTY_TRANSFER"&&row.eventType==="PARTY_TRANSFER_POSTED"&&typeof metadata?.photoObjectKey==="string"?[{sourceId:row.entityId,photoObjectKey:metadata.photoObjectKey,expectedSha256:metadata.photoSha256}]:[];
+    });
     return {...identity,
+      partyTransferPhotos,
       commercialDocumentLine,
       purchaseLineAllocation,
       openingBalanceAllocation,

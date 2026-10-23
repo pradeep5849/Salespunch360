@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 import {describe,it,expect,vi} from "vitest";
 import {backupPrivateFileKeys,collectBackupPrivateFiles,verifyBackupPrivateFiles} from "./backup-private-files";
 const key="companies/a/sale-attachments/invoice/photo",snapshot={id:"a",logoObjectKey:key,commercialAttachment:[{storageKey:key}],accountOperationalAudit:[{metadata:{storageKey:"companies/foreign/private"}}],recycleBinRecords:[{snapshot:{objectKey:"companies/a/deleted"}}]};
@@ -27,3 +28,5 @@ describe("A088 bounded private-file recovery bundles",()=>{
  it("bounds file count before accessing storage",async()=>{const get=vi.fn();await expect(collectBackupPrivateFiles("a",{rows:Array.from({length:2001},(_,i)=>({objectKey:`companies/a/files/${i}`}))},{get})).rejects.toThrow("BACKUP_FILES_TOO_LARGE");expect(get).not.toHaveBeenCalled()});
  it("bounds cumulative binary payload",async()=>{const get=vi.fn().mockResolvedValue(Buffer.alloc(33*1024*1024));await expect(collectBackupPrivateFiles("a",{rows:[{objectKey:"companies/a/one"},{objectKey:"companies/a/two"}]},{get})).rejects.toThrow("BACKUP_FILES_TOO_LARGE")});
 });
+
+it("rejects private transfer evidence whose bytes no longer match its immutable source hash",async()=>{const key="companies/a/party-transfers/source/photo.webp",data={partyTransferPhotos:[{photoObjectKey:key,expectedSha256:createHash("sha256").update("original").digest("hex")}]};await expect(collectBackupPrivateFiles("a",data,{get:async()=>Buffer.from("changed")})).rejects.toThrow("BACKUP_FILE_INTEGRITY_INVALID");const correct=await collectBackupPrivateFiles("a",data,{get:async()=>Buffer.from("original")});expect(verifyBackupPrivateFiles("a",data,correct)).toEqual({files:1,bytes:8});const changedData={partyTransferPhotos:[{photoObjectKey:key,expectedSha256:"0".repeat(64)}]};expect(()=>verifyBackupPrivateFiles("a",changedData,correct)).toThrow("BACKUP_FILE_INTEGRITY_INVALID")});

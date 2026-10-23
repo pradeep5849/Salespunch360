@@ -3,6 +3,7 @@ export async function retrySerializable<T>(
   operation: () => Promise<T>,
   attempts = 3,
   replayUniqueTarget?: readonly string[],
+  additionalReplayUniqueTargets?: readonly (readonly string[])[],
 ): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -24,15 +25,14 @@ export async function retrySerializable<T>(
         // a serialization error. Only callers validating replay content opt in.
         if (
           error.code === "P2002" &&
-          replayUniqueTarget?.length &&
+          (replayUniqueTarget?.length || additionalReplayUniqueTargets?.length) &&
           meta &&
           "target" in meta &&
           Array.isArray(meta.target)
         ) {
           const target = meta.target;
           retryable =
-            target.length === replayUniqueTarget.length &&
-            replayUniqueTarget.every((field) => target.includes(field));
+            [...(replayUniqueTarget?.length?[replayUniqueTarget]:[]),...(additionalReplayUniqueTargets??[])].some(fields=>fields.length>0&&target.length===fields.length&&fields.every(field=>target.includes(field)));
         }
       }
       if (attempt >= attempts || !retryable) throw error;

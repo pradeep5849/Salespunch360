@@ -10506,3 +10506,11 @@ A086 decisions received:corrected sale retains original printed invoice number w
 `c40a224db865fc29a3bf29442d1363c52058cde0`:private PDF cache headers andall15themes through Web/native endpoints.40unit checks and2desktop/mobile browser casesPASS;fulltsc/focusedlintPASS. Initial2headerassertionfailures corrected for Next-added max-age=0;private/no-store requirements retained. Android device/reference visual verification still pending;A080-F01 PARTIAL.
 
 `bee3a9c9111cba370942ec9e063d364528cc3c82`:user-approved transfer calculation foundation only. Received600/paid500 records100OtherIncome and500pass-through,expense0;equal600/600or800/800income0.11focused tests/fulltsc/focusedlintPASS. No transfer Save/financial/UI/Home runtime implemented or claimed. A071-F05 PARTIAL. Reference/financial decisions retained in JSON;all199IDs preserved;counts188implemented-but-not-verified/11partial.
+
+### 23 October 2026 — Party Transfer atomic core and API checkpoint (A071-F05; backup link A088-F01)
+
+Both findings remain PARTIAL. Received ₹600 / paid ₹500 posts ₹500 pass-through clearing and ₹100 Other Income; equal amounts create no income. Atomic request replay, company/branch/permission/edition/period safeguards, immutable snapshots, scoped raster photos, protected child reversals and immutable backup-photo checksum checks are implemented. Web and native source/save/photo APIs share the guarded financial service and redact private keys and hashes.
+
+Evidence: 52 serialized financial tests passed; subsequent 14 photo-integrity integration tests passed; 100 focused units passed; 25 backup tests passed; 30 HTTP/route tests passed; fresh 147-migration rehearsal passed; full TypeScript and focused ESLint passed. Initial fixture, guard-order and mobile actor type failures were corrected before the passing runs. These are distinct runs, not a final full-suite total.
+
+Still pending: reference form and Home mapping, Android screens/runtime, atomic source-level reversal, full restore, and final-head validation. No production migration, deployment or merge. Code commit is the Git commit containing this entry; machine evidence key: `party_transfer_atomic_core_and_http_2026_10_23`.

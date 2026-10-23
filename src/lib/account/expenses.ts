@@ -481,6 +481,7 @@ export async function createExpenseForActor(
   a: Actor,
   raw: unknown,
   occurrenceKey?: string,
+  transaction?: Prisma.TransactionClient,
 ) {
   await assertExpenseAccess(a, "ACCOUNT_EXPENSE_ENTRY");
   const parsed = expenseInput.parse(raw);
@@ -501,10 +502,7 @@ export async function createExpenseForActor(
         ),
       )
       .digest("hex");
-  return retrySerializable(
-    () =>
-      db.$transaction(
-        async (tx) => {
+  const work=async (tx:Prisma.TransactionClient)=>{
           if (recordAsPaid)
             await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
           await lockCategory(tx, a.companyId);
@@ -615,13 +613,12 @@ export async function createExpenseForActor(
             });
           }
           return row;
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      ),
-    4,
-    ["companyId", "creationRequestKey"],
-  );
+
+  };
+  if(transaction)return work(transaction);
+  return retrySerializable(()=>db.$transaction(work,{isolationLevel:Prisma.TransactionIsolationLevel.Serializable}),4,["companyId","creationRequestKey"]);
 }
+
 export async function updateExpenseForActor(
   a: Actor,
   id: string,

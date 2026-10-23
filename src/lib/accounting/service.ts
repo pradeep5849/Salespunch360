@@ -361,6 +361,7 @@ export async function reverseJournalInTx(
     settlementId?: string;
     advanceApplicationId?: string;
     loanReceiptId?: string;
+    partyTransferId?: string;
   },
 ) {
   const d = reversalSchema.parse(raw);
@@ -377,6 +378,8 @@ export async function reverseJournalInTx(
   if (!original) throw new Error("JOURNAL_NOT_REVERSIBLE");
   // Loan balances are managed by the loan lifecycle. A generic journal reversal
   // cannot change its principal/status and must never detach the two records.
+  if(["PARTY_TRANSFER_PASS_RECEIPT","PARTY_TRANSFER_PASS_PAYMENT"].includes(original.sourceType)&&sourceLifecycle?.partyTransferId!==original.sourceId)throw new Error("PARTY_TRANSFER_SOURCE_REQUIRED");
+
   if (["LOAN_RECEIPT", "LOAN_PAYMENT", "LOAN_TOP_UP"].includes(original.sourceType) && !(original.sourceType === "LOAN_RECEIPT" && !!sourceLifecycle?.loanReceiptId && sourceLifecycle.loanReceiptId === original.sourceId))
     throw new Error("MANAGED_LOAN_REVERSAL_NOT_SUPPORTED");
   if (
@@ -389,6 +392,10 @@ export async function reverseJournalInTx(
     sourceLifecycle?.expenseId !== original.sourceId
   )
     throw new Error("MANAGED_EXPENSE_REVERSAL_REQUIRED");
+  if(original.sourceType==="OTHER_INCOME"){
+    const parent=await tx.accountOperationalAudit.findFirst({where:{companyId:a.companyId,entityType:"PARTY_TRANSFER",eventType:"PARTY_TRANSFER_POSTED",metadata:{path:["commissionIncomeId"],equals:original.sourceId}},select:{entityId:true}});
+    if(parent&&sourceLifecycle?.partyTransferId!==parent.entityId)throw new Error("PARTY_TRANSFER_SOURCE_REQUIRED");
+  }
   if (
     [
       "CUSTOMER_RECEIPT",
@@ -426,7 +433,7 @@ export async function reverseJournalInTx(
     entryDate: d.entryDate,
   });
   // A generic reversal of a managed correction cannot reopen its business record.
-  const managedCorrections=new Set(["PROJECT_EXPENSE","OFFICE_EXPENSE","OTHER_INCOME","REIMBURSEMENT","CUSTOMER_RECEIPT","CUSTOMER_ADVANCE","VENDOR_PAYMENT","VENDOR_ADVANCE","ADVANCE_APPLICATION","LOAN_RECEIPT","LOAN_PAYMENT","LOAN_TOP_UP","INVESTMENT","CAPITAL_WITHDRAWAL","WITHDRAWAL","PROFIT_DISTRIBUTION","OWNER_LOAN"]);
+  const managedCorrections=new Set(["PARTY_TRANSFER_PASS_RECEIPT","PARTY_TRANSFER_PASS_PAYMENT","PROJECT_EXPENSE","OFFICE_EXPENSE","OTHER_INCOME","REIMBURSEMENT","CUSTOMER_RECEIPT","CUSTOMER_ADVANCE","VENDOR_PAYMENT","VENDOR_ADVANCE","ADVANCE_APPLICATION","LOAN_RECEIPT","LOAN_PAYMENT","LOAN_TOP_UP","INVESTMENT","CAPITAL_WITHDRAWAL","WITHDRAWAL","PROFIT_DISTRIBUTION","OWNER_LOAN"]);
   let correctionParent=original.sourceType==="REVERSAL"?original.reversalOfId:null;const visited=new Set<string>();
   while(correctionParent){if(visited.has(correctionParent)||visited.size>=64)throw new Error("MANAGED_CORRECTION_REVERSAL_REQUIRED");visited.add(correctionParent);const source=await tx.journalEntry.findFirst({where:{id:correctionParent,companyId:a.companyId},select:{sourceType:true,reversalOfId:true}});if(!source)throw new Error("JOURNAL_NOT_REVERSIBLE");if(managedCorrections.has(source.sourceType))throw new Error("MANAGED_CORRECTION_REVERSAL_REQUIRED");correctionParent=source.sourceType==="REVERSAL"?source.reversalOfId:null;}
   if(original.sourceType==="INVESTMENT"&&await tx.assetOwnerFunding.count({where:{companyId:a.companyId,contribution:{journalEntryId:original.id},cancellation:null}}))throw new Error("OWNER_CONTRIBUTION_HAS_ASSET_FUNDING");
