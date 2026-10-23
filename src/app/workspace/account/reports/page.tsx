@@ -1,5 +1,5 @@
 import {ReportHub} from "@/components/account/report-hub";
-import {availableReportCatalogueForActor,reportFavouritesForActor} from "@/lib/account/reports/favourites";
+import {availableReportCatalogueForActor,unavailableReportCatalogueForActor,reportFavouritesForActor} from "@/lib/account/reports/favourites";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth/authorization";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
@@ -43,7 +43,7 @@ export default async function Page({
             : "Choose report dates in the report."}{" "}
           Project costing reports are lifetime-to-date.
         </p>
-        <ReportHub catalogue={await availableReportCatalogueForActor(a)} initialFavourites={await reportFavouritesForActor(a)} query={query.toString()}/>
+        <ReportHub unavailable={await unavailableReportCatalogueForActor(a)} catalogue={await availableReportCatalogueForActor(a)} initialFavourites={await reportFavouritesForActor(a)} query={query.toString()}/>
 
         <Link href="/workspace/account/reports">
           Reset dates and choose current workspace scope

@@ -1,0 +1,383 @@
+{
+  "source": "Saved A084/A085 supplied 45-report reference inventory; no additional names inferred.",
+  "reports": [
+    {
+      "name": "Sale Report",
+      "group": "Transaction",
+      "destinations": [
+        "sale-report"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Purchase Report",
+      "group": "Transaction",
+      "destinations": [
+        "purchase-report"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Day Book",
+      "group": "Transaction",
+      "destinations": [],
+      "requirement": "MONEY",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "All Transactions",
+      "group": "Transaction",
+      "destinations": [],
+      "requirement": "REPORTS",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Bill Wise Profit",
+      "group": "Transaction",
+      "destinations": [
+        "invoices"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Profit & Loss",
+      "group": "Transaction",
+      "destinations": [
+        "profit-loss"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Cashflow",
+      "group": "Transaction",
+      "destinations": [
+        "cash-flow"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Balance Sheet",
+      "group": "Transaction",
+      "destinations": [
+        "balance-sheet"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Party Statement",
+      "group": "Party reports",
+      "destinations": [
+        "customer-ledger",
+        "vendor-ledger"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Party Wise Profit & Loss",
+      "group": "Party reports",
+      "destinations": [
+        "customers"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "All Parties Report",
+      "group": "Party reports",
+      "destinations": [],
+      "requirement": "REPORTS",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Party Report by Items",
+      "group": "Party reports",
+      "destinations": [],
+      "requirement": "REPORTS",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Sale/Purchase by Party",
+      "group": "Party reports",
+      "destinations": [
+        "sale-purchase-party"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "GSTR-1",
+      "group": "GST reports",
+      "destinations": [],
+      "requirement": "TAX",
+      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+    },
+    {
+      "name": "GSTR-2",
+      "group": "GST reports",
+      "destinations": [],
+      "requirement": "TAX",
+      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+    },
+    {
+      "name": "GSTR-3B",
+      "group": "GST reports",
+      "destinations": [],
+      "requirement": "TAX",
+      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+    },
+    {
+      "name": "GST Transaction report",
+      "group": "GST reports",
+      "destinations": [],
+      "requirement": "TAX",
+      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+    },
+    {
+      "name": "GSTR-9",
+      "group": "GST reports",
+      "destinations": [],
+      "requirement": "TAX",
+      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+    },
+    {
+      "name": "Sale Summary by HSN",
+      "group": "GST reports",
+      "destinations": [
+        "hsn-sales"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "SAC Report",
+      "group": "GST reports",
+      "destinations": [
+        "sac-sales"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "Stock Summary Report",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "stock-summary"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Item Report by Party",
+      "group": "Item/Stock reports",
+      "destinations": [],
+      "requirement": "STOCK",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Item Wise Profit & Loss",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "items"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Low Stock Summary Report",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "low-stock-summary"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Item Detail Report",
+      "group": "Item/Stock reports",
+      "destinations": [],
+      "requirement": "STOCK",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Stock Detail Report",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "stock-detail"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Sale/Purchase By Item Category",
+      "group": "Item/Stock reports",
+      "destinations": [],
+      "requirement": "STOCK",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Stock summary By Item Category",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "stock-category"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Item Batch Report",
+      "group": "Item/Stock reports",
+      "destinations": [],
+      "requirement": "STOCK",
+      "reason": "This report\u2019s calculation and output are not available yet."
+    },
+    {
+      "name": "Item Serial Report",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "item-serial"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Item Wise Discount",
+      "group": "Item/Stock reports",
+      "destinations": [
+        "item-discount"
+      ],
+      "requirement": "STOCK",
+      "reason": ""
+    },
+    {
+      "name": "Bank Statement",
+      "group": "Business status",
+      "destinations": [
+        "bank-statement"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Discount Report",
+      "group": "Business status",
+      "destinations": [
+        "discount-party"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "GST Report",
+      "group": "Taxes",
+      "destinations": [
+        "gst-party"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "GST Rate Report",
+      "group": "Taxes",
+      "destinations": [
+        "gst-rate"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "Form No. 27EQ",
+      "group": "Taxes",
+      "destinations": [],
+      "requirement": "TAX",
+      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+    },
+    {
+      "name": "TCS Receivable",
+      "group": "Taxes",
+      "destinations": [
+        "tcs-receivable"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "TDS Payable",
+      "group": "Taxes",
+      "destinations": [
+        "tds-payable"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "TDS Receivable",
+      "group": "Taxes",
+      "destinations": [
+        "tds-receivable"
+      ],
+      "requirement": "TAX",
+      "reason": ""
+    },
+    {
+      "name": "Expense Transaction Report",
+      "group": "Expense reports",
+      "destinations": [
+        "expense-transactions"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Expense Category Report",
+      "group": "Expense reports",
+      "destinations": [
+        "expense-category"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Expense Item Report",
+      "group": "Expense reports",
+      "destinations": [
+        "expense-items"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Sale/Purchase Order Transaction Report",
+      "group": "Sale/Purchase Order reports",
+      "destinations": [
+        "order-transactions"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Sale/Purchase Order Item Report",
+      "group": "Sale/Purchase Order reports",
+      "destinations": [
+        "order-items"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    },
+    {
+      "name": "Loan Statement",
+      "group": "Loan Reports",
+      "destinations": [
+        "loan-statement"
+      ],
+      "requirement": "REPORTS",
+      "reason": ""
+    }
+  ]
+}

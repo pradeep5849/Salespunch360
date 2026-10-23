@@ -18,6 +18,7 @@ vi.mock("@/lib/db", () => ({
 }));
 import {
   availableReportCatalogueForActor,
+  unavailableReportCatalogueForActor,
   reportFavouritesForActor,
   setReportFavouriteForActor,
 } from "./favourites";
@@ -208,4 +209,15 @@ it.skipIf(!url)("keeps party GST in core accounting and hides it from Project Ma
 it.skipIf(!url)("keeps historical item discounts available when Items is off but enforces report role",async()=>{
  const actor={id:a,companyId};await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:false}}});
  try{expect((await availableReportCatalogueForActor(actor)).find(x=>x.key==="item-discount")).toMatchObject({filters:["customerId","categoryId","itemSearch"]});await setReportFavouriteForActor(actor,{reportKey:"item-discount",favourite:true});expect(await reportFavouritesForActor(actor)).toContain("item-discount");await client.user.update({where:{id:a},data:{accountRole:"PROJECT_MANAGER"}});expect((await availableReportCatalogueForActor(actor)).some(x=>x.key==="item-discount")).toBe(false);await expect(setReportFavouriteForActor(actor,{reportKey:"item-discount",favourite:true})).rejects.toThrow()}finally{await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true}}})}
+});
+
+it.skipIf(!url)("A085 unavailable metadata preserves tenant role stock-module guards and cannot become a favourite",async()=>{
+ const actor={id:a,companyId},before=await client.accountSettings.findUnique({where:{companyId}});
+ try{
+  await client.accountSettings.upsert({where:{companyId},create:{companyId,enabledModules:["INVENTORY"],itemSettings:{enabled:false}},update:{enabledModules:["INVENTORY"],itemSettings:{enabled:false}}});
+  const hidden=await unavailableReportCatalogueForActor(actor);expect(hidden.some(row=>row.name==="Item Batch Report")).toBe(false);expect(hidden.find(row=>row.name==="GSTR-3B")?.reason).toContain("not filing documents");
+  await client.accountSettings.update({where:{companyId},data:{itemSettings:{enabled:true}}});expect((await unavailableReportCatalogueForActor(actor)).some(row=>row.name==="Item Batch Report")).toBe(true);
+  await expect(unavailableReportCatalogueForActor({id:foreign,companyId})).rejects.toThrow();await expect(setReportFavouriteForActor(actor,{reportKey:"gstr-3b",favourite:true})).rejects.toThrow();expect(await client.accountReportFavourite.count({where:{companyId,reportKey:"gstr-3b"}})).toBe(0);
+  await client.user.update({where:{id:a},data:{accountRole:"PROJECT_MANAGER"}});expect(await unavailableReportCatalogueForActor(actor)).toEqual([]);
+ }finally{await client.user.update({where:{id:a},data:{accountRole:"ACCOUNT_ADMIN"}});if(before)await client.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{}}});else await client.accountSettings.deleteMany({where:{companyId}})}
 });

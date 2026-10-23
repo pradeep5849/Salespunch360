@@ -3,7 +3,7 @@ import {itemDiscountCategoriesForActor} from "@/lib/account/reports/item-discoun
 import {bankStatementOptionsForActor} from "@/lib/account/reports/bank-statement";
 import {stockDetailCategoriesForActor} from "@/lib/account/reports/stock-detail-options";
 import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
-import {availableReportCatalogueForActor,reportFavouritesForActor,setReportFavouriteForActor} from "@/lib/account/reports/favourites";
+import {availableReportCatalogueForActor,unavailableReportCatalogueForActor,reportFavouritesForActor,setReportFavouriteForActor} from "@/lib/account/reports/favourites";
 import {reportExportRows} from "@/lib/account/reports/export-data";
 import {formatReport} from "@/lib/account/reports/display";
 import {resolveDisplayPreferences} from "@/lib/account/display-preferences";
@@ -41,6 +41,7 @@ export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
     stockCategories: catalogue.some(x=>["stock-detail","stock-summary","low-stock-summary"].includes(x.key)) ? await stockDetailCategoriesForActor(a) : [],
     reports:catalogue.map(x=>x.key),
     catalogue,
+    unavailableCatalogue:await unavailableReportCatalogueForActor(a),
     favourites:await reportFavouritesForActor(a),
     ...options,
   };

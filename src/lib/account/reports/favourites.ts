@@ -1,3 +1,4 @@
+import {unavailableReferenceReports} from "./reference-inventory";
 import { db } from "@/lib/db";
 import { AuthorizationError } from "@/lib/auth/authorization";
 import { canUsePermission } from "@/lib/auth/permissions";
@@ -73,4 +74,13 @@ export async function setReportFavouriteForActor(actor: Actor, raw: unknown) {
     });
   else await db.accountReportFavourite.deleteMany({ where: key });
   return reportFavouritesForActor(actor);
+}
+
+/** Public report names only; no financial rows or unsupported destinations are returned. */
+export async function unavailableReportCatalogueForActor(actor:Actor){
+ const user=await principal(actor);if(user.accountRole==="PROJECT_MANAGER")return [];
+ const modules=await enabledModulesForCompany(actor.companyId!);
+ const stock=modules.includes("INVENTORY")&&canUsePermission(user,user.company!.productEdition,"ACCOUNT_STOCK");
+ const settings=stock?await db.accountSettings.findUnique({where:{companyId:actor.companyId!},select:{itemSettings:true}}):null;
+ return unavailableReferenceReports({projectManager:false,stock:stock&&(settings?.itemSettings as {enabled?:boolean}|null)?.enabled!==false,tax:modules.includes("GST_ADVANCED"),money:canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW")});
 }

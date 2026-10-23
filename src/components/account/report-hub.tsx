@@ -2,12 +2,14 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { saveReportFavourite } from "@/app/actions/report-favourites";
-type Entry = { key: string; name: string; group: string };
+type Entry = { key: string; name: string; group: string; aliases?:string[] };
 export function ReportHub({
+  unavailable=[],
   catalogue,
   initialFavourites,
   query,
 }: {
+  unavailable?:Array<{name:string;group:string;reason:string}>;
   catalogue: Entry[];
   initialFavourites: string[];
   query: string;
@@ -17,10 +19,11 @@ export function ReportHub({
     [error, setError] = useState(""),
     [pending, startTransition] = useTransition();
   const visible = catalogue.filter((x) =>
-    `${x.name} ${x.group} ${x.key}`
+    `${x.name} ${x.group} ${x.key} ${(x.aliases??[]).join(" ")}`
       .toLocaleLowerCase()
       .includes(search.trim().toLocaleLowerCase()),
   );
+  const unavailableVisible=unavailable.filter(x=>`${x.name} ${x.group}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
   function toggle(key: string) {
     setError("");
     startTransition(async () => {
@@ -93,7 +96,8 @@ export function ReportHub({
           {rows(visible.filter((x) => x.group === group))}
         </section>
       ))}
-      {!visible.length && <p>No reports match your search.</p>}
+      {unavailableVisible.length>0&&<section aria-label="Unavailable reports"><h2>Unavailable reports</h2><ul>{unavailableVisible.map(entry=><li key={entry.name}><strong>{entry.name}</strong><p>{entry.reason}</p></li>)}</ul></section>}
+      {!visible.length&&!unavailableVisible.length && <p>No reports match your search.</p>}
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import {referenceReportAliases} from "./reference-inventory";
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
   ["hsn-sales", "Sale Summary by HSN", "Tax"],
@@ -60,7 +61,7 @@ export function searchReportCatalogue(
 ) {
   const query = search.trim().toLocaleLowerCase();
   return reportsForRole(role).filter((x) =>
-    `${x.name} ${x.group} ${x.key}`.toLocaleLowerCase().includes(query),
+    `${x.name} ${x.group} ${x.key} ${referenceReportAliases(x.key).join(" ")}`.toLocaleLowerCase().includes(query),
   );
 }
 
@@ -107,5 +108,6 @@ export function reportCatalogueWithFilters(entries = REPORT_CATALOGUE) {
   return entries.map((entry) => ({
     ...entry,
     filters: reportSpecificFilters(entry.key),
+    aliases:referenceReportAliases(entry.key),
   }));
 }

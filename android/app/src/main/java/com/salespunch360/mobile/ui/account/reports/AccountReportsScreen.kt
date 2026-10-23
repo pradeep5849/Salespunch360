@@ -24,6 +24,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountReportViewModel
+import com.salespunch360.mobile.account.accountUnavailableReportCatalogue
 import com.salespunch360.mobile.account.accountReportCatalogue
 import com.salespunch360.mobile.account.accountReportFavourites
 import com.salespunch360.mobile.account.accountReportColumns
@@ -60,6 +61,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     if (state.report == null) {
         var search by remember{mutableStateOf("")}
         val entries=accountReportCatalogue(state.options,search)
+        val unavailable=accountUnavailableReportCatalogue(state.options,search)
         val favourites=accountReportFavourites(state.options)
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(16.dp)) {
             item { Text("Account reports", style = MaterialTheme.typography.headlineSmall) }
@@ -72,7 +74,11 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
                     ListItem(headlineContent={Text(report.name)},modifier=Modifier.clickable{vm.choose(report.key)},trailingContent={TextButton(onClick={vm.favourite(report.key,report.key !in favourites)},enabled=!state.favouriteSaving,modifier=Modifier.sizeIn(minWidth=48.dp,minHeight=48.dp).semantics{contentDescription="${if(report.key in favourites)"Remove"else"Add"} ${report.name} ${if(report.key in favourites)"from"else"to"} favourites"}){Text(if(report.key in favourites)"★"else"☆")}})
                 }
             }
-            if(entries.isEmpty())item{Text("No reports match your search.")}
+            if(unavailable.isNotEmpty()){
+                item{Text("Unavailable reports",style=MaterialTheme.typography.titleMedium,modifier=Modifier.padding(vertical=12.dp))}
+                items(unavailable,key={"unavailable:${it.name}"}){ report -> ListItem(headlineContent={Text(report.name)},supportingContent={Text(report.reason)}) }
+            }
+            if(entries.isEmpty()&&unavailable.isEmpty())item{Text("No reports match your search.")}
         }
         return
     }

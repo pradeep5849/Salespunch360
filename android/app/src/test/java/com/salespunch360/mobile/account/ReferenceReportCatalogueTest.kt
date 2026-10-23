@@ -1,0 +1,9 @@
+package com.salespunch360.mobile.account
+import kotlinx.serialization.json.*
+import org.junit.Assert.*
+import org.junit.Test
+class ReferenceReportCatalogueTest {
+    @Test fun searchesSupportedReferenceAliasesWithoutChangingTheDestination(){val options=Json.parseToJsonElement("""{"catalogue":[{"key":"customer-ledger","name":"Customer Ledger","group":"Parties","aliases":["Party Statement"]}]}""").jsonObject;assertEquals(listOf("customer-ledger"),accountReportCatalogue(options,"Party Statement").map{it.key});assertTrue(accountReportCatalogue(options,"missing").isEmpty())}
+    @Test fun unavailableRowsHaveReasonsAndNeverBecomeExecutableReportNames(){val options=Json.parseToJsonElement("""{"reports":["tax"],"unavailableCatalogue":[{"name":"GSTR-3B","group":"GST reports","reason":"Filing generation is not available."}]}""").jsonObject;assertEquals("GSTR-3B",accountUnavailableReportCatalogue(options,"gstr").single().name);assertTrue(accountReportCatalogue(options).none{it.key=="gstr-3b"});assertTrue(accountUnavailableReportCatalogue(options,"stock").isEmpty())}
+    @Test fun olderServerWithoutOptionalUnavailableMetadataStillWorks(){val options=Json.parseToJsonElement("""{"reports":["tax"]}""").jsonObject;assertTrue(accountUnavailableReportCatalogue(options).isEmpty());assertEquals("tax",accountReportCatalogue(options).single().key)}
+}
