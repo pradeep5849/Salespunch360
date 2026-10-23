@@ -10538,3 +10538,11 @@ Home now returns distinct scoped Received/Paid source rows and reversed status w
 Actual checks: 25 serialized database tests passed (2 files, 3.72s); 53 focused tests passed (5 files, 1.28s); 2 desktop/mobile Chromium cases passed (1.1m), including native Home filters, unique keys, commission suppression and Web navigation. Full TypeScript, focused ESLint and whitespace checks passed. Android compile and 18 selected JVM regression tests passed (2m7s); no device/UI/TalkBack runtime claim. Prior exact898c739b CI passed all jobs; this newer slice needs its own CI.
 
 Native creation/launcher correction, direction toggles, reversal controls and final199 certification remain pending. Earlier Home source backend limitation is resolved by this evidence; original IDs and PARTIAL status preserved.
+
+### 23 October 2026 — Native Party Transfer creation and correction controls
+
+Code commit `049257c53a9df2f74676d604d7c7a3a4d7c0101f` completes the Party Transfer creation/correction slice: native form/options/multipart/photo/retry handling and launcher; direction selection on Web/native; whole-source reversal controls; new flow consumes business display preferences. Branch-unassigned options return empty master lists. Missing Other Income ledger returns an actionable setup conflict.
+
+Final focused checks: 19 PostgreSQL cases passed; 39 API/route cases passed; 2 desktop/mobile Chromium cases passed (1.2m) covering actual direction/autofill/save/retry/abandon/reversal/Home and mobile multipart/options, Axe/no overflow and ledger/history. Android compiled with3 focused money/request JVM tests passing (2m2s). Full TypeScript, focused ESLint and whitespace checks passed. No native UI/device/picker/TalkBack runtime claim.
+
+Exact code mappings corrected in the machine register: core/API b6cf0f63; Web326ba1de with fixture correctioncd74af6b; whole-source reversal898c739b; Home/native-detailsba008df8; native entry/control049257c5. A071-F05 remains PARTIAL for the other accepted Home variants/final matrix. A090-F01 remains PARTIAL for remaining consumers/Hindi deferral/final matrix. A088 recovery remains independently PARTIAL; newer Party Transfer UI evidence does not certify backup recovery. All199 original IDs retained; no final status promotion.

@@ -51572,6 +51572,18 @@
             "No Android emulator/device UI/TalkBack/private-photo runtime verification.",
             "Other original partial findings, final199 validation and main conflicts remain."
           ]
+        },
+        {
+          "evidence_key": "party_transfer_native_entry_and_controls_2026_10_23",
+          "implementation_commit": "049257c53a9df2f74676d604d7c7a3a4d7c0101f",
+          "implementation_status": "PARTIAL",
+          "summary": "Native creation form uses authorized scoped options, exact decimal commission, received-to-paid autofill, direction controls retaining parties, notes/private photo, Save/Save & New and frozen idempotent retry intent. Corrected native launcher. Web/native admin whole-source reversal controls. Web/native business money/date formatters applied to new flow; active Web direction has distinct accessible color. Options with no authorized branch return no master lists. Missing Other Income configuration is actionable409.",
+          "remaining_limitations": [
+            "A071-F05 remains PARTIAL for other accepted Home filter variants and final source/device matrix; Party Transfer form and source correction gaps resolved by this evidence.",
+            "A090-F01 remains PARTIAL for remaining original consumers/final matrix; Hindi explicitly user-deferred.",
+            "Native creation, picker, correction and photo rendering need physical/emulator runtime verification.",
+            "Other partial original findings, final199 complete validation, current-main conflicts and merge approval remain outstanding."
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -69226,6 +69238,14 @@
             "No final-head full-suite/build/Android/device certification.",
             "Full backup restore and production migration remain unperformed; no production writes."
           ]
+        },
+        {
+          "evidence_key": "party_transfer_atomic_core_and_http_2026_10_23",
+          "implementation_commit": "b6cf0f636234dac9f7fc49f25462b59af05b010e",
+          "scope_clarification": "Party transfer private-photo inventory/checksum belongs to Backup scope; later Party Transfer UI progress does not determine Backup completion.",
+          "remaining_limitations": [
+            "Full validated recovery/provider-storage/historical restore matrix and final-head verification remain pending; no production restore or migration authorized."
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -70582,6 +70602,18 @@
           "work": "New named quotation renderer uses saved company money/date preferences,unchanged quantities and recorded tax values.",
           "tests": "Included in final44PASSgroup:USD3decimals,MM/DDcalendar,Karnataka supply label and unchanged source total.",
           "remaining": "A090 remainsPARTIAL;Hindi user-deferred and final consumer/device matrix pending."
+        },
+        "party_transfer_native_entry_and_controls_2026_10_23": {
+          "evidence_key": "party_transfer_native_entry_and_controls_2026_10_23",
+          "implementation_commit": "049257c53a9df2f74676d604d7c7a3a4d7c0101f",
+          "implementation_status": "PARTIAL",
+          "summary": "Native creation form uses authorized scoped options, exact decimal commission, received-to-paid autofill, direction controls retaining parties, notes/private photo, Save/Save & New and frozen idempotent retry intent. Corrected native launcher. Web/native admin whole-source reversal controls. Web/native business money/date formatters applied to new flow; active Web direction has distinct accessible color. Options with no authorized branch return no master lists. Missing Other Income configuration is actionable409.",
+          "remaining_limitations": [
+            "A071-F05 remains PARTIAL for other accepted Home filter variants and final source/device matrix; Party Transfer form and source correction gaps resolved by this evidence.",
+            "A090-F01 remains PARTIAL for remaining original consumers/final matrix; Hindi explicitly user-deferred.",
+            "Native creation, picker, correction and photo rendering need physical/emulator runtime verification.",
+            "Other partial original findings, final199 complete validation, current-main conflicts and merge approval remain outstanding."
+          ]
         }
       },
       "intermediate_validation": {
@@ -73163,7 +73195,7 @@
         "No final-head full-suite/build/Android/device certification.",
         "Full backup restore and production migration remain unperformed; no production writes."
       ],
-      "commit_sha": "Recorded by Git commit containing this evidence; no final verification claim."
+      "commit_sha": "b6cf0f636234dac9f7fc49f25462b59af05b010e"
     },
     "party_transfer_web_form_2026_10_23": {
       "date": "2026-10-23",
@@ -73193,7 +73225,8 @@
         "Full source reversal pending; component reversal remains guarded.",
         "Reference row direction toggles and final complete199 validation pending."
       ],
-      "commit_sha": "Git commit containing this evidence; final_status unchanged."
+      "commit_sha": "326ba1de92d4ef9bd74eb668626d3fea39747829",
+      "corrected_typecheck_commit": "cd74af6bb9d4d7b16f5e50ae03924bf69ad4b870"
     },
     "party_transfer_whole_source_reversal_2026_10_23": {
       "date": "2026-10-23",
@@ -73227,7 +73260,7 @@
         "Final199 full-suite/build/device/migration certification and main conflict resolution remain pending."
       ],
       "migrations": "No additional migration; existing147 chain unchanged. No production database changes.",
-      "commit_sha": "Git commit containing this evidence."
+      "commit_sha": "898c739b1edf3bba6de9f0795fb4683cb27e5516"
     },
     "party_transfer_home_and_native_details_2026_10_23": {
       "date": "2026-10-23",
@@ -73261,7 +73294,51 @@
         "No Android emulator/device UI/TalkBack/private-photo runtime verification.",
         "Other original partial findings, final199 validation and main conflicts remain."
       ],
-      "commit_sha": "Git commit containing this evidence; no final status promotion."
+      "commit_sha": "ba008df88951252efbc4303cd404652f8c875ca6"
+    },
+    "party_transfer_native_entry_and_controls_2026_10_23": {
+      "date": "2026-10-23",
+      "finding_ids": [
+        "A071-F05",
+        "A090-F01"
+      ],
+      "implementation_status": "PARTIAL",
+      "commit_sha": "049257c53a9df2f74676d604d7c7a3a4d7c0101f",
+      "actual_implementation": "Native creation form uses authorized scoped options, exact decimal commission, received-to-paid autofill, direction controls retaining parties, notes/private photo, Save/Save & New and frozen idempotent retry intent. Corrected native launcher. Web/native admin whole-source reversal controls. Web/native business money/date formatters applied to new flow; active Web direction has distinct accessible color. Options with no authorized branch return no master lists. Missing Other Income configuration is actionable409.",
+      "modified_files": [
+        "android/app/src/main/java/com/salespunch360/mobile/account/PartyTransferDraft.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/PartyTransferScreen.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/PartyTransferDetailScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/PartyTransferDraftTest.kt",
+        "src/app/api/v1/mobile/account/party-transfers/options/route.ts",
+        "src/components/account/party-transfer-form.tsx",
+        "src/components/account/party-transfer-reversal-form.tsx",
+        "src/app/workspace/account/money/party-transfers/[id]/page.tsx",
+        "src/lib/account/party-transfers.ts",
+        "src/lib/account/party-transfers.integration.test.ts",
+        "src/lib/account/party-transfer-http.ts",
+        "src/lib/account/party-transfer-http.test.ts",
+        "src/lib/account/party-transfer-routes.test.ts",
+        "e2e/a090-settings.spec.ts"
+      ],
+      "test_evidence": [
+        "19 PostgreSQL party-transfer integration tests passed, 0 failed/skipped, 5.11s, including no assigned-branch master leakage.",
+        "Final39 focused HTTP/route tests passed, 2 files, 0 failed/skipped; includes native options and actionable missing-ledger response.",
+        "Final2 desktop/mobile Chromium cases passed, 1.2m: direction swap preserves parties, selected active styling, autofill/commission, real Save/Save & New/abandon, native options/multipart create/replay, Web reversal button, native reversal/retry, Home filters/navigation, Axe/no overflow and preserved financial history. Earlier same-scope 2-case run passed before active-color assertion; not additive case totals.",
+        "Native compileDebugKotlin +3 PartyTransferDraftTest JVM passed in final controls build2m2s; exact high-precision money, equal amounts, overpayment/precision rejection and request identity/no caller commission. No native UI/emulator/device/TalkBack claim.",
+        "Final full tsc --noEmit and focused ESLint --max-warnings=0 passed after browser run; git diff --check passed."
+      ],
+      "financial_impact": "Only retained difference posts to Other Income; pass-through excluded from P/L; no automatic invoice settlement. Source reversal is atomic and immutable.",
+      "permission_impact": "Account/Plus edition, Money View for reads, Money Entry and Journal Post for saves; Account Admin plus existing expense reversal permission for commission reversal. Company/branch and subscription gates retained.",
+      "migrations": "None in this slice; previously introduced migration147 remains unchanged. No production writes.",
+      "remaining_limitations": [
+        "A071-F05 remains PARTIAL for other accepted Home filter variants and final source/device matrix; Party Transfer form and source correction gaps resolved by this evidence.",
+        "A090-F01 remains PARTIAL for remaining original consumers/final matrix; Hindi explicitly user-deferred.",
+        "Native creation, picker, correction and photo rendering need physical/emulator runtime verification.",
+        "Other partial original findings, final199 complete validation, current-main conflicts and merge approval remain outstanding."
+      ]
     }
   },
   "approved_business_decisions": {
@@ -74305,6 +74382,15 @@
       ],
       "status": "PARTIAL",
       "evidence": "intermediate_validation.party_transfer_home_and_native_details_2026_10_23"
+    },
+    {
+      "key": "party_transfer_native_entry_and_controls_2026_10_23",
+      "finding_ids": [
+        "A071-F05",
+        "A090-F01"
+      ],
+      "status": "PARTIAL",
+      "evidence": "intermediate_validation.party_transfer_native_entry_and_controls_2026_10_23"
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
