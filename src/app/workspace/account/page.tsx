@@ -38,6 +38,7 @@ export default async function Page({
     <AccountMobileHome
       shareAs={defaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"}
       tab={tab}
+      unavailableFilters={data.unavailableFilters}
       transactions={data.transactions}
       parties={data.parties}
       q={data.q}

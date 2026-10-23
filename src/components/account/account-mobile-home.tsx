@@ -165,6 +165,7 @@ export function AccountMobileHome({
   parties,
   q,
   selectedTypes,
+  unavailableFilters = [],
   searchScope = {},
   canCreateParty = false,
   canCreateSale = false,
@@ -179,6 +180,7 @@ export function AccountMobileHome({
   parties: Party[];
   q: string;
   selectedTypes: string[];
+  unavailableFilters?: {key:string;label:string;message:string}[];
 }) {
   const router = useRouter(),
     pathname = usePathname(),
@@ -377,6 +379,7 @@ export function AccountMobileHome({
           </button>
         )}
       </form>
+      {tab === "transactions"&&unavailableFilters.length>0&&<aside role="status" aria-label="Unavailable transaction categories" style={{padding:"12px 16px",color:"#334155",background:"#fff"}}>{unavailableFilters.map(item=><p key={item.key}>{item.message}</p>)}</aside>}
       {tab === "transactions" ? (
         <section className="account-home-list" aria-label="Recent transactions">
           {transactions.length ? (

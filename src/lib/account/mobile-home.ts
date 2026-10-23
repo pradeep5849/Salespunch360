@@ -18,6 +18,10 @@ export const accountHomeFilterKeys = [...accountHomeTransactionTypes,
   "SALE_FA", "PURCHASE_FA", "SALE_CANCELLED", "JOB_WORK_OUT", "SALE_REPEATING",
 ] as const;
 
+/** Keep reference categories visible without silently claiming an unsupported source has no records. */
+export const HOME_UNAVAILABLE_FILTERS:Readonly<Record<string,string>>={SALE_FA:"Sale FA",PURCHASE_FA:"Purchase FA",JOB_WORK_OUT:"Job work out (Challan)",SALE_REPEATING:"Sale [Repeating]"};
+export function unavailableHomeFilters(types:readonly string[]){return types.filter(key=>Object.hasOwn(HOME_UNAVAILABLE_FILTERS,key)).map(key=>({key,label:HOME_UNAVAILABLE_FILTERS[key],message:`${HOME_UNAVAILABLE_FILTERS[key]} is not available in Home yet. Transactions from this category are not included.`}))}
+
 export function normalizedHomeTypes(values: string[] | undefined): string[] {
   const supported = new Set<string>(accountHomeFilterKeys);
   return [...new Set((values ?? []).filter(value => supported.has(value)))];
@@ -85,7 +89,7 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
       return {...row,sourceKind:"COMMERCIAL" as const,filterType:row.type,detailHref:row.type==="SALES_INVOICE"?`/workspace/account/sales/${row.id}`:`/workspace/account/transactions/${row.id}`,printType:row.type,showBalance:true,balanceLabel:"Balance",sortAt:row.updatedAt,grandTotal:(modules?base:row.grandTotal).toString(),payableAmount:row.payableAmount?.toString()??null,balanceDue:(outstanding??row.balanceDue).toString(),paymentStatus};
     });
   const merged=[...normalized,...extraRows].sort((a,b)=>b.issueDate.getTime()-a.issueDate.getTime()||(b.sortAt?.getTime()??0)-(a.sortAt?.getTime()??0)||b.id.localeCompare(a.id)).slice(0,20);
-  return {q,types,transactions:merged.map(item=>{const {sortAt,...row}=item;void sortAt;return row;}),
+  return {q,types,unavailableFilters:unavailableHomeFilters(types),transactions:merged.map(item=>{const {sortAt,...row}=item;void sortAt;return row;}),
     parties: parties.map(party => ({ id: party.id, name: party.name, lastActivity: balanceByParty.get(party.id)?._max.issueDate ?? party.updatedAt, balance: balanceByParty.get(party.id)?._sum.balanceDue?.toString() ?? "0" })),
   };
 }

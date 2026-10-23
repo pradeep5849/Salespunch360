@@ -22,4 +22,10 @@ describe("Home commercial query with non-commercial filters", () => {
     await accountMobileHomeData(actor, context, { types: ["EXPENSE", "SALES_INVOICE"] });
     expect(mocks.documents.mock.calls[0][0].where.AND[0]).toEqual({ OR: [{ type: "SALES_INVOICE" }] });
   });
+  it("unsupported reference categories are explicit and never become fake commercial UUIDs",async()=>{
+    const result=await accountMobileHomeData(actor,context,{types:["SALE_FA","PURCHASE_FA","JOB_WORK_OUT","SALE_REPEATING","P2P_RECEIVED"]});
+    expect(result.transactions).toEqual([]);expect(result.unavailableFilters.map(row=>row.key)).toEqual(["SALE_FA","PURCHASE_FA","JOB_WORK_OUT","SALE_REPEATING"]);
+    expect(result.unavailableFilters.every(row=>row.message.includes("not included"))).toBe(true);expect(mocks.documents.mock.calls[0][0].where.AND[0]).toEqual({OR:[{id:{in:[]}}]});
+  });
+
 });

@@ -323,6 +323,7 @@ private fun AccountHomeScreen(
                 }
             }
             if(!partyMode){
+                items(home?.unavailableFilters.orEmpty(),key={"unavailable:${it.key}"}){entry->Text(entry.message,color=MaterialTheme.colorScheme.onSurface)}
                 items(home?.transactions.orEmpty(),key={"${it.sourceKind}:${it.id}"}){tx->
                     ElevatedCard(Modifier.fillMaxWidth()){
                         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
