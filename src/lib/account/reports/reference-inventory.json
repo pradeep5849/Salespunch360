@@ -223,9 +223,11 @@
     {
       "name": "Sale/Purchase By Item Category",
       "group": "Item/Stock reports",
-      "destinations": [],
+      "destinations": [
+        "category-trade"
+      ],
       "requirement": "STOCK",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Stock summary By Item Category",

@@ -29,11 +29,11 @@ export async function availableReportCatalogueForActor(actor: Actor) {
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
       (!["order-transactions","order-items"].includes(x.key)||((modules.includes("SALES")&&modules.includes("SALES_ORDER"))||(modules.includes("PURCHASES")&&modules.includes("PURCHASE_ORDER"))))&&
-      (!["sale-purchase-party","discount-party","party-items","item-party"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
+      (!["sale-purchase-party","discount-party","party-items","item-party","category-trade"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
       (!["hsn-sales","sac-sales","gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable","tcs-collected"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
       (!["hsn-sales","item-discount"].includes(x.key)||modules.includes("SALES"))&&
       (!["day-book","bank-statement","loan-statement"].includes(x.key)||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
-      (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial","item-batch"].includes(x.key)||canStock)&&
+      (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","category-trade"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
       (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||
       (modules.includes("PROJECTS") &&
