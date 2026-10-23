@@ -32,6 +32,8 @@ jobs:
         run: npx vitest run src/lib/account/backup-private-files.test.ts src/app/api/account/utilities/backup/route.test.ts src/app/api/v1/mobile/account/backup/route.test.ts src/lib/account/backup-snapshot.runtime.test.ts src/lib/account/backup-settings.runtime.test.ts
       - name: Private Sale multipart, authorization and explicit Save transport
         run: npx vitest run src/lib/account/sale-attachment-http.test.ts src/lib/account/sale-attachment-routes.test.ts src/lib/account/sale-attachment-upload.test.ts src/lib/quotations/attachment-http.test.ts src/lib/quotations/creation-attachments-route.test.ts
+      - name: Party-to-party net commission policy
+        run: npx vitest run src/lib/account/party-transfer-policy.test.ts
       - name: Money mutation validation boundaries
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
       - name: Scoped notification tabs and existing alert permissions
