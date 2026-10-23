@@ -1,6 +1,7 @@
 import {referenceReportAliases} from "./reference-inventory";
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["all-transactions", "All Transactions", "Transaction"],
   ["all-parties", "All Parties Report", "Party reports"],
   ["category-trade", "Sale/Purchase by Item Category", "Item/Stock reports"],
   ["party-items", "Party Report by Items", "Party reports"],

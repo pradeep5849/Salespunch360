@@ -31,9 +31,11 @@
     {
       "name": "All Transactions",
       "group": "Transaction",
-      "destinations": [],
+      "destinations": [
+        "all-transactions"
+      ],
       "requirement": "REPORTS",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Bill Wise Profit",
@@ -141,9 +143,11 @@
     {
       "name": "GST Transaction report",
       "group": "GST reports",
-      "destinations": [],
+      "destinations": [
+        "tax"
+      ],
       "requirement": "TAX",
-      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+      "reason": ""
     },
     {
       "name": "GSTR-9",
