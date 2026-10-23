@@ -51254,7 +51254,10 @@
         "src/lib/account/home-noncommercial.integration.test.ts",
         "src/lib/account/home-settlement.ts",
         "src/lib/account/home-settlement-scope.ts",
-        "src/app/workspace/account/settlements/[id]/page.tsx"
+        "src/app/workspace/account/settlements/[id]/page.tsx",
+        ".github/workflows/targeted-validation.yml",
+        "src/lib/account/party-transfer-policy.test.ts",
+        "src/lib/account/party-transfer-policy.ts"
       ],
       "affected_services_apis_actions": [
         "Account Home web and shared accountMobileHomeData",
@@ -51507,6 +51510,25 @@
           },
           "remaining": "A071-F05 remains PARTIAL for broader Home/noncommercial-source and party-transfer scope. This continuation only strengthens its shared duplicate provenance and related entry handling; no Home completion inferred.",
           "commit_sha": "cbfe0ce5d69844246178dbfc07d15930cc36fed2"
+        },
+        {
+          "party_transfer_net_commission_policy_2026_10_23": {
+            "implementation_commit": "bee3a9c9111cba370942ec9e063d364528cc3c82",
+            "work": "Approved agency/pass-through calculation and strict input validation only: received600/paid500 -> OtherIncome100, pass-through500, expense0; equal600/600or800/800 ->income0. ExactDecimal arithmetic, distinct typed parties, required dates/account/branch/request IDs and rejection of caller-supplied commission/expense values. No Save endpoint, ledger posting, UI, invoice allocation or Home source enabled by this foundation.",
+            "files": [
+              ".github/workflows/targeted-validation.yml",
+              "src/lib/account/party-transfer-policy.test.ts",
+              "src/lib/account/party-transfer-policy.ts"
+            ],
+            "tests": {
+              "focused": "11PASS/1file,0fail/skip,208ms; includes decimal precision, equal amounts, partial retention, invalid/overpaid values and spoofed classification rejection.",
+              "typescript": "Full tsc PASS.",
+              "eslint": "Focused policy/tests ESLint andgitdiff--check PASS.",
+              "financial_runtime": "NONE: no financial writes implemented.",
+              "browser_native_runtime": "NONE for new transfer workflow."
+            },
+            "remaining": "A071-F05 remains PARTIAL. Transactional persisted transfer/OtherIncome creation, replay/concurrency/isolation/module guards, cash/bank journals, private image, safe reversal, Web/native form and Home filters/routes/report coverage still required."
+          }
         }
       ],
       "push_checkpoint_evidence": {
@@ -55149,6 +55171,25 @@
             "device_runtime": "NOT RUN; no emulator/device verification claimed."
           },
           "remaining": "A080-F01 remains PARTIAL pending full visual/reference/device and checkpoint-wide final-head verification. This supersedes the earlier remaining combined-picker implementation gap, not its test limitations. No schema, financial, production, A104, merge or deployment change."
+        },
+        "full_theme_native_pdf_matrix_2026_10_23": {
+          "implementation_commit": "c40a224db865fc29a3bf29442d1363c52058cde0",
+          "work": "Authenticated native and Web quotation PDF downloads explicitly private/no-store/nosniff with auth-specific Vary headers. Extended existing 15-theme runtime matrix through both endpoints for each theme; temporary previews do not persist settings. No financial/model/migration change.",
+          "files": [
+            "e2e/a090-settings.spec.ts",
+            "src/app/api/v1/mobile/account/quotations/[id]/pdf/route.ts",
+            "src/app/workspace/account/quotations/[id]/pdf/route.ts"
+          ],
+          "tests": {
+            "unit": "40PASS/4 quotation theme/settings/presentation/PDF suites.",
+            "browser": "Final2PASS/1.3m desktop/mobile Chromium: each profile requests all15Web and15authenticatednative theme PDFs, verifies retained item/terms/amount236, orientation/private headers, temporary settings unchanged, original Apply/Cancel/access/Axe/nooverflow/document immutability assertions. Initial2FAIL only on exact Cache-Control string because Next adds max-age=0; assertions now validate private/no-store directives without rejecting stronger headers.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused routes/browser ESLint andgitdiff--check PASS.",
+            "android": "No native source changes or new device/compile claim in this slice. HTTP/PDF endpoint runtime is distinct from Android device UI.",
+            "prior_ci": "Exacta0a017c7 CI39893447818 SUCCESS; new slice CI pending.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A080-F01 remains PARTIAL for complete visual/reference and Android device/PrintManager/TalkBack matrix and checkpoint final validation; functional endpoint coverage does not prove pixel/device parity."
         }
       }
     },
@@ -72969,6 +73010,42 @@
       },
       "deployment_steps": "Before a future approved application deployment, run the additive migrate-deploy chain including 20261022110000_invoice_description. Do not rewrite old notes/terms. No deployment or production migration performed.",
       "remaining": "A086-F06/A087-F02 remain PARTIAL: reference payment/cheque controls and remaining actions, posted-return correction value/carry policy, full final-head and native device matrix pending. This slice resolves separate description only; no final_status promotion."
+    },
+    "full_theme_native_pdf_matrix_2026_10_23": {
+      "implementation_commit": "c40a224db865fc29a3bf29442d1363c52058cde0",
+      "work": "Authenticated native and Web quotation PDF downloads explicitly private/no-store/nosniff with auth-specific Vary headers. Extended existing 15-theme runtime matrix through both endpoints for each theme; temporary previews do not persist settings. No financial/model/migration change.",
+      "files": [
+        "e2e/a090-settings.spec.ts",
+        "src/app/api/v1/mobile/account/quotations/[id]/pdf/route.ts",
+        "src/app/workspace/account/quotations/[id]/pdf/route.ts"
+      ],
+      "tests": {
+        "unit": "40PASS/4 quotation theme/settings/presentation/PDF suites.",
+        "browser": "Final2PASS/1.3m desktop/mobile Chromium: each profile requests all15Web and15authenticatednative theme PDFs, verifies retained item/terms/amount236, orientation/private headers, temporary settings unchanged, original Apply/Cancel/access/Axe/nooverflow/document immutability assertions. Initial2FAIL only on exact Cache-Control string because Next adds max-age=0; assertions now validate private/no-store directives without rejecting stronger headers.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused routes/browser ESLint andgitdiff--check PASS.",
+        "android": "No native source changes or new device/compile claim in this slice. HTTP/PDF endpoint runtime is distinct from Android device UI.",
+        "prior_ci": "Exacta0a017c7 CI39893447818 SUCCESS; new slice CI pending.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A080-F01 remains PARTIAL for complete visual/reference and Android device/PrintManager/TalkBack matrix and checkpoint final validation; functional endpoint coverage does not prove pixel/device parity."
+    },
+    "party_transfer_net_commission_policy_2026_10_23": {
+      "implementation_commit": "bee3a9c9111cba370942ec9e063d364528cc3c82",
+      "work": "Approved agency/pass-through calculation and strict input validation only: received600/paid500 -> OtherIncome100, pass-through500, expense0; equal600/600or800/800 ->income0. ExactDecimal arithmetic, distinct typed parties, required dates/account/branch/request IDs and rejection of caller-supplied commission/expense values. No Save endpoint, ledger posting, UI, invoice allocation or Home source enabled by this foundation.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "src/lib/account/party-transfer-policy.test.ts",
+        "src/lib/account/party-transfer-policy.ts"
+      ],
+      "tests": {
+        "focused": "11PASS/1file,0fail/skip,208ms; includes decimal precision, equal amounts, partial retention, invalid/overpaid values and spoofed classification rejection.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused policy/tests ESLint andgitdiff--check PASS.",
+        "financial_runtime": "NONE: no financial writes implemented.",
+        "browser_native_runtime": "NONE for new transfer workflow."
+      },
+      "remaining": "A071-F05 remains PARTIAL. Transactional persisted transfer/OtherIncome creation, replay/concurrency/isolation/module guards, cash/bank journals, private image, safe reversal, Web/native form and Home filters/routes/report coverage still required."
     }
   },
   "approved_business_decisions": {
@@ -73094,6 +73171,12 @@
       "printed_number": "Retain original printed number with revision history",
       "posted_credit_notes": "Allow edits only when replacement covers all returned items/quantities",
       "implementation": "Printed identity implemented in 12743e36e6e106f2be60bf539e7b9dc4ff1f4616; posted return correction not enabled pending valuation policy and safe financial carry implementation."
+    },
+    "party_transfer_pass_through_2026_10_23": {
+      "source": "User reference and replies23October2026",
+      "ui": "Party-to-Party Transfer date/firm/two parties Received/Paid amount/note/image/Save&New/Save. Entering amount initially mirrors it for second party; paid amount may differ for commission case.",
+      "accounting": "Actual cash/bank movement. Received600/paid500 =>commission100underOtherIncome,500pass-throughexcludedfromincomeandexpense. Received600/paid600 =>noincome. Default800/800 =>noincome.",
+      "implementation": "Calculation/validation foundation only in bee3a9c9111cba370942ec9e063d364528cc3c82; complete financial workflow not yet implemented."
     }
   },
   "push_checkpoint": {
@@ -74004,6 +74087,6 @@
     }
   },
   "checkpoint_pending_questions_2026_10_23": {
-    "home_party_to_party": "User asked to define Home Party-to-Party transfer with an example; no transfer accounting or source substituted. Continue independent findings while waiting."
+    "home_party_to_party": "RESOLVED by reference and user replies: actual cash/bank pass-through, default matching amounts, retained difference recorded under OtherIncome. Implementation remains partial."
   }
 }
