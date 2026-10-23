@@ -67404,7 +67404,11 @@
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
         "prisma/migrations/20261022110000_invoice_description/migration.sql",
         "src/lib/account/a16-print-settings.test.ts",
-        "src/lib/account/print-renderer.ts"
+        "src/lib/account/print-renderer.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -67930,6 +67934,31 @@
           },
           "deployment_steps": "Before a future approved application deployment, run the additive migrate-deploy chain including 20261022110000_invoice_description. Do not rewrite old notes/terms. No deployment or production migration performed.",
           "remaining": "A086-F06/A087-F02 remain PARTIAL: reference payment/cheque controls and remaining actions, posted-return correction value/carry policy, full final-head and native device matrix pending. This slice resolves separate description only; no final_status promotion."
+        },
+        "recorded_sale_payment_edit_display_2026_10_23": {
+          "implementation_commit": "3a375f12e2a140aa0a7ff95b4d4d0733ab6246ad",
+          "work": "Web Add/Edit Sale now restores read-only saved actual received amount,payment discount,applied advance,outstanding and per-allocation receipt date/mode/reference from existing authorized saleDetail. Removes misleading empty/new-payment controls during Edit;invoice correction does not resend receipts. Android retains the same summary/reference snapshot,excludes pending/reversed cheque receipts,does not put snapshot in write payload,and clears it on Duplicate;Cash/Credit selection disabled on Edit and new-payment-type selector only shown on Add. Business date/money helpers apply. Contrast corrected in recorded payment section and balance text. No posting service/API/schema/migration change.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/sale-edit-initial.ts"
+          ],
+          "tests": {
+            "focused": "32PASS/4 existing Sale preview/submit/duplicate/identity suites,0fail/skip,focused regression.",
+            "browser_database": "Final2PASS53.4s desktop/mobile Chromium using isolated PostgreSQL. Restore90receipt/10discount/reference;read-only controls,AxeAA;edit100to80 yields10advance;nativeHTTP subsequent edit/retry/cancel retains actual90original receipt and avoids duplicate settlement. Initial2FAIL:mobile waited on same Sale heading before navigation finished (now explicit editURL wait),desktop found low contrast in new payment display (corrected CSS).",
+            "android": "compileDebugKotlin +13JVM tests PASS,0fail/errors/skips,2m17s. SavedSalePayments2new tests verify90appliedreceipt,10discount,5advance,reference/date/mode,pendingchequeexclusion,no snapshot/reference in write payload,andDuplicateclearing;SalesEditSnapshot8 andSaleDetailTotals3 existing tests retained. No emulator/device/Compose/TalkBack runtime or local current-slice lint claim.",
+            "typescript": "Final full tsc PASS after all Web changes.",
+            "eslint": "Final focused ESLint and gitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference actions/cheque workflow,posted-return edit valuation policy and full final-head/device validation. A086-F05 return-value decision requested separately;guard retained until answered. No A104/merge/deploy/production action."
         }
       },
       "push_checkpoint_evidence": {
@@ -68494,7 +68523,11 @@
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
         "prisma/migrations/20261022110000_invoice_description/migration.sql",
         "src/lib/account/a16-print-settings.test.ts",
-        "src/lib/account/print-renderer.ts"
+        "src/lib/account/print-renderer.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -68968,6 +69001,31 @@
           },
           "deployment_steps": "Before a future approved application deployment, run the additive migrate-deploy chain including 20261022110000_invoice_description. Do not rewrite old notes/terms. No deployment or production migration performed.",
           "remaining": "A086-F06/A087-F02 remain PARTIAL: reference payment/cheque controls and remaining actions, posted-return correction value/carry policy, full final-head and native device matrix pending. This slice resolves separate description only; no final_status promotion."
+        },
+        "recorded_sale_payment_edit_display_2026_10_23": {
+          "implementation_commit": "3a375f12e2a140aa0a7ff95b4d4d0733ab6246ad",
+          "work": "Web Add/Edit Sale now restores read-only saved actual received amount,payment discount,applied advance,outstanding and per-allocation receipt date/mode/reference from existing authorized saleDetail. Removes misleading empty/new-payment controls during Edit;invoice correction does not resend receipts. Android retains the same summary/reference snapshot,excludes pending/reversed cheque receipts,does not put snapshot in write payload,and clears it on Duplicate;Cash/Credit selection disabled on Edit and new-payment-type selector only shown on Add. Business date/money helpers apply. Contrast corrected in recorded payment section and balance text. No posting service/API/schema/migration change.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/sale-edit-initial.ts"
+          ],
+          "tests": {
+            "focused": "32PASS/4 existing Sale preview/submit/duplicate/identity suites,0fail/skip,focused regression.",
+            "browser_database": "Final2PASS53.4s desktop/mobile Chromium using isolated PostgreSQL. Restore90receipt/10discount/reference;read-only controls,AxeAA;edit100to80 yields10advance;nativeHTTP subsequent edit/retry/cancel retains actual90original receipt and avoids duplicate settlement. Initial2FAIL:mobile waited on same Sale heading before navigation finished (now explicit editURL wait),desktop found low contrast in new payment display (corrected CSS).",
+            "android": "compileDebugKotlin +13JVM tests PASS,0fail/errors/skips,2m17s. SavedSalePayments2new tests verify90appliedreceipt,10discount,5advance,reference/date/mode,pendingchequeexclusion,no snapshot/reference in write payload,andDuplicateclearing;SalesEditSnapshot8 andSaleDetailTotals3 existing tests retained. No emulator/device/Compose/TalkBack runtime or local current-slice lint claim.",
+            "typescript": "Final full tsc PASS after all Web changes.",
+            "eslint": "Final focused ESLint and gitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference actions/cheque workflow,posted-return edit valuation policy and full final-head/device validation. A086-F05 return-value decision requested separately;guard retained until answered. No A104/merge/deploy/production action."
         }
       },
       "push_checkpoint_evidence": {
@@ -74549,6 +74607,35 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A084-F03/A085-F02 remain PARTIAL for other original report destinations/reference controls and full final-head/device verification. This resolves HSN saved gross presentation and populated goods runtime gap only."
+    },
+    {
+      "finding_ids": [
+        "A086-F06",
+        "A087-F02"
+      ],
+      "implementation_commit": "3a375f12e2a140aa0a7ff95b4d4d0733ab6246ad",
+      "work": "Web Add/Edit Sale now restores read-only saved actual received amount,payment discount,applied advance,outstanding and per-allocation receipt date/mode/reference from existing authorized saleDetail. Removes misleading empty/new-payment controls during Edit;invoice correction does not resend receipts. Android retains the same summary/reference snapshot,excludes pending/reversed cheque receipts,does not put snapshot in write payload,and clears it on Duplicate;Cash/Credit selection disabled on Edit and new-payment-type selector only shown on Add. Business date/money helpers apply. Contrast corrected in recorded payment section and balance text. No posting service/API/schema/migration change.",
+      "files": [
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/sale-edit-initial.ts"
+      ],
+      "tests": {
+        "focused": "32PASS/4 existing Sale preview/submit/duplicate/identity suites,0fail/skip,focused regression.",
+        "browser_database": "Final2PASS53.4s desktop/mobile Chromium using isolated PostgreSQL. Restore90receipt/10discount/reference;read-only controls,AxeAA;edit100to80 yields10advance;nativeHTTP subsequent edit/retry/cancel retains actual90original receipt and avoids duplicate settlement. Initial2FAIL:mobile waited on same Sale heading before navigation finished (now explicit editURL wait),desktop found low contrast in new payment display (corrected CSS).",
+        "android": "compileDebugKotlin +13JVM tests PASS,0fail/errors/skips,2m17s. SavedSalePayments2new tests verify90appliedreceipt,10discount,5advance,reference/date/mode,pendingchequeexclusion,no snapshot/reference in write payload,andDuplicateclearing;SalesEditSnapshot8 andSaleDetailTotals3 existing tests retained. No emulator/device/Compose/TalkBack runtime or local current-slice lint claim.",
+        "typescript": "Final full tsc PASS after all Web changes.",
+        "eslint": "Final focused ESLint and gitdiff--check PASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference actions/cheque workflow,posted-return edit valuation policy and full final-head/device validation. A086-F05 return-value decision requested separately;guard retained until answered. No A104/merge/deploy/production action."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
