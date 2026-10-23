@@ -59432,7 +59432,9 @@
         "src/lib/account/sale-amendments.ts",
         "src/lib/account/sale-duplicate.ts",
         "src/lib/mobile/account-purchases.ts",
-        "src/lib/mobile/account-reports.ts"
+        "src/lib/mobile/account-reports.ts",
+        "src/lib/account/reports/category-trade.ts",
+        "src/lib/account/reports/category-trade.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -60782,6 +60784,33 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03 remains PARTIAL for10 other unavailable reference calculations/controls and final-head/device validation. Catalogue names45,mapped35,unavailable10;51 supported service destinations. A085 remains implemented but not finally verified."
+        },
+        "category_trade_2026_10_23": {
+          "code_commit": "5d473351946bc877e07e7e1e9a6620be17882055",
+          "scope": "A084-F03 supplied Sale/Purchase By Item Category report; shared A085 export/parity dependency, not a new finding",
+          "work": "Real posted-line computation exposed in Web and server-driven native catalogue. Sales/Purchases kept separate, each net of original credit/debit notes; exact decimal gross/discount/taxable/tax/cess/total. Company/branch/date economic-history scope and repeatable-read pagination. Current category metadata explicitly disclosed; saved monetary/unit snapshots retained; mixed or unspecified units separate. Core account module/role/stock permission and item enabled gates. Existing CSV/XLSX/PDF export service shared. No model/migration or financial writes.",
+          "files": [
+            "src/lib/account/reports/category-trade.ts",
+            "src/lib/account/reports/category-trade.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/service.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused": "28PASS/3suites1.36s. Includes exact decimals, immutable100credit/80sale, no cross-side/unit/category-identity merge, pagination, scope, permissions, edition/item-disabled and unsupported filters. Initial tests lacked active account principal fields and incorrectly assumed core Purchases could be disabled; fixtures corrected to actual approved core-module behavior; no production guard weakened.",
+            "grouped": "86PASS/9report suites4.81s;overlaps28focused,not additive.",
+            "browser": "2PASS1.6m actual mobile390x844+desktop1440x1000:category report Web/native results,sale206.20/purchase80,saved106.20 item line,all3export contents,foreignbranch403,itemOFF403andhiddenCatalogue,AxeAA/nooverflow,unchangedjournal count. Existing HSN/SAC/party-item parity retained in same fixture.",
+            "android": "34JVM PASS,0fail/errors/skips,45s;7ReferenceReportCatalogue+27AccountReportData. Server metadata supplies new report and drops stale unsupported filters. No emulator/device/Compose/TalkBack runtime.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint and gitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "ci": "Previous exact checkpoint6788ead4d1c284b326c95807a7fb47394a49da97 targeted run40012257535 SUCCESS(Web/Migration/Android). Current report source requires new head validation.",
+          "remaining": "A084-F03 remainsPARTIAL:36of45supplied reference names nowmapped,9unavailable;52supported service destinations. Other report computations/layouts and final199-head/device validation pending. No statutory filing claim."
         }
       },
       "current_unavailable_reference_reports": [
@@ -75856,6 +75885,33 @@
       "tests": "22PASS/3focused mobile/settings suites1.27s;86PASS/5database suites23.46s with maxWorkers1;294PASS/27commercial suites6.83s. Earlier49PASS/3focused financial/settings/runtime10.65s includes27 correction cases. Actual desktop+mobile-web browser2PASS1.0m:Web100to80 edit,original100credit unchanged,20advance,PDF/native details/Homev1/v2,AxeAA/nooverflow;plain nativePATCH below returned quantity400 with actionable message and unchanged journal count. Initial grouped parallel DB run39FAIL/40PASS/7SKIP due shared-database write conflicts; sequential rerun86PASS/0FAIL/0SKIP. Results overlap;do not add counts.",
       "ci": "Last exact-head targeted SUCCESS40001844563 at e9a44e809686936bad4d0d2d9339836e8ecb2b3a,all3jobs. New source head requires fresh CI.",
       "remaining": "No status promotion or final199-head claim. Android source unchanged; no emulator/device runtime. Production migration/deployment prohibited. Remaining partial report/recovery/production findings and final validation remain."
+    },
+    {
+      "code_commit": "5d473351946bc877e07e7e1e9a6620be17882055",
+      "scope": "A084-F03 supplied Sale/Purchase By Item Category report; shared A085 export/parity dependency, not a new finding",
+      "work": "Real posted-line computation exposed in Web and server-driven native catalogue. Sales/Purchases kept separate, each net of original credit/debit notes; exact decimal gross/discount/taxable/tax/cess/total. Company/branch/date economic-history scope and repeatable-read pagination. Current category metadata explicitly disclosed; saved monetary/unit snapshots retained; mixed or unspecified units separate. Core account module/role/stock permission and item enabled gates. Existing CSV/XLSX/PDF export service shared. No model/migration or financial writes.",
+      "files": [
+        "src/lib/account/reports/category-trade.ts",
+        "src/lib/account/reports/category-trade.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/service.ts",
+        "e2e/a090-settings.spec.ts",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        ".github/workflows/targeted-validation.yml"
+      ],
+      "tests": {
+        "focused": "28PASS/3suites1.36s. Includes exact decimals, immutable100credit/80sale, no cross-side/unit/category-identity merge, pagination, scope, permissions, edition/item-disabled and unsupported filters. Initial tests lacked active account principal fields and incorrectly assumed core Purchases could be disabled; fixtures corrected to actual approved core-module behavior; no production guard weakened.",
+        "grouped": "86PASS/9report suites4.81s;overlaps28focused,not additive.",
+        "browser": "2PASS1.6m actual mobile390x844+desktop1440x1000:category report Web/native results,sale206.20/purchase80,saved106.20 item line,all3export contents,foreignbranch403,itemOFF403andhiddenCatalogue,AxeAA/nooverflow,unchangedjournal count. Existing HSN/SAC/party-item parity retained in same fixture.",
+        "android": "34JVM PASS,0fail/errors/skips,45s;7ReferenceReportCatalogue+27AccountReportData. Server metadata supplies new report and drops stale unsupported filters. No emulator/device/Compose/TalkBack runtime.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused ESLint and gitdiff--check PASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "ci": "Previous exact checkpoint6788ead4d1c284b326c95807a7fb47394a49da97 targeted run40012257535 SUCCESS(Web/Migration/Android). Current report source requires new head validation.",
+      "remaining": "A084-F03 remainsPARTIAL:36of45supplied reference names nowmapped,9unavailable;52supported service destinations. Other report computations/layouts and final199-head/device validation pending. No statutory filing claim."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75892,7 +75948,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "f3f980646e2fa5b81a3f82782024e9724e6f5d42",
+    "code_head_commit": "5d473351946bc877e07e7e1e9a6620be17882055",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
