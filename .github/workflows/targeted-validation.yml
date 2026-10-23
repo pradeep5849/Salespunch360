@@ -140,9 +140,18 @@ jobs:
         env:
           ACCOUNT_RECOVERY_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: |
-          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client-16
-          fi
-          export PATH=/usr/lib/postgresql/16/bin:$PATH
+          export RECOVERY_POSTGRES_IMAGE="$(docker inspect --format='{{.Image}}' '${{ job.services.postgres.id }}')"
+          task_recovery_tools="$(mktemp -d)"
+          cat > "$task_recovery_tools/pg_dump" <<'TOOL'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          task_backup_path="${!#}"
+          task_backup_directory="$(dirname "$task_backup_path")"
+          exec docker run --rm --network host --read-only --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$task_backup_directory,target=$task_backup_directory" \
+            --entrypoint "$(basename "$0")" "$RECOVERY_POSTGRES_IMAGE" "$@"
+          TOOL
+          cp "$task_recovery_tools/pg_dump" "$task_recovery_tools/pg_restore"
+          chmod +x "$task_recovery_tools/pg_dump" "$task_recovery_tools/pg_restore"
+          export PATH="$task_recovery_tools:$PATH"
           npx vitest run scripts/recovery-drill.test.ts scripts/recovery-drill.integration.test.ts --maxWorkers=1

@@ -6,7 +6,7 @@ The operational recovery drill uses `pg_dump`/`pg_restore` against explicitly lo
 
 - `npm run test:recovery`: `DIRECT_URL` must point to a local database whose name ends in `_ci`. `RESTORE_DRILL_DATABASE_URL` must point to a different, empty local database ending in `_restore_drill`.
 - `ACCOUNT_RECOVERY_DATABASE_URL=<isolated local source URL> npx vitest run scripts/recovery-drill.test.ts scripts/recovery-drill.integration.test.ts --maxWorkers=1`: creates a fresh UUID-named target and disposes only of that test-created target. It does not reset, restore into, or drop any pre-existing database.
-- Both PostgreSQL client tools must be compatible with the server. Local verification used the existing PostgreSQL **17.11** container's tools. The targeted CI migration job uses PostgreSQL **16** and explicitly selects its version-16 clients. Earlier notes describing the local container as version 16 were inaccurate.
+- Both PostgreSQL client tools must be compatible with the server. Local verification used the existing PostgreSQL **17.11** container's tools. The targeted CI migration job uses PostgreSQL **16** and uses clients from that exact service image in temporary containers. This avoids reliance on Ubuntu runner package availability. Each client mounts only its temporary dump directory. Earlier notes describing the local container as version 16 were inaccurate.
 
 The source transaction is read-only and repeatable-read. Its exported MVCC snapshot is shared with `pg_dump`; expected row digests and the dump therefore use the same data snapshot. Restoration refuses a target containing any public table. Temporary dump files are removed on completion or failure. Credentials, row contents and digests are not logged.
 
