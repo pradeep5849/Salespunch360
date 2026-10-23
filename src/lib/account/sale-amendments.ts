@@ -1,3 +1,4 @@
+import {retainedSaleReturnsInTx,retainedSaleReturnAmount,carrySaleReturnsInTx,saleCorrectionFamilyInTx} from "./sale-return-revisions";
 import {recordSaleInvoiceIdentity} from "./sale-invoice-identity";
 import {receiptAdvanceCreditInTx,advanceApplicationCreditInTx} from "./receipt-advance-credit";
 import {EFFECTIVE_DOCUMENT_ALLOCATION,EFFECTIVE_ADVANCE_APPLICATION} from "./settlement-policy";
@@ -23,13 +24,15 @@ async function editableSaleInTx(
   tx: Prisma.TransactionClient,
   actor: ProjectActor,
   id: string,
+  allowReturns=false,
 ) {
   await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${id}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
   const sale = await tx.commercialDocument.findFirst({
     where: { id, companyId: actor.companyId },
     include: {
       lines: { orderBy: { position: "asc" } },
-      adjustments: { where: { status: "POSTED" } },
+      adjustments: { where: { status: "POSTED",journalEntry:{is:{status:"POSTED"}} } },
+      journalEntry:{select:{status:true,entryDate:true}},
       allocations: {where:EFFECTIVE_DOCUMENT_ALLOCATION,include:{settlement:true}},
       advanceApplications: {where:EFFECTIVE_ADVANCE_APPLICATION},
     },
@@ -46,12 +49,17 @@ async function editableSaleInTx(
     !sale.partyId
   )
     throw new Error("SALE_NOT_EDITABLE");
+  const priorCorrection=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,entityType:"SALES_INVOICE",entityId:id,eventType:{in:["SALE_AMENDED","SALE_REVERSED"]}},select:{id:true}});
+  if(priorCorrection)throw new Error("SALE_ALREADY_REVISED");
+  if(!sale.journalEntryId||sale.journalEntry?.status!=="POSTED")throw new Error("SALE_NOT_EDITABLE");
   const pending=await tx.settlementAllocation.count({where:{companyId:actor.companyId,documentId:sale.id,settlement:{status:"PENDING_CHEQUE"}}});
   if(pending)throw new Error("SALE_HAS_PENDING_CHEQUE");
   const financial = await documentOutstandingInTx(tx, actor.companyId, sale.id);
   const applied=sale.allocations.reduce((total,row)=>total.add(row.amount),new Prisma.Decimal(0)).add(sale.advanceApplications.reduce((total,row)=>total.add(row.amount),new Prisma.Decimal(0)));
-  if(sale.adjustments.length||!financial.outstanding.add(applied).eq(sale.payableAmount??sale.grandTotal))throw new Error("SALE_HAS_PAYMENTS_OR_ADJUSTMENTS");
-  return sale;
+  const retainedReturns=allowReturns?await retainedSaleReturnsInTx(tx,actor.companyId,sale.id):[];
+  const retained=retainedSaleReturnAmount(retainedReturns);
+  if((!allowReturns&&sale.adjustments.length)||!financial.outstanding.add(applied).add(retained).eq(sale.payableAmount??sale.grandTotal))throw new Error("SALE_HAS_PAYMENTS_OR_ADJUSTMENTS");
+  return {...sale,retainedReturns};
 }
 function creditPayload(
   sale: Awaited<ReturnType<typeof editableSaleInTx>>,
@@ -203,7 +211,7 @@ export function reversePostedSaleForActor(actor: ProjectActor, id: string) {
           actor,
           await editableSaleInTx(tx, actor, id),
         );
-        await tx.accountOperationalAudit.create({
+        const lifecycleAudit=await tx.accountOperationalAudit.create({
           data: {
             companyId: actor.companyId,
             actorUserId: actor.id,
@@ -213,6 +221,7 @@ export function reversePostedSaleForActor(actor: ProjectActor, id: string) {
             metadata: { creditId: credit.id },
           },
         });
+        await tx.saleLifecycleSnapshot.create({data:{companyId:actor.companyId,invoiceId:id,state:"CANCELLED",auditId:lifecycleAudit.id,correctionCreditId:credit.id}});
         return tx.commercialDocument.findUniqueOrThrow({
           where: { id: credit.id },
         });
@@ -278,7 +287,8 @@ export async function replacePostedSaleForActor(
             throw new AuthorizationError();
           return existing;
         }
-        const sale = await editableSaleInTx(tx, actor, id);
+        const sale = await editableSaleInTx(tx, actor, id,true);
+        const familyIds=await saleCorrectionFamilyInTx(tx,actor.companyId,sale);
         if (!raw || typeof raw !== "object" || Array.isArray(raw))
           throw new Error("INVALID_INPUT");
         const payload: Record<string, unknown> = {
@@ -402,15 +412,15 @@ export async function replacePostedSaleForActor(
           if(kept.count!==1)throw new Error("SALE_REPLACEMENT_ALREADY_POSTED");
         }
 
-        await ensureOpenFinancialYearForDate(
-          actor.companyId,
-          replacement.issueDate,
-          tx,
-        );
-        // The full credit returns stock before a replacement reuses a batch or serial.
-        // Both postings and all journals/stock movements commit or roll back together.
-        await creditInTx(tx, actor, sale);
-        await tx.accountOperationalAudit.create({
+        const correctionDate=new Date([businessToday(),sale.issueDate.toISOString().slice(0,10),sale.journalEntry!.entryDate.toISOString().slice(0,10),replacement.issueDate.toISOString().slice(0,10),...sale.retainedReturns.map(item=>item.note.issueDate.toISOString().slice(0,10)),...sale.allocations.map(row=>row.settlement.transactionDate.toISOString().slice(0,10)),...sale.advanceApplications.map(row=>row.applicationDate.toISOString().slice(0,10))].sort().at(-1)!);
+        await ensureOpenFinancialYearForDate(actor.companyId,correctionDate,tx);
+        let correctionCreditId:string|null=null;
+        if(sale.retainedReturns.length){
+          for(const row of sale.allocations)await receiptAdvanceCreditInTx(tx,actor,{allocationId:row.id,entryDate:correctionDate});
+          for(const row of sale.advanceApplications)await advanceApplicationCreditInTx(tx,actor,{applicationId:row.id,entryDate:correctionDate});
+          await carrySaleReturnsInTx(tx,actor,sale,replacement,sale.retainedReturns,retainedUnitLineIds,correctionDate);
+        }else correctionCreditId=(await creditInTx(tx,actor,sale)).id;
+        const lifecycleAudit=await tx.accountOperationalAudit.create({
           data: {
             companyId: actor.companyId,
             actorUserId: actor.id,
@@ -424,20 +434,23 @@ export async function replacePostedSaleForActor(
             },
           },
         });
+        await tx.saleLifecycleSnapshot.create({data:{companyId:actor.companyId,invoiceId:sale.id,state:"REVISED",auditId:lifecycleAudit.id,replacementId:replacement.id,correctionCreditId}});
         await postCommercialDocumentForActor(
           actor,
           { documentId: replacement.id },
           tx,
+          {sourceInvoiceId:sale.id,postingDate:correctionDate},
         );
         // Preserve actual previous payments even when automatic linking is disabled.
         // Posting may already have applied them; use current remaining/outstanding.
         if(replacement.partyId===sale.partyId&&replacement.projectId===sale.projectId){
-          const credits=await tx.accountSettlement.findMany({where:{companyId:actor.companyId,OR:[{receiptCreditSourceAllocationId:{in:sale.allocations.map(row=>row.id)}},{advanceCreditSourceApplicationId:{in:sale.advanceApplications.map(row=>row.id)}}]},orderBy:{id:"asc"}});
+          const related=[...familyIds,replacement.id];
+          const credits=await tx.accountSettlement.findMany({where:{companyId:actor.companyId,partyId:replacement.partyId,branchId:replacement.branchId,projectId:replacement.projectId,type:"CUSTOMER_ADVANCE",status:"POSTED",paymentMode:"ACCOUNT_CREDIT",journalEntry:{is:{status:"POSTED"}},remainingAmount:{gt:0},OR:[{receiptCreditSourceAllocation:{is:{documentId:{in:related}}}},{advanceCreditSourceApplication:{is:{documentId:{in:related}}}},{saleRevisionCreditSource:{is:{revision:{invoiceId:{in:related}}}}}]},orderBy:[{transactionDate:"asc"},{createdAt:"asc"},{id:"asc"}]});
           for(const credit of credits){
             const available=await tx.accountSettlement.findUniqueOrThrow({where:{id:credit.id}});
             const financial=await documentOutstandingInTx(tx,actor.companyId,replacement.id);
             const amount=Prisma.Decimal.min(available.remainingAmount,financial.outstanding);
-            if(amount.gt(0))await applyAdvanceForActor(actor,{advanceId:credit.id,documentId:replacement.id,amount:amount.toFixed(2),applicationDate:new Date(Math.max(credit.transactionDate.getTime(),replacement.issueDate.getTime())),idempotencyKey:`sale-correction:${replacement.id}:${credit.id}`},tx);
+            if(amount.gt(0))await applyAdvanceForActor(actor,{advanceId:credit.id,documentId:replacement.id,amount:amount.toFixed(2),applicationDate:new Date(Math.max(credit.transactionDate.getTime(),correctionDate.getTime())),idempotencyKey:`sale-correction:${replacement.id}:${credit.id}`},tx);
           }
         }
         return tx.commercialDocument.findUniqueOrThrow({

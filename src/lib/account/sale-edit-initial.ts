@@ -2,7 +2,9 @@ import type { EditableLine } from "@/app/workspace/account/transactions/new/comm
 
 /** Invoice snapshots used by the shared Add/Edit Sale form. */
 export type SaleEditInitial = {
+  canDelete?:boolean;
   recordedPayments?: {
+    credits?:string;originalReturnCredits?:string;returnCreditsTransferred?:string;
     received:string; paymentDiscount:string; advanceApplied:string; outstanding:string;
     receipts:Array<{id:string;amount:string;date:string;mode:string;reference:string|null}>;
   };

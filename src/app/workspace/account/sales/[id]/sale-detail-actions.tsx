@@ -5,15 +5,15 @@ import { useState } from "react";
 import { deletePostedSaleAction } from "@/app/actions/sale-amendments";
 import styles from "./sale-detail.module.css";
 
-export function SaleDetailActions({id,canChange}:{id:string;canChange:boolean}){
+export function SaleDetailActions({id,canChange,canDelete=canChange}:{id:string;canChange:boolean;canDelete?:boolean}){
   const [deleting,setDeleting]=useState(false);
   return <footer className={styles.footer}>
     <form action={deletePostedSaleAction} onSubmit={event=>{
-      if(deleting||!canChange||!confirm("Delete this saved Sale? SalesPunch will reverse it with a Credit Note. Actual payments will remain as customer advance credit; the original payment discount will be removed.")){event.preventDefault();return}
+      if(deleting||!canDelete||!confirm("Delete this saved Sale? SalesPunch will reverse it with a Credit Note. Actual payments will remain as customer advance credit; the original payment discount will be removed.")){event.preventDefault();return}
       setDeleting(true);
     }}>
       <input type="hidden" name="id" value={id}/>
-      <button className={styles.delete} disabled={!canChange||deleting}>{deleting?"Deleting…":"Delete"}</button>
+      <button className={styles.delete} disabled={!canDelete||deleting}>{deleting?"Deleting…":"Delete"}</button>
     </form>
     {canChange?<Link className={styles.edit} href={`/workspace/account/sales/${id}/edit`}>Edit</Link>:<span className={`${styles.edit} ${styles.disabled}`}>Edit</span>}
   </footer>;

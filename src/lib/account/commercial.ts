@@ -1,3 +1,5 @@
+import {saleInvoiceIdentity} from "./sale-invoice-identity";
+import {retainedSerialReturnQuantityInTx,assertSaleReturnQuantitiesInTx} from "./sale-return-revisions";
 import {validateOrderFulfilmentInTx} from "./orders/source";
 import {requireQuotationSourceInTx,closeQuotationSourceInTx,authorizeQuotationConversion} from "@/lib/quotations/commercial-link";
 import {commercialBaseQuantity,commercialReturnBaseQuantity} from "./commercial-stock-quantity";
@@ -1046,7 +1048,7 @@ export async function createCommercialDocumentForActor(
         if (d.sourceDocumentId) {
           await tx.$queryRaw`SELECT "id" FROM "commercial_documents" WHERE "id"=${d.sourceDocumentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
           source = await tx.commercialDocument.findFirst({
-            where: { id: d.sourceDocumentId, companyId: actor.companyId },
+            where: { id: d.sourceDocumentId, companyId: actor.companyId,...(d.type==="CREDIT_NOTE"?{journalEntry:{is:{status:"POSTED" as const}}}:{}) },
           });
           if (
             !source ||
@@ -1686,6 +1688,7 @@ async function commercialInventoryInTx(
   doc: Prisma.CommercialDocumentGetPayload<{
     include: { lines: { include: { purchaseAllocations: true } } };
   }>,
+  correctionDate?:Date,
 ) {
   if (doc.type === "PURCHASE_BILL")
     return purchaseInventoryFromAllocationsInTx(tx, actor, doc);
@@ -1829,11 +1832,10 @@ async function commercialInventoryInTx(
         serialQty.gt(0)
       )
         throw new Error("SERIAL_ALREADY_IN_STOCK");
-      if (
-        ["SALE", "PURCHASE_RETURN"].includes(movementType) &&
-        !serialQty.equals(1)
-      )
-        throw new Error("SERIAL_NOT_AVAILABLE");
+      if (["SALE", "PURCHASE_RETURN"].includes(movementType)&&!serialQty.equals(1)){
+        const retained=correctionDate&&movementType==="SALE"?await retainedSerialReturnQuantityInTx(tx,actor.companyId,doc.id,line.id):new D(0);
+        if(!retained.gt(0)||!serialQty.eq(retained.add(1)))throw new Error("SERIAL_NOT_AVAILABLE");
+      }
     }
     await tx.stockMovement.create({
       data: {
@@ -1850,7 +1852,7 @@ async function commercialInventoryInTx(
         sourceLineId: line.id,
         batchId: line.batchId,
         serialNumberId: line.serialNumberId,
-        movementDate: doc.issueDate,
+        movementDate: correctionDate??doc.issueDate,
         createdById: actor.id,
       },
     });
@@ -2033,6 +2035,7 @@ export async function postCommercialDocumentForActor(
   actor: Actor,
   raw: unknown,
   transaction?: Prisma.TransactionClient,
+  correction?:{sourceInvoiceId:string;postingDate:Date},
 ) {
   const { documentId } = z
     .object({ documentId: z.string().uuid() })
@@ -2048,6 +2051,14 @@ export async function postCommercialDocumentForActor(
         });
         if (!doc) throw new Error("NOT_FOUND");
         assertBranch(actor, doc.branchId);
+        let financialDate=doc.issueDate;
+        if(correction){
+          if(doc.type!=="SALES_INVOICE"||!Number.isFinite(correction.postingDate.getTime())||correction.postingDate<doc.issueDate)throw new Error("INVALID_SALE_CORRECTION_DATE");
+          const identity=await saleInvoiceIdentity(tx,doc);
+          const event=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,entityType:"SALES_INVOICE",entityId:correction.sourceInvoiceId,eventType:"SALE_AMENDED",metadata:{path:["replacementId"],equals:doc.id}},select:{id:true}});
+          if(identity.previousInvoiceId!==correction.sourceInvoiceId||!event)throw new Error("SALE_CORRECTION_WORKFLOW_REQUIRED");
+          financialDate=correction.postingDate;
+        }
         const p = policies[doc.type];
         await requireAccountModules(actor, ...p.modules);
         if (doc.projectId)
@@ -2118,6 +2129,7 @@ export async function postCommercialDocumentForActor(
               type:
                 doc.type === "CREDIT_NOTE" ? "SALES_INVOICE" : "PURCHASE_BILL",
               status: "POSTED",
+              ...(doc.type==="CREDIT_NOTE"?{journalEntry:{is:{status:"POSTED" as const}}}:{}),
             },
             include: { lines: { include: { purchaseAllocations: true } } },
           });
@@ -2128,6 +2140,7 @@ export async function postCommercialDocumentForActor(
             source.vendorId !== doc.vendorId
           )
             throw new Error("INVALID_SOURCE_DOCUMENT");
+          if(doc.type==="CREDIT_NOTE")await assertSaleReturnQuantitiesInTx(tx,actor.companyId,source.id,doc.id,source.lines,doc.lines);
           const used = await tx.commercialDocument.aggregate({
               where: {
                 companyId: actor.companyId,
@@ -2177,6 +2190,7 @@ export async function postCommercialDocumentForActor(
             tx,
             actor,
             inventoryDocument,
+            correction?financialDate:undefined,
           ),
           sale = doc.type === "SALES_INVOICE" || doc.type === "CREDIT_NOTE",
           classification = purchaseClassificationForPosting(
@@ -2225,7 +2239,7 @@ export async function postCommercialDocumentForActor(
                 ? ["PROJECT_MATERIAL_WIP"]
                 : []),
           ],
-          ctx = await systemContext(tx, actor, doc.issueDate, keys),
+          ctx = await systemContext(tx, actor, financialDate, keys),
           creditSide =
             doc.type === "SALES_INVOICE" || doc.type === "DEBIT_NOTE",
           counterDebit =
@@ -2327,7 +2341,7 @@ export async function postCommercialDocumentForActor(
         const journal = await postJournalInTx(tx, actor, {
           financialYearId: ctx.fy.id,
           branchId: doc.branchId,
-          entryDate: doc.issueDate,
+          entryDate: financialDate,
           sourceType: doc.type,
           sourceId: doc.id,
           postingPurpose: "PRIMARY",
@@ -2371,7 +2385,7 @@ export async function postCommercialDocumentForActor(
               const amount = D.min(outstanding,advance.remainingAmount);
               await applyAdvanceForActor(actor,{
                 advanceId:advance.id,documentId:doc.id,amount:amount.toFixed(2),
-                applicationDate:advance.transactionDate > doc.issueDate ? advance.transactionDate : doc.issueDate,
+                applicationDate:advance.transactionDate > financialDate ? advance.transactionDate : financialDate,
                 idempotencyKey:`invoice-advance:${doc.id}:${advance.id}`,
               },tx);
             }
@@ -2409,7 +2423,7 @@ export async function documentOutstandingInTx(
 ) {
   const doc = await tx.commercialDocument.findFirst({
     where: { id: documentId, companyId, status: "POSTED" },
-    select: { grandTotal: true, payableAmount: true, type: true },
+    select: { grandTotal: true, payableAmount: true, type: true, returnRevisionTarget:{select:{credits:{where:{creditNote:{status:"POSTED",journalEntry:{is:{status:"POSTED"}}}},select:{originalAmount:true,appliedAmount:true}}}} },
   });
   if (!doc || !["SALES_INVOICE", "PURCHASE_BILL"].includes(doc.type))
     throw new Error("INVALID_FINANCIAL_DOCUMENT");
@@ -2417,6 +2431,7 @@ export async function documentOutstandingInTx(
       companyId,
       sourceDocumentId: documentId,
       status: "POSTED" as const,
+      journalEntry:{is:{status:"POSTED" as const}},
       type:
         doc.type === "SALES_INVOICE"
           ? ("CREDIT_NOTE" as const)
@@ -2426,7 +2441,7 @@ export async function documentOutstandingInTx(
       typeof tx.commercialDocument.findMany === "function"
         ? tx.commercialDocument.findMany({
             where: adjustmentWhere,
-            select: { grandTotal: true, payableAmount: true },
+            select: { id:true, grandTotal: true, payableAmount: true },
           })
         : tx.commercialDocument
             .aggregate({ where: adjustmentWhere, _sum: { grandTotal: true } })
@@ -2449,13 +2464,20 @@ export async function documentOutstandingInTx(
       (n, x) => n.add(x.payableAmount ?? x.grandTotal ?? 0),
       new D(0),
     ),
+    retainedRows=doc.returnRevisionTarget?.credits??[],
+    carriedApplied=retainedRows.reduce((sum,row)=>sum.add(row.appliedAmount),new D(0)),
+    carriedOriginal=retainedRows.reduce((sum,row)=>sum.add(row.originalAmount),new D(0)),
     outstanding = base
-      .sub(adjusted)
+      .sub(adjusted).sub(carriedApplied)
       .sub(allocations._sum.amount ?? 0)
       .sub(applications._sum.amount ?? 0);
   if (outstanding.lt(0)) throw new Error("NEGATIVE_OUTSTANDING");
   return {
     outstanding,
+    returnCreditsApplied:adjusted.add(carriedApplied),
+    returnCreditsOriginal:adjusted.add(carriedOriginal),
+    returnCreditsTransferred:carriedOriginal.sub(carriedApplied),
+    returnCount:adjustmentRows.filter(row=>"id" in row&&Boolean(row.id)).length+retainedRows.length,
     paymentStatus: outstanding.isZero()
       ? ("PAID" as const)
       : outstanding.eq(base)
@@ -3221,7 +3243,7 @@ export async function getCommercialDocumentForActor(actor: Actor, id: string, tr
         include: { purchaseAllocations: true },
       },
       reminders: { orderBy: { createdAt: "desc" } },
-      adjustments: { where: { status: "POSTED" } },
+      adjustments: { where: { status: "POSTED",journalEntry:{is:{status:"POSTED"}} } },
       allocations: { where: EFFECTIVE_DOCUMENT_ALLOCATION, include: { settlement: true } },
       advanceApplications: { where: EFFECTIVE_ADVANCE_APPLICATION, include: { advance: true } },
     },
@@ -3590,11 +3612,12 @@ export async function documentOutstandingsBatch(
   const ids = documents.map((x) => x.id),
     [adjustments, allocations, applications] = await Promise.all([
       reader.commercialDocument.findMany({
-        where: { companyId, status: asOf?{in:["POSTED","CANCELLED"]}:"POSTED", sourceDocumentId: { in: ids }, ...(asOf?{issueDate:{lte:asOf},journalEntry:{is:postedJournalAt(asOf)}}:{}) },
+        where: { companyId, status: asOf?{in:["POSTED","CANCELLED"]}:"POSTED", OR:[{sourceDocumentId:{in:ids}},{id:{in:ids},returnRevisionTarget:{isNot:null}}], ...(asOf?{issueDate:{lte:asOf},journalEntry:{is:postedJournalAt(asOf)}}:{journalEntry:{is:{status:"POSTED"}}}) },
         select: {
-          sourceDocumentId: true,
+          id:true,sourceDocumentId: true,
           grandTotal: true,
           payableAmount: true,
+          returnRevisionTarget:{select:{credits:{where:{creditNote:{status:asOf?{in:["POSTED","CANCELLED"]}:"POSTED",journalEntry:{is:asOf?postedJournalAt(asOf):{status:"POSTED"}}}},select:{appliedAmount:true}}}},
         },
       }),
       reader.settlementAllocation.groupBy({
@@ -3609,13 +3632,11 @@ export async function documentOutstandingsBatch(
       }),
     ]),
     adjustmentMap = adjustments.reduce(
-      (map, x) =>
-        map.set(
-          x.sourceDocumentId!,
-          (map.get(x.sourceDocumentId!) ?? new D(0)).add(
-            x.payableAmount ?? x.grandTotal,
-          ),
-        ),
+      (map, x) => {
+        if(x.sourceDocumentId&&ids.includes(x.sourceDocumentId))map.set(x.sourceDocumentId,(map.get(x.sourceDocumentId)??new D(0)).add(x.payableAmount??x.grandTotal));
+        if(ids.includes(x.id)){const carried=(x.returnRevisionTarget?.credits??[]).reduce((sum,row)=>sum.add(row.appliedAmount),new D(0));map.set(x.id,(map.get(x.id)??new D(0)).add(carried));}
+        return map;
+      },
       new Map<string, Prisma.Decimal>(),
     ),
     allocationMap = new Map(

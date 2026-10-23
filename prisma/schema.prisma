@@ -741,6 +741,8 @@ enum ProjectAuditEventType {
 }
 
 model Company {
+  saleLifecycleSnapshots SaleLifecycleSnapshot[]
+  saleReturnRevisions SaleReturnRevision[]
   reportFavourites AccountReportFavourite[]
   fieldJobs FieldJob[]
   id                                  String                     @id @default(uuid()) @db.Uuid
@@ -856,6 +858,7 @@ model Company {
 }
 
 model User {
+  saleReturnRevisions SaleReturnRevision[] @relation("SaleReturnRevisionCreator")
   reportFavourites AccountReportFavourite[]
   loanOperations LoanOperation[] @relation("LoanOperationCreator")
 
@@ -2123,6 +2126,7 @@ model CostCentre {
 }
 
 model JournalEntry {
+  saleReturnRevision SaleReturnRevision? @relation("SaleReturnRevisionJournal")
   loanOperations LoanOperation[] @relation("LoanOperationJournal")
 
   id                  String               @id @default(uuid()) @db.Uuid
@@ -2428,6 +2432,12 @@ model QuotationAuditEvent {
 }
 
 model CommercialDocument {
+  lifecycleSnapshot SaleLifecycleSnapshot? @relation("SaleLifecycleSource")
+  previousLifecycleSources SaleLifecycleSnapshot[] @relation("SaleLifecycleReplacement")
+  lifecycleAdjustmentSource SaleLifecycleSnapshot? @relation("SaleLifecycleCredit")
+  returnRevisionSource SaleReturnRevision? @relation("SaleReturnRevisionSource")
+  returnRevisionTarget SaleReturnRevision? @relation("SaleReturnRevisionTarget")
+  retainedCreditUses SaleRevisionCredit[] @relation("SaleRetainedCreditNote")
   id                     String                   @id @default(uuid()) @db.Uuid
   creationRequestKey     String?                  @db.VarChar(120)
   creationRequestHash    String?                  @db.VarChar(64)
@@ -2568,6 +2578,8 @@ model ServiceReminderCompletion {
 }
 
 model CommercialDocumentLine {
+  retainedCreditLineUses SaleRevisionCreditLine[] @relation("SaleRetainedCreditLine")
+  retainedReturnBindings SaleRevisionCreditLine[] @relation("SaleReturnRevisionLine")
   // NULL on historical rows: quantity retains its original primary-unit meaning.
   baseQuantity Decimal? @db.Decimal(18,4)
   unitConversionSnapshot Json?
@@ -2650,6 +2662,9 @@ model PurchaseLineAllocation {
 }
 
 model AccountSettlement {
+  saleRevisionCreditSourceId String? @db.Uuid
+  saleRevisionCreditSource SaleRevisionCredit? @relation("SaleRevisionCreditAdvance",fields:[companyId,saleRevisionCreditSourceId],references:[companyId,id],onDelete:NoAction,onUpdate:Restrict,map:"sale_revision_advance_source_fkey")
+  @@unique([companyId,saleRevisionCreditSourceId],map:"account_settlement_sale_revision_credit_key")
   advanceCreditSourceApplicationId String? @db.Uuid
   advanceCreditSourceApplication AdvanceApplication? @relation("AdvanceCreditSource", fields:[companyId,advanceCreditSourceApplicationId], references:[companyId,id], onDelete:NoAction, onUpdate:Restrict, map:"advance_credit_source_fkey")
   receiptCreditSourceAllocationId String? @db.Uuid
@@ -3347,6 +3362,8 @@ model LoanPayment {
 }
 
 model AccountOperationalAudit {
+  saleLifecycleSnapshot SaleLifecycleSnapshot?
+  @@unique([companyId,id])
   id          String   @id @default(uuid()) @db.Uuid
   companyId   String   @db.Uuid
   actorUserId String   @db.Uuid
@@ -3741,4 +3758,93 @@ model QuotationAttachment {
   @@index([companyId, revisionId, createdAt])
   @@index([companyId, storageKey])
   @@map("quotation_attachments")
+}
+
+
+// Append-only carry of existing posted credits into a corrected Sale. Original
+// invoice, credit-note lines, journals and stock history are never rewritten.
+model SaleReturnRevision {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  sourceInvoiceId String @db.Uuid
+  sourceInvoice CommercialDocument @relation("SaleReturnRevisionSource",fields:[companyId,sourceInvoiceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  invoiceId String @db.Uuid
+  invoice CommercialDocument @relation("SaleReturnRevisionTarget",fields:[companyId,invoiceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  reversalJournalId String @db.Uuid
+  reversalJournal JournalEntry @relation("SaleReturnRevisionJournal",fields:[companyId,reversalJournalId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  postingDate DateTime @db.Date
+  createdById String @db.Uuid
+  createdBy User @relation("SaleReturnRevisionCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdAt DateTime @default(now())
+  credits SaleRevisionCredit[]
+  @@unique([companyId,id])
+  @@unique([companyId,sourceInvoiceId])
+  @@unique([companyId,invoiceId])
+  @@unique([companyId,reversalJournalId])
+  @@map("sale_return_revisions")
+}
+
+model SaleRevisionCredit {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  revisionId String @db.Uuid
+  revision SaleReturnRevision @relation(fields:[companyId,revisionId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  creditNoteId String @db.Uuid
+  creditNote CommercialDocument @relation("SaleRetainedCreditNote",fields:[companyId,creditNoteId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  originalAmount Decimal @db.Decimal(18,2)
+  availableAmount Decimal @db.Decimal(18,2)
+  appliedAmount Decimal @db.Decimal(18,2)
+  excessAmount Decimal @db.Decimal(18,2)
+  createdAt DateTime @default(now())
+  lines SaleRevisionCreditLine[]
+  excessAdvance AccountSettlement? @relation("SaleRevisionCreditAdvance")
+  @@unique([companyId,id])
+  @@unique([companyId,revisionId,creditNoteId])
+  @@index([companyId,creditNoteId])
+  @@map("sale_revision_credits")
+}
+
+model SaleRevisionCreditLine {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  creditId String @db.Uuid
+  credit SaleRevisionCredit @relation(fields:[companyId,creditId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  creditLineId String @db.Uuid
+  creditLine CommercialDocumentLine @relation("SaleRetainedCreditLine",fields:[companyId,creditLineId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  invoiceLineId String @db.Uuid
+  invoiceLine CommercialDocumentLine @relation("SaleReturnRevisionLine",fields:[companyId,invoiceLineId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  quantity Decimal @db.Decimal(18,4)
+  physicalQuantity Decimal @db.Decimal(18,4)
+  createdAt DateTime @default(now())
+  @@unique([companyId,id])
+  @@unique([companyId,creditId,creditLineId])
+  @@index([companyId,invoiceLineId])
+  @@map("sale_revision_credit_lines")
+}
+
+
+// Indexed read model for immutable cancellation/revision audit events. The
+// original posted invoice remains untouched and is available in history.
+model SaleLifecycleSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  invoiceId String @db.Uuid
+  invoice CommercialDocument @relation("SaleLifecycleSource",fields:[companyId,invoiceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  state String @db.VarChar(16)
+  auditId String @db.Uuid
+  audit AccountOperationalAudit @relation(fields:[companyId,auditId],references:[companyId,id],onDelete:NoAction,onUpdate:Restrict,map:"sale_lifecycle_audit_fkey")
+  replacementId String? @db.Uuid
+  replacement CommercialDocument? @relation("SaleLifecycleReplacement",fields:[companyId,replacementId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  correctionCreditId String? @db.Uuid
+  correctionCredit CommercialDocument? @relation("SaleLifecycleCredit",fields:[companyId,correctionCreditId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdAt DateTime @default(now())
+  @@unique([companyId,id])
+  @@unique([companyId,invoiceId])
+  @@unique([companyId,auditId])
+  @@unique([companyId,correctionCreditId])
+  @@index([companyId,state,invoiceId])
+  @@index([companyId,replacementId])
+  @@map("sale_lifecycle_snapshots")
 }

@@ -30,10 +30,12 @@ export function useSaleBottomDetails({recordedPayments,advanceBalance=0,subtotal
    {editMode&&recordedPayments?<section aria-label="Recorded payments" className={styles.recorded}>
     <div className={styles.row}><span>Received on saved invoice</span><strong><Money value={recordedPayments.received}/></strong></div>
     <div className={styles.row}><span>Advance already applied</span><strong><Money value={recordedPayments.advanceApplied}/></strong></div>
+    {Number(recordedPayments.credits??0)!==0&&<div className={styles.row}><span>Recorded credit adjustments</span><strong><Money value={recordedPayments.credits??"0"}/></strong></div>}
+    {Number(recordedPayments.returnCreditsTransferred??0)!==0&&<p>Original billed return credit: <Money value={recordedPayments.originalReturnCredits??"0"}/>. Transferred to customer advance credit: <Money value={recordedPayments.returnCreditsTransferred??"0"}/>.</p>}
     <div className={styles.row}><span>Recorded payment discount</span><strong><Money value={recordedPayments.paymentDiscount}/></strong></div>
     <div className={`${styles.row} ${styles.balance}`}><strong>Recorded balance due</strong><strong><Money value={recordedPayments.outstanding}/></strong></div>
     {recordedPayments.receipts.map(receipt=><p key={receipt.id} style={{overflowWrap:"anywhere"}}>Applied receipt · <AccountDate value={receipt.date}/> · {receipt.mode} · <Money value={receipt.amount}/>{receipt.reference&&<> · Reference: {receipt.reference}</>}</p>)}
-    <p>These are the saved payment amounts. An amount correction keeps actual payments available and removes the old payment discount. Record new payments from Sale Details after saving.</p>
+    <p>These are the saved payment amounts. An amount correction keeps actual payments available and removes the old payment discount. Record new payments separately after saving.</p>
    </section>:<>
    <div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={cashSale||receivedEnabled} disabled={cashSale||editMode} onChange={e=>toggleReceived(e.target.checked)}/><span>Received</span></label><label className={styles.moneyInput}><AccountCurrencySymbol/><input type="number" step="0.01" min="0" max={remaining} value={cashSale?remaining.toFixed(2):received} disabled={cashSale||editMode||!receivedEnabled} onChange={e=>setReceived(e.target.value)}/></label></div>
    <div className={`${styles.row} ${styles.balance}`}><strong>Balance Due</strong><strong><Money value={balanceDue}/></strong></div>

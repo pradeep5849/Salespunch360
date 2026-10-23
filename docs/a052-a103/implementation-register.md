@@ -10621,3 +10621,15 @@ Implementation `8e951b8e1a6d1809e58b741ae853645fbaf6b4c6` strengthens the existi
 ### A088 recovery CI runner compatibility, 2026-10-23
 
 `c99c5fccd495943a9e435e3f528309047e3415b1` removes runner apt dependency and uses clients from the exact PostgreSQL service image. Previous CI39965827235(eddf37ca)passed Web/Android but failed client installation with exit100 before recovery tests on the changing Ubuntu runner. The extracted actual workflow step passed all9recovery/guard tests locally(9.84s),using standalone Docker clients with host networking,read-only root,runnerUID/GID and only the temporary dump directory mounted. YAML/bash/diff checks passed. PG16 CIrerun pending;localservice17.11. No product source/schema/migration change or final finding promotion.
+
+
+## 23 October 2026 — retained posted return credit development
+
+[Development evidence](sale-return-revision-verification.md) records the new
+immutable correction implementation, 103 grouped financial/Home passes, 12
+expanded credit/stock/serial integration passes, desktop/mobile-web evidence and
+Android compile/eight JVM passes. Runs overlap; counts are not additive.
+193 findings remain implemented/resolved but not finally verified and six remain
+PARTIAL. No final status was promoted. The machine-readable register retains all
+199 original IDs and the remaining validation limitations. A104 and merging stay
+on hold.

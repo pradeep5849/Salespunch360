@@ -23,4 +23,12 @@ class SaleDetailTotalsTest {
         val totals=saleDetailTotals(doc)
         assertEquals("9876543210123.01",totals.received);assertEquals("0.10",totals.discount)
     }
+
+    @Test fun returnedSaleCanBeEditedWhileDeleteStaysDisabled() {
+        val doc=Json.parseToJsonElement("""{"paymentSummary":{"received":"0.00","paymentDiscount":"0.00","advanceApplied":"0.00","credits":"80.00","originalReturnCredits":"100.00","returnCreditsTransferred":"20.00","outstanding":"0.00","lifecycle":"POSTED","canChange":true,"canDelete":false}}""").jsonObject
+        val totals=saleDetailTotals(doc)
+        assertTrue(totals.canChange);assertFalse(totals.canDelete)
+        assertEquals("0.00",totals.received);assertEquals("80.00",totals.credits)
+        assertEquals("100.00",totals.originalReturnCredits);assertEquals("20.00",totals.returnCreditsTransferred)
+    }
 }

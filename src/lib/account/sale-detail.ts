@@ -1,3 +1,4 @@
+import {saleLifecycleEvents} from "./sale-lifecycle";
 import {saleInvoiceIdentity} from "./sale-invoice-identity";
 import { gstStateName } from "./gst-states";
 import { db } from "@/lib/db";
@@ -18,6 +19,8 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
       const sale = await getCommercialDocumentForActor(actor, id, tx);
       if (sale.type !== "SALES_INVOICE") throw new Error("NOT_FOUND");
       const identity=await saleInvoiceIdentity(tx,sale);
+      const retired=(await saleLifecycleEvents(tx,actor.companyId,[sale.id])).get(sale.id);
+      const successor=retired?.replacementId?await tx.commercialDocument.findFirst({where:{id:retired.replacementId,companyId:actor.companyId,branchId:sale.branchId,type:"SALES_INVOICE"},select:{id:true}}):null;
       const zero = sale.grandTotal.mul(0);
       const receipts = sale.allocations.filter(
         (row) => row.settlement.type === "CUSTOMER_RECEIPT",
@@ -30,7 +33,7 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
           }),
         ]);
       const active =
-        sale.status === "POSTED" && sale.journalEntry?.status !== "REVERSED";
+        sale.status === "POSTED" && sale.journalEntry?.status !== "REVERSED"&&!retired;
       const base = sale.payableAmount ?? sale.grandTotal;
       const outstanding = active ? (sale.financial?.outstanding ?? base) : zero;
       return {
@@ -39,6 +42,7 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
         internalDocumentNumber:sale.documentNumber,
         invoiceRevision:identity.revision,
         previousInvoiceId:identity.previousInvoiceId,
+        supersededById:successor?.id??null,
         stateOfSupplyName: gstStateName(sale.stateOfSupplyCode),
         partyBalance,
         paymentSummary: {
@@ -54,24 +58,20 @@ export async function saleDetailForActor(actor: ProjectActor, id: string) {
           advanceApplied: sale.advanceApplications
             .reduce((total, row) => total.add(row.amount), zero)
             .toFixed(2),
-          credits: sale.adjustments
-            .filter((row) => row.type === "CREDIT_NOTE")
-            .reduce(
-              (total, row) => total.add(row.payableAmount ?? row.grandTotal),
-              zero,
-            )
-            .toFixed(2),
+          credits: (sale.financial?.returnCreditsApplied??zero).toFixed(2),
+          originalReturnCredits:(sale.financial?.returnCreditsOriginal??zero).toFixed(2),
+          returnCreditsTransferred:(sale.financial?.returnCreditsTransferred??zero).toFixed(2),
+          canDelete:active&&sale.journalEntry?.status==="POSTED"&&Boolean(sale.financial)&&!pendingCheques&&!(sale.financial?.returnCount??0)&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SALES_ENTRY")&&(!(sale.allocations.length||sale.advanceApplications.length)||(["ACCOUNT_ADMIN","ACCOUNTANT"].includes(actor.accountRole??"")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTLEMENT_ENTRY"))),
           outstanding: outstanding.toFixed(2),
           lifecycle:
-            sale.journalEntry?.status === "REVERSED" ? "REVERSED" : sale.status,
+            retired?.lifecycle??(sale.journalEntry?.status === "REVERSED" ? "REVERSED" : sale.status),
           canChange:
-            active &&
+            active &&sale.journalEntry?.status==="POSTED"&&
             Boolean(sale.financial) &&
             !pendingCheques &&
-            outstanding.add(sale.allocations.reduce((sum,row)=>sum.add(row.amount),zero)).add(sale.advanceApplications.reduce((sum,row)=>sum.add(row.amount),zero)).eq(base) &&
-            !sale.adjustments.length &&
+            outstanding.add(sale.financial?.returnCreditsApplied??zero).add(sale.allocations.reduce((sum,row)=>sum.add(row.amount),zero)).add(sale.advanceApplications.reduce((sum,row)=>sum.add(row.amount),zero)).eq(base) &&
             canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST") &&
-            (!(sale.allocations.length||sale.advanceApplications.length)||(["ACCOUNT_ADMIN","ACCOUNTANT"].includes(actor.accountRole??"")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTLEMENT_ENTRY"))) &&
+            (!(sale.allocations.length||sale.advanceApplications.length||(sale.financial?.returnCount??0))||(["ACCOUNT_ADMIN","ACCOUNTANT"].includes(actor.accountRole??"")&&canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTLEMENT_ENTRY"))) &&
             canUsePermission(
               actor,
               "SALESPUNCH360_ACCOUNT",

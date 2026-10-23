@@ -235,6 +235,10 @@ describe.skipIf(!url)(
       if (url)
         await client.$transaction(async (tx) => {
           await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+      await tx.saleLifecycleSnapshot.deleteMany({where:{companyId}});
+      await tx.saleRevisionCreditLine.deleteMany({where:{companyId}});
+      await tx.saleRevisionCredit.deleteMany({where:{companyId}});
+      await tx.saleReturnRevision.deleteMany({where:{companyId}});
           await tx.paymentReminder.deleteMany({where:{companyId}});
           await tx.cheque.updateMany({
             where: { companyId },
@@ -640,7 +644,8 @@ describe.skipIf(!url)(
       expect(details.paymentSummary.paymentDiscount).toBe("10.00");
       expect(details.paymentSummary.outstanding).toBe("30.00");
       expect(details.partyBalance).toBe("260.00");
-      expect(details.paymentSummary.canChange).toBe(false);
+      expect(details.paymentSummary.canChange).toBe(true);
+      expect(details.paymentSummary.canDelete).toBe(false);
       const advanced = await saleDetailForActor(actor, second.id);
       expect(advanced.paymentSummary.received).toBe("0.00");
       expect(advanced.paymentSummary.advanceApplied).toBe("30.00");

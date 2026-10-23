@@ -1,6 +1,17 @@
 import { ZodError } from "zod";
 
 const messages: Record<string, string> = {
+  SALE_ALREADY_REVISED: "This Sale already has a saved revision or cancellation. Open its latest history before continuing." ,
+  SALE_MUST_COVER_POSTED_RETURNS: "Keep every returned item and at least its already returned quantity on the corrected Sale." ,
+  RETURN_REVISION_ITEM_UNIT_MISMATCH: "Keep the original item, unit, warehouse, batch and serial for items with posted returns." ,
+  RETURN_REVISION_PARTY_PROJECT_MISMATCH: "A Sale with posted returns must keep the same customer, branch and project." ,
+  SALE_RETURN_LINE_HISTORY_REQUIRED: "This return is missing its original item history. Ask your Account administrator to review it; saved records have not changed." ,
+  SALE_RETURN_HISTORY_INCONSISTENT: "This Sale has inconsistent return or revision history. Ask your Account administrator to review it; saved records have not changed." ,
+  RETURN_REVISION_STOCK_CONFIGURATION_CHANGED: "Restore stock tracking for this retained item before correcting its Sale." ,
+  SALE_STOCK_SOURCE_HISTORY_REQUIRED: "This Sale is missing its original stock history. Ask your Account administrator to review it; saved records have not changed." ,
+  INVALID_SALE_CORRECTION_DATE: "Use a correction date on or after the original invoice and its posted transactions." ,
+  SALE_CORRECTION_WORKFLOW_REQUIRED: "Open the saved Sale and use Edit to create its audited correction." ,
+
   INVALID_SALE_ATTACHMENT: "Select a valid PDF, PNG or JPEG attachment of up to 10 MB.",
   SALE_ATTACHMENT_LIMIT: "Select up to 50 attachments with a combined size of no more than 10 MB.",
   SALE_ATTACHMENT_REQUEST_KEY_REQUIRED: "Reload the Sale form and try saving again with a fresh request reference.",

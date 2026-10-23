@@ -48,6 +48,10 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     setPrivateStorageForTests(undefined);
     await client.$transaction(async tx => {
       await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+      await tx.saleLifecycleSnapshot.deleteMany({where:{companyId}});
+      await tx.saleRevisionCreditLine.deleteMany({where:{companyId}});
+      await tx.saleRevisionCredit.deleteMany({where:{companyId}});
+      await tx.saleReturnRevision.deleteMany({where:{companyId}});
       await tx.commercialAttachment.deleteMany({ where: { companyId } });
       await tx.commercialAuditEvent.deleteMany({ where: { companyId } });
       await tx.accountOperationalAudit.deleteMany({ where: { companyId } });

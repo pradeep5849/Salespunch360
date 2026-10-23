@@ -190,3 +190,9 @@ it("never records successful backup when a required private file cannot be read"
 it("includes immutable party-transfer photo references in the private file inventory",async()=>{
  const key="companies/company-a/party-transfers/source/photo.webp";m.reads.set("accountOperationalAudit",vi.fn().mockResolvedValue([{entityId:"source",entityType:"PARTY_TRANSFER",eventType:"PARTY_TRANSFER_POSTED",metadata:{photoObjectKey:key,photoSha256:createHash("sha256").update("photo").digest("hex")}}]));m.storageGet.mockResolvedValue(Buffer.from("photo"));const bundle=JSON.parse(new TextDecoder().decode((await createAccountBackupForActor(actor,false,true)).bytes));expect(bundle.data.partyTransferPhotos).toEqual([{sourceId:"source",photoObjectKey:key,expectedSha256:createHash("sha256").update("photo").digest("hex")}]);expect(bundle.privateFiles).toEqual(expect.arrayContaining([expect.objectContaining({objectKey:key,data:Buffer.from("photo").toString("base64")})]));expect(bundle.manifest.recordCounts.partyTransferPhotos).toBe(1);
 });
+
+it.each(["saleReturnRevision","saleRevisionCredit","saleRevisionCreditLine","saleLifecycleSnapshot"])("retains company-scoped immutable Sale correction history: %s",async name=>{
+ const row={id:`${name}-original`,companyId:actor.companyId,originalAmount:"100.00",appliedAmount:"80.00",excessAmount:"20.00"};m.reads.set(name,vi.fn().mockResolvedValue([row]));
+ const result=await createAccountBackupForActor(actor);const bundle=JSON.parse(new TextDecoder().decode(result.bytes));
+ expect(m.reads.get(name)).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId}});expect(bundle.data[name]).toEqual([row]);expect(bundle.manifest.recordCounts[name]).toBe(1);
+});

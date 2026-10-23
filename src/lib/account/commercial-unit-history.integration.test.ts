@@ -38,6 +38,10 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
  afterAll(async()=>{
   await client.$transaction(async tx=>{
    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+      await tx.saleLifecycleSnapshot.deleteMany({where:{companyId}});
+      await tx.saleRevisionCreditLine.deleteMany({where:{companyId}});
+      await tx.saleRevisionCredit.deleteMany({where:{companyId}});
+      await tx.saleReturnRevision.deleteMany({where:{companyId}});
    await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
    await tx.projectMaterialMovement.deleteMany({where:{companyId}});
    await tx.$executeRawUnsafe("SET LOCAL session_replication_role = origin");

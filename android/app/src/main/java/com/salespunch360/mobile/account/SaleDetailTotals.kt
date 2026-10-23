@@ -4,10 +4,10 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.serialization.json.*
 
-internal data class SaleDetailTotals(val received:String,val discount:String,val advance:String,val credits:String,val outstanding:String,val lifecycle:String,val canChange:Boolean)
+internal data class SaleDetailTotals(val received:String,val discount:String,val advance:String,val credits:String,val outstanding:String,val lifecycle:String,val canChange:Boolean,val canDelete:Boolean=canChange,val originalReturnCredits:String="0.00",val returnCreditsTransferred:String="0.00")
 internal fun saleDetailTotals(doc:JsonObject):SaleDetailTotals {
     val summary=doc["paymentSummary"] as? JsonObject
-    if(summary!=null)return SaleDetailTotals(summary.str("received"),summary.str("paymentDiscount"),summary.str("advanceApplied"),summary.str("credits"),summary.str("outstanding"),summary.str("lifecycle"),summary.bool("canChange"))
+    if(summary!=null)return SaleDetailTotals(summary.str("received"),summary.str("paymentDiscount"),summary.str("advanceApplied"),summary.str("credits").ifBlank{"0.00"},summary.str("outstanding"),summary.str("lifecycle"),summary.bool("canChange"),if("canDelete" in summary)summary.bool("canDelete")else summary.bool("canChange"),summary.str("originalReturnCredits").ifBlank{"0.00"},summary.str("returnCreditsTransferred").ifBlank{"0.00"})
     fun money(value:String)=value.toBigDecimalOrNull() ?: BigDecimal.ZERO
     fun text(value:BigDecimal)=value.setScale(2,RoundingMode.HALF_UP).toPlainString()
     val receipts=doc.array("allocations").map{it.jsonObject}.filter{row->(row["settlement"] as? JsonObject)?.let{it.str("type")=="CUSTOMER_RECEIPT"&&it.str("status") !in listOf("PENDING_CHEQUE","REVERSED")}==true}

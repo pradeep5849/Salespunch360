@@ -577,10 +577,12 @@ private fun DirectSaleInvoiceEditor(
                 item{Text("Recorded payments",fontWeight=FontWeight.Bold)}
                 item{Text("Received on saved invoice: ${accountMoney(saved.received)}")}
                 item{Text("Advance already applied: ${accountMoney(saved.advance)}")}
+                if(saved.credits.toBigDecimalOrNull()?.signum()!=0)item{Text("Recorded credit adjustments: ${accountMoney(saved.credits)}")}
+                if(saved.returnCreditsTransferred.toBigDecimalOrNull()?.signum()==1)item{Text("Original billed return credit: ${accountMoney(saved.originalReturnCredits)}. Transferred to customer advance credit: ${accountMoney(saved.returnCreditsTransferred)}.")}
                 item{Text("Recorded payment discount: ${accountMoney(saved.discount)}")}
                 item{Text("Recorded balance due: ${accountMoney(saved.outstanding)}")}
                 items(saved.receipts){ receipt -> Text("Applied receipt · ${accountDate(receipt.date)} · ${receipt.mode} · ${accountMoney(receipt.amount)}${if(receipt.reference.isBlank())"" else " · Reference: ${receipt.reference}"}") }
-                item{Text("These are the saved payment amounts. An amount correction keeps actual payments available and removes the old payment discount. Record new payments from Sale Details after saving.")}
+                item{Text("These are the saved payment amounts. An amount correction keeps actual payments available and removes the old payment discount. Record new payments separately after saving.")}
             }
             if(draft.paymentType=="CHEQUE"&&draft.editingSourceId.isBlank()){
                 item{OutlinedTextField(draft.chequeNumber,{onDraft(draft.copy(chequeNumber=it.take(80)))},enabled=!saving,label={Text("Cheque number")},modifier=Modifier.fillMaxWidth())}

@@ -25,7 +25,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   const transactionDefaults=settings?.transactionDefaults as {transactionPreferences?:{shareAs?:string}}|null;
   const message=`Hi ${sale.partyName}, invoice ${sale.documentNumber} dated ${formatCalendarDate(sale.issueDate,prefs)} totals ${formatMoney(sale.payableAmount??sale.grandTotal,prefs)}.${messaging.includeInvoiceLink&&sale.status==="POSTED"?`\n${invoiceShareUrl(sale)}`:""}`;
   const base=sale.payableAmount??sale.grandTotal;
-  const {outstanding,received,paymentDiscount,advanceApplied,credits,canChange,lifecycle}=sale.paymentSummary;
+  const {outstanding,received,paymentDiscount,advanceApplied,credits,canChange,canDelete,lifecycle}=sale.paymentSummary;
   const receipts=sale.allocations.filter(row=>row.settlement.type==="CUSTOMER_RECEIPT");
   return <main className={styles.root}>
     <header className={styles.header}>
@@ -34,6 +34,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       <SaleDetailToolbar id={sale.id} number={sale.documentNumber} pdfUrl={`/api/account/print/${sale.type}/${sale.id}?format=pdf`} canChange={canChange} shareAs={transactionDefaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"}/>
     </header>
     {sale.invoiceRevision>0&&<p className={styles.revision}>Revision {sale.invoiceRevision}{sale.previousInvoiceId&&<> · <Link href={`/workspace/account/sales/${sale.previousInvoiceId}`}>View previous revision</Link></>}</p>}
+    {lifecycle!=="POSTED"&&<p className={styles.revision}>{lifecycle==="REVISED"?"A newer revision is saved.":lifecycle==="CANCELLED"?"This Sale is cancelled.":lifecycle==="REVERSED"?"This Sale has been reversed.":lifecycle}{sale.supersededById&&<> <Link href={`/workspace/account/sales/${sale.supersededById}`}>View latest revision</Link></>}</p>}
     <section className={styles.meta}>
       <div><small>Invoice No.</small><strong>{sale.documentNumber}⌄</strong></div>
       <div><small>Date</small><strong><AccountDate value={sale.issueDate.toISOString()}/>⌄</strong></div>
@@ -63,6 +64,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
         {Number(paymentDiscount)!==0&&<div className={styles.totalRow}><span>Payment discount</span><Money value={paymentDiscount}/></div>}
         {Number(advanceApplied)!==0&&<div className={styles.totalRow}><span>Advance applied</span><Money value={advanceApplied}/></div>}
         {Number(credits)!==0&&<div className={styles.totalRow}><span>Credit adjustments</span><Money value={credits}/></div>}
+        {Number(sale.paymentSummary.returnCreditsTransferred)!==0&&<div className={styles.note}>Original billed return credit: <Money value={sale.paymentSummary.originalReturnCredits}/>. Transferred to customer advance credit: <Money value={sale.paymentSummary.returnCreditsTransferred}/>. These are retained credit values, not a new cash receipt.</div>}
         <div className={`${styles.totalRow} ${styles.balance}`}><span>Balance Due</span><strong><Money value={outstanding}/></strong></div>
         {!canChange&&sale.status==="POSTED"&&<div className={styles.note}>This posted Sale has payment or adjustment history. Use its correction workflow to retain that history.</div>}
       </section>
@@ -80,6 +82,6 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       {attachments.length>0&&<section className={styles.field} aria-label="Sale attachments"><h2>Attachments</h2><ul>{attachments.map(file=><li key={file.id} style={{overflowWrap:"anywhere"}}><a href={`/api/account/sale-attachments/${file.id}`}>{file.displayName}</a></li>)}</ul></section>}
     </section>
     {(messaging.sendToParty||messaging.copyToSelf)&&<section className={styles.body}>{messaging.sendToParty&&<ManualMessage message={message} phone={party?.phone}/ >}{messaging.copyToSelf&&<><h3>Copy to Self</h3><ManualMessage message={message} phone={company?.primaryPhone}/></>}{messaging.includeInvoiceLink&&<p><Link href={`/api/account/print/${sale.type}/${sale.id}?format=pdf`}>Download invoice to attach</Link></p>}</section>}
-    <SaleDetailActions id={sale.id} canChange={canChange}/>
+    <SaleDetailActions id={sale.id} canChange={canChange} canDelete={canDelete}/>
   </main>;
 }

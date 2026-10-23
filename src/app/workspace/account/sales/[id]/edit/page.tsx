@@ -17,7 +17,8 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   const actor=await requirePermission("ACCOUNT_LEDGER_VIEW");if(!actor.companyId)throw new AuthorizationError();
   const attachments=await listSaleAttachmentsForActor({...actor,companyId:actor.companyId},sale.id);
   const initial={
-    recordedPayments:{received:sale.paymentSummary.received,paymentDiscount:sale.paymentSummary.paymentDiscount,advanceApplied:sale.paymentSummary.advanceApplied,outstanding:sale.paymentSummary.outstanding,
+    canDelete:sale.paymentSummary.canDelete,
+    recordedPayments:{credits:sale.paymentSummary.credits,originalReturnCredits:sale.paymentSummary.originalReturnCredits,returnCreditsTransferred:sale.paymentSummary.returnCreditsTransferred,received:sale.paymentSummary.received,paymentDiscount:sale.paymentSummary.paymentDiscount,advanceApplied:sale.paymentSummary.advanceApplied,outstanding:sale.paymentSummary.outstanding,
       receipts:sale.allocations.filter(row=>row.settlement.type==="CUSTOMER_RECEIPT").map(row=>({id:row.id,amount:row.amount.sub(row.discountAmount).toFixed(2),date:row.settlement.transactionDate.toISOString().slice(0,10),mode:row.settlement.paymentMode,reference:row.settlement.reference}))},
     attachments:attachments.map(({id,displayName,mimeType,sizeBytes})=>({id,displayName,mimeType,sizeBytes})),
     id:sale.id,documentNumber:sale.documentNumber,

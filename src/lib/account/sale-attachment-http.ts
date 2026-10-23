@@ -32,7 +32,7 @@ export function saleAttachmentFailure(error: unknown) {
   if (message === "INVALID_INPUT") return saleAttachmentJson({ error: "INVALID_INPUT" }, 400);
   const result = commercialActionFailure(error);
   if (message === "IDEMPOTENCY_KEY_REUSED") return saleAttachmentJson(result, 409);
-  if (["SALE_HAS_PENDING_CHEQUE","SALE_HAS_PAYMENTS_OR_ADJUSTMENTS","SALE_NOT_EDITABLE","SALE_REPLACEMENT_ALREADY_POSTED"].includes(message)) return saleAttachmentJson(result,409);
+  if (["SALE_ALREADY_REVISED","SALE_RETURN_LINE_HISTORY_REQUIRED","SALE_RETURN_HISTORY_INCONSISTENT","SALE_STOCK_SOURCE_HISTORY_REQUIRED","RETURN_REVISION_STOCK_CONFIGURATION_CHANGED","SALE_HAS_PENDING_CHEQUE","SALE_HAS_PAYMENTS_OR_ADJUSTMENTS","SALE_NOT_EDITABLE","SALE_REPLACEMENT_ALREADY_POSTED"].includes(message)) return saleAttachmentJson(result,409);
   if (error instanceof z.ZodError || result.errorCode !== "SAVE_FAILED") {
     return saleAttachmentJson(result, 400);
   }

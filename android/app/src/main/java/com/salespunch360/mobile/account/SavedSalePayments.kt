@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import kotlinx.serialization.json.*
 
 data class SavedSaleReceipt(val amount:String,val date:String,val mode:String,val reference:String)
-data class SavedSalePayments(val received:String,val discount:String,val advance:String,val outstanding:String,val receipts:List<SavedSaleReceipt>)
+data class SavedSalePayments(val received:String,val discount:String,val advance:String,val outstanding:String,val receipts:List<SavedSaleReceipt>,val credits:String="0.00",val originalReturnCredits:String="0.00",val returnCreditsTransferred:String="0.00")
 /** Read-only saved invoice display; never added to a payment or invoice write payload. */
 fun savedSalePayments(doc:JsonObject):SavedSalePayments {
     val totals=saleDetailTotals(doc)
@@ -15,5 +15,5 @@ fun savedSalePayments(doc:JsonObject):SavedSalePayments {
         val discount=row.str("discountAmount").toBigDecimalOrNull() ?: BigDecimal.ZERO
         SavedSaleReceipt((amount-discount).toPlainString(),settlement.str("transactionDate").take(10),settlement.str("paymentMode"),settlement.str("reference"))
     }
-    return SavedSalePayments(totals.received,totals.discount,totals.advance,totals.outstanding,receipts)
+    return SavedSalePayments(totals.received,totals.discount,totals.advance,totals.outstanding,receipts,totals.credits,totals.originalReturnCredits,totals.returnCreditsTransferred)
 }

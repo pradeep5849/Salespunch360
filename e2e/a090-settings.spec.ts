@@ -129,6 +129,10 @@ test.afterAll(async () => {
   await db.numberingSeries.deleteMany({ where: { companyId } });
   await db.$transaction(async tx=>{
     await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+      await tx.saleLifecycleSnapshot.deleteMany({where:{companyId}});
+      await tx.saleRevisionCreditLine.deleteMany({where:{companyId}});
+      await tx.saleRevisionCredit.deleteMany({where:{companyId}});
+      await tx.saleReturnRevision.deleteMany({where:{companyId}});
     await tx.accountOperationalAudit.deleteMany({where:{companyId}});
     // Only the localhost *_ci fixture tenant is removed. Production material guards remain unchanged.
     await tx.$executeRawUnsafe("SET LOCAL session_replication_role = replica");
@@ -3240,7 +3244,7 @@ for(const scenario of [{type:"FIXED",value:"1",applied:"3",total:"57",legacy:fal
  await db.accountProduct.update({where:{id:product.id},data:{pricing:{enteredSalePrice:"20",saleTaxMode:"EXCLUSIVE",discountType:scenario.type,discountValue:"9",normalizedDiscountValue:"9"}}});
  const count=await db.commercialDocument.count({where:{companyId}});await signInSettings(page);await page.goto(`/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${source.id}`);await expect(page.getByText(product.name,{exact:true})).toBeVisible({timeout:30000});expect(await db.commercialDocument.count({where:{companyId}})).toBe(count);
  await page.getByRole("button",{name:"Save",exact:true}).click();await expect.poll(async()=>await db.commercialDocument.count({where:{companyId}}),{timeout:30000}).toBe(count+1);
- const copy=await db.commercialDocument.findFirstOrThrow({where:{companyId,id:{not:source.id},lines:{some:{productId:product.id}}},include:{lines:true,journalEntry:{include:{lines:true}}}});
+ const copy=await db.commercialDocument.findFirstOrThrow({where:{companyId,id:{not:source.id},lines:{some:{productId:product.id}}},include:{lines:{orderBy:{position:"asc"}},journalEntry:{include:{lines:{orderBy:{lineNumber:"asc"}}}}}});
  expect(copy.status).toBe("POSTED");expect(copy.grandTotal.toString()).toBe(scenario.total);expect(copy.lines[0].discountType).toBe(scenario.type);expect(copy.lines[0].discountValue?.toString()).toBe(scenario.applied);expect(copy.journalEntry!.lines.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(0);
  expect(await db.commercialDocumentLine.findUniqueOrThrow({where:{id:original.id}})).toEqual(original);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  if(scenario.legacy){
@@ -4092,4 +4096,33 @@ test("A084 Item Batch Report preserves scoped as-of primary quantities metadata 
   const empty=await page.request.get(`/api/v1/mobile/account/reports/item-batch?branchId=${branchId}&to=2026-10-13&productId=${product.id}&itemSearch=NoMatch`,{headers});expect(empty.status()).toBe(200);expect((await empty.json()).rows).toEqual([]);
   await db.accountSettings.update({where:{companyId},data:{itemSettings:{...before.itemSettings as object,enabled:false}}});const itemsOff=await page.request.get(`/api/v1/mobile/account/reports/item-batch?${query}`,{headers});expect(itemsOff.status()).toBe(400);expect((await itemsOff.json()).error).toBe("ITEMS_DISABLED");const optionsOff=await page.request.get("/api/v1/mobile/account/reports/options",{headers});expect(optionsOff.status()).toBe(200);expect((await optionsOff.json()).reports).not.toContain("item-batch");await db.accountSettings.update({where:{companyId},data:{itemSettings:{...before.itemSettings as object,enabled:true},enabledModules:[]}});const core=await page.request.get(`/api/v1/mobile/account/reports/item-batch?${query}`,{headers});expect(core.status()).toBe(200);expect((await core.json()).rows[0][4]).toBe("3.0000");await db.user.update({where:{id:userId},data:{accountRole:"PROJECT_MANAGER"}});expect((await page.request.get(`/api/v1/mobile/account/reports/item-batch?${query}`,{headers})).status()).toBe(403);expect(await db.stockMovement.count({where:{companyId}})).toBe(movements);expect(await db.journalEntry.count({where:{companyId}})).toBe(journals);
  }finally{await db.user.update({where:{id:userId},data:{accountRole:"ACCOUNT_ADMIN"}});await db.accountSettings.update({where:{companyId},data:{enabledModules:before.enabledModules,itemSettings:before.itemSettings??{},dateFormat:before.dateFormat}})}
+});
+
+test("A086 retained billed returns preserve original credit through shared Web edit and native detail",async({page})=>{
+ test.setTimeout(240000);
+ const settings=await db.accountSettings.findUniqueOrThrow({where:{companyId}});
+ try{
+  await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES"],itemSettings:{enabled:true},transactionDefaults:{transactionPreferences:{invoicePreview:false,linkPayments:false}}}});
+  if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Return edit year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+  for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
+  const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
+  const service=await db.accountService.create({data:{companyId,name:`Retained return ${randomUUID().slice(0,8)}`,sellingRate:"100",taxRate:"0"}});
+  const input={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"SERVICE",sourceId:service.id,quantity:"1",rate:"100",taxRate:"0"}]};
+  const sale=await createCommercialDocumentForActor(actor,input);await postCommercialDocumentForActor(actor,{documentId:sale.id});const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
+  const credit=await createCommercialDocumentForActor(actor,{...input,type:"CREDIT_NOTE",sourceDocumentId:sale.id,lines:[{...input.lines[0],sourceCommercialLineId:line.id}]});await postCommercialDocumentForActor(actor,{documentId:credit.id});
+  const original=await db.commercialDocument.findUniqueOrThrow({where:{id:credit.id},include:{lines:{orderBy:{position:"asc"}},journalEntry:{include:{lines:{orderBy:{lineNumber:"asc"}}}}}});
+  await signInSettings(page);await page.goto(`/workspace/account/sales/${sale.id}`);
+  await expect(page.getByRole("button",{name:"Delete",exact:true})).toBeDisabled();await page.getByRole("link",{name:"Edit",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Delete",exact:true})).toBeDisabled();
+  await page.getByRole("button",{name:`Edit item ${service.name}`,exact:true}).click();await page.getByLabel("Rate (Price/Unit)",{exact:true}).fill("80");
+  await page.locator("section").filter({has:page.getByRole("heading",{name:"Add Items to Sale",exact:true})}).getByRole("button",{name:"Save",exact:true}).click();await page.getByRole("button",{name:"Save",exact:true}).click();
+  await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/,{timeout:30000});const id=page.url().split("/").at(-1)!;expect(id).not.toBe(sale.id);
+  await expect(page.locator("main").last()).toContainText("Original billed return credit:");await expect(page.getByRole("button",{name:"Delete",exact:true})).toBeDisabled();await expect(page.getByRole("link",{name:"Edit",exact:true})).toBeVisible();
+  expect(await db.commercialDocument.findUniqueOrThrow({where:{id:credit.id},include:{lines:{orderBy:{position:"asc"}},journalEntry:{include:{lines:{orderBy:{lineNumber:"asc"}}}}}})).toEqual(original);
+  const carry=await db.saleRevisionCredit.findFirstOrThrow({where:{companyId,creditNoteId:credit.id},include:{excessAdvance:true}});expect(carry.appliedAmount.toString()).toBe("80");expect(carry.excessAdvance!.remainingAmount.toString()).toBe("20");
+  const user=await db.user.findUniqueOrThrow({where:{id:userId}}),token=createSessionToken();await db.mobileSession.create({data:{userId,tokenHash:hashSessionToken(token),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date(),sessionVersion:user.sessionVersion}});
+  const native=await page.request.get(`/api/v1/mobile/account/transactions/${id}`,{headers:{authorization:`Bearer ${token}`}});expect(native.status()).toBe(200);expect((await native.json()).paymentSummary).toMatchObject({credits:"80.00",originalReturnCredits:"100.00",returnCreditsTransferred:"20.00",outstanding:"0.00",canChange:true,canDelete:false});
+  const pdf=await page.request.get(`/api/account/print/SALES_INVOICE/${id}?format=pdf`);expect(pdf.status()).toBe(200);expect((await extractPdfText(await pdf.body())).text).toContain(sale.documentNumber);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+ }finally{await db.accountSettings.update({where:{companyId},data:{enabledModules:settings.enabledModules,itemSettings:settings.itemSettings===null?Prisma.DbNull:settings.itemSettings as Prisma.InputJsonValue,transactionDefaults:settings.transactionDefaults===null?Prisma.DbNull:settings.transactionDefaults as Prisma.InputJsonValue}})}
 });

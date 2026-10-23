@@ -1,7 +1,8 @@
+import {saleInvoiceIdentityFromMetadata} from "./sale-invoice-identity";
 import {ACCOUNT_ROLE_PERMISSIONS} from "@/lib/auth/permissions";
 import {enabledModulesForCompany} from "./modules";
 import {homeNonCommercialRows,homeReadBranches} from "./home-noncommercial";
-import type { CommercialDocumentType, Prisma } from "@prisma/client";
+import {Prisma,type CommercialDocumentType} from "@prisma/client";
 import { db } from "@/lib/db";
 import {commercialDocumentPolicies, documentOutstandingsBatch } from "@/lib/account/commercial";
 import type { AccountBranchActor, AccountBranchContext } from "./branch-context";
@@ -38,12 +39,12 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
   const allowedTypes=modules?(permissions.has("ACCOUNT_LEDGER_VIEW")?accountHomeTransactionTypes.filter(type=>commercialDocumentPolicies[type].modules.every(key=>modules.has(key))):[]):accountHomeTransactionTypes;
   const commercialTypes = types.filter((type): type is CommercialDocumentType => (accountHomeTransactionTypes as readonly string[]).includes(type));
   const documentFilters: Prisma.CommercialDocumentWhereInput[] = commercialTypes.map(type => ({ type }));
-  if (types.includes("SALE_CANCELLED")) documentFilters.push({ type: "SALES_INVOICE", status: "CANCELLED" });
+  if (types.includes("SALE_CANCELLED")) documentFilters.push({ type: "SALES_INVOICE", OR:[{status:"CANCELLED"},{lifecycleSnapshot:{is:{state:"CANCELLED"}}}] });
   const documentWhere: Prisma.CommercialDocumentWhereInput = {
     ...scopes.document,
     ...viewBranch,
     ...(modules?{type:{in:[...allowedTypes]}}:{}),
-    NOT: { type: "SALES_INVOICE", status: "DRAFT" },
+    NOT: [{type:"SALES_INVOICE",status:"DRAFT"},{type:"SALES_INVOICE",lifecycleSnapshot:{is:{state:"REVISED"}}},{type:"CREDIT_NOTE",lifecycleAdjustmentSource:{isNot:null}}],
     ...((types.length || q) ? { AND: [
       ...(types.length ? [{ OR: documentFilters.length ? documentFilters : [{ id: { in: [] } }] }] : []),
       ...(q ? [{ OR: [
@@ -67,12 +68,16 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
       where: documentWhere,
       orderBy: [{ issueDate: "desc" }, { updatedAt: "desc" }],
       take: 20,
-      select: { id: true, partyName: true, type: true, documentNumber: true, issueDate: true, status: true, grandTotal: true, payableAmount: true, balanceDue: true,updatedAt:true },
+      select: { id: true, branchId:true,journalEntry:{select:{status:true}},lifecycleSnapshot:{select:{state:true}},partyName: true, type: true, documentNumber: true, issueDate: true, status: true, grandTotal: true, payableAmount: true, balanceDue: true,updatedAt:true },
     }),
     modules&&(!modules.size||(!permissions.has("ACCOUNT_ACCOUNTS")&&actor.accountRole!=="PROJECT_MANAGER"))?[]:db.customer.findMany({ where: partyWhere, orderBy: { updatedAt: "desc" }, take: 20, select: { id: true, name: true, updatedAt: true } }),
     modules?homeNonCommercialRows(actor,context,{q,types},modules,permissions):[],
   ]);
-  const postedSales = transactions.filter(row => row.type === "SALES_INVOICE" && row.status === "POSTED");
+  const saleIds=transactions.filter(row=>row.type==="SALES_INVOICE").map(row=>row.id);
+  const identities=saleIds.length?await db.accountOperationalAudit.findMany({where:{companyId:actor.companyId,entityType:"SALES_INVOICE",entityId:{in:saleIds},eventType:"SALE_INVOICE_IDENTITY"},orderBy:[{createdAt:"asc"},{id:"asc"}],select:{entityId:true,metadata:true}}):[];
+  const identityById=new Map<string,unknown>();for(const event of identities)if(!identityById.has(event.entityId))identityById.set(event.entityId,event.metadata);
+  const activeSale=(row:typeof transactions[number])=>row.type==="SALES_INVOICE"&&row.status==="POSTED"&&row.journalEntry?.status!=="REVERSED"&&!row.lifecycleSnapshot;
+  const postedSales = transactions.filter(activeSale);
   const saleOutstandings = postedSales.length ? await documentOutstandingsBatch(actor.companyId, postedSales) : new Map();
   const partyIds = parties.map(party => party.id);
   const balances = partyIds.length ? await db.commercialDocument.groupBy({
@@ -83,10 +88,13 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
   }) : [];
   const balanceByParty = new Map(balances.map(row => [row.customerId, row]));
   const normalized=transactions.map(row => {
-      const outstanding = row.type === "SALES_INVOICE" && row.status === "POSTED" ? saleOutstandings.get(row.id) : undefined;
+      const inactiveSale=row.type==="SALES_INVOICE"&&!activeSale(row);
+      const outstanding=inactiveSale?new Prisma.Decimal(0):row.type==="SALES_INVOICE"?saleOutstandings.get(row.id):undefined;
       const base = row.payableAmount ?? row.grandTotal;
-      const paymentStatus = outstanding === undefined ? undefined : outstanding.isZero() ? "PAID" : outstanding.lt(base) ? "PARTIALLY_PAID" : "UNPAID";
-      return {...row,sourceKind:"COMMERCIAL" as const,filterType:row.type,detailHref:row.type==="SALES_INVOICE"?`/workspace/account/sales/${row.id}`:`/workspace/account/transactions/${row.id}`,printType:row.type,showBalance:true,balanceLabel:"Balance",sortAt:row.updatedAt,grandTotal:(modules?base:row.grandTotal).toString(),payableAmount:row.payableAmount?.toString()??null,balanceDue:(outstanding??row.balanceDue).toString(),paymentStatus};
+      const paymentStatus = inactiveSale||outstanding === undefined ? undefined : outstanding.isZero() ? "PAID" : outstanding.lt(base) ? "PARTIALLY_PAID" : "UNPAID";
+      const printedNumber=row.type==="SALES_INVOICE"?saleInvoiceIdentityFromMetadata({...row,companyId:actor.companyId},identityById.get(row.id)).printedNumber:row.documentNumber;
+      const {journalEntry,lifecycleSnapshot,...visible}=row;
+      return {...visible,documentNumber:printedNumber,status:lifecycleSnapshot?.state==="CANCELLED"?"CANCELLED":journalEntry?.status==="REVERSED"?"REVERSED":row.status,sourceKind:"COMMERCIAL" as const,filterType:row.type,detailHref:row.type==="SALES_INVOICE"?`/workspace/account/sales/${row.id}`:`/workspace/account/transactions/${row.id}`,printType:row.type,showBalance:!inactiveSale,balanceLabel:"Balance",sortAt:row.updatedAt,grandTotal:(modules?base:row.grandTotal).toString(),payableAmount:row.payableAmount?.toString()??null,balanceDue:(outstanding??row.balanceDue).toString(),paymentStatus};
     });
   const merged=[...normalized,...extraRows].sort((a,b)=>b.issueDate.getTime()-a.issueDate.getTime()||(b.sortAt?.getTime()??0)-(a.sortAt?.getTime()??0)||b.id.localeCompare(a.id)).slice(0,20);
   return {q,types,unavailableFilters:unavailableHomeFilters(types),transactions:merged.map(item=>{const {sortAt,...row}=item;void sortAt;return row;}),
