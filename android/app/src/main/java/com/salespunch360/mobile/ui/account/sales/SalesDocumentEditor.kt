@@ -479,6 +479,7 @@ private fun DirectSaleInvoiceEditor(
                         listOf("Credit","Cash").forEachIndexed{i,label->
                             SegmentedButton(
                                 selected=cash==(i==1),
+                                enabled=!saving&&draft.editingSourceId.isBlank(),
                                 onClick={onDraft(draft.copy(receivedInFull=i==1))},
                                 shape=SegmentedButtonDefaults.itemShape(i,2)
                             ){Text(label)}
@@ -571,7 +572,16 @@ private fun DirectSaleInvoiceEditor(
                 item{Row(verticalAlignment=Alignment.CenterVertically){Checkbox(draft.receivedEnabled,{onDraft(draft.copy(receivedEnabled=it))},enabled=!saving);Text("Received")}}
                 if(draft.receivedEnabled)item{OutlinedTextField(draft.receivedAmount,{onDraft(draft.copy(receivedAmount=it))},enabled=!saving,label={Text("Received Amount")},modifier=Modifier.fillMaxWidth())}
             }
-            item{SelectField("Payment Type",draft.paymentType,listOf("CASH" to "Cash","BANK" to "Bank","CHEQUE" to "Cheque")){if(!saving)onDraft(draft.copy(paymentType=it))}}
+            if(draft.editingSourceId.isBlank())item{SelectField("Payment Type",draft.paymentType,listOf("CASH" to "Cash","BANK" to "Bank","CHEQUE" to "Cheque")){if(!saving)onDraft(draft.copy(paymentType=it))}}
+            draft.recordedPayments?.takeIf{draft.editingSourceId.isNotBlank()}?.let { saved ->
+                item{Text("Recorded payments",fontWeight=FontWeight.Bold)}
+                item{Text("Received on saved invoice: ${accountMoney(saved.received)}")}
+                item{Text("Advance already applied: ${accountMoney(saved.advance)}")}
+                item{Text("Recorded payment discount: ${accountMoney(saved.discount)}")}
+                item{Text("Recorded balance due: ${accountMoney(saved.outstanding)}")}
+                items(saved.receipts){ receipt -> Text("Applied receipt · ${accountDate(receipt.date)} · ${receipt.mode} · ${accountMoney(receipt.amount)}${if(receipt.reference.isBlank())"" else " · Reference: ${receipt.reference}"}") }
+                item{Text("These are the saved payment amounts. An amount correction keeps actual payments available and removes the old payment discount. Record new payments from Sale Details after saving.")}
+            }
             if(draft.paymentType=="CHEQUE"&&draft.editingSourceId.isBlank()){
                 item{OutlinedTextField(draft.chequeNumber,{onDraft(draft.copy(chequeNumber=it.take(80)))},enabled=!saving,label={Text("Cheque number")},modifier=Modifier.fillMaxWidth())}
                 item{OutlinedTextField(draft.chequeDate,{onDraft(draft.copy(chequeDate=it))},enabled=!saving,label={Text("Cheque date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())}

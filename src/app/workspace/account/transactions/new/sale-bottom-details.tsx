@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
+import type {SaleEditInitial} from "@/lib/account/sale-edit-initial";
 import { GST_STATES } from "@/lib/account/gst-states";
 import {Money} from "@/components/account/account-ui";
-import {AccountCurrencySymbol} from "@/components/account/display-preferences";
+import {AccountDate,AccountCurrencySymbol} from "@/components/account/display-preferences";
 import {useMemo,useState} from "react";
 import styles from "./sale-bottom-details.module.css";
 
@@ -10,7 +11,7 @@ const states=GST_STATES;
 
 function n(v:string){const x=Number(v);return Number.isFinite(x)?x:0}
 
-export function useSaleBottomDetails({advanceBalance=0,subtotal,taxTotal,defaultStateCode,roundingEnabled=false,roundingStep=1,termsEnabled=true,defaultTerms="",cashSale=false,showStateOfSupply=true,initialRoundOff,initialStateCode,editMode=false}:{initialRoundOff?:string;initialStateCode?:string;editMode?:boolean;advanceBalance?:number;subtotal:number;taxTotal:number;defaultStateCode?:string|null;roundingEnabled?:boolean;roundingStep?:number;termsEnabled?:boolean;defaultTerms?:string;cashSale?:boolean;showStateOfSupply?:boolean}){
+export function useSaleBottomDetails({recordedPayments,advanceBalance=0,subtotal,taxTotal,defaultStateCode,roundingEnabled=false,roundingStep=1,termsEnabled=true,defaultTerms="",cashSale=false,showStateOfSupply=true,initialRoundOff,initialStateCode,editMode=false}:{recordedPayments?:SaleEditInitial["recordedPayments"];initialRoundOff?:string;initialStateCode?:string;editMode?:boolean;advanceBalance?:number;subtotal:number;taxTotal:number;defaultStateCode?:string|null;roundingEnabled?:boolean;roundingStep?:number;termsEnabled?:boolean;defaultTerms?:string;cashSale?:boolean;showStateOfSupply?:boolean}){
  const [roundOffEnabled,setRoundOffEnabled]=useState(initialRoundOff!==undefined?n(initialRoundOff)!==0:roundingEnabled),[roundOff,setRoundOff]=useState(initialRoundOff??""),[receivedEnabled,setReceivedEnabled]=useState(false),[received,setReceived]=useState(""),[paymentType,setPaymentType]=useState("CASH"),[stateOfSupplyCode,setStateOfSupplyCode]=useState(initialStateCode??"");
  const[notes,setNotes]=useState(defaultTerms);
  const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState("");
@@ -26,11 +27,20 @@ export function useSaleBottomDetails({advanceBalance=0,subtotal,taxTotal,default
    {(roundingEnabled||initialRoundOff!==undefined)&&<div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={roundOffEnabled} onChange={e=>setRoundOffEnabled(e.target.checked)}/><span>Round Off</span></label><label className={styles.moneyInput}><AccountCurrencySymbol/><input type="number" step="0.01" min={-Math.max(10,roundingStep/2)} max={Math.max(10,roundingStep/2)} value={roundOff||roundedAdjustment.toFixed(2)} disabled={!roundOffEnabled} onChange={e=>setRoundOff(e.target.value)}/></label></div>}
    <div className={`${styles.row} ${styles.total}`}><strong>Total Amount</strong><strong><Money value={total}/></strong></div>
    {advanceApplied>0&&<div className={styles.row}><span>Advance applied</span><strong><Money value={advanceApplied}/></strong></div>}
+   {editMode&&recordedPayments?<section aria-label="Recorded payments" className={styles.recorded}>
+    <div className={styles.row}><span>Received on saved invoice</span><strong><Money value={recordedPayments.received}/></strong></div>
+    <div className={styles.row}><span>Advance already applied</span><strong><Money value={recordedPayments.advanceApplied}/></strong></div>
+    <div className={styles.row}><span>Recorded payment discount</span><strong><Money value={recordedPayments.paymentDiscount}/></strong></div>
+    <div className={`${styles.row} ${styles.balance}`}><strong>Recorded balance due</strong><strong><Money value={recordedPayments.outstanding}/></strong></div>
+    {recordedPayments.receipts.map(receipt=><p key={receipt.id} style={{overflowWrap:"anywhere"}}>Applied receipt · <AccountDate value={receipt.date}/> · {receipt.mode} · <Money value={receipt.amount}/>{receipt.reference&&<> · Reference: {receipt.reference}</>}</p>)}
+    <p>These are the saved payment amounts. An amount correction keeps actual payments available and removes the old payment discount. Record new payments from Sale Details after saving.</p>
+   </section>:<>
    <div className={styles.row}><label className={styles.checkLabel}><input type="checkbox" checked={cashSale||receivedEnabled} disabled={cashSale||editMode} onChange={e=>toggleReceived(e.target.checked)}/><span>Received</span></label><label className={styles.moneyInput}><AccountCurrencySymbol/><input type="number" step="0.01" min="0" max={remaining} value={cashSale?remaining.toFixed(2):received} disabled={cashSale||editMode||!receivedEnabled} onChange={e=>setReceived(e.target.value)}/></label></div>
    <div className={`${styles.row} ${styles.balance}`}><strong>Balance Due</strong><strong><Money value={balanceDue}/></strong></div>
    <div className={styles.payment}><span>Payment Type</span><select disabled={editMode} value={paymentType} onChange={e=>setPaymentType(e.target.value)}><option value="CASH">💵 Cash</option><option value="BANK">Bank</option><option value="CHEQUE">Cheque</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></div>
    {paymentType==="CHEQUE"&&!editMode&&<><label>Cheque number<input value={chequeNumber} onChange={event=>setChequeNumber(event.target.value)} maxLength={80} required={receivedAmount>0}/></label><label>Cheque date<input type="date" value={chequeDate} onChange={event=>setChequeDate(event.target.value)} required={receivedAmount>0}/></label><p>The invoice stays unpaid until this cheque is closed.</p></>}
    {editMode&&<p>Save invoice changes first, then record any new payment from Sale Details.</p>}
+   </>}
    <Link className={styles.addPayment} href="/workspace/account/money/accounts">＋ Add Payment Type</Link>
    {showStateOfSupply&&<div className={styles.state}><label>State of Supply</label><select aria-label="State of Supply" value={effectiveStateCode} onChange={e=>setStateOfSupplyCode(e.target.value)}><option value="">Select State</option>{states.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></div>}
    {termsEnabled&&<details className={styles.terms}><summary>Terms &amp; Conditions</summary><textarea aria-label="Terms & Conditions" maxLength={5000} value={notes} onChange={event=>setNotes(event.target.value)}/></details>}
