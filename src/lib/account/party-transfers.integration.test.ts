@@ -10,7 +10,8 @@ vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof Prism
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {reverseJournalInTx} from "@/lib/accounting/service";
 import {reverseExpenseForActor} from "./expenses";
-import {savePartyTransferForActor,partyTransferForActor,partyTransferPhotoForActor} from "./party-transfers";
+import * as expenseService from "./expenses";
+import {savePartyTransferForActor,partyTransferForActor,partyTransferPhotoForActor,reversePartyTransferForActor} from "./party-transfers";
 import type {ProjectActor} from "./projects";
 const companyId=randomUUID(),otherCompany=randomUUID(),branchId=randomUUID(),otherBranch=randomUUID(),userId=randomUUID(),customerId=randomUUID(),vendorId=randomUUID(),foreignCustomer=randomUUID();
 const actor={id:userId,companyId,name:"Transfer admin",email:`${userId}@example.test`,role:"ACCOUNT_USER",accountRole:"ACCOUNT_ADMIN",isActive:true,accountAccessActive:true,salesAccessActive:false,salesRole:null,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor;
@@ -93,4 +94,28 @@ describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",
  it("checks period locks with complete rollback",async()=>{
   const fy=await client.financialYear.findFirstOrThrow({where:{companyId}});const lock=await client.accountingPeriodLock.create({data:{companyId,financialYearId:fy.id,lockedThrough:new Date("2026-10-23"),updatedById:userId}});const before=await counts();try{await expect(savePartyTransferForActor(actor,input())).rejects.toThrow("PERIOD_LOCKED");expect(await counts()).toEqual(before)}finally{await client.accountingPeriodLock.delete({where:{id:lock.id}})}
  });
+ it("reverses all cash and commission legs atomically and replays the same reversal once",async()=>{
+  const saved=await savePartyTransferForActor(actor,input()),request={requestKey:randomUUID(),entryDate:"2026-10-24",reason:"Cancel complete agency transfer"};
+  const original=await client.accountOperationalAudit.findFirstOrThrow({where:{companyId,entityId:saved.id,eventType:"PARTY_TRANSFER_POSTED"}});
+  const results=await Promise.all(Array.from({length:3},()=>reversePartyTransferForActor(actor,saved.id,request)));expect(results.every(row=>row.status==="REVERSED")).toBe(true);expect((await partyTransferForActor(actor,saved.id)).status).toBe("REVERSED");
+  const reversals=await client.accountOperationalAudit.findMany({where:{companyId,entityId:saved.id,eventType:"PARTY_TRANSFER_REVERSED"}});expect(reversals).toHaveLength(1);
+  const metadata=reversals[0].metadata as {reversalJournalIds:string[]};expect(metadata.reversalJournalIds).toHaveLength(3);expect(await cashFor(metadata.reversalJournalIds)).toBe("-100");
+  const income=await client.expenseTransaction.findUniqueOrThrow({where:{id:saved.commissionIncomeId!}});expect(income.status).toBe("REVERSED");expect(income.reversalJournalId).not.toBeNull();
+  expect((await client.accountOperationalAudit.findUniqueOrThrow({where:{id:original.id}})).metadata).toEqual(original.metadata);
+  await expect(reversePartyTransferForActor(actor,saved.id,{...request,requestKey:randomUUID()})).rejects.toThrow("PARTY_TRANSFER_ALREADY_REVERSED");
+ });
+ it("rolls back both reversed pass-through legs if the commission reversal fails",async()=>{
+  const saved=await savePartyTransferForActor(actor,input());const fault=vi.spyOn(expenseService,"reverseExpenseForActor").mockRejectedValueOnce(new Error("COMMISSION_REVERSAL_FAILURE"));
+  try{await expect(reversePartyTransferForActor(actor,saved.id,{requestKey:randomUUID(),entryDate:"2026-10-24",reason:"Whole transfer cancellation"})).rejects.toThrow("COMMISSION_REVERSAL_FAILURE")}finally{fault.mockRestore()}
+  expect(await client.accountOperationalAudit.count({where:{companyId,entityId:saved.id,eventType:"PARTY_TRANSFER_REVERSED"}})).toBe(0);
+  for(const id of [saved.passReceiptJournalId!,saved.passPaymentJournalId!])expect((await client.journalEntry.findUniqueOrThrow({where:{id}})).status).toBe("POSTED");
+  expect((await client.expenseTransaction.findUniqueOrThrow({where:{id:saved.commissionIncomeId!}})).status).toBe("POSTED");
+ });
+ it("denies non-admin and foreign-company source reversals without financial writes",async()=>{
+  const saved=await savePartyTransferForActor(actor,input()),request={requestKey:randomUUID(),entryDate:"2026-10-24",reason:"Denied cancellation"};
+  await expect(reversePartyTransferForActor({...actor,accountRole:"ACCOUNTANT"},saved.id,request)).rejects.toThrow();
+  await expect(reversePartyTransferForActor({...actor,companyId:otherCompany,branchIds:[]},saved.id,request)).rejects.toThrow();
+  expect(await client.accountOperationalAudit.count({where:{companyId,entityId:saved.id,eventType:"PARTY_TRANSFER_REVERSED"}})).toBe(0);
+ });
+
 });

@@ -10522,3 +10522,11 @@ Dedicated branch-scoped form and saved details, received-to-paid autofill, edita
 Exact earlier core head `b6cf0f636234dac9f7fc49f25462b59af05b010e` passed all Web/migration/Android jobs in CI39899395942. This evidence does not certify the newer Web commit. Home source-filter integration, direction toggles, full-source reversal, Android screens/device runtime and final 199-finding certification remain pending. IDs and statuses unchanged.
 
 Correction evidence: explicit scalar ledger fixture now passes full `tsc --noEmit` (exit 0) and focused ESLint (exit 0). No application runtime change after the two passing browser profiles. The earlier TS2322 failure remains recorded.
+
+### 23 October 2026 — Whole Party Transfer reversal (A071-F05 remains PARTIAL)
+
+Both pass-through journals and the commission Other Income reverse atomically through an Account-admin source operation; concurrent same-request retries return one correction. The original immutable source remains intact, and private source APIs/details show REVERSED. Web/native source reversal endpoints are guarded. Independent component reversal remains blocked.
+
+Actual validation: 55 financial integration tests passed (3 files, 7.30s), 62 focused unit/route/accounting tests passed (3 files, 622ms), 2 desktop/mobile Chromium tests passed (52.6s) including actual native HTTP reversal/retry, Web/native status reads and equal-amount Web reversal. Final full TypeScript, focused ESLint and diff whitespace checks passed. Initial failure-injection fixture targeted the root client rather than the transaction service; corrected injector and final passing evidence retained. No extra migration or production write.
+
+Remaining: Home source rows/filters, reference direction toggles, native Android screens/device runtime, dedicated reversal UI controls and final 199-finding validation. Earlier entries are historical; the full-source reversal backend/API limitation is resolved by this entry. No final-status promotion.

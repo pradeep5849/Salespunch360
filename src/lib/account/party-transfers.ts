@@ -8,9 +8,9 @@ import {db} from "@/lib/db";
 import {AuthorizationError} from "@/lib/auth/authorization";
 import {canUsePermission} from "@/lib/auth/permissions";
 import {assertOperationalWrite} from "@/lib/billing/entitlement";
-import {postJournalInTx} from "@/lib/accounting/service";
+import {postJournalInTx,reverseJournalInTx} from "@/lib/accounting/service";
 import {partyTransferBaseInput,partyTransferInput,partyTransferAmounts} from "./party-transfer-policy";
-import {createExpenseForActor} from "./expenses";
+import {createExpenseForActor,reverseExpenseForActor} from "./expenses";
 import {allocateDocumentNumberInTx} from "./numbering";
 import {retrySerializable} from "./transaction-retry";
 import type {ProjectActor} from "./projects";
@@ -35,7 +35,7 @@ async function party(tx:Prisma.TransactionClient,companyId:string,branchId:strin
 }
 async function source(tx:Prisma.TransactionClient,companyId:string,id:string){return tx.accountOperationalAudit.findFirst({where:{companyId,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_POSTED"},select:{metadata:true,createdAt:true}})}
 export async function partyTransferForActor(a:ProjectActor,id:string){
- await access(a);z.string().uuid().parse(id);id=id.toLowerCase();const row=await source(db as unknown as Prisma.TransactionClient,a.companyId!,id);if(!row)throw new Error("PARTY_TRANSFER_NOT_FOUND");const data=partyTransferSnapshot.parse(row.metadata);branch(a,data.branchId);return{id,...data,createdAt:row.createdAt};
+ await access(a);z.string().uuid().parse(id);id=id.toLowerCase();const row=await source(db as unknown as Prisma.TransactionClient,a.companyId!,id);if(!row)throw new Error("PARTY_TRANSFER_NOT_FOUND");const data=partyTransferSnapshot.parse(row.metadata);branch(a,data.branchId);const reversed=await db.accountOperationalAudit.count({where:{companyId:a.companyId,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_REVERSED"}});return{id,...data,createdAt:row.createdAt,status:reversed?"REVERSED" as const:"POSTED" as const};
 }
 /** One serializable commit; no invoice allocation or company expense is created for pass-through money. */
 export async function savePartyTransferForActor(a:ProjectActor,raw:unknown,file?:File){
@@ -45,7 +45,7 @@ export async function savePartyTransferForActor(a:ProjectActor,raw:unknown,file?
  try{return await retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM companies WHERE id=${companyId}::uuid FOR UPDATE`;
   const existing=await source(tx,companyId,requestKey);
-  if(existing){const data=partyTransferSnapshot.parse(existing.metadata);branch(a,data.branchId);if(data.requestHash!==requestHash)throw new Error("IDEMPOTENCY_KEY_REUSED");return{id:requestKey,...data,createdAt:existing.createdAt}}
+  if(existing){const data=partyTransferSnapshot.parse(existing.metadata);branch(a,data.branchId);if(data.requestHash!==requestHash)throw new Error("IDEMPOTENCY_KEY_REUSED");const reversed=await tx.accountOperationalAudit.count({where:{companyId,entityType:"PARTY_TRANSFER",entityId:requestKey,eventType:"PARTY_TRANSFER_REVERSED"}});return{id:requestKey,...data,createdAt:existing.createdAt,status:reversed?"REVERSED" as const:"POSTED" as const}}
   const date=new Date(input.transactionDate),[receivedPartyName,paidPartyName,money,fy]=await Promise.all([
    party(tx,companyId,input.branchId,input.receivedParty),party(tx,companyId,input.branchId,input.paidParty),
    tx.moneyAccount.findFirst({where:{id:input.moneyAccountId,companyId,isActive:true,OR:[{branchId:null},{branchId:input.branchId}]}}),
@@ -74,7 +74,7 @@ export async function savePartyTransferForActor(a:ProjectActor,raw:unknown,file?
   if(photo&&photoObjectKey){uploadAttempted=true;await privateStorage().put(photoObjectKey,photo.bytes)}
   const data=partyTransferSnapshot.parse({...intent,...amounts,photoObjectKey,photoSha256:photo?.sha256??null,photoMimeType:photo?.mimeType??null,version:1,requestHash,number,receivedPartyName,paidPartyName,passReceiptJournalId,passPaymentJournalId,commissionIncomeId});
   const saved=await tx.accountOperationalAudit.create({data:{companyId,actorUserId:a.id,entityType:"PARTY_TRANSFER",entityId:requestKey,eventType:"PARTY_TRANSFER_POSTED",metadata:data}});
-  return{id:requestKey,...data,createdAt:saved.createdAt};
+  return{id:requestKey,...data,createdAt:saved.createdAt,status:"POSTED" as const};
  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:30000}),4,["companyId","entityId"],[["companyId","sourceType","sourceId","postingPurpose"],["companyId","creationRequestKey"]]);}catch(error){
   if(uploadAttempted&&photoObjectKey){
    const retained=await db.accountOperationalAudit.findFirst({where:{companyId,entityType:"PARTY_TRANSFER",entityId:requestKey,eventType:"PARTY_TRANSFER_POSTED",metadata:{path:["photoObjectKey"],equals:photoObjectKey}},select:{id:true}}).then(Boolean).catch(()=>true);
@@ -100,4 +100,23 @@ export async function partyTransferOptionsForActor(a:ProjectActor){
   db.moneyAccount.findMany({where:{companyId:a.companyId,isActive:true,OR:[{branchId:null},{branchId:{in:branchIds}}]},select:{id:true,name:true,branchId:true,type:true},orderBy:{name:"asc"}}),
  ]);
  return{branches,customers,vendors,accounts,canPost:canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_MONEY_ENTRY")&&canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST")};
+}
+
+const reversalInput=z.object({requestKey:z.string().uuid().transform(value=>value.toLowerCase()),entryDate:z.string().date(),reason:z.string().trim().min(3).max(1000)}).strict();
+/** Reverse the entire managed source; its original immutable snapshot remains intact. */
+export async function reversePartyTransferForActor(a:ProjectActor,id:string,raw:unknown){
+ await access(a,true);if(a.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+ id=z.string().uuid().parse(id).toLowerCase();const input=reversalInput.parse(raw);
+ const requestHash=createHash("sha256").update(JSON.stringify({id,...input})).digest("hex");
+ return retrySerializable(()=>db.$transaction(async tx=>{
+  await tx.$queryRaw`SELECT id FROM companies WHERE id=${a.companyId}::uuid FOR UPDATE`;
+  const posted=await source(tx,a.companyId,id);if(!posted)throw new Error("PARTY_TRANSFER_NOT_FOUND");const snapshot=partyTransferSnapshot.parse(posted.metadata);branch(a,snapshot.branchId);
+  const previous=await tx.accountOperationalAudit.findFirst({where:{companyId:a.companyId,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_REVERSED"},select:{metadata:true}});
+  if(previous){const metadata=previous.metadata as {requestHash?:string};if(metadata.requestHash!==requestHash)throw new Error("PARTY_TRANSFER_ALREADY_REVERSED");return{id,status:"REVERSED" as const}}
+  const entryDate=new Date(input.entryDate),journalIds:string[]=[];
+  for(const journalEntryId of [snapshot.passReceiptJournalId,snapshot.passPaymentJournalId])if(journalEntryId){const row=await reverseJournalInTx(tx,a,{journalEntryId,entryDate,reason:input.reason},{partyTransferId:id});journalIds.push(row.id)}
+  if(snapshot.commissionIncomeId){const row=await reverseExpenseForActor(a,snapshot.commissionIncomeId,entryDate,input.reason,{transaction:tx,partyTransferId:id});journalIds.push(row.id)}
+  await tx.accountOperationalAudit.create({data:{companyId:a.companyId,actorUserId:a.id,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_REVERSED",metadata:{version:1,requestKey:input.requestKey,requestHash,entryDate:input.entryDate,reason:input.reason,reversalJournalIds:journalIds}}});
+  return{id,status:"REVERSED" as const};
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:30000}),4);
 }

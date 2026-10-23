@@ -986,13 +986,13 @@ export async function reverseExpenseForActor(
   id: string,
   entryDate: Date,
   reason: string,
+  parent?: {transaction: Prisma.TransactionClient; partyTransferId: string},
 ) {
   await assertExpenseAccess(a, "ACCOUNT_EXPENSE_APPROVE");
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const row = await scopedExpense(a, id, "POSTED");
   if (!row?.journalEntryId) throw new Error("EXPENSE_NOT_REVERSIBLE");
-  return db.$transaction(
-    async (tx) => {
+  const work = async (tx: Prisma.TransactionClient) => {
       await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
       await tx.$queryRaw`SELECT "id" FROM "expense_transactions" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
       const current = await tx.expenseTransaction.findFirst({
@@ -1012,7 +1012,7 @@ export async function reverseExpenseForActor(
           entryDate,
           reason,
         },
-        { expenseId: current.id },
+        { expenseId: current.id, ...(parent ? {partyTransferId: parent.partyTransferId} : {}) },
       );
       const changed = await tx.expenseTransaction.updateMany({
         where: {
@@ -1039,9 +1039,9 @@ export async function reverseExpenseForActor(
         reversalJournalId: reversal.id,
       });
       return reversal;
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
+    };
+  if(parent)return work(parent.transaction);
+  return db.$transaction(work,{ isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 export const recurringPaymentInput = z
   .object({

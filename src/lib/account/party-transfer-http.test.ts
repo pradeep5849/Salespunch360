@@ -18,7 +18,7 @@ describe("party transfer HTTP boundary",()=>{
   if(mode==="textPhoto")form.set("photo","private-key");
   await expect(partyTransferForm(request(form))).rejects.toThrow("INVALID_PARTY_TRANSFER_FORM");
  });
- it.each([[new AuthenticationError(),401],[new AuthorizationError(),403],[new Error("MOBILE_UNAUTHORIZED"),401],[new Error("SUBSCRIPTION_REQUIRED"),403],[new Error("RATE_LIMITED"),429],[new Error("PARTY_TRANSFER_NOT_FOUND"),404],[new Error("IDEMPOTENCY_KEY_REUSED"),409],[new Error("INVALID_PARTY_TRANSFER_PARTY"),400],[new Error("database password must stay private"),503]])("maps controlled errors without leaking internals",async(error,status)=>{
+ it.each([[new AuthenticationError(),401],[new AuthorizationError(),403],[new Error("MOBILE_UNAUTHORIZED"),401],[new Error("SUBSCRIPTION_REQUIRED"),403],[new Error("RATE_LIMITED"),429],[new Error("PARTY_TRANSFER_NOT_FOUND"),404],[new Error("IDEMPOTENCY_KEY_REUSED"),409],[new Error("PARTY_TRANSFER_ALREADY_REVERSED"),409],[new SyntaxError("internal parse details"),400],[new Error("INVALID_PARTY_TRANSFER_PARTY"),400],[new Error("database password must stay private"),503]])("maps controlled errors without leaking internals",async(error,status)=>{
   const response=partyTransferFailure(error);expect(response.status).toBe(status);expect(response.headers.get("cache-control")).toContain("no-store");expect(await response.text()).not.toContain("password");
  });
  it("returns a narrow DTO and keeps private storage and request hashes server-side",()=>{

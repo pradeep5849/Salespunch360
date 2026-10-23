@@ -51551,6 +51551,16 @@
             "Full source reversal pending; component reversal remains guarded.",
             "Reference row direction toggles and final complete199 validation pending."
           ]
+        },
+        {
+          "evidence_key": "party_transfer_whole_source_reversal_2026_10_23",
+          "implementation_status": "PARTIAL",
+          "summary": "Account-admin whole-source reversal: both pass-through journals and commission Other Income reverse in one serializable transaction, immutable reversal audit, request replay protection, original source preserved, source status exposed without private keys. Web/native guarded reversal APIs and saved details status implemented. Existing expense reversal accepts a trusted parent transaction/lifecycle only for composed source correction; standalone behavior preserved.",
+          "remaining_limitations": [
+            "Home transaction-source list/filter mapping, reference direction toggles and Android screens/device runtime pending.",
+            "Browser exercised reversal endpoints and status; a dedicated Web/Android reversal control is not yet supplied.",
+            "Final199 full-suite/build/device/migration certification and main conflict resolution remain pending."
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -73173,6 +73183,40 @@
         "Reference row direction toggles and final complete199 validation pending."
       ],
       "commit_sha": "Git commit containing this evidence; final_status unchanged."
+    },
+    "party_transfer_whole_source_reversal_2026_10_23": {
+      "date": "2026-10-23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "implementation_status": "PARTIAL",
+      "actual_implementation": "Account-admin whole-source reversal: both pass-through journals and commission Other Income reverse in one serializable transaction, immutable reversal audit, request replay protection, original source preserved, source status exposed without private keys. Web/native guarded reversal APIs and saved details status implemented. Existing expense reversal accepts a trusted parent transaction/lifecycle only for composed source correction; standalone behavior preserved.",
+      "modified_files": [
+        "src/lib/account/party-transfers.ts",
+        "src/lib/account/party-transfers.integration.test.ts",
+        "src/lib/account/expenses.ts",
+        "src/lib/account/party-transfer-http.ts",
+        "src/lib/account/party-transfer-http.test.ts",
+        "src/lib/account/party-transfer-routes.test.ts",
+        "src/app/api/account/party-transfers/[id]/reverse/route.ts",
+        "src/app/api/v1/mobile/account/party-transfers/[id]/reverse/route.ts",
+        "src/app/workspace/account/money/party-transfers/[id]/page.tsx",
+        "e2e/a090-settings.spec.ts"
+      ],
+      "test_evidence": [
+        "55 passed /3 financial integration files /0 failed or skipped /7.30s: concurrent replay, original snapshot retention, negative100 cash correction, reversed Other Income, late-failure rollback and role/company denial plus existing expense regressions.",
+        "62 passed /3 focused unit and route files /0 failed or skipped /622ms: source reversal delegation and denial before body read, controlled conflict errors, existing accounting service regressions.",
+        "2 desktop/mobile Chromium passed /52.6s: complete form plus native HTTP reversal/retry, Web GET state, equal-amount Web reversal, native GET state and retained details; no Android device claim.",
+        "Final full tsc --noEmit PASS exit0; focused ESLint --max-warnings=0 PASS exit0; git diff --check PASS."
+      ],
+      "initial_test_failure": "Initial failure injector spied on root Prisma updateMany which transaction client did not call; 54 passed/1 failed. Replaced with actual commission service boundary injector; final group55 passed, proving rollback.",
+      "remaining_limitations": [
+        "Home transaction-source list/filter mapping, reference direction toggles and Android screens/device runtime pending.",
+        "Browser exercised reversal endpoints and status; a dedicated Web/Android reversal control is not yet supplied.",
+        "Final199 full-suite/build/device/migration certification and main conflict resolution remain pending."
+      ],
+      "migrations": "No additional migration; existing147 chain unchanged. No production database changes.",
+      "commit_sha": "Git commit containing this evidence."
     }
   },
   "approved_business_decisions": {
@@ -74200,6 +74244,14 @@
       ],
       "status": "PARTIAL",
       "evidence": "intermediate_validation.party_transfer_web_form_2026_10_23"
+    },
+    {
+      "key": "party_transfer_whole_source_reversal_2026_10_23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "status": "PARTIAL",
+      "evidence": "intermediate_validation.party_transfer_whole_source_reversal_2026_10_23"
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
