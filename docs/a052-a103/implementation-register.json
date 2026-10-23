@@ -62824,7 +62824,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -62993,8 +62993,26 @@
           ],
           "tests": "36 PASS across4files,0fail/skip,1.44s; includes2 real isolated PostgreSQL tests. No production access or financial writes.",
           "remaining": "Final full-head regression and report-specific end-to-end export matrix remain pending. No new application defect inferred; original finding ID preserved."
+        },
+        "final_day_native_and_export_scope_2026_10_23": {
+          "implementation_commit": "ea5e32301037a7fb321095fae744890e1a4d34e6",
+          "resolution": "NO APPLICATION CODE CHANGE REQUIRED — original timestamp-cutoff allegation remains withdrawn. Native DATE storage proven;correct existing query preserved.",
+          "work": "Complete original finding-specific remaining Web/native/export cutoff matrix with final-day posted sale and credit note plus a next-day goods sale with distinct saved name/code/amount. Native rows and parsedCSV/XLSX/PDF retain final-day net90taxable/106.20total and exclude next-day916.86/changedgoods. No application query,ledger,schema or migration changed.",
+          "files": [
+            "e2e/a090-settings.spec.ts"
+          ],
+          "tests": {
+            "focused_database": "36PASS/4suites,0fail/skip. Includes2real isolated PostgreSQL tests:information_schema DATE types,Kolkata previous/start/noon/end/next-day inclusion,single-day/as-of and export-query preservation. Calendar/query/service-boundary regression included.",
+            "browser_database": "2PASS1.1m desktop/mobileChromium:realpostedfinal-day sales/returns retained;next-day source excluded;authenticated native results agree;actualCSV/XLSX/PDF contents checked,branch/role denial,Axe/nooverflow,journalcount unchanged.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint andgitdiff--check PASS.",
+            "android": "Native HTTP/report data tested through authenticated API;no Android device or new native compile claim in this test-only slice.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "Code-scope resolution complete without unnecessary application mutation;IMPLEMENTED BUT NOT VERIFIED denotes completed correction/resolution scope,not a fictitious code fix. Final-head regression and native device limitations remain;original withdrawal and finding ID retained."
         }
-      }
+      },
+      "resolution": "NO APPLICATION CODE CHANGE REQUIRED — WITHDRAWN ALLEGATION; NATIVE DATE STORAGE VERIFIED"
     },
     {
       "finding_id": "A084-F14",
@@ -74864,6 +74882,26 @@
         }
       ],
       "remaining": "Code implementation status IMPLEMENTED BUT NOT VERIFIED. Exact reference pixel parity is not certified;Android physical/emulator/Compose/PrintManager/TalkBack and complete final-head regressions remain pending. No final_status promotion."
+    },
+    {
+      "finding_ids": [
+        "A084-F13"
+      ],
+      "implementation_commit": "ea5e32301037a7fb321095fae744890e1a4d34e6",
+      "resolution": "NO APPLICATION CODE CHANGE REQUIRED — original timestamp-cutoff allegation remains withdrawn. Native DATE storage proven;correct existing query preserved.",
+      "work": "Complete original finding-specific remaining Web/native/export cutoff matrix with final-day posted sale and credit note plus a next-day goods sale with distinct saved name/code/amount. Native rows and parsedCSV/XLSX/PDF retain final-day net90taxable/106.20total and exclude next-day916.86/changedgoods. No application query,ledger,schema or migration changed.",
+      "files": [
+        "e2e/a090-settings.spec.ts"
+      ],
+      "tests": {
+        "focused_database": "36PASS/4suites,0fail/skip. Includes2real isolated PostgreSQL tests:information_schema DATE types,Kolkata previous/start/noon/end/next-day inclusion,single-day/as-of and export-query preservation. Calendar/query/service-boundary regression included.",
+        "browser_database": "2PASS1.1m desktop/mobileChromium:realpostedfinal-day sales/returns retained;next-day source excluded;authenticated native results agree;actualCSV/XLSX/PDF contents checked,branch/role denial,Axe/nooverflow,journalcount unchanged.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused ESLint andgitdiff--check PASS.",
+        "android": "Native HTTP/report data tested through authenticated API;no Android device or new native compile claim in this test-only slice.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "Code-scope resolution complete without unnecessary application mutation;IMPLEMENTED BUT NOT VERIFIED denotes completed correction/resolution scope,not a fictitious code fix. Final-head regression and native device limitations remain;original withdrawal and finding ID retained."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -74900,14 +74938,14 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "93bd0969295d77ff7261c941546035df86d7ca70",
+    "code_head_commit": "ea5e32301037a7fb321095fae744890e1a4d34e6",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 8,
-      "IMPLEMENTED BUT NOT VERIFIED": 191
+      "PARTIAL": 7,
+      "IMPLEMENTED BUT NOT VERIFIED": 192
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "Finding code implementation status only:191implemented but not verified/8partial. A080 fifteen-theme code scope complete with visual functional inspection,not pixel/device certification. A090 English scope complete;Hindi user-deferred. No final-head completion claim;historical evidence retained."
+    "scope_note": "192implemented/resolved but not finally verified;7partial;0notstarted. A084-F13 completed via original required no-code-change resolution;withdrawal preserved. A090 Hindi user-deferred. No final-head completion claim."
   }
 }

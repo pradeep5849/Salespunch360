@@ -7914,7 +7914,7 @@ Cheque financial slice: normalized pending settlement/source/amount/version, clo
 
 **Required tests:** Transaction at start/noon/end of final day; next-day exclusion; Asia/Calcutta versus UTC boundary; single-day and as-of reports; export parity.
 
-**Current implementation status:** PARTIAL. Final-head verification not yet run.
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED — no application correction required; original allegation withdrawn.. Final-head verification not yet run.
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "Supplied report inventory reviewed; user accepted supplied list plus owner/partner Profit Withdrawal (46 names). Implemented drawings-ledger withdrawal report, dated signed reversals, exports and related report scope/date/display corrections. Full 46-report catalogue is not implemented.", "tests": "29 selected unit/contract tests passed in 6 files (1.03s); 2 Profit Withdrawal browser cases passed (20.2s) with CSV/XLSX/PDF checks; 2 native JVM tests passed. Full catalogue and native UI not verified.", "finding_status": null, "evidence": ["SalesPunch360_Reports_Menu_and_Transaction_Checkpoint.md", "SalesPunch360_A084-A085_Report_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -10577,3 +10577,8 @@ Implementation commit `eb72a4678c4494f0a3bec16ef207bc076c239456` includes saved 
 ### A080-F01 — all15 rendered theme matrix, 2026-10-23
 
 `93bd0969295d77ff7261c941546035df86d7ca70` retains actual authenticated theme PDFs in Playwright artifacts.1desktop casePASS1.0m with15Web/15nativeendpoint requests;earlier2profiles passedsameproductcode. Rendered all15firstpages withpdftoppm andinspectedcontactsheet:one-item fixture1pageeach,orientation/header/grid/extendedtax/acknowledgement/dual-tone/Tallymonochrome treatments visible without observedclipping. ArtifactSHA256manifest retainedinJSON. FullTypeScript/focusedESLint/diffPASS. Combined with original finding-specific Web/native picker/ApplyCancel/printshare/48nativeJVM+lint andPDFunit evidence,code scope now IMPLEMENTED BUT NOT VERIFIED. Pixel-perfect reference parity,Androiddevice/PrintManager/TalkBack,andfinalcompletehead remain unverified. Current199status:191implemented but not verified/8partial/0notstarted;no final_status promoted.
+
+
+### A084-F13 — native DATE and export cutoff resolution, 2026-10-23
+
+`ea5e32301037a7fb321095fae744890e1a4d34e6`:36focused/databasePASS4suites,including2realPostgreSQL metadata/Kolkata start/noon/end/nextday/single-day/as-of tests;2desktop/mobile-webPASS1.1m withfinal-day sale/return andnext-day posted goods excluded fromnative rowsandparsedCSV/XLSX/PDF. TypeScript/focusedESLint/diffPASS. Original allegation remains WITHDRAWN;no application query,financial,schema or migration change justified or made. Code-scope resolution complete;IMPLEMENTED BUT NOT VERIFIED reflects resolved required scope,not a fabricated code correction. Final-head/device verification remains. Current199status:192implemented/resolved butnotfinallyverified/7partial/0notstarted.
