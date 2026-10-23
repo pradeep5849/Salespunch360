@@ -1,6 +1,8 @@
 import {referenceReportAliases} from "./reference-inventory";
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["party-items", "Party Report by Items", "Party reports"],
+  ["item-party", "Item Report by Party", "Item/Stock reports"],
   ["day-book", "Day Book", "Transaction"],
   ["hsn-sales", "Sale Summary by HSN", "Tax"],
   ["sac-sales", "SAC Report", "Tax"],
@@ -68,6 +70,8 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "party-items":["customerId","vendorId","productId","itemSearch"],
+  "item-party":["customerId","vendorId","productId","itemSearch"],
   "sac-sales":["classificationSide"],
   "order-transactions":["orderType","orderStatus","customerId","vendorId"],
   "order-items":["orderType","orderStatus","customerId","vendorId"],

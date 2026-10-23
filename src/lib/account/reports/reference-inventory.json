@@ -100,9 +100,11 @@
     {
       "name": "Party Report by Items",
       "group": "Party reports",
-      "destinations": [],
+      "destinations": [
+        "party-items"
+      ],
       "requirement": "REPORTS",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Sale/Purchase by Party",
@@ -178,9 +180,11 @@
     {
       "name": "Item Report by Party",
       "group": "Item/Stock reports",
-      "destinations": [],
+      "destinations": [
+        "item-party"
+      ],
       "requirement": "STOCK",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Item Wise Profit & Loss",
