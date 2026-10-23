@@ -23,6 +23,7 @@ export function partyTransferFailure(error:unknown){
  if(error instanceof AuthorizationError||["MOBILE_FORBIDDEN","UNTRUSTED_ORIGIN","SUBSCRIPTION_REQUIRED"].includes(code)||code.startsWith("MODULE_DISABLED:"))return partyTransferJson({error:"FORBIDDEN"},403);
  if(code==="RATE_LIMITED")return partyTransferJson({error:code},429);
  if(["PARTY_TRANSFER_NOT_FOUND","PARTY_TRANSFER_PHOTO_NOT_FOUND"].includes(code))return partyTransferJson({error:"NOT_FOUND"},404);
+ if(code==="MISSING_SYSTEM_ACCOUNT")return partyTransferJson({error:code,message:"Ask your Account administrator to configure an active Other Income ledger before saving a commission transfer."},409);
  if(code==="PARTY_TRANSFER_ALREADY_REVERSED")return partyTransferJson({error:code,message:"This transfer has already been reversed. Reload its saved history."},409);
  if(error instanceof SyntaxError)return partyTransferJson({error:"INVALID_INPUT"},400);
  if(code==="IDEMPOTENCY_KEY_REUSED")return partyTransferJson({error:code,message:"This request reference already belongs to different transfer details. Review the saved transfer before retrying."},409);

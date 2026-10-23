@@ -12,7 +12,7 @@ import {reverseJournalInTx} from "@/lib/accounting/service";
 import {reverseExpenseForActor} from "./expenses";
 import {homeNonCommercialRows} from "./home-noncommercial";
 import * as expenseService from "./expenses";
-import {savePartyTransferForActor,partyTransferForActor,partyTransferPhotoForActor,reversePartyTransferForActor} from "./party-transfers";
+import {savePartyTransferForActor,partyTransferForActor,partyTransferPhotoForActor,partyTransferOptionsForActor,reversePartyTransferForActor} from "./party-transfers";
 import type {ProjectActor} from "./projects";
 const companyId=randomUUID(),otherCompany=randomUUID(),branchId=randomUUID(),otherBranch=randomUUID(),userId=randomUUID(),customerId=randomUUID(),vendorId=randomUUID(),foreignCustomer=randomUUID();
 const actor={id:userId,companyId,name:"Transfer admin",email:`${userId}@example.test`,role:"ACCOUNT_USER",accountRole:"ACCOUNT_ADMIN",isActive:true,accountAccessActive:true,salesAccessActive:false,salesRole:null,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor;
@@ -128,6 +128,11 @@ describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",
   expect(await homeNonCommercialRows({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},context,{q:saved.number,types:["P2P_RECEIVED"]},modules,permissions)).toEqual([]);
   expect(await homeNonCommercialRows(actor,context,{q:saved.number,types:["P2P_RECEIVED"]},modules,new Set())).toEqual([]);
   const reversed=await reversePartyTransferForActor(actor,saved.id,{requestKey:randomUUID(),entryDate:"2026-10-24",reason:"Home source reversal status"});expect(reversed.status).toBe("REVERSED");expect((await homeNonCommercialRows(actor,context,{q:saved.number,types:["P2P_RECEIVED"]},modules,permissions))[0].status).toBe("REVERSED");
+ });
+
+ it("native options isolate active assigned branches and do not leak masters when no branch is assigned",async()=>{
+  const scoped=await partyTransferOptionsForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[branchId]});expect(scoped.branches.map(row=>row.id)).toEqual([branchId]);expect(scoped.customers.some(row=>row.id===foreignCustomer)).toBe(false);expect(scoped.accounts.some(row=>row.id===foreignMoneyId)).toBe(false);
+  const empty=await partyTransferOptionsForActor({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]});expect(empty).toEqual({branches:[],customers:[],vendors:[],accounts:[],canPost:false});
  });
 
 });

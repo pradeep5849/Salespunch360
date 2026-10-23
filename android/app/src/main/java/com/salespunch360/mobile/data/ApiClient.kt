@@ -191,6 +191,13 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun moneyContext(query:String=""):JsonObject {val scope=com.salespunch360.mobile.account.moneyContextQuery(query);return json.parseToJsonElement(call("api/v1/mobile/account/money${if(scope.isBlank())""else"?$scope"}")).jsonObject}
  suspend fun saveMoneyAccount(id:String?,payload:kotlinx.serialization.json.JsonObject)=call("api/v1/mobile/account/money/accounts${id?.let{"/${enc(it)}"}.orEmpty()}",if(id==null)"POST" else "PATCH",payload.toString())
  suspend fun disableMoneyAccount(id:String)=call("api/v1/mobile/account/money/accounts/${enc(id)}","DELETE")
+ suspend fun reversePartyTransfer(id:String,payload:JsonObject):JsonObject=json.parseToJsonElement(call("api/v1/mobile/account/party-transfers/${enc(id)}/reverse","POST",payload.toString())).jsonObject
+ suspend fun partyTransferOptions():JsonObject=json.parseToJsonElement(call("api/v1/mobile/account/party-transfers/options")).jsonObject
+ suspend fun savePartyTransfer(payload:JsonObject,photo:JsonObject?):JsonObject=withContext(Dispatchers.IO){
+  val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("document",payload.toString()).apply{photo?.let{val mime=it["mimeType"]!!.jsonPrimitive.content;val bytes=java.util.Base64.getDecoder().decode(it["base64"]!!.jsonPrimitive.content);require(bytes.isNotEmpty()&&bytes.size<=5*1024*1024);addFormDataPart("photo",it["name"]!!.jsonPrimitive.content,bytes.toRequestBody(mime.toMediaType()))}}.build()
+  val token=pinnedToken?:session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/party-transfers").apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build()
+  http.newCall(request).awaitResponse().use{response->val raw=response.body?.string()?:"{}";if(!response.isSuccessful){val error=runCatching{json.parseToJsonElement(raw).jsonObject}.getOrNull();val code=error?.get("error")?.jsonPrimitive?.contentOrNull;if(response.code==401)session.invalidateIfCurrent(token);if(response.code==403&&code=="FORBIDDEN"&&session.token()==token)session.authorizationChanged();throw ApiException(response.code,code,serverMessage=error?.get("message")?.jsonPrimitive?.contentOrNull?.take(300))};json.parseToJsonElement(raw).jsonObject}
+ }
  suspend fun partyTransfer(id:String):JsonObject=json.parseToJsonElement(call("api/v1/mobile/account/party-transfers/${enc(id)}")).jsonObject
  suspend fun partyTransferPhoto(id:String):ByteArray=download("api/v1/mobile/account/party-transfers/${enc(id)}/photo")
  suspend fun moneyTransferImage(id:String):ByteArray=download("api/v1/mobile/account/money/transfers/${enc(id)}/image")

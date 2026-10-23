@@ -90,6 +90,7 @@ export async function partyTransferPhotoForActor(a:ProjectActor,id:string){
 export async function partyTransferOptionsForActor(a:ProjectActor){
  await access(a);
  const branches=await db.branch.findMany({where:{companyId:a.companyId,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},select:{id:true,name:true},orderBy:{name:"asc"}}),branchIds=branches.map(row=>row.id);
+ if(!branchIds.length)return{branches,customers:[],vendors:[],accounts:[],canPost:false};
  const [customers,vendors,accounts]=await Promise.all([
   db.customer.findMany({where:{companyId:a.companyId,isActive:true,isAccountCustomer:true,branchId:{in:branchIds}},select:{id:true,name:true,branchId:true},orderBy:{name:"asc"}}),
   db.vendor.findMany({where:{companyId:a.companyId,isActive:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
