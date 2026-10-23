@@ -50344,6 +50344,14 @@
         {
           "work": "Android Home shares authorized PDF or every page as PNG through a narrowly permitted FileProvider cache directory and multi-file read grants. Uses saved company PDF/ASK preference from scoped mobile Home API, handles download/render/chooser errors and refreshes Home on return. Cards deserialize authoritative paymentStatus, render paid/partial/unpaid labels with document/date/amount/balance, accessible icon actions and a More sheet instead of redirecting More to details. No financial writes or DB changes.",
           "tests": "Android compileDebugKotlin and focused DocumentSharingTest passed (3 tests, 0 failures/errors/skips; build 1m48s). Initial missing shared Intent import corrected before successful compile. Grouped Home/share tests 19/19 passed. Desktop/mobile browser PDF/image/multi-page/failure/cancel plus authenticated mobile preference checks 2/2 passed (31.8s); initial test token predated sign-in session rotation, corrected issuance order without weakening auth. TypeScript and targeted lint passed after browser stopped. Final-head regression, production worker build and physical-device chooser/PdfRenderer/TalkBack/font-scale remain pending."
+        },
+        {
+          "code_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
+          "scope": "Shared correction/customer-balance dependency;no new audit or model/migration",
+          "work": "Home full financial roles now batch all authorized party balances in one SQL snapshot,including original/reversal/receipt/advance/opening histories and legacy journal-less documents. Retained100credit against80Sale shows20customeradvance rather than duplicate saved invoice debt. ProjectManager project-scoped behavior preserved. Legacy commercial-only Home also enforces selected-branch bounds.",
+          "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
+          "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
+          "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
         }
       ],
       "push_checkpoint_evidence": {
@@ -52601,6 +52609,14 @@
         {
           "work": "Web/native Party Home uses a single white panel with row dividers, Add New Party label, dates/balances, wrapping long names and accessible existing destinations. Native empty list now has an explicit empty state. Web row navigation retains the selected branch and party query. Existing financial source calculations unchanged in this presentation slice.",
           "tests": "Desktop/mobile web tests 2/2 passed (26.0s): two rows, explicit dates, long name, 2rem enlarged text without horizontal overflow, scoped Axe AA, branch/query-preserving navigation, zero results. Android compileDebugKotlin passed (1m20s). TypeScript and targeted lint passed after browser stopped. Native physical-device/font-scale/TalkBack and final-head checks pending."
+        },
+        {
+          "code_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
+          "scope": "Shared correction/customer-balance dependency;no new audit or model/migration",
+          "work": "Home full financial roles now batch all authorized party balances in one SQL snapshot,including original/reversal/receipt/advance/opening histories and legacy journal-less documents. Retained100credit against80Sale shows20customeradvance rather than duplicate saved invoice debt. ProjectManager project-scoped behavior preserved. Legacy commercial-only Home also enforces selected-branch bounds.",
+          "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
+          "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
+          "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
         }
       ],
       "push_checkpoint_evidence": {
@@ -67779,6 +67795,14 @@
           "tests": "16financialintegrationPASS7.10s:secondarysaved-unit mapping aftermasterchange;role/company/branch denial andAccountantallowed;previousperiodP&Lunchanged/correctionday-20/BalanceSheetdifference0;physicalbatchstock1/netCOGS25. Overlapsprevious12;notadditive. TypeScript/focusedESLintPASS.",
           "ci": "39999035042 exactc602c401SUCCESS:Web,Migration,Android. Newtest/evidencecommitdoesnotinheritexact-headCIverification;rerunonfinalhead.",
           "remaining": "All originalfindingIDs/statuses preserved;193implemented/resolvedbutnotfinallyverified,6PARTIAL. No final199-headsuite or emulator/device certification."
+        },
+        "posted_party_balance_dependency_2026_10_23": {
+          "code_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
+          "scope": "Shared correction/customer-balance dependency;no new audit or model/migration",
+          "work": "Home full financial roles now batch all authorized party balances in one SQL snapshot,including original/reversal/receipt/advance/opening histories and legacy journal-less documents. Retained100credit against80Sale shows20customeradvance rather than duplicate saved invoice debt. ProjectManager project-scoped behavior preserved. Legacy commercial-only Home also enforces selected-branch bounds.",
+          "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
+          "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
+          "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
         }
       }
     },
@@ -69739,6 +69763,14 @@
           "work": "Sale details read one RepeatableRead snapshot, separate effective cash receipts/payment discounts/credits/advance applications, and show scoped signed party balance including openings and advances. Native display uses exact decimal totals and handles null/cancelled financial data. Historical allocation counts prevent offering an amendment the current backend would reject.",
           "tests": "7 isolated PostgreSQL tests passed including the new mixed receipt/discount/credit/advance/opening and assigned-branch projection; 47 related commercial/print/mobile tests passed; desktop and mobile-web detail tests 2 passed; Android compile and 3 focused sale-detail JVM regressions passed. TypeScript/lint passed. All intermediate.",
           "remaining": "Final-head verification, expanded cancelled/reversed and company-isolation scenarios; paid amendment workflow remains linked to A086-F05 and A087-F02."
+        },
+        "posted_party_balance_dependency_2026_10_23": {
+          "code_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
+          "scope": "Shared correction/customer-balance dependency;no new audit or model/migration",
+          "work": "Home full financial roles now batch all authorized party balances in one SQL snapshot,including original/reversal/receipt/advance/opening histories and legacy journal-less documents. Retained100credit against80Sale shows20customeradvance rather than duplicate saved invoice debt. ProjectManager project-scoped behavior preserved. Legacy commercial-only Home also enforces selected-branch bounds.",
+          "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
+          "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
+          "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
         }
       },
       "push_checkpoint_evidence": {
@@ -72910,7 +72942,7 @@
   "validation": {
     "final_head_status": "NOT RUN",
     "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
-    "ci_status": "39999035042 exactc602c401SUCCESS(Web,Migration,Android);later test/evidence head not yet CI verified. Final199headvalidationNOTRUN.",
+    "ci_status": "Exact-head CI pending for Home balance dependency;lastpassing39999035042 onc602c401,notcurrenthead.",
     "migration_status": "New148migration successfully rehearsed locally,123existingtables unchanged. Pre-existing536line migration/datamodel drift identical to pre-change baseline;not repaired or hidden. Production migrations not executed.",
     "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
@@ -74307,7 +74339,7 @@
   "push_checkpoint": {
     "date": "2026-10-14",
     "timezone": "Asia/Calcutta",
-    "code_head": "51e1533e6338215e1b0aed64c7b6e09b22a4616a",
+    "code_head": "aeca5d5853001c1616b4b5004976bb600806a529",
     "base_commit": "a3e284bca56db3608193a3833b986bb57450d86c",
     "status": "DRAFT CHECKPOINT; NOT READY FOR MERGE",
     "counts": {
@@ -75729,6 +75761,14 @@
       "tests": "16financialintegrationPASS7.10s:secondarysaved-unit mapping aftermasterchange;role/company/branch denial andAccountantallowed;previousperiodP&Lunchanged/correctionday-20/BalanceSheetdifference0;physicalbatchstock1/netCOGS25. Overlapsprevious12;notadditive. TypeScript/focusedESLintPASS.",
       "ci": "39999035042 exactc602c401SUCCESS:Web,Migration,Android. Newtest/evidencecommitdoesnotinheritexact-headCIverification;rerunonfinalhead.",
       "remaining": "All originalfindingIDs/statuses preserved;193implemented/resolvedbutnotfinallyverified,6PARTIAL. No final199-headsuite or emulator/device certification."
+    },
+    {
+      "code_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
+      "scope": "Shared correction/customer-balance dependency;no new audit or model/migration",
+      "work": "Home full financial roles now batch all authorized party balances in one SQL snapshot,including original/reversal/receipt/advance/opening histories and legacy journal-less documents. Retained100credit against80Sale shows20customeradvance rather than duplicate saved invoice debt. ProjectManager project-scoped behavior preserved. Legacy commercial-only Home also enforces selected-branch bounds.",
+      "tests": "36PASS/4suites9.40s:17retained-credit financialcases,5batchunitcases,Home query/noncommercial integration. TypeScript/focusedESLintPASS. Browser4PASS1.3m:original PartyHome layout/scope/empty/Axe and shared returnedSaleEdit;actual nativeHomev1/v2 bothbalance-20,no supersededSale. Earlier original-controls8PASS2.7m on product code preceding this read-only Home dependency;not relabelled final-head.",
+      "ci": "Targeted exact-head CI required after this source change. LastSUCCESS39999035042 exactc602c401.",
+      "remaining": "No final status promotion. All199 finding IDs/193implemented-resolved-notfinallyverified+6PARTIAL preserved. Financial correction and originalcontrol/device/report/recovery/production limitations remain as separately documented."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75761,11 +75801,11 @@
   },
   "checkpoint_pending_questions_2026_10_23": {
     "home_party_to_party": "RESOLVED;atomic pass-through/commission workflow implemented and focused tested under originalA071-F05;final-head/device verification pending.",
-    "posted_return_valuation": "RESOLVED by user 23 October 2026: already billed/posted credit notes retain their original billed value; editing a sale to a different rate must not change, reverse or replace that existing credit. Original100credit remains100 when replacement sale price80. Existing history retained. Implementation and financial regression still pending; no completion inferred."
+    "posted_return_valuation": "RESOLVED:original billed100credit remains100 after80Saleedit. Core implementation and17financialcases have intermediate evidence. No unanswered decision here;remaining completion/final-head limitations are in finding checkpoints."
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "51e1533e6338215e1b0aed64c7b6e09b22a4616a",
+    "code_head_commit": "aeca5d5853001c1616b4b5004976bb600806a529",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,

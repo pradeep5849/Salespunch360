@@ -122,3 +122,17 @@ minus20, balanced BalanceSheet, physicalbatchstock1 and netCOGS25. Full TypeScri
 and focused ESLintPASS. These overlap earlier12case runs, not additive counts.
 CI39999035042 exactc602c401SUCCESS(Web,Migration,Android). A later test/evidence
 commit must not be reported as that exactCIhead. Final199headvalidationNOTRUN.
+
+## Home party balance dependency
+
+Source `aeca5d5853001c1616b4b5004976bb600806a529` uses one company/branch-scoped SQL snapshot for financial-role
+customer balances: original journals and reversals, receipts, advances, openings
+and journal-less legacy documents. No second payment from advance allocation.
+ProjectManager project-specific scope stays unchanged; legacy Home selected-branch
+reads are bounded too. No schema/migration change.
+
+36PASS/foursuites9.40s;17financialcases and five new batch unit cases.
+TypeScript/ESLintPASS. Browser4PASS1.3m:PartyHome layout/scope/empty/Axe and
+returnedSaleEdit plus actual nativeHomev1/v2 balance-20/no supersededSale.
+Original Edit/Details controls also reran8PASS2.7m before this Home-only change.
+All199IDs/statuses unchanged;not final-head or physical-device certification.
