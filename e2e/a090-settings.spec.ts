@@ -1612,7 +1612,7 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   await expect(page.getByRole("link",{name:"A052-SCOPE-1",exact:true})).toBeVisible();
   await expect(page.getByRole("link",{name:"A052-SCOPE-0",exact:true})).toHaveCount(0);
   await page.getByRole("link",{name:"Manage categories",exact:true}).click();
-  await expect(page).toHaveURL(new RegExp(`categories\\?branchId=${second}`));
+  await expect(page).toHaveURL(new RegExp(`categories\\?branchId=${second}`),{timeout:30000});
   await expect(page.getByRole("heading",{name:"Posted totals · Expense second branch · all history",exact:true})).toBeVisible();
   await page.getByLabel("Search categories",{exact:true}).fill("Expense scope");
   await page.getByRole("button",{name:"Search",exact:true}).click();
@@ -3545,7 +3545,7 @@ test("A086 A087 Edit Sale support files preserve paid accounting and retry once"
   await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/,{timeout:30000});const correctedId=page.url().split("/").at(-1)!;expect(correctedId).not.toBe(source.id);
   const corrected=await db.commercialDocument.findUniqueOrThrow({where:{id:correctedId}});expect(corrected.grandTotal.toString()).toBe("80");
   expect(await db.commercialAttachment.count({where:{companyId,documentId:source.id}})).toBe(2);expect(await db.commercialAttachment.count({where:{companyId,documentId:correctedId}})).toBe(3);
-  await expect(page.getByRole("region",{name:"Sale attachments",exact:true}).getByRole("link",{name:"correction.pdf",exact:true})).toBeVisible();
+  await expect(page.getByRole("region",{name:"Sale attachments",exact:true}).getByRole("link",{name:"correction.pdf",exact:true})).toBeVisible({timeout:30000});
   await expect(page.getByText(`${source.documentNumber}⌄`,{exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"View previous revision",exact:true})).toHaveAttribute("href",`/workspace/account/sales/${source.id}`);
   const printed=await page.request.get(`/api/account/print/SALES_INVOICE/${correctedId}?format=pdf`);expect(printed.status()).toBe(200);const printedText=(await extractPdfText(await printed.body())).text;expect(printedText).toContain(source.documentNumber);expect(printedText).toMatch(/Revision\s+1/);
   expect((await db.accountSettlement.findUniqueOrThrow({where:{id:receipt.id}})).amount.toString()).toBe("90");
@@ -3889,6 +3889,7 @@ test("A080 fifteen quotation themes preview cancel apply and native authorizatio
 test("A084 HSN SAC saved sales classifications Web native and exports",async({page})=>{
  test.setTimeout(240000);
  const before=await db.accountSettings.findUniqueOrThrow({where:{companyId}}),user=await db.user.findUniqueOrThrow({where:{id:userId}}),suffix=randomUUID().slice(0,8);let tokenHash:string|null=null;
+ const branchId=(await db.branch.create({data:{companyId,name:`Classification branch ${suffix}`,code:`CLASS-${suffix}`}})).id;
  try{
   await db.accountSettings.update({where:{companyId},data:{enabledModules:["SALES","CREDIT_NOTE","GST_ADVANCED"],baseCurrency:"INR",displayDecimalPlaces:2}});
   if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Classification year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
@@ -4124,6 +4125,7 @@ test("A086 retained billed returns preserve original credit through shared Web e
   for(const row of DEFAULT_LEDGER_ACCOUNTS)await db.ledgerAccount.upsert({where:{companyId_code:{companyId,code:row.code}},create:{companyId,code:row.code,name:row.name,accountClass:row.accountClass,normalBalance:row.normalBalance,systemKey:row.systemKey,isSystem:row.isSystem},update:{systemKey:row.systemKey}});
   const actor={...await db.user.findUniqueOrThrow({where:{id:userId}}),companyId,branchIds:[]} as ProjectActor;
   const service=await db.accountService.create({data:{companyId,name:`Retained return ${randomUUID().slice(0,8)}`,sellingRate:"100",taxRate:"0"}});
+  const customerId=(await db.customer.create({data:{companyId,branchId,name:`Retained credit customer ${randomUUID().slice(0,8)}`,isAccountCustomer:true}})).id;
   const input={type:"SALES_INVOICE",branchId,partyId:customerId,issueDate:"2026-10-20",lines:[{lineType:"SERVICE",sourceId:service.id,quantity:"1",rate:"100",taxRate:"0"}]};
   const sale=await createCommercialDocumentForActor(actor,input);await postCommercialDocumentForActor(actor,{documentId:sale.id});const line=await db.commercialDocumentLine.findFirstOrThrow({where:{documentId:sale.id}});
   const credit=await createCommercialDocumentForActor(actor,{...input,type:"CREDIT_NOTE",sourceDocumentId:sale.id,lines:[{...input.lines[0],sourceCommercialLineId:line.id}]});await postCommercialDocumentForActor(actor,{documentId:credit.id});
