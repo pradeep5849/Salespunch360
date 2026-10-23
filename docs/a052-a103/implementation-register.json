@@ -67230,7 +67230,11 @@
         "src/app/api/account/sales/[id]/attachments/route.ts",
         "src/app/api/account/sales/[id]/with-attachments/route.ts",
         "src/app/api/v1/mobile/account/sales/[id]/with-attachments/route.ts",
-        "src/app/workspace/account/sales/[id]/edit/sale-edit-form.tsx"
+        "src/app/workspace/account/sales/[id]/edit/sale-edit-form.tsx",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+        "prisma/migrations/20261022110000_invoice_description/migration.sql",
+        "src/lib/account/a16-print-settings.test.ts",
+        "src/lib/account/print-renderer.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -67701,6 +67705,61 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06 and A087-F02 remain PARTIAL. Separate invoice-level description/reference-control scope, posted return correction financial carry/value decision and full checkpoint/device validation remain. This slice does not claim those original gaps complete."
+        },
+        "independent_invoice_description_2026_10_23": {
+          "implementation_commit": "903bf7fc874b5f8212e7a079ca71d6ee039e2926",
+          "completed_date": "2026-10-23",
+          "work": "Separate optional CommercialDocument.invoiceDescription snapshot, independently editable/clearable from existing terms in Web/native Sale editor/details, duplication and immutable correction defaults/full reversal. Authorized shared HTML/PDF output includes escaped description under printDescription preference. Existing notes/terms are not repurposed or backfilled; historical combined text remains unchanged. Added nullable VARCHAR5000 column only.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261022110000_invoice_description/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/a16-print-settings.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/print-renderer.ts",
+            "src/lib/account/print.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/sale-edit-initial.ts",
+            "src/lib/account/transaction-header.test.ts",
+            "src/lib/account/transaction-header.ts"
+          ],
+          "models": [
+            "CommercialDocument.invoiceDescription nullable String/VARCHAR(5000)"
+          ],
+          "migrations": [
+            "20261022110000_invoice_description"
+          ],
+          "apis_actions": [
+            "createCommercialDocumentForActor shared validated header",
+            "replacePostedSaleForActor/creditPayload",
+            "Web Sale explicit Save and Edit shared input",
+            "native Sales draft snapshot/payload via existing Sale APIs",
+            "shared authorized HTML/PDF print loader/renderer"
+          ],
+          "tests": {
+            "unit": "80 PASS/5 suites; header validation/clearing, escaped independent description/terms, print toggle consumers, actual print loader and duplicate snapshots.",
+            "financial_database": "56 PASS/2 suites with maxWorkers1,12.64s; new independent description/correction/explicit clearing/posted mutation rejection test plus existing receipt/advance/cheque/file/idempotency/isolation regressions.",
+            "browser": "4 PASS/1.7m desktop/mobile: description restore/edit/clear, independent retained terms and immutable original values; native authenticated Sale API and actual PDF description output. Additional2PASS/53.6s desktop/mobile paid support-file append/retry/correction regressions. Six distinct browser cases total.",
+            "android": "compileDebugKotlin +18 focused JVM tests PASS,0 failures/errors/skips,2m56s:SalesPreview10 andSalesEditSnapshot8. New snapshot/clearing/terms independence assertion. No device/TalkBack/share runtime or current-slice local lint claim.",
+            "migration": "Prisma generate PASS; initial standalone schema validation failed because DIRECT_URL was unset; rerun with isolated local CI URL PASS. New migration applied to existing isolated settings_2ec7dea6_ci database. Fresh invoice_description_20261023_ci rehearsal PASS/1test4.11s: complete migration chain, original document and Historical terms retained, new descriptionNULL and repeated deploy no pending migrations. No reset/drop/production action.",
+            "typescript": "Initial1fixture typing failure for new description property; narrowed test helper extended for new optional fields. Final full tsc PASS after browser/migration test updates.",
+            "eslint": "All changed TypeScript/TSX files focusedESLint PASS;gitdiff--check PASS.",
+            "previous_ci": "Exact9542e156 targetedCI39766594622 SUCCESS; does not certify new description commit.",
+            "final_complete_199_head": "NOT RUN"
+          },
+          "deployment_steps": "Before a future approved application deployment, run the additive migrate-deploy chain including 20261022110000_invoice_description. Do not rewrite old notes/terms. No deployment or production migration performed.",
+          "remaining": "A086-F06/A087-F02 remain PARTIAL: reference payment/cheque controls and remaining actions, posted-return correction value/carry policy, full final-head and native device matrix pending. This slice resolves separate description only; no final_status promotion."
         }
       },
       "push_checkpoint_evidence": {
@@ -68261,7 +68320,11 @@
         "src/app/api/account/sales/[id]/attachments/route.ts",
         "src/app/api/account/sales/[id]/with-attachments/route.ts",
         "src/app/api/v1/mobile/account/sales/[id]/with-attachments/route.ts",
-        "src/app/workspace/account/sales/[id]/edit/sale-edit-form.tsx"
+        "src/app/workspace/account/sales/[id]/edit/sale-edit-form.tsx",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+        "prisma/migrations/20261022110000_invoice_description/migration.sql",
+        "src/lib/account/a16-print-settings.test.ts",
+        "src/lib/account/print-renderer.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -68680,6 +68743,61 @@
             "final_complete_head": "NOT RUN"
           },
           "remaining": "A086-F06 and A087-F02 remain PARTIAL. Separate invoice-level description/reference-control scope, posted return correction financial carry/value decision and full checkpoint/device validation remain. This slice does not claim those original gaps complete."
+        },
+        "independent_invoice_description_2026_10_23": {
+          "implementation_commit": "903bf7fc874b5f8212e7a079ca71d6ee039e2926",
+          "completed_date": "2026-10-23",
+          "work": "Separate optional CommercialDocument.invoiceDescription snapshot, independently editable/clearable from existing terms in Web/native Sale editor/details, duplication and immutable correction defaults/full reversal. Authorized shared HTML/PDF output includes escaped description under printDescription preference. Existing notes/terms are not repurposed or backfilled; historical combined text remains unchanged. Added nullable VARCHAR5000 column only.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "prisma/migrations/20261022110000_invoice_description/migration.sql",
+            "prisma/schema.prisma",
+            "src/app/workspace/account/sales/[id]/edit/page.tsx",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/a16-print-settings.test.ts",
+            "src/lib/account/commercial.ts",
+            "src/lib/account/migration-chain.integration.test.ts",
+            "src/lib/account/print-renderer.ts",
+            "src/lib/account/print.ts",
+            "src/lib/account/sale-amendments.ts",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/sale-duplicate.ts",
+            "src/lib/account/sale-edit-initial.ts",
+            "src/lib/account/transaction-header.test.ts",
+            "src/lib/account/transaction-header.ts"
+          ],
+          "models": [
+            "CommercialDocument.invoiceDescription nullable String/VARCHAR(5000)"
+          ],
+          "migrations": [
+            "20261022110000_invoice_description"
+          ],
+          "apis_actions": [
+            "createCommercialDocumentForActor shared validated header",
+            "replacePostedSaleForActor/creditPayload",
+            "Web Sale explicit Save and Edit shared input",
+            "native Sales draft snapshot/payload via existing Sale APIs",
+            "shared authorized HTML/PDF print loader/renderer"
+          ],
+          "tests": {
+            "unit": "80 PASS/5 suites; header validation/clearing, escaped independent description/terms, print toggle consumers, actual print loader and duplicate snapshots.",
+            "financial_database": "56 PASS/2 suites with maxWorkers1,12.64s; new independent description/correction/explicit clearing/posted mutation rejection test plus existing receipt/advance/cheque/file/idempotency/isolation regressions.",
+            "browser": "4 PASS/1.7m desktop/mobile: description restore/edit/clear, independent retained terms and immutable original values; native authenticated Sale API and actual PDF description output. Additional2PASS/53.6s desktop/mobile paid support-file append/retry/correction regressions. Six distinct browser cases total.",
+            "android": "compileDebugKotlin +18 focused JVM tests PASS,0 failures/errors/skips,2m56s:SalesPreview10 andSalesEditSnapshot8. New snapshot/clearing/terms independence assertion. No device/TalkBack/share runtime or current-slice local lint claim.",
+            "migration": "Prisma generate PASS; initial standalone schema validation failed because DIRECT_URL was unset; rerun with isolated local CI URL PASS. New migration applied to existing isolated settings_2ec7dea6_ci database. Fresh invoice_description_20261023_ci rehearsal PASS/1test4.11s: complete migration chain, original document and Historical terms retained, new descriptionNULL and repeated deploy no pending migrations. No reset/drop/production action.",
+            "typescript": "Initial1fixture typing failure for new description property; narrowed test helper extended for new optional fields. Final full tsc PASS after browser/migration test updates.",
+            "eslint": "All changed TypeScript/TSX files focusedESLint PASS;gitdiff--check PASS.",
+            "previous_ci": "Exact9542e156 targetedCI39766594622 SUCCESS; does not certify new description commit.",
+            "final_complete_199_head": "NOT RUN"
+          },
+          "deployment_steps": "Before a future approved application deployment, run the additive migrate-deploy chain including 20261022110000_invoice_description. Do not rewrite old notes/terms. No deployment or production migration performed.",
+          "remaining": "A086-F06/A087-F02 remain PARTIAL: reference payment/cheque controls and remaining actions, posted-return correction value/carry policy, full final-head and native device matrix pending. This slice resolves separate description only; no final_status promotion."
         }
       },
       "push_checkpoint_evidence": {
@@ -72796,6 +72914,61 @@
         "final_complete_head": "NOT RUN"
       },
       "remaining": "A086-F06 and A087-F02 remain PARTIAL. Separate invoice-level description/reference-control scope, posted return correction financial carry/value decision and full checkpoint/device validation remain. This slice does not claim those original gaps complete."
+    },
+    "independent_invoice_description_2026_10_23": {
+      "implementation_commit": "903bf7fc874b5f8212e7a079ca71d6ee039e2926",
+      "completed_date": "2026-10-23",
+      "work": "Separate optional CommercialDocument.invoiceDescription snapshot, independently editable/clearable from existing terms in Web/native Sale editor/details, duplication and immutable correction defaults/full reversal. Authorized shared HTML/PDF output includes escaped description under printDescription preference. Existing notes/terms are not repurposed or backfilled; historical combined text remains unchanged. Added nullable VARCHAR5000 column only.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "prisma/migrations/20261022110000_invoice_description/migration.sql",
+        "prisma/schema.prisma",
+        "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/sales/[id]/page.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/a16-print-settings.test.ts",
+        "src/lib/account/commercial.ts",
+        "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/account/print-renderer.ts",
+        "src/lib/account/print.ts",
+        "src/lib/account/sale-amendments.ts",
+        "src/lib/account/sale-attachments.integration.test.ts",
+        "src/lib/account/sale-duplicate.ts",
+        "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/transaction-header.test.ts",
+        "src/lib/account/transaction-header.ts"
+      ],
+      "models": [
+        "CommercialDocument.invoiceDescription nullable String/VARCHAR(5000)"
+      ],
+      "migrations": [
+        "20261022110000_invoice_description"
+      ],
+      "apis_actions": [
+        "createCommercialDocumentForActor shared validated header",
+        "replacePostedSaleForActor/creditPayload",
+        "Web Sale explicit Save and Edit shared input",
+        "native Sales draft snapshot/payload via existing Sale APIs",
+        "shared authorized HTML/PDF print loader/renderer"
+      ],
+      "tests": {
+        "unit": "80 PASS/5 suites; header validation/clearing, escaped independent description/terms, print toggle consumers, actual print loader and duplicate snapshots.",
+        "financial_database": "56 PASS/2 suites with maxWorkers1,12.64s; new independent description/correction/explicit clearing/posted mutation rejection test plus existing receipt/advance/cheque/file/idempotency/isolation regressions.",
+        "browser": "4 PASS/1.7m desktop/mobile: description restore/edit/clear, independent retained terms and immutable original values; native authenticated Sale API and actual PDF description output. Additional2PASS/53.6s desktop/mobile paid support-file append/retry/correction regressions. Six distinct browser cases total.",
+        "android": "compileDebugKotlin +18 focused JVM tests PASS,0 failures/errors/skips,2m56s:SalesPreview10 andSalesEditSnapshot8. New snapshot/clearing/terms independence assertion. No device/TalkBack/share runtime or current-slice local lint claim.",
+        "migration": "Prisma generate PASS; initial standalone schema validation failed because DIRECT_URL was unset; rerun with isolated local CI URL PASS. New migration applied to existing isolated settings_2ec7dea6_ci database. Fresh invoice_description_20261023_ci rehearsal PASS/1test4.11s: complete migration chain, original document and Historical terms retained, new descriptionNULL and repeated deploy no pending migrations. No reset/drop/production action.",
+        "typescript": "Initial1fixture typing failure for new description property; narrowed test helper extended for new optional fields. Final full tsc PASS after browser/migration test updates.",
+        "eslint": "All changed TypeScript/TSX files focusedESLint PASS;gitdiff--check PASS.",
+        "previous_ci": "Exact9542e156 targetedCI39766594622 SUCCESS; does not certify new description commit.",
+        "final_complete_199_head": "NOT RUN"
+      },
+      "deployment_steps": "Before a future approved application deployment, run the additive migrate-deploy chain including 20261022110000_invoice_description. Do not rewrite old notes/terms. No deployment or production migration performed.",
+      "remaining": "A086-F06/A087-F02 remain PARTIAL: reference payment/cheque controls and remaining actions, posted-return correction value/carry policy, full final-head and native device matrix pending. This slice resolves separate description only; no final_status promotion."
     }
   },
   "approved_business_decisions": {
@@ -73829,5 +74002,8 @@
       "question": "Official filing export with challan/section/deductee details versus recorded sales TCS report? Existing models lack full filing data.",
       "answer": "Approved: provide TCS Collected Report for recorded sales TCS; keep official Form27EQ filing separate and unavailable until required filing data/validation are implemented. Do not label activity exports as official filings."
     }
+  },
+  "checkpoint_pending_questions_2026_10_23": {
+    "home_party_to_party": "User asked to define Home Party-to-Party transfer with an example; no transfer accounting or source substituted. Continue independent findings while waiting."
   }
 }
