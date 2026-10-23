@@ -69709,6 +69709,13 @@
       "expected_behavior": "Consistent isolated backup and validated recovery without losing accounting/project movements.",
       "root_cause": "Snapshot completeness/consistency and backup operational validation gaps.",
       "affected_files": [
+        ".github/workflows/targeted-validation.yml",
+        "docs/a052-a103/recovery-verification.md",
+        "package.json",
+        "scripts/recovery-drill.integration.test.ts",
+        "scripts/recovery-drill.mjs",
+        "scripts/recovery-fingerprint.d.mts",
+        "scripts/recovery-fingerprint.mjs",
         "src/lib/account/utilities.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
@@ -69867,6 +69874,30 @@
           "remaining_limitations": [
             "Full validated recovery/provider-storage/historical restore matrix and final-head verification remain pending; no production restore or migration authorized."
           ]
+        },
+        {
+          "evidence_key": "isolated_full_public_database_recovery_2026_10_23",
+          "implementation_commit": "8e951b8e1a6d1809e58b741ae853645fbaf6b4c6",
+          "work": "Strengthened existing operational recovery drill beyond migration/three-table counts. Read-only RepeatableRead source transaction exports an MVCC snapshot shared with pg_dump. Restore refuses occupied target; checks every public table count/content digest plus columns/active order,enums,constraints,indexes,triggers,functions,RLS/policies,views,sequence definitions. PostgreSQL planner canonicalizes CHECK expressions; dropped-column physical ordinal gaps are normalized to active order. Credentials/row contents/digests are not logged. Added real restore/corruption integration tests and matching PostgreSQL16 client selection in targetedCI. No application restore endpoint, schema or migration change.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "docs/a052-a103/recovery-verification.md",
+            "package.json",
+            "scripts/recovery-drill.integration.test.ts",
+            "scripts/recovery-drill.mjs",
+            "scripts/recovery-fingerprint.d.mts",
+            "scripts/recovery-fingerprint.mjs"
+          ],
+          "tests": {
+            "focused_and_database": "Final9PASS/2suites,0failed/skipped,6.56s. Four URL/local-only/credential-redaction guards;five actual local recovery cases: complete restore including a posted balanced123.45journal,occupied-target refusal,same-count row tamper detection,unchanged-row column-type tamper detection,and weakenedCHECK detection. Source financial/project rows included;target probes affect only fresh UUID local fixture database. Test-created target disposed;no pre-existing database reset or dropped.",
+            "early_failures": "Initial real restore reproduced all123publictable row digests but flagged equivalent CHECK rendering;planner canonicalization fixed without textual operator/parenthesis stripping. Expanded metadata initially exposed dropped-column ordinal gaps and test fixture failed to restore updatedAt after intentional tampering. Both corrected before final9PASS. Earlier4guardPASS and8integration/guardPASS are historical,not additive final counts.",
+            "environment": "Actual local PostgreSQL17.11;earlier localPG16 notes inaccurate. Existing targetedCI usesPG16;newstep selects version16 dump/restore tools for that service. No production database accessed.",
+            "typescript": "Final full tsc PASS.",
+            "lint": "Focused ESLint,Prettiercheck,workflowYAMLparse andgitdiff--check PASS.",
+            "browser_android": "No product UI/native source change in this slice;no new browser/device/build claim. Prior party/item slice33JVM and2browserPASS retain their own source/evidence.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A088-F01 staysPARTIAL. This is operational public-schema database recovery,not applicationJSONbundle import or provider/private-file/deleted-history recovery. Roles/grants/ownership,nonpublicschemas,externalextensionfiles,sequencecurrentpositions andproduction-scale performance notcertified. Full checkpoint/device/finalhead validation pending."
         }
       ],
       "push_checkpoint_evidence": {
@@ -72750,7 +72781,7 @@
   "validation": {
     "final_head_status": "NOT RUN",
     "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
-    "ci_status": "TargetedCI39958420154 succeeded on exact prior head37002d9445cc0b482a54503da273d1947ca80147. New party/item report checkpoint awaits ownCI;full final199head validation NOT RUN.",
+    "ci_status": "TargetedCI39961596089 succeeded on exact prior head9fc181bbd8f9e66f27cb0b95137c7ab99c95a1d3. New isolated recovery checkpoint awaits ownCI;full final199head NOT RUN.",
     "migration_status": "147-migration isolated clean-chain preservation/replay rehearsal passed on 23 October; no migration changed in latest UI slices. Complete final-head rehearsal pending; no production database change.",
     "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
@@ -75487,6 +75518,33 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A084-F03 remains PARTIAL for10 other unavailable reference calculations/controls and final-head/device validation. Catalogue names45,mapped35,unavailable10;51 supported service destinations. A085 remains implemented but not finally verified."
+    },
+    {
+      "finding_ids": [
+        "A088-F01"
+      ],
+      "evidence_key": "isolated_full_public_database_recovery_2026_10_23",
+      "implementation_commit": "8e951b8e1a6d1809e58b741ae853645fbaf6b4c6",
+      "work": "Strengthened existing operational recovery drill beyond migration/three-table counts. Read-only RepeatableRead source transaction exports an MVCC snapshot shared with pg_dump. Restore refuses occupied target; checks every public table count/content digest plus columns/active order,enums,constraints,indexes,triggers,functions,RLS/policies,views,sequence definitions. PostgreSQL planner canonicalizes CHECK expressions; dropped-column physical ordinal gaps are normalized to active order. Credentials/row contents/digests are not logged. Added real restore/corruption integration tests and matching PostgreSQL16 client selection in targetedCI. No application restore endpoint, schema or migration change.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "docs/a052-a103/recovery-verification.md",
+        "package.json",
+        "scripts/recovery-drill.integration.test.ts",
+        "scripts/recovery-drill.mjs",
+        "scripts/recovery-fingerprint.d.mts",
+        "scripts/recovery-fingerprint.mjs"
+      ],
+      "tests": {
+        "focused_and_database": "Final9PASS/2suites,0failed/skipped,6.56s. Four URL/local-only/credential-redaction guards;five actual local recovery cases: complete restore including a posted balanced123.45journal,occupied-target refusal,same-count row tamper detection,unchanged-row column-type tamper detection,and weakenedCHECK detection. Source financial/project rows included;target probes affect only fresh UUID local fixture database. Test-created target disposed;no pre-existing database reset or dropped.",
+        "early_failures": "Initial real restore reproduced all123publictable row digests but flagged equivalent CHECK rendering;planner canonicalization fixed without textual operator/parenthesis stripping. Expanded metadata initially exposed dropped-column ordinal gaps and test fixture failed to restore updatedAt after intentional tampering. Both corrected before final9PASS. Earlier4guardPASS and8integration/guardPASS are historical,not additive final counts.",
+        "environment": "Actual local PostgreSQL17.11;earlier localPG16 notes inaccurate. Existing targetedCI usesPG16;newstep selects version16 dump/restore tools for that service. No production database accessed.",
+        "typescript": "Final full tsc PASS.",
+        "lint": "Focused ESLint,Prettiercheck,workflowYAMLparse andgitdiff--check PASS.",
+        "browser_android": "No product UI/native source change in this slice;no new browser/device/build claim. Prior party/item slice33JVM and2browserPASS retain their own source/evidence.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A088-F01 staysPARTIAL. This is operational public-schema database recovery,not applicationJSONbundle import or provider/private-file/deleted-history recovery. Roles/grants/ownership,nonpublicschemas,externalextensionfiles,sequencecurrentpositions andproduction-scale performance notcertified. Full checkpoint/device/finalhead validation pending."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75523,7 +75581,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "93ff4088ccad6a50ab37d8f55429a5aa4d142316",
+    "code_head_commit": "8e951b8e1a6d1809e58b741ae853645fbaf6b4c6",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
