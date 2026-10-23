@@ -51540,6 +51540,17 @@
             "No final-head full-suite/build/Android/device certification.",
             "Full backup restore and production migration remain unperformed; no production writes."
           ]
+        },
+        {
+          "evidence_key": "party_transfer_web_form_2026_10_23",
+          "implementation_status": "PARTIAL",
+          "summary": "Dedicated authorized Web form and immutable details page; received amount mirrors Paid, paid override calculates commission under Other Income; company/assigned-branch-scoped options; note/photo controls; Save and Save & New with stable request UUID; Home P2P entry now opens party transfer rather than bank/cash transfer.",
+          "remaining_limitations": [
+            "Home transaction-source list/filter integration still pending.",
+            "Native Android screen/device parity pending; mobile HTTP endpoints exist.",
+            "Full source reversal pending; component reversal remains guarded.",
+            "Reference row direction toggles and final complete199 validation pending."
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -73132,6 +73143,35 @@
         "Full backup restore and production migration remain unperformed; no production writes."
       ],
       "commit_sha": "Recorded by Git commit containing this evidence; no final verification claim."
+    },
+    "party_transfer_web_form_2026_10_23": {
+      "date": "2026-10-23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "implementation_status": "PARTIAL",
+      "actual_implementation": "Dedicated authorized Web form and immutable details page; received amount mirrors Paid, paid override calculates commission under Other Income; company/assigned-branch-scoped options; note/photo controls; Save and Save & New with stable request UUID; Home P2P entry now opens party transfer rather than bank/cash transfer.",
+      "modified_files": [
+        "src/lib/account/party-transfers.ts",
+        "src/components/account/party-transfer-form.tsx",
+        "src/app/workspace/account/money/party-transfers/page.tsx",
+        "src/app/workspace/account/money/party-transfers/[id]/page.tsx",
+        "src/components/account/account-mobile-home.tsx",
+        "e2e/a090-settings.spec.ts"
+      ],
+      "test_evidence": [
+        "Desktop and mobile Chromium: 2 passed, 43.3s; mirrored800/800 and600/500, net100 Other Income, balanced3journals, reload retained source, Save & New equal800/800 with no income and cleared fields, leave unsaved creates no transaction, Axe and no horizontal overflow.",
+        "Earlier browser run timed out on selector label; explicit accessible labels corrected. Next run failed contrast4.49:1 on commission summary; text contrast corrected; final assertions retained.",
+        "Full tsc --noEmit PASS; focused ESLint --max-warnings=0 PASS.",
+        "Previous exact pushed core head b6cf0f636234dac9f7fc49f25462b59af05b010e: CI39899395942 Web/migration/Android all SUCCESS. This does not certify the newer Web commit."
+      ],
+      "remaining_limitations": [
+        "Home transaction-source list/filter integration still pending.",
+        "Native Android screen/device parity pending; mobile HTTP endpoints exist.",
+        "Full source reversal pending; component reversal remains guarded.",
+        "Reference row direction toggles and final complete199 validation pending."
+      ],
+      "commit_sha": "Git commit containing this evidence; final_status unchanged."
     }
   },
   "approved_business_decisions": {
@@ -74151,6 +74191,14 @@
       ],
       "status": "PARTIAL",
       "evidence": "intermediate_validation.party_transfer_atomic_core_and_http_2026_10_23"
+    },
+    {
+      "key": "party_transfer_web_form_2026_10_23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "status": "PARTIAL",
+      "evidence": "intermediate_validation.party_transfer_web_form_2026_10_23"
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {

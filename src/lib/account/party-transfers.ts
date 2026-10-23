@@ -89,3 +89,15 @@ export async function partyTransferPhotoForActor(a:ProjectActor,id:string){
  const bytes=await privateStorage().get(assertSafeObjectKey(row.photoObjectKey));if(createHash("sha256").update(bytes).digest("hex")!==row.photoSha256)throw new Error("PARTY_TRANSFER_PHOTO_INTEGRITY_FAILED");
  return{bytes,mimeType:"image/webp" as const};
 }
+
+/** Explicit company/assignment filters; no ambient browser branch cookie is trusted. */
+export async function partyTransferOptionsForActor(a:ProjectActor){
+ await access(a);
+ const branches=await db.branch.findMany({where:{companyId:a.companyId,isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:a.branchIds??[]}}:{})},select:{id:true,name:true},orderBy:{name:"asc"}}),branchIds=branches.map(row=>row.id);
+ const [customers,vendors,accounts]=await Promise.all([
+  db.customer.findMany({where:{companyId:a.companyId,isActive:true,isAccountCustomer:true,branchId:{in:branchIds}},select:{id:true,name:true,branchId:true},orderBy:{name:"asc"}}),
+  db.vendor.findMany({where:{companyId:a.companyId,isActive:true},select:{id:true,name:true},orderBy:{name:"asc"}}),
+  db.moneyAccount.findMany({where:{companyId:a.companyId,isActive:true,OR:[{branchId:null},{branchId:{in:branchIds}}]},select:{id:true,name:true,branchId:true,type:true},orderBy:{name:"asc"}}),
+ ]);
+ return{branches,customers,vendors,accounts,canPost:canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_MONEY_ENTRY")&&canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST")};
+}

@@ -3933,3 +3933,28 @@ test("A067 opening fee choices post gross loans net receipts and native retry sa
   expect((await page.request.post("/api/v1/mobile/account/money/loans",{headers,data:{...request,openingFeeAmount:"2001"}})).status()).toBe(409);
  }finally{if(tokenHash)await db.mobileSession.deleteMany({where:{tokenHash}})}
 });
+
+
+test("A071 party transfer mirrors amounts posts net Other Income and preserves saved source",async({page})=>{
+ test.setTimeout(120000);page.on("pageerror",error=>{throw new Error(`Party transfer browser error: ${error.message}`)});
+ if(!await db.financialYear.findFirst({where:{companyId}}))await db.financialYear.create({data:{companyId,name:"Party transfer browser year",startDate:new Date("2026-01-01"),endDate:new Date("2026-12-31")}});
+ const definition=DEFAULT_LEDGER_ACCOUNTS.find(row=>row.systemKey==="OTHER_INCOME")!;
+ if(!await db.ledgerAccount.findFirst({where:{companyId,systemKey:"OTHER_INCOME"}}))await db.ledgerAccount.create({data:{...definition,companyId}});
+ const ledger=await db.ledgerAccount.create({data:{companyId,code:`P2P-${randomUUID().slice(0,8)}`,name:"Party transfer test cash",accountClass:"ASSET",normalBalance:"DEBIT"}});
+ const account=await db.moneyAccount.create({data:{companyId,branchId,name:"Party transfer test cash",type:"CASH",ledgerAccountId:ledger.id}}),vendor=await db.vendor.create({data:{companyId,name:"Party transfer test recipient"}});
+ await signInSettings(page);await page.goto("/workspace/account/money/party-transfers");
+ await page.getByLabel("Transfer date",{exact:true}).fill("2026-10-23");await page.getByLabel("Cash / Bank",{exact:true}).selectOption(account.id);await page.getByLabel("Received from",{exact:true}).selectOption(`CUSTOMER:${customerId}`);await page.getByLabel("Paid to",{exact:true}).selectOption(`VENDOR:${vendor.id}`);
+ await page.getByLabel("Received amount",{exact:true}).fill("800");await expect(page.getByLabel("Paid amount",{exact:true})).toHaveValue("800");await expect(page.getByText("Commission — Other Income: 0.00",{exact:true})).toBeVisible();
+ await page.getByLabel("Received amount",{exact:true}).fill("600");await expect(page.getByLabel("Paid amount",{exact:true})).toHaveValue("600");await page.getByLabel("Paid amount",{exact:true}).fill("500");await expect(page.getByText("Commission — Other Income: 100.00",{exact:true})).toBeVisible();await page.getByLabel("Add Note",{exact:true}).fill("Pass-through with retained commission");
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ expect((await new AxeBuilder({page}).include("main").withTags(["wcag2a","wcag2aa","wcag21aa"]).analyze()).violations).toEqual([]);
+ await page.getByRole("button",{name:"Save",exact:true}).click();await expect(page).toHaveURL(/money\/party-transfers\/[a-f0-9-]+$/,{timeout:30000});const id=page.url().split("/").at(-1)!;
+ await expect(page.getByText("100.00",{exact:true})).toBeVisible();await expect(page.getByText("Pass-through with retained commission",{exact:true})).toBeVisible();
+ const audit=await db.accountOperationalAudit.findFirstOrThrow({where:{companyId,entityId:id,eventType:"PARTY_TRANSFER_POSTED"}}),snapshot=audit.metadata as {commissionIncomeId:string;passThroughAmount:string};expect(snapshot.passThroughAmount).toBe("500.00");const income=await db.expenseTransaction.findUniqueOrThrow({where:{id:snapshot.commissionIncomeId}});expect(income.type).toBe("OTHER_INCOME");expect(income.taxableAmount.toString()).toBe("100");
+ const journals=await db.journalEntry.findMany({where:{companyId,OR:[{sourceId:id},{sourceId:income.id}]},include:{lines:true}});expect(journals).toHaveLength(3);const net=journals.flatMap(row=>row.lines).filter(row=>row.ledgerAccountId===ledger.id).reduce((sum,row)=>sum.add(row.debit).sub(row.credit),new Prisma.Decimal(0));expect(net.toString()).toBe("100");
+ await page.reload();await expect(page.getByText("100.00",{exact:true})).toBeVisible();expect(await db.accountOperationalAudit.count({where:{companyId,entityId:id,eventType:"PARTY_TRANSFER_POSTED"}})).toBe(1);
+ const incomeCount=await db.expenseTransaction.count({where:{companyId,type:"OTHER_INCOME"}});
+ await page.getByRole("link",{name:"Add another transfer",exact:true}).click();await page.getByLabel("Transfer date",{exact:true}).fill("2026-10-23");await page.getByLabel("Cash / Bank",{exact:true}).selectOption(account.id);await page.getByLabel("Received from",{exact:true}).selectOption(`CUSTOMER:${customerId}`);await page.getByLabel("Paid to",{exact:true}).selectOption(`VENDOR:${vendor.id}`);await page.getByLabel("Received amount",{exact:true}).fill("800");await page.getByLabel("Add Note",{exact:true}).fill("Equal pass-through Save and New");await page.getByRole("button",{name:"Save & New",exact:true}).click();await expect(page.getByLabel("Received amount",{exact:true})).toHaveValue("");await expect(page.getByLabel("Paid amount",{exact:true})).toHaveValue("");await expect(page.getByLabel("Add Note",{exact:true})).toHaveValue("");
+ const equal=await db.accountOperationalAudit.findMany({where:{companyId,eventType:"PARTY_TRANSFER_POSTED",metadata:{path:["notes"],equals:"Equal pass-through Save and New"}}});expect(equal).toHaveLength(1);expect(equal[0].metadata).toMatchObject({receivedAmount:"800.00",paidAmount:"800.00",commissionAmount:"0.00",commissionIncomeId:null});expect(await db.expenseTransaction.count({where:{companyId,type:"OTHER_INCOME"}})).toBe(incomeCount);
+ await page.getByLabel("Received amount",{exact:true}).fill("123");await page.goto("/workspace/account");expect(await db.accountOperationalAudit.count({where:{companyId,eventType:"PARTY_TRANSFER_POSTED"}})).toBe(2);
+});

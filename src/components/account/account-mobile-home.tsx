@@ -119,7 +119,7 @@ export const ADD_GROUPS: { title: string; actions: Action[] }[] = [
     title: "Other transactions",
     actions: [
       { label: "Expenses", href: "/workspace/account/expenses/new" },
-      { label: "P2P Transfer", href: "/workspace/account/money/transfers" },
+      { label: "P2P Transfer", href: "/workspace/account/money/party-transfers" },
     ],
   },
 ];

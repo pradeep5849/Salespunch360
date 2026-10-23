@@ -10514,3 +10514,9 @@ Both findings remain PARTIAL. Received ₹600 / paid ₹500 posts ₹500 pass-th
 Evidence: 52 serialized financial tests passed; subsequent 14 photo-integrity integration tests passed; 100 focused units passed; 25 backup tests passed; 30 HTTP/route tests passed; fresh 147-migration rehearsal passed; full TypeScript and focused ESLint passed. Initial fixture, guard-order and mobile actor type failures were corrected before the passing runs. These are distinct runs, not a final full-suite total.
 
 Still pending: reference form and Home mapping, Android screens/runtime, atomic source-level reversal, full restore, and final-head validation. No production migration, deployment or merge. Code commit is the Git commit containing this entry; machine evidence key: `party_transfer_atomic_core_and_http_2026_10_23`.
+
+### 23 October 2026 — Party Transfer Web form runtime (A071-F05 remains PARTIAL)
+
+Dedicated branch-scoped form and saved details, received-to-paid autofill, editable paid amount/net Other Income, notes/photo selection, Save and Save & New, and corrected Home P2P entry destination are implemented. Desktop/mobile Chromium: 2 passed (43.3s), including balanced financial postings, retained source after reload, equal-amount Save & New with no income, cleared fields and abandonment without saving. Axe and overflow assertions passed. Earlier selector and contrast failures were corrected without weakening tests. TypeScript and focused ESLint passed.
+
+Exact earlier core head `b6cf0f636234dac9f7fc49f25462b59af05b010e` passed all Web/migration/Android jobs in CI39899395942. This evidence does not certify the newer Web commit. Home source-filter integration, direction toggles, full-source reversal, Android screens/device runtime and final 199-finding certification remain pending. IDs and statuses unchanged.
