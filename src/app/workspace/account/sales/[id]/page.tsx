@@ -74,7 +74,8 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       {sale.ewayBillNumber&&<div className={styles.field}><label>E-way bill number</label><strong>{sale.ewayBillNumber}</strong></div>}
       {sale.transactionTime&&<div className={styles.field}><label>Transaction time</label><strong>{sale.transactionTime}</strong></div>}
       {sale.shippingAddress&&<div className={styles.field}><label>Shipping Address</label><p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{sale.shippingAddress}</p></div>}
-      {sale.notes&&<div className={styles.field}><label>Terms & Conditions / Description</label><p style={{whiteSpace:"pre-wrap"}}>{sale.notes}</p></div>}
+      {sale.invoiceDescription&&<div className={styles.field}><label>Description</label><p style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{sale.invoiceDescription}</p></div>}
+      {sale.notes&&<div className={styles.field}><label>Terms & Conditions</label><p style={{whiteSpace:"pre-wrap"}}>{sale.notes}</p></div>}
       {attachments.length>0&&<section className={styles.field} aria-label="Sale attachments"><h2>Attachments</h2><ul>{attachments.map(file=><li key={file.id} style={{overflowWrap:"anywhere"}}><a href={`/api/account/sale-attachments/${file.id}`}>{file.displayName}</a></li>)}</ul></section>}
     </section>
     {(messaging.sendToParty||messaging.copyToSelf)&&<section className={styles.body}>{messaging.sendToParty&&<ManualMessage message={message} phone={party?.phone}/ >}{messaging.copyToSelf&&<><h3>Copy to Self</h3><ManualMessage message={message} phone={company?.primaryPhone}/></>}{messaging.includeInvoiceLink&&<p><Link href={`/api/account/print/${sale.type}/${sale.id}?format=pdf`}>Download invoice to attach</Link></p>}</section>}

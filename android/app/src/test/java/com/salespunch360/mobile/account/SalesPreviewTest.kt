@@ -6,6 +6,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.Json
 
 class SalesPreviewTest {
+    @Test fun separateDescriptionSurvivesSnapshotAndCanBeClearedWithoutChangingTerms() {
+        val draft=savedSaleEditorDraft(Json.parseToJsonElement("""{"id":"sale","type":"SALES_INVOICE","invoiceDescription":"Site description","notes":"Terms","lines":[]}""") as kotlinx.serialization.json.JsonObject)
+        assertEquals("Site description",draft.invoiceDescription)
+        val payload=salesDraftPayload(draft.copy(invoiceDescription=""))
+        assertEquals("",payload["invoiceDescription"]?.jsonPrimitive?.content)
+        assertEquals("Terms",payload["notes"]?.jsonPrimitive?.content)
+    }
+
     @Test fun editedChargesChangePreviewAndPayloadWithoutChangingOriginalDraft() {
         val original=SalesEditorDraft(editingSourceId="saved",freightAmount="5",otherChargesAmount="7",roundOffAmount="0.25",lines=listOf(SalesLineDraft(sourceId="service",quantity="2",rate="120")))
         val edited=original.copy(freightAmount="13.50",otherChargesAmount="8.25")

@@ -20,6 +20,7 @@ export type SaleEditInitial = {
   customerPoDate?: string;
   transactionTime?: string;
   ewayBillNumber?: string;
+  invoiceDescription?: string;
   notes?: string;
   dueDate?: string;
   projectId?: string;

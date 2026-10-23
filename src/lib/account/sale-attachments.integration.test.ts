@@ -22,7 +22,7 @@ const pdf = (name = "plan.pdf", text = "%PDF-1.7\nfixture") => new File([text], 
 const objects = new Map<string, Buffer>();
 const put = vi.fn(async (key: string, bytes: Buffer) => { objects.set(key, Buffer.from(bytes)); });
 const remove = vi.fn(async (key: string) => { objects.delete(key); });
-const save = (input = raw(), files = [pdf()]) => submitSaleForActor(actor, input, {}, "sale-save-receipt", files);
+const save = (input:ReturnType<typeof raw>&{invoiceDescription?:string;notes?:string} = raw(), files = [pdf()]) => submitSaleForActor(actor, input, {}, "sale-save-receipt", files);
 async function payWithDiscount(documentId:string){
  const settings=await client.accountSettings.findUniqueOrThrow({where:{companyId}});
  try{
@@ -164,6 +164,17 @@ describe.skipIf(!url)("A086/A087 private Sale attachments commit boundary", () =
     expect(await client.accountOperationalAudit.count({where:{companyId,eventType:"SALE_AMENDED",entityId:saved.id}})).toBe(1);
   });
 
+  it("retains and independently clears invoice descriptions without rewriting original terms or posted history",async()=>{
+    const source=await save({...raw(),invoiceDescription:"Site A description",notes:"Original terms"});
+    const original=await client.commercialDocument.findUniqueOrThrow({where:{id:source.id}});expect(original.invoiceDescription).toBe("Site A description");
+    await expect(client.commercialDocument.update({where:{id:source.id},data:{invoiceDescription:"Forbidden rewrite"}})).rejects.toThrow();
+    const next=await replacePostedSaleForActor(actor,source.id,{...raw(),notes:"Revised terms"});
+    expect(next.invoiceDescription).toBe("Site A description");expect(next.notes).toBe("Revised terms");
+    const detail=await saleDetailForActor(actor,next.id);expect(detail.invoiceDescription).toBe("Site A description");
+    const printed=await loadPrintDocumentForActor(actor,"SALES_INVOICE",next.id);expect(printed.document.invoiceDescription).toBe("Site A description");expect(printed.document.terms).toBe("Revised terms");
+    const cleared=await replacePostedSaleForActor(actor,next.id,{...raw(),invoiceDescription:""});expect(cleared.invoiceDescription).toBeNull();expect(cleared.notes).toBe("Revised terms");
+    expect((await client.commercialDocument.findUniqueOrThrow({where:{id:source.id}})).invoiceDescription).toBe("Site A description");expect((await client.commercialDocument.findUniqueOrThrow({where:{id:source.id}})).notes).toBe("Original terms");
+  });
   it("retains the printed invoice number across immutable correction revisions",async()=>{
     const saved=await save(),original=await client.commercialDocument.findUniqueOrThrow({where:{id:saved.id},select:{id:true,documentNumber:true,issueDate:true,grandTotal:true,lines:{orderBy:{position:"asc"}}}}),firstRequest={...raw(),lines:[{lineType:"CUSTOM",itemName:"Work",quantity:"1",rate:"80",taxRate:"0"}]};
     const first=await replacePostedSaleForActor(actor,saved.id,firstRequest);expect(first.documentNumber).not.toBe(original.documentNumber);

@@ -2489,6 +2489,7 @@ model CommercialDocument {
   grandTotal             Decimal                  @db.Decimal(18, 2)
   balanceDue             Decimal                  @db.Decimal(18, 2)
   payableAmount          Decimal?                 @db.Decimal(18, 2)
+  invoiceDescription     String?                  @db.VarChar(5000)
   notes                  String?
   journalEntryId         String?                  @db.Uuid
   createdById            String                   @db.Uuid

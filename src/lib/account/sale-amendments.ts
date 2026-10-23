@@ -62,6 +62,7 @@ function creditPayload(
     branchId: sale.branchId,
     partyId: sale.partyId!,
     sourceDocumentId: sale.id,
+    invoiceDescription: sale.invoiceDescription ?? "",
     shippingAddress: sale.shippingAddress ?? "",
     issueDate: date,
     taxMode: sale.taxMode,
@@ -288,6 +289,7 @@ export async function replacePostedSaleForActor(
           throw new Error("INVALID_BRANCH");
         // Clients may omit hidden header fields; preserve their invoice snapshots.
         const headerDefaults: Record<string, unknown> = {
+          invoiceDescription: sale.invoiceDescription ?? "",
           billingName: sale.billingName ?? undefined,
           shippingAddress: sale.shippingAddress ?? "",
           customerPoNumber: sale.customerPoNumber ?? undefined,

@@ -25,7 +25,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
     customValues:sale.customValues,
     branchId:sale.branchId,
     partyId:sale.partyId,
-    billingName:sale.billingName??undefined,shippingAddress:sale.shippingAddress??"",customerPoNumber:sale.customerPoNumber??undefined,customerPoDate:sale.customerPoDate?.toISOString().slice(0,10),transactionTime:sale.transactionTime??undefined,ewayBillNumber:sale.ewayBillNumber??undefined,notes:sale.notes??undefined,dueDate:sale.dueDate?.toISOString().slice(0,10),
+    invoiceDescription:sale.invoiceDescription??"",billingName:sale.billingName??undefined,shippingAddress:sale.shippingAddress??"",customerPoNumber:sale.customerPoNumber??undefined,customerPoDate:sale.customerPoDate?.toISOString().slice(0,10),transactionTime:sale.transactionTime??undefined,ewayBillNumber:sale.ewayBillNumber??undefined,notes:sale.notes??undefined,dueDate:sale.dueDate?.toISOString().slice(0,10),
     issueDate:sale.issueDate.toISOString().slice(0,10),
     taxMode:sale.taxMode,
     reverseCharge:sale.reverseCharge,

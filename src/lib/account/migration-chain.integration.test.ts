@@ -28,6 +28,7 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   await db.$executeRaw`INSERT INTO customers (id,"companyId","branchId",name,"shippingAddress","isAccountCustomer","updatedAt") VALUES (${customerId}::uuid,${companyId}::uuid,${branchId}::uuid,'Existing customer','Current customer site',true,NOW())`;
   // Use the pre-upgrade columns: the generated client already knows the new field.
   await db.$executeRaw`INSERT INTO commercial_documents ("id","companyId","branchId","type","status","documentNumber","partyId","partyName","customerId","issueDate","subtotal","taxableTotal","taxTotal","grandTotal","balanceDue","createdById","updatedAt") VALUES (${id}::uuid,${companyId}::uuid,${branchId}::uuid,'SALES_INVOICE','DRAFT','PRE-MIGRATION',${customerId}::uuid,'Existing customer',${customerId}::uuid,'2026-10-11',100,100,0,100,100,${userId}::uuid,NOW())`;
+  await db.$executeRaw`UPDATE commercial_documents SET notes='Historical terms' WHERE id=${id}::uuid`;
   const legacyLineId=randomUUID();
   await db.$executeRaw`INSERT INTO commercial_document_lines (id,"companyId","documentId",position,"lineType","itemName","unitName","unitSymbol",quantity,rate,"baseAmount","discountAmount","taxableAmount","taxAmount","lineTotal") VALUES (${legacyLineId}::uuid,${companyId}::uuid,${id}::uuid,0,'CUSTOM','Existing line','Historical pack','old',2,50,100,0,100,0,100)`;
   const [lineBefore]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(l) AS record FROM commercial_document_lines l WHERE id=${legacyLineId}::uuid`;
@@ -51,7 +52,7 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   expect(billingName).toBeNull();expect(taxMode).toBe("EXCLUSIVE");expect(stateOfSupplyCode).toBeNull();expect(roundOffEnabled).toBe(false);expect(Number(roundOffAmount)).toBe(0);expect(quoteRetained).toEqual(quoteBefore.record);
   await expect(db.quotationRevision.update({where:{id:revisionId},data:{roundOffEnabled:true}})).rejects.toThrow("QUOTATION_REVISION_COMMERCIAL_IMMUTABLE");
   expect(after.record.shippingAddress).toBeNull();
-  const {shippingAddress:_newField,sourceQuotationRevisionId,sourceSalesOrderId,...retained}=after.record;void _newField;expect(sourceSalesOrderId).toBeNull();expect(sourceQuotationRevisionId).toBeNull();
+  const {invoiceDescription,shippingAddress:_newField,sourceQuotationRevisionId,sourceSalesOrderId,...retained}=after.record;expect(invoiceDescription).toBeNull();expect(after.record.notes).toBe("Historical terms");void _newField;expect(sourceSalesOrderId).toBeNull();expect(sourceQuotationRevisionId).toBeNull();
   expect(retained).toEqual(before.record);
   expect(await db.customer.count({where:{companyId,shippingAddress:"Current customer site"}})).toBe(1);
   expect(await db.commercialDocument.count({where:{companyId}})).toBe(1);

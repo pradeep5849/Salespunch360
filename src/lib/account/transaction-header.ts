@@ -1,6 +1,7 @@
 import {z} from "zod";
 
 export const transactionHeaderFields={
+ invoiceDescription:z.string().trim().max(5000).optional(),
  shippingAddress:z.string().trim().max(5000).optional(),
  billingName:z.string().trim().max(240).optional(),
  customerPoNumber:z.string().trim().max(100).optional(),

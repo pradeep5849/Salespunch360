@@ -36,6 +36,8 @@ jobs:
         run: npx vitest run src/app/api/v1/mobile/account/money src/lib/account/action-feedback.test.ts src/lib/mobile/money-validation-feedback.test.ts
       - name: Scoped notification tabs and existing alert permissions
         run: npx vitest run src/lib/account/notification-tabs.test.ts src/lib/account/expense-alerts.test.ts src/app/api/v1/mobile/account/notifications/route.test.ts
+      - name: Independent invoice description snapshots and print output
+        run: npx vitest run src/lib/account/transaction-header.test.ts src/lib/account/a16-print-settings.test.ts src/lib/account/invoice-print-toggle-consumers.test.ts src/lib/account/y04-print-coverage.test.ts src/lib/account/sale-duplicate.test.ts
       - name: Immutable printed invoice revision identity
         run: npx vitest run src/lib/account/sale-invoice-identity.test.ts src/lib/account/invoice-share.test.ts
       - name: Quotation theme layouts and scoped settings

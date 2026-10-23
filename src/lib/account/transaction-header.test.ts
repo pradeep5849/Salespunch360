@@ -6,6 +6,7 @@ import {transactionRoundingLimit,defaultTransactionRoundOff} from "./transaction
 
 describe("transaction header snapshots",()=>{
  const schema=z.object(transactionHeaderFields).strict();
+ it("keeps an optional independent description and permits explicit clearing",()=>{expect(schema.parse({invoiceDescription:"  Work at site A  "}).invoiceDescription).toBe("Work at site A");expect(schema.parse({invoiceDescription:""}).invoiceDescription).toBe("");expect(schema.parse({})).not.toHaveProperty("invoiceDescription");expect(schema.safeParse({invoiceDescription:"x".repeat(5001)}).success).toBe(false)});
  it("validates document shipping addresses while allowing explicit clearing",()=>{
   expect(schema.parse({shippingAddress:"  Site A\nStreet 2  "}).shippingAddress).toBe("Site A\nStreet 2");
   expect(schema.parse({shippingAddress:""}).shippingAddress).toBe("");

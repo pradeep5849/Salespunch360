@@ -1407,6 +1407,7 @@ export async function createCommercialDocumentForActor(
               vendorId: p.party === "vendor" ? party.id : null,
               partyId: party.id,
               partyName: party.name,
+              invoiceDescription: d.invoiceDescription || null,
               billingName: d.billingName || null,
               shippingAddress: d.shippingAddress !== undefined ? d.shippingAddress || null : resolvePartySettings(settings?.transactionDefaults).shippingAddressEnabled && "shippingAddress" in party && typeof party.shippingAddress === "string" ? party.shippingAddress || null : null,
               customerPoNumber: d.customerPoNumber || null,

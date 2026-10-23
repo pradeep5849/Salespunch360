@@ -556,6 +556,7 @@ private fun DirectSaleInvoiceEditor(
                 if(line.sourceId.isNotBlank()||line.itemName.isNotBlank())SalesLineEditor(index,line,draft,options,emptyList(),onLine,onRemove)
             }
             if(options.transactionPreference("showProfit"))item{val profit=salesPreviewProfit(draft,options);Text(if(profit==null)"Enter purchase costs for these items to calculate profit." else "Estimated profit: ${accountMoney(profit.toPlainString())}")}
+            item{OutlinedTextField(draft.invoiceDescription,{onDraft(draft.copy(invoiceDescription=it.take(5000)))},enabled=!saving,label={Text("Description")},minLines=2,modifier=Modifier.fillMaxWidth())}
             item{Text("Charges",fontWeight=FontWeight.Bold)}
             item{OutlinedTextField(draft.freightAmount,{onDraft(draft.copy(freightAmount=it))},enabled=!saving,label={Text("Freight amount")},modifier=Modifier.fillMaxWidth())}
             item{OutlinedTextField(draft.otherChargesAmount,{onDraft(draft.copy(otherChargesAmount=it))},enabled=!saving,label={Text("Other charges amount")},modifier=Modifier.fillMaxWidth())}
