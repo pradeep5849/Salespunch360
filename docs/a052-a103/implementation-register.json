@@ -59410,7 +59410,9 @@
         "src/components/account/report-hub.tsx",
         "src/lib/account/reports/reference-inventory.json",
         "src/lib/account/reports/reference-inventory.test.ts",
-        "src/lib/account/reports/reference-inventory.ts"
+        "src/lib/account/reports/reference-inventory.ts",
+        "src/lib/account/reports/day-book.test.ts",
+        "src/lib/account/reports/day-book.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -60672,8 +60674,54 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "Implement outstanding approved report calculations/reference controls with honest limitations;do not infer A084 completion from catalogue mapping."
+        },
+        "single_day_posted_cash_day_book_2026_10_23": {
+          "implementation_commit": "809aeb7c819c0c7e659d26365600b51246a8ef49",
+          "work": "Implemented original Day Book reference as read-only single-business-day posted Cash/Bank ledger statement. Repeatable-read company/authorized-branch snapshot includes legacyCash/Bank and named money-account ledgers including inactive historical accounts;opening beforeday,exact paginated debit/credit flow,closing=opening+in-out. Internal transfers count on both sides and netzero;pendingcheques/drafts excluded. Explicitnote netmovement is not profit/revenue. Web/native single-date controls and export scope normalize a carried range to selected finalday;native sends from=to. Shared catalogue now48working destinations and45reference names mapped32working/13explicitunavailable. No models,migrations or financial writes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/day-book.test.ts",
+            "src/lib/account/reports/day-book.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "focused": "26PASS/3suites,0fail/skip including8newDayBook cases;initial6FAIL/20PASS due incomplete auth fixture,corrected to activeAccountUser;explicitrole guard preserves existing report context rolepolicy.",
+            "grouped_reports": "216PASS/28suites,0fail;11DB tests/2suites initially skipped without DB URL,then those exact11PASS separately with isolatedPostgreSQL,maxWorkers1.",
+            "browser_database": "Final2PASS49.4s desktop/mobileChromium with realPG:prioropening1000+same-dayincome100-expense200=closing900;inactivecash retained;next-day777/draft888/pendingcheque300 excluded;unpaidinvoice has no cash effect;single-day/emptyday/UIexportlinks/from=to,authenticatednative rows,parsedCSV/XLSX/PDF,branch/role403,AxeAA/nooverflow andunchangedjournalcount. Initial2FAIL fixture used category scope EXPENSE as transaction type;corrected toOFFICE_EXPENSE andpaidretry key. Intermediate1desktopFAIL onlyafterAll cycliccheque/settlementFK cleanup;assertions completed butnotclaimedPASS. FK-safe cleanup now breaks fixturecheque settlement pointer beforedeletion,onlyinside existing guarded localhost*_ci tenant cleanup. Two initial tsc fixture errors(inherited nestedlinecompanyId andExpenseCategory field names) corrected before finaltypecheck.",
+            "android": "compileDebugKotlin +31JVM PASS2m17s,0fail/errors/skips;AccountReportData27 +ReferenceReportCatalogue4 includingdailyfrom=to andunsupported-filter removal. No emulator/device/TalkBack/local current-slice lint execution.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused ESLint,workflowYAMLparse andgitdiff--check PASS.",
+            "ci": "NewDayBook/referenceInventory unit suites added to targetedworkflow;newhead CI pending.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remains PARTIAL for other original report computations/reference controls and full final-head/device validation. A085 catalogue remains implemented-but-not-finally-verified;this actualnewcomputation supersedes its earlier unavailable DayBook entry,notother13gaps."
         }
-      }
+      },
+      "current_unavailable_reference_reports": [
+        "All Transactions",
+        "All Parties Report",
+        "Party Report by Items",
+        "GSTR-1",
+        "GSTR-2",
+        "GSTR-3B",
+        "GST Transaction report",
+        "GSTR-9",
+        "Item Report by Party",
+        "Item Detail Report",
+        "Sale/Purchase By Item Category",
+        "Item Batch Report",
+        "Form No. 27EQ"
+      ]
     },
     {
       "finding_id": "A084-F04",
@@ -64282,7 +64330,9 @@
         "src/components/account/report-hub.tsx",
         "src/lib/account/reports/reference-inventory.json",
         "src/lib/account/reports/reference-inventory.test.ts",
-        "src/lib/account/reports/reference-inventory.ts"
+        "src/lib/account/reports/reference-inventory.ts",
+        "src/lib/account/reports/day-book.test.ts",
+        "src/lib/account/reports/day-book.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -65458,7 +65508,45 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A085-F02 catalogue mapping scope IMPLEMENTED BUT NOT VERIFIED under original explicit-unavailable requirement. This does not mark14unsupported reports implemented:their missing computations/reference workflows remain A084-F03 PARTIAL,except approved separation of official27EQ filing. Final-head/device validation pending;no final_status promoted."
+        },
+        "single_day_posted_cash_day_book_2026_10_23": {
+          "implementation_commit": "809aeb7c819c0c7e659d26365600b51246a8ef49",
+          "work": "Implemented original Day Book reference as read-only single-business-day posted Cash/Bank ledger statement. Repeatable-read company/authorized-branch snapshot includes legacyCash/Bank and named money-account ledgers including inactive historical accounts;opening beforeday,exact paginated debit/credit flow,closing=opening+in-out. Internal transfers count on both sides and netzero;pendingcheques/drafts excluded. Explicitnote netmovement is not profit/revenue. Web/native single-date controls and export scope normalize a carried range to selected finalday;native sends from=to. Shared catalogue now48working destinations and45reference names mapped32working/13explicitunavailable. No models,migrations or financial writes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/reports/[report]/page.tsx",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/day-book.test.ts",
+            "src/lib/account/reports/day-book.ts",
+            "src/lib/account/reports/display.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "focused": "26PASS/3suites,0fail/skip including8newDayBook cases;initial6FAIL/20PASS due incomplete auth fixture,corrected to activeAccountUser;explicitrole guard preserves existing report context rolepolicy.",
+            "grouped_reports": "216PASS/28suites,0fail;11DB tests/2suites initially skipped without DB URL,then those exact11PASS separately with isolatedPostgreSQL,maxWorkers1.",
+            "browser_database": "Final2PASS49.4s desktop/mobileChromium with realPG:prioropening1000+same-dayincome100-expense200=closing900;inactivecash retained;next-day777/draft888/pendingcheque300 excluded;unpaidinvoice has no cash effect;single-day/emptyday/UIexportlinks/from=to,authenticatednative rows,parsedCSV/XLSX/PDF,branch/role403,AxeAA/nooverflow andunchangedjournalcount. Initial2FAIL fixture used category scope EXPENSE as transaction type;corrected toOFFICE_EXPENSE andpaidretry key. Intermediate1desktopFAIL onlyafterAll cycliccheque/settlementFK cleanup;assertions completed butnotclaimedPASS. FK-safe cleanup now breaks fixturecheque settlement pointer beforedeletion,onlyinside existing guarded localhost*_ci tenant cleanup. Two initial tsc fixture errors(inherited nestedlinecompanyId andExpenseCategory field names) corrected before finaltypecheck.",
+            "android": "compileDebugKotlin +31JVM PASS2m17s,0fail/errors/skips;AccountReportData27 +ReferenceReportCatalogue4 includingdailyfrom=to andunsupported-filter removal. No emulator/device/TalkBack/local current-slice lint execution.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused ESLint,workflowYAMLparse andgitdiff--check PASS.",
+            "ci": "NewDayBook/referenceInventory unit suites added to targetedworkflow;newhead CI pending.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remains PARTIAL for other original report computations/reference controls and full final-head/device validation. A085 catalogue remains implemented-but-not-finally-verified;this actualnewcomputation supersedes its earlier unavailable DayBook entry,notother13gaps."
         }
+      },
+      "current_reference_inventory": {
+        "total": 45,
+        "mapped_names": 32,
+        "unavailable_names": 13,
+        "source": "src/lib/account/reports/reference-inventory.json",
+        "scope_note": "Working report names and honest gaps;unavailable calculations not claimed implemented."
       }
     },
     {
@@ -75127,6 +75215,41 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference controls/actions,bank/instrument presentation and posted-return correction policy/full final-head/device matrix. This slice resolves ordinary reference entry/persistence only;does not mark remaining instrument labels or finding complete."
+    },
+    {
+      "finding_ids": [
+        "A084-F03",
+        "A085-F02"
+      ],
+      "implementation_commit": "809aeb7c819c0c7e659d26365600b51246a8ef49",
+      "work": "Implemented original Day Book reference as read-only single-business-day posted Cash/Bank ledger statement. Repeatable-read company/authorized-branch snapshot includes legacyCash/Bank and named money-account ledgers including inactive historical accounts;opening beforeday,exact paginated debit/credit flow,closing=opening+in-out. Internal transfers count on both sides and netzero;pendingcheques/drafts excluded. Explicitnote netmovement is not profit/revenue. Web/native single-date controls and export scope normalize a carried range to selected finalday;native sends from=to. Shared catalogue now48working destinations and45reference names mapped32working/13explicitunavailable. No models,migrations or financial writes.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/reports/[report]/page.tsx",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/day-book.test.ts",
+        "src/lib/account/reports/day-book.ts",
+        "src/lib/account/reports/display.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "src/lib/account/reports/service.ts"
+      ],
+      "tests": {
+        "focused": "26PASS/3suites,0fail/skip including8newDayBook cases;initial6FAIL/20PASS due incomplete auth fixture,corrected to activeAccountUser;explicitrole guard preserves existing report context rolepolicy.",
+        "grouped_reports": "216PASS/28suites,0fail;11DB tests/2suites initially skipped without DB URL,then those exact11PASS separately with isolatedPostgreSQL,maxWorkers1.",
+        "browser_database": "Final2PASS49.4s desktop/mobileChromium with realPG:prioropening1000+same-dayincome100-expense200=closing900;inactivecash retained;next-day777/draft888/pendingcheque300 excluded;unpaidinvoice has no cash effect;single-day/emptyday/UIexportlinks/from=to,authenticatednative rows,parsedCSV/XLSX/PDF,branch/role403,AxeAA/nooverflow andunchangedjournalcount. Initial2FAIL fixture used category scope EXPENSE as transaction type;corrected toOFFICE_EXPENSE andpaidretry key. Intermediate1desktopFAIL onlyafterAll cycliccheque/settlementFK cleanup;assertions completed butnotclaimedPASS. FK-safe cleanup now breaks fixturecheque settlement pointer beforedeletion,onlyinside existing guarded localhost*_ci tenant cleanup. Two initial tsc fixture errors(inherited nestedlinecompanyId andExpenseCategory field names) corrected before finaltypecheck.",
+        "android": "compileDebugKotlin +31JVM PASS2m17s,0fail/errors/skips;AccountReportData27 +ReferenceReportCatalogue4 includingdailyfrom=to andunsupported-filter removal. No emulator/device/TalkBack/local current-slice lint execution.",
+        "typescript": "Final full tsc PASS.",
+        "eslint": "Focused ESLint,workflowYAMLparse andgitdiff--check PASS.",
+        "ci": "NewDayBook/referenceInventory unit suites added to targetedworkflow;newhead CI pending.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A084-F03 remains PARTIAL for other original report computations/reference controls and full final-head/device validation. A085 catalogue remains implemented-but-not-finally-verified;this actualnewcomputation supersedes its earlier unavailable DayBook entry,notother13gaps."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75163,7 +75286,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "5cb6555e3f8bd2615dd8bc5eb787db9cc7bba6cb",
+    "code_head_commit": "809aeb7c819c0c7e659d26365600b51246a8ef49",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
