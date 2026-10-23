@@ -28,4 +28,9 @@ describe("Home commercial query with non-commercial filters", () => {
     expect(result.unavailableFilters.every(row=>row.message.includes("not included"))).toBe(true);expect(mocks.documents.mock.calls[0][0].where.AND[0]).toEqual({OR:[{id:{in:[]}}]});
   });
 
+  it("retains selected-branch restrictions even on the legacy commercial-only query",async()=>{
+    await accountMobileHomeData({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},context,{});
+    expect(mocks.documents.mock.calls[0][0].where.branchId).toEqual({in:[]});expect(mocks.customers.mock.calls[0][0].where.branchId).toEqual({in:[]});
+  });
+
 });

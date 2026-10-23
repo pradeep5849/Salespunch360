@@ -7,6 +7,8 @@ const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {createCommercialDocumentForActor,postCommercialDocumentForActor,documentOutstandingInTx} from "./commercial";
+import {postedPartyBalances} from "./posted-party-balances";
+import {currentPartyBalanceForActor} from "./party-balance";
 import {runFinancialReportForActor} from "./reports/service";
 import {accountMobileHomeData} from "./mobile-home";
 import {replacePostedSaleForActor,reversePostedSaleForActor} from "./sale-amendments";
@@ -58,6 +60,9 @@ describe.skipIf(!url)("A086 immutable posted return correction",()=>{
   const home=await accountMobileHomeData(actor,{mode:"BRANCH",branchId,branchName:"Main"},{types:["SALES_INVOICE"]});
   expect(home.transactions.some(row=>row.id===source.id)).toBe(false);
   expect(home.transactions.find(row=>row.id===replacement.id)).toMatchObject({documentNumber:source.documentNumber,balanceDue:"0",showBalance:true});
+  expect(home.parties.find(row=>row.id===customerId)?.balance).toBe("-20");
+  const batch=await postedPartyBalances({companyId,partyIds:[customerId],customer:true,branches:[branchId]});expect(batch.get(customerId)!.toFixed(2)).toBe(await currentPartyBalanceForActor(actor,customerId));
+
 
  });
  it("retains partial original100 credit against repriced160 invoice",async()=>{
@@ -186,6 +191,13 @@ describe.skipIf(!url)("A086 immutable posted return correction",()=>{
   const documents=await client.commercialDocument.findMany({where:{companyId,id:{in:[source.id,credit.id,replacement.id]}},select:{journalEntryId:true}}),journalIds=[...documents.map(doc=>doc.journalEntryId!),revision.reversalJournalId];
   const costs=await client.journalLine.findMany({where:{companyId,journalEntryId:{in:journalIds},ledgerAccount:{systemKey:"COGS"}}});expect(costs.reduce((sum,row)=>sum+Number(row.debit)-Number(row.credit),0)).toBe(25);
   expect((await client.$transaction(tx=>documentOutstandingInTx(tx,companyId,replacement.id))).outstanding.toString()).toBe("60");
+ });
+
+ it("scopes batched party history by branch company and historical cutoff",async()=>{
+  const {source,line}=await returned();await replacePostedSaleForActor(actor,source.id,{...raw("80"),lines:[{...raw("80").lines[0],originalLineId:line.id}]});
+  const current=await postedPartyBalances({companyId,partyIds:[customerId],customer:true,branches:[branchId]});expect(current.get(customerId)!.toFixed(2)).toBe(await currentPartyBalanceForActor(actor,customerId));
+  for(const scope of [{companyId,branches:[randomUUID()]},{companyId:randomUUID(),branches:undefined},{companyId,branches:[]}])expect((await postedPartyBalances({...scope,partyIds:[customerId],customer:true})).get(customerId)!.toString()).toBe("0");
+  expect((await postedPartyBalances({companyId,partyIds:[customerId],customer:true,branches:[branchId],asOf:new Date("2026-10-19")})).get(customerId)!.toString()).toBe("0");
  });
 
 });

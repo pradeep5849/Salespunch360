@@ -1,3 +1,4 @@
+import {postedPartyBalances} from "./posted-party-balances";
 import {saleInvoiceIdentityFromMetadata} from "./sale-invoice-identity";
 import {ACCOUNT_ROLE_PERMISSIONS} from "@/lib/auth/permissions";
 import {enabledModulesForCompany} from "./modules";
@@ -34,7 +35,7 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
   const types = normalizedHomeTypes(input.types);
   const modules=input.includeNonCommercial?new Set(await enabledModulesForCompany(actor.companyId)):undefined;
   const permissions=new Set(actor.accountRole?ACCOUNT_ROLE_PERMISSIONS[actor.accountRole]:[]);
-  const readBranches=input.includeNonCommercial?homeReadBranches(actor,context):undefined;
+  const readBranches=input.includeNonCommercial||actor.branchAccessScope==="SELECTED_BRANCHES"?homeReadBranches(actor,context):undefined;
   const viewBranch=readBranches===undefined?{}:{branchId:{in:readBranches}};
   const allowedTypes=modules?(permissions.has("ACCOUNT_LEDGER_VIEW")?accountHomeTransactionTypes.filter(type=>commercialDocumentPolicies[type].modules.every(key=>modules.has(key))):[]):accountHomeTransactionTypes;
   const commercialTypes = types.filter((type): type is CommercialDocumentType => (accountHomeTransactionTypes as readonly string[]).includes(type));
@@ -87,6 +88,13 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
     _max: { issueDate: true },
   }) : [];
   const balanceByParty = new Map(balances.map(row => [row.customerId, row]));
+  // Full financial roles use posted party history. Preserve Project Manager
+  // project-specific scoping and other role capabilities instead of widening
+  // them to all transactions belonging to a shared customer.
+  const canReadPartyLedger=["ACCOUNT_ADMIN","ACCOUNTANT"].includes(actor.accountRole??"");
+  const partyBranches=context.mode==="BRANCH"?(actor.branchAccessScope==="SELECTED_BRANCHES"&&!actor.branchIds?.includes(context.branchId)?[]:[context.branchId]):actor.branchAccessScope==="SELECTED_BRANCHES"?[...(actor.branchIds??[])]:undefined;
+  const actualPartyBalances=canReadPartyLedger?await postedPartyBalances({companyId:actor.companyId,partyIds,customer:true,branches:partyBranches}):undefined;
+
   const normalized=transactions.map(row => {
       const inactiveSale=row.type==="SALES_INVOICE"&&!activeSale(row);
       const outstanding=inactiveSale?new Prisma.Decimal(0):row.type==="SALES_INVOICE"?saleOutstandings.get(row.id):undefined;
@@ -98,6 +106,6 @@ export async function accountMobileHomeData(actor: AccountBranchActor, context: 
     });
   const merged=[...normalized,...extraRows].sort((a,b)=>b.issueDate.getTime()-a.issueDate.getTime()||(b.sortAt?.getTime()??0)-(a.sortAt?.getTime()??0)||b.id.localeCompare(a.id)).slice(0,20);
   return {q,types,unavailableFilters:unavailableHomeFilters(types),transactions:merged.map(item=>{const {sortAt,...row}=item;void sortAt;return row;}),
-    parties: parties.map(party => ({ id: party.id, name: party.name, lastActivity: balanceByParty.get(party.id)?._max.issueDate ?? party.updatedAt, balance: balanceByParty.get(party.id)?._sum.balanceDue?.toString() ?? "0" })),
+    parties: parties.map(party => ({ id: party.id, name: party.name, lastActivity: balanceByParty.get(party.id)?._max.issueDate ?? party.updatedAt, balance: actualPartyBalances?.get(party.id)?.toString()??balanceByParty.get(party.id)?._sum.balanceDue?.toString() ?? "0" })),
   };
 }
