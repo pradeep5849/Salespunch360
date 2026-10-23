@@ -59434,7 +59434,9 @@
         "src/lib/mobile/account-purchases.ts",
         "src/lib/mobile/account-reports.ts",
         "src/lib/account/reports/category-trade.ts",
-        "src/lib/account/reports/category-trade.test.ts"
+        "src/lib/account/reports/category-trade.test.ts",
+        "src/lib/account/reports/all-parties.ts",
+        "src/lib/account/reports/all-parties.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -60811,6 +60813,33 @@
           },
           "ci": "Previous exact checkpoint6788ead4d1c284b326c95807a7fb47394a49da97 targeted run40012257535 SUCCESS(Web/Migration/Android). Current report source requires new head validation.",
           "remaining": "A084-F03 remainsPARTIAL:36of45supplied reference names nowmapped,9unavailable;52supported service destinations. Other report computations/layouts and final199-head/device validation pending. No statutory filing claim."
+        },
+        "all_parties_2026_10_23": {
+          "code_commit": "31160475abb76b9543157eda195e033e90afe0c2",
+          "scope": "A084-F03 supplied All Parties Report; shared A085 export/parity dependency",
+          "work": "Lists accounting customers(inactive included) and company-shared vendors with distinct identities. Reuses exact posted journal/reversal/opening/receipt/advance balance snapshot in same repeatable-read transaction, pages at1000, enforces company and authorized customer-profile/financial branch scope. Receivable/Payable/CustomerAdvance/VendorAdvance columns separate; no income/expense inference. Current names and closing-through-end-date semantics disclosed. Existing generic Web/native report renderer and shared CSV/XLSX/PDF exports. No model/migration/financial write.",
+          "files": [
+            "src/lib/account/reports/all-parties.ts",
+            "src/lib/account/reports/all-parties.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/service.ts",
+            "src/lib/account/reports/display.ts",
+            "e2e/a090-settings.spec.ts",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            ".github/workflows/targeted-validation.yml"
+          ],
+          "tests": {
+            "focused": "44PASS/5suites2.00s. Side/advance separation, exact cents, zero/inactive profiles, pagination, historical cutoff and same snapshot reader, empty branch scope, role/edition denial, unsupported filters.",
+            "grouped": "90PASS/10suites5.93s;overlaps focused,not additive.",
+            "browser": "2PASS1.7m actual desktop+mobile-web:Web/native party balances206.20receivable/80payable,all3export contents,foreignbranch403,ProjectManager403,AxeAA/nooverflow and unchanged journal count. Existing category/HSN/SAC/party-item matrices retained.",
+            "android": "35JVM PASS/0fail/errors/skips35s:8ReferenceReportCatalogue+27AccountReportData. New metadata-selected report drops stale unrelated filters. No emulator/device runtime.",
+            "typescript": "Full tsc PASS.",
+            "eslint": "Focused ESLint/gitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remainsPARTIAL:37of45supplied names mapped,8unavailable;53supported service destinations. Other report calculations/layouts and final-head/device verification pending."
         }
       },
       "current_unavailable_reference_reports": [
@@ -75912,6 +75941,33 @@
       },
       "ci": "Previous exact checkpoint6788ead4d1c284b326c95807a7fb47394a49da97 targeted run40012257535 SUCCESS(Web/Migration/Android). Current report source requires new head validation.",
       "remaining": "A084-F03 remainsPARTIAL:36of45supplied reference names nowmapped,9unavailable;52supported service destinations. Other report computations/layouts and final199-head/device validation pending. No statutory filing claim."
+    },
+    {
+      "code_commit": "31160475abb76b9543157eda195e033e90afe0c2",
+      "scope": "A084-F03 supplied All Parties Report; shared A085 export/parity dependency",
+      "work": "Lists accounting customers(inactive included) and company-shared vendors with distinct identities. Reuses exact posted journal/reversal/opening/receipt/advance balance snapshot in same repeatable-read transaction, pages at1000, enforces company and authorized customer-profile/financial branch scope. Receivable/Payable/CustomerAdvance/VendorAdvance columns separate; no income/expense inference. Current names and closing-through-end-date semantics disclosed. Existing generic Web/native report renderer and shared CSV/XLSX/PDF exports. No model/migration/financial write.",
+      "files": [
+        "src/lib/account/reports/all-parties.ts",
+        "src/lib/account/reports/all-parties.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/service.ts",
+        "src/lib/account/reports/display.ts",
+        "e2e/a090-settings.spec.ts",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        ".github/workflows/targeted-validation.yml"
+      ],
+      "tests": {
+        "focused": "44PASS/5suites2.00s. Side/advance separation, exact cents, zero/inactive profiles, pagination, historical cutoff and same snapshot reader, empty branch scope, role/edition denial, unsupported filters.",
+        "grouped": "90PASS/10suites5.93s;overlaps focused,not additive.",
+        "browser": "2PASS1.7m actual desktop+mobile-web:Web/native party balances206.20receivable/80payable,all3export contents,foreignbranch403,ProjectManager403,AxeAA/nooverflow and unchanged journal count. Existing category/HSN/SAC/party-item matrices retained.",
+        "android": "35JVM PASS/0fail/errors/skips35s:8ReferenceReportCatalogue+27AccountReportData. New metadata-selected report drops stale unrelated filters. No emulator/device runtime.",
+        "typescript": "Full tsc PASS.",
+        "eslint": "Focused ESLint/gitdiff--check PASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A084-F03 remainsPARTIAL:37of45supplied names mapped,8unavailable;53supported service destinations. Other report calculations/layouts and final-head/device verification pending."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75948,7 +76004,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "5d473351946bc877e07e7e1e9a6620be17882055",
+    "code_head_commit": "31160475abb76b9543157eda195e033e90afe0c2",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
