@@ -67684,6 +67684,11 @@
             "earlier_failures": "Print mock lacked audit reader (8 failures); browser assertions omitted existing dropdown glyph and treated PDF extraction object as string (4 failures). Mocks/assertions corrected and recorded final runs passed."
           },
           "remaining": "Finding remains PARTIAL. Posted return correction carry/value policy, remaining original reference scope and final-head/full device validation are not certified. No migration or production change."
+        },
+        "posted_return_valuation_decision_2026_10_23": {
+          "user_decision": "RESOLVED by user 23 October 2026: already billed/posted credit notes retain their original billed value; editing a sale to a different rate must not change, reverse or replace that existing credit. Original100credit remains100 when replacement sale price80. Existing history retained. Implementation and financial regression still pending; no completion inferred.",
+          "implementation_status": "PARTIAL",
+          "remaining": "Implement immutable-original credit linkage across corrected sale revisions, enforce returned quantity coverage, and verify ledger/stock/advance/idempotency/concurrency effects; do not merely remove guard."
         }
       }
     },
@@ -74082,7 +74087,8 @@
     "hindi_translation_deferral": {
       "decision": "User explicitly deferred Hindi translation;continue English implementation.",
       "scope": "A090-F01 approved English code scope;Hindi translation intentionally deferred,not claimed implemented."
-    }
+    },
+    "posted_return_valuation_2026_10_23": "RESOLVED by user 23 October 2026: already billed/posted credit notes retain their original billed value; editing a sale to a different rate must not change, reverse or replace that existing credit. Original100credit remains100 when replacement sale price80. Existing history retained. Implementation and financial regression still pending; no completion inferred."
   },
   "push_checkpoint": {
     "date": "2026-10-14",
@@ -75429,7 +75435,7 @@
   },
   "checkpoint_pending_questions_2026_10_23": {
     "home_party_to_party": "RESOLVED;atomic pass-through/commission workflow implemented and focused tested under originalA071-F05;final-head/device verification pending.",
-    "posted_return_valuation": "DECISION REQUIRED:keep original100creditnote unchanged when edited sale price80,or audited reversal/replacement80. Asked23October2026;no answer yet. Existing posted-return edit guard retained."
+    "posted_return_valuation": "RESOLVED by user 23 October 2026: already billed/posted credit notes retain their original billed value; editing a sale to a different rate must not change, reverse or replace that existing credit. Original100credit remains100 when replacement sale price80. Existing history retained. Implementation and financial regression still pending; no completion inferred."
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",

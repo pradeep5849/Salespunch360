@@ -10605,3 +10605,7 @@ Implementation `36600f021ac9ba3d0317ca0637420ec3c57a3851` adds scoped, as-of pri
 ### A087-F02 — functional Sale Details toolbar, 2026-10-23
 
 Implementation `bc738b6b3b4c4969415ad91efc6a4d8a8944d3cb` adds authorized PDF/image sharing with download fallback, ASK/PDF preference, accessible native dialog, actionable overflow links and correctly placed revision history. Financial services and native source unchanged. Nine focused helper tests passed. Final desktop/mobile browser regression: 2 passed (1.1m), including real PDF/PNG bytes, HTTP403/HTML rejection and retry, menu destinations, Axe AA, Escape/focus, paid-sale Edit and native save/retry accounting assertions. Initial desktop passed; mobile Edit navigation exceeded the old five-second development timeout; rerun with 30 seconds passed. Full TypeScript, focused lint and diff checks passed. A087 remains PARTIAL; counts remain 193 implemented/resolved but not finally verified and 6 partial. No final-199/device/merge/deployment claim.
+
+### A086-F05 — posted return valuation decision resolved, 2026-10-23
+
+User confirmed already billed/posted credits retain their original billed value: an existing ₹100 credit remains ₹100 if a corrected sale price is ₹80. Do not rewrite, reverse or replace that credit. Implementation and financial regression remain pending; safe guard remains until a complete correction path is implemented. No completion promotion.
