@@ -9,6 +9,10 @@ import type { ReportResult } from "./service";
 // These are the monetary columns emitted by the report service. Quantity,
 // percentage, identifiers and arbitrary text must never be treated as money.
 const moneyColumns = new Set([
+  "Receivable",
+  "Payable",
+  "Customer Advance",
+  "Vendor Advance",
   "Amount",
   "Money In",
   "Money Out",

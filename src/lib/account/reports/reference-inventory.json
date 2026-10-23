@@ -93,9 +93,11 @@
     {
       "name": "All Parties Report",
       "group": "Party reports",
-      "destinations": [],
+      "destinations": [
+        "all-parties"
+      ],
       "requirement": "REPORTS",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Party Report by Items",
