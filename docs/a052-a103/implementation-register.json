@@ -68850,6 +68850,7 @@
         "android/app/src/main/java/com/salespunch360/mobile/account/CommercialCreationIdentity.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/ProjectInvoiceSelection.kt",
         "android/app/src/main/java/com/salespunch360/mobile/account/SaleCreationAttachment.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
         "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SaleAttachmentControls.kt",
         "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentDetail.kt",
@@ -68857,25 +68858,38 @@
         "android/app/src/test/java/com/salespunch360/mobile/account/ProjectInvoiceSelectionTest.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/SaleCreationAttachmentTest.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/SalesEditSnapshotTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
         "e2e/a090-settings.spec.ts",
         "prisma/migrations/20261019060000_commercial_shipping_snapshot/migration.sql",
         "prisma/migrations/20261021010000_commercial_private_attachments/migration.sql",
         "prisma/migrations/20261021020000_sale_attachment_append_history/migration.sql",
+        "prisma/migrations/20261022110000_invoice_description/migration.sql",
         "prisma/schema.prisma",
         "src/app/api/account/sale-attachments/[id]/route.ts",
+        "src/app/api/account/sales/[id]/attachments/route.ts",
+        "src/app/api/account/sales/[id]/with-attachments/route.ts",
         "src/app/api/account/sales/with-attachments/route.ts",
         "src/app/api/v1/mobile/account/sale-attachments/[id]/route.ts",
         "src/app/api/v1/mobile/account/sales/[id]/attachments/route.ts",
+        "src/app/api/v1/mobile/account/sales/[id]/with-attachments/route.ts",
         "src/app/api/v1/mobile/account/sales/with-attachments/route.ts",
         "src/app/workspace/account/sales/[id]/edit/page.tsx",
+        "src/app/workspace/account/sales/[id]/edit/sale-edit-form.tsx",
         "src/app/workspace/account/sales/[id]/page.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail-actions.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail-toolbar.tsx",
         "src/app/workspace/account/sales/[id]/sale-detail.module.css",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
         "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/a16-print-settings.test.ts",
         "src/lib/account/backup-snapshot.runtime.test.ts",
         "src/lib/account/cheque-finance.integration.test.ts",
         "src/lib/account/commercial-action-errors.ts",
         "src/lib/account/commercial.ts",
         "src/lib/account/migration-chain.integration.test.ts",
+        "src/lib/account/print-renderer.ts",
         "src/lib/account/print.ts",
         "src/lib/account/private-document-multipart.ts",
         "src/lib/account/project-invoice-selection.ts",
@@ -68890,25 +68904,13 @@
         "src/lib/account/sale-duplicate.test.ts",
         "src/lib/account/sale-duplicate.ts",
         "src/lib/account/sale-edit-initial.ts",
+        "src/lib/account/sale-submit.test.ts",
         "src/lib/account/sale-submit.ts",
         "src/lib/account/transaction-header.test.ts",
         "src/lib/account/transaction-header.ts",
         "src/lib/account/transaction-scope.ts",
         "src/lib/account/utilities.ts",
-        "src/lib/quotations/attachment-http.ts",
-        "src/app/api/account/sales/[id]/attachments/route.ts",
-        "src/app/api/account/sales/[id]/with-attachments/route.ts",
-        "src/app/api/v1/mobile/account/sales/[id]/with-attachments/route.ts",
-        "src/app/workspace/account/sales/[id]/edit/sale-edit-form.tsx",
-        "android/app/src/test/java/com/salespunch360/mobile/account/SalesPreviewTest.kt",
-        "prisma/migrations/20261022110000_invoice_description/migration.sql",
-        "src/lib/account/a16-print-settings.test.ts",
-        "src/lib/account/print-renderer.ts",
-        "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
-        "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
-        "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
-        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
-        "src/lib/account/sale-submit.test.ts"
+        "src/lib/quotations/attachment-http.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -69433,6 +69435,27 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference controls/actions,bank/instrument presentation and posted-return correction policy/full final-head/device matrix. This slice resolves ordinary reference entry/persistence only;does not mark remaining instrument labels or finding complete."
+        },
+        "functional_sale_detail_toolbar_2026_10_23": {
+          "implementation_commit": "bc738b6b3b4c4969415ad91efc6a4d8a8944d3cb",
+          "work": "Sale Details now uses authorized PDF preparation and the existing all-pages image renderer for real Web Share or download fallback. Share respects ASK/PDF setting. Native HTML dialog provides keyboard Escape/focus restoration; failed/HTML responses show retryable errors rather than being shared. Overflow disclosure exposes working PDF/full details/permitted Edit links. Revision notice moved out of the four-column header. Existing financial correction services unchanged; footer rejects repeated Delete submissions while pending. No schema/migration or native source changes.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/sales/[id]/page.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail-actions.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail-toolbar.tsx",
+            "src/app/workspace/account/sales/[id]/sale-detail.module.css"
+          ],
+          "tests": {
+            "focused": "9 passed in two authorized PDF/image helper suites, 0 failed/skipped. Failed HTTP/MIME, filename sanitation, cancellation, complete page rendering/limits retained. Added both suites to targeted CI.",
+            "browser_database": "Final desktop and mobile-web Chromium: 2 passed in 1.1m. Menu destinations, ASK chooser, Axe AA, Escape/focus restoration, real PDF download magic, blocked403/HTML error response and successful retry to real PNG verified. Existing paid Cash Sale reference/readonly Edit, native Bank save/idempotency/conflict/oversize rejection, no duplicate settlements/journals and no overflow retained. Initial run desktop passed; mobile exceeded existing 5s Edit navigation timeout after share assertions. Rerun used30s development-navigation allowance and passed.",
+            "typescript": "Full tsc passed.",
+            "eslint": "Focused ESLint and git diff --check passed.",
+            "native": "No native source change in this slice. Prior Item Batch compilation plus32JVM tests passed; not relabelled native Sale toolbar runtime verification.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A087-F02 remains PARTIAL for all original shared paid/returned-sale correction/action requirements and final-head/device validation. A086-F05 return-valuation decision remains unanswered; existing safe guard retained."
         }
       },
       "push_checkpoint_evidence": {
@@ -75350,6 +75373,30 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A084-F03 remains PARTIAL for the other 12 unavailable reference calculations/controls and final validation. A085 catalogue mapping is implemented but not finally verified. All 199 final statuses remain unpromoted."
+    },
+    {
+      "finding_ids": [
+        "A087-F02"
+      ],
+      "implementation_commit": "bc738b6b3b4c4969415ad91efc6a4d8a8944d3cb",
+      "work": "Sale Details now uses authorized PDF preparation and the existing all-pages image renderer for real Web Share or download fallback. Share respects ASK/PDF setting. Native HTML dialog provides keyboard Escape/focus restoration; failed/HTML responses show retryable errors rather than being shared. Overflow disclosure exposes working PDF/full details/permitted Edit links. Revision notice moved out of the four-column header. Existing financial correction services unchanged; footer rejects repeated Delete submissions while pending. No schema/migration or native source changes.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/sales/[id]/page.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail-actions.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail-toolbar.tsx",
+        "src/app/workspace/account/sales/[id]/sale-detail.module.css"
+      ],
+      "tests": {
+        "focused": "9 passed in two authorized PDF/image helper suites, 0 failed/skipped. Failed HTTP/MIME, filename sanitation, cancellation, complete page rendering/limits retained. Added both suites to targeted CI.",
+        "browser_database": "Final desktop and mobile-web Chromium: 2 passed in 1.1m. Menu destinations, ASK chooser, Axe AA, Escape/focus restoration, real PDF download magic, blocked403/HTML error response and successful retry to real PNG verified. Existing paid Cash Sale reference/readonly Edit, native Bank save/idempotency/conflict/oversize rejection, no duplicate settlements/journals and no overflow retained. Initial run desktop passed; mobile exceeded existing 5s Edit navigation timeout after share assertions. Rerun used30s development-navigation allowance and passed.",
+        "typescript": "Full tsc passed.",
+        "eslint": "Focused ESLint and git diff --check passed.",
+        "native": "No native source change in this slice. Prior Item Batch compilation plus32JVM tests passed; not relabelled native Sale toolbar runtime verification.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A087-F02 remains PARTIAL for all original shared paid/returned-sale correction/action requirements and final-head/device validation. A086-F05 return-valuation decision remains unanswered; existing safe guard retained."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75386,7 +75433,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "36600f021ac9ba3d0317ca0637420ec3c57a3851",
+    "code_head_commit": "bc738b6b3b4c4969415ad91efc6a4d8a8944d3cb",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
