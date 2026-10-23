@@ -67608,7 +67608,8 @@
         "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
         "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
-        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx"
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+        "src/lib/account/sale-submit.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -68159,6 +68160,32 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference actions/cheque workflow,posted-return edit valuation policy and full final-head/device validation. A086-F05 return-value decision requested separately;guard retained until answered. No A104/merge/deploy/production action."
+        },
+        "ordinary_sale_receipt_reference_2026_10_23": {
+          "implementation_commit": "d2d1c9c8b81f218598e7156fe5c0b3ec07b3ee30",
+          "work": "Web Add Sale exposes Payment Ref No. for actual new receipts,disabled when no payment is being recorded;passes reference to existing atomic Sale Save. Android shows/submits references for Cash/Bank as well as Cheque,instead of cheque-only. Edit remains read-only through saved receipt snapshot;no old receipt is resubmitted. Shared payment input bounds reference160chars,rejects unknown instrument names,and normalizes blank to omitted reference so previously valid file Save retry hashes stay compatible. Existing Cash/Bank/Cheque/UPI/Card input normalization preserved (UPI/Card remain canonical BANK);no new instrument classification claim or financial model change.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/sale-submit.test.ts",
+            "src/lib/account/sale-submit.ts"
+          ],
+          "tests": {
+            "focused": "31PASS/3Sale submit/preview/duplicate suites,0fail/skip;includes4Cash/Bank/UPI/Card reference-forwarding and pretransaction oversize/unknown-type rejection checks.",
+            "financial_database": "54PASS/2existing financial/attachment integration suites,0fail/skip. Includes2new realPG cross-version blank/omitted reference file retries in both orders:one original document,journal,file only. Existing atomic posting,receipt/advance/correction/permissions/isolation/private-file regressions retained.",
+            "browser_database": "Final2PASS50.8s desktop/mobileChromium with isolated PostgreSQL:WebCash reference persists onDetails/readonlyEdit;nativeBank referenceSave/replay sameID;changedreference withsamekey409;161char400;unchangeddoc/journal/settlementcounts,Axe onnewfield,nooverflow. Initial2PASS55.5s usednativeCash before expanding finalcase toBank;overlapnotadditive.",
+            "android": "compileDebugKotlin +14JVM PASS2m11s,0fail/errors/skips:SavedSalePayments3,SalesEditSnapshot8,SaleDetailTotals3;newpayloadtestCash/Bank/ChequereferencesonAddandabsentonEdit. No device/Compose/TalkBack or local current-slice lint execution.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused ESLint andgitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference controls/actions,bank/instrument presentation and posted-return correction policy/full final-head/device matrix. This slice resolves ordinary reference entry/persistence only;does not mark remaining instrument labels or finding complete."
         }
       },
       "push_checkpoint_evidence": {
@@ -68727,7 +68754,8 @@
         "android/app/src/main/java/com/salespunch360/mobile/account/SavedSalePayments.kt",
         "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
         "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
-        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx"
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+        "src/lib/account/sale-submit.test.ts"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -69226,6 +69254,32 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference actions/cheque workflow,posted-return edit valuation policy and full final-head/device validation. A086-F05 return-value decision requested separately;guard retained until answered. No A104/merge/deploy/production action."
+        },
+        "ordinary_sale_receipt_reference_2026_10_23": {
+          "implementation_commit": "d2d1c9c8b81f218598e7156fe5c0b3ec07b3ee30",
+          "work": "Web Add Sale exposes Payment Ref No. for actual new receipts,disabled when no payment is being recorded;passes reference to existing atomic Sale Save. Android shows/submits references for Cash/Bank as well as Cheque,instead of cheque-only. Edit remains read-only through saved receipt snapshot;no old receipt is resubmitted. Shared payment input bounds reference160chars,rejects unknown instrument names,and normalizes blank to omitted reference so previously valid file Save retry hashes stay compatible. Existing Cash/Bank/Cheque/UPI/Card input normalization preserved (UPI/Card remain canonical BANK);no new instrument classification claim or financial model change.",
+          "files": [
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+            "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+            "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+            "src/lib/account/sale-attachments.integration.test.ts",
+            "src/lib/account/sale-submit.test.ts",
+            "src/lib/account/sale-submit.ts"
+          ],
+          "tests": {
+            "focused": "31PASS/3Sale submit/preview/duplicate suites,0fail/skip;includes4Cash/Bank/UPI/Card reference-forwarding and pretransaction oversize/unknown-type rejection checks.",
+            "financial_database": "54PASS/2existing financial/attachment integration suites,0fail/skip. Includes2new realPG cross-version blank/omitted reference file retries in both orders:one original document,journal,file only. Existing atomic posting,receipt/advance/correction/permissions/isolation/private-file regressions retained.",
+            "browser_database": "Final2PASS50.8s desktop/mobileChromium with isolated PostgreSQL:WebCash reference persists onDetails/readonlyEdit;nativeBank referenceSave/replay sameID;changedreference withsamekey409;161char400;unchangeddoc/journal/settlementcounts,Axe onnewfield,nooverflow. Initial2PASS55.5s usednativeCash before expanding finalcase toBank;overlapnotadditive.",
+            "android": "compileDebugKotlin +14JVM PASS2m11s,0fail/errors/skips:SavedSalePayments3,SalesEditSnapshot8,SaleDetailTotals3;newpayloadtestCash/Bank/ChequereferencesonAddandabsentonEdit. No device/Compose/TalkBack or local current-slice lint execution.",
+            "typescript": "Final full tsc PASS.",
+            "eslint": "Focused ESLint andgitdiff--check PASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference controls/actions,bank/instrument presentation and posted-return correction policy/full final-head/device matrix. This slice resolves ordinary reference entry/persistence only;does not mark remaining instrument labels or finding complete."
         }
       },
       "push_checkpoint_evidence": {
@@ -75043,6 +75097,36 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A085-F02 catalogue mapping scope IMPLEMENTED BUT NOT VERIFIED under original explicit-unavailable requirement. This does not mark14unsupported reports implemented:their missing computations/reference workflows remain A084-F03 PARTIAL,except approved separation of official27EQ filing. Final-head/device validation pending;no final_status promoted."
+    },
+    {
+      "finding_ids": [
+        "A086-F06",
+        "A087-F02"
+      ],
+      "implementation_commit": "d2d1c9c8b81f218598e7156fe5c0b3ec07b3ee30",
+      "work": "Web Add Sale exposes Payment Ref No. for actual new receipts,disabled when no payment is being recorded;passes reference to existing atomic Sale Save. Android shows/submits references for Cash/Bank as well as Cheque,instead of cheque-only. Edit remains read-only through saved receipt snapshot;no old receipt is resubmitted. Shared payment input bounds reference160chars,rejects unknown instrument names,and normalizes blank to omitted reference so previously valid file Save retry hashes stay compatible. Existing Cash/Bank/Cheque/UPI/Card input normalization preserved (UPI/Card remain canonical BANK);no new instrument classification claim or financial model change.",
+      "files": [
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountSalesModels.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/sales/SalesDocumentEditor.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/SavedSalePaymentsTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.module.css",
+        "src/app/workspace/account/transactions/new/sale-bottom-details.tsx",
+        "src/app/workspace/account/transactions/new/sale-invoice-vyapar.tsx",
+        "src/lib/account/sale-attachments.integration.test.ts",
+        "src/lib/account/sale-submit.test.ts",
+        "src/lib/account/sale-submit.ts"
+      ],
+      "tests": {
+        "focused": "31PASS/3Sale submit/preview/duplicate suites,0fail/skip;includes4Cash/Bank/UPI/Card reference-forwarding and pretransaction oversize/unknown-type rejection checks.",
+        "financial_database": "54PASS/2existing financial/attachment integration suites,0fail/skip. Includes2new realPG cross-version blank/omitted reference file retries in both orders:one original document,journal,file only. Existing atomic posting,receipt/advance/correction/permissions/isolation/private-file regressions retained.",
+        "browser_database": "Final2PASS50.8s desktop/mobileChromium with isolated PostgreSQL:WebCash reference persists onDetails/readonlyEdit;nativeBank referenceSave/replay sameID;changedreference withsamekey409;161char400;unchangeddoc/journal/settlementcounts,Axe onnewfield,nooverflow. Initial2PASS55.5s usednativeCash before expanding finalcase toBank;overlapnotadditive.",
+        "android": "compileDebugKotlin +14JVM PASS2m11s,0fail/errors/skips:SavedSalePayments3,SalesEditSnapshot8,SaleDetailTotals3;newpayloadtestCash/Bank/ChequereferencesonAddandabsentonEdit. No device/Compose/TalkBack or local current-slice lint execution.",
+        "typescript": "Final full tsc PASS.",
+        "eslint": "Focused ESLint andgitdiff--check PASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A086-F06/A087-F02 remain PARTIAL for other reference controls/actions,bank/instrument presentation and posted-return correction policy/full final-head/device matrix. This slice resolves ordinary reference entry/persistence only;does not mark remaining instrument labels or finding complete."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
