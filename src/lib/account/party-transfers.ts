@@ -9,18 +9,14 @@ import {AuthorizationError} from "@/lib/auth/authorization";
 import {canUsePermission} from "@/lib/auth/permissions";
 import {assertOperationalWrite} from "@/lib/billing/entitlement";
 import {postJournalInTx,reverseJournalInTx} from "@/lib/accounting/service";
-import {partyTransferBaseInput,partyTransferInput,partyTransferAmounts} from "./party-transfer-policy";
+import {partyTransferInput,partyTransferAmounts} from "./party-transfer-policy";
 import {createExpenseForActor,reverseExpenseForActor} from "./expenses";
 import {allocateDocumentNumberInTx} from "./numbering";
 import {retrySerializable} from "./transaction-retry";
 import type {ProjectActor} from "./projects";
 const D=Prisma.Decimal;
-export const partyTransferSnapshot=partyTransferBaseInput.omit({requestKey:true}).extend({
- version:z.literal(1),requestHash:z.string().regex(/^[a-f0-9]{64}$/),number:z.string().min(1).max(100),
- receivedPartyName:z.string(),paidPartyName:z.string(),passThroughAmount:z.string(),commissionAmount:z.string(),commissionHead:z.literal("OTHER_INCOME"),expenseAmount:z.literal("0.00"),
- photoObjectKey:z.string().nullable().default(null),photoSha256:z.string().regex(/^[a-f0-9]{64}$/).nullable().default(null),photoMimeType:z.literal("image/webp").nullable().default(null),
- passReceiptJournalId:z.string().uuid().nullable(),passPaymentJournalId:z.string().uuid().nullable(),commissionIncomeId:z.string().uuid().nullable(),
-}).strict();
+import {partyTransferSnapshot} from "./party-transfer-snapshot";
+export {partyTransferSnapshot} from "./party-transfer-snapshot";
 async function access(a:ProjectActor,write=false){
  if(!a.companyId||!canUsePermission(a,"SALESPUNCH360_ACCOUNT",write?"ACCOUNT_MONEY_ENTRY":"ACCOUNT_MONEY_VIEW"))throw new AuthorizationError();
  const company=await db.company.findUnique({where:{id:a.companyId},select:{productEdition:true}});

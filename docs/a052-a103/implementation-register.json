@@ -51561,6 +51561,17 @@
             "Browser exercised reversal endpoints and status; a dedicated Web/Android reversal control is not yet supplied.",
             "Final199 full-suite/build/device/migration certification and main conflict resolution remain pending."
           ]
+        },
+        {
+          "evidence_key": "party_transfer_home_and_native_details_2026_10_23",
+          "implementation_status": "PARTIAL",
+          "summary": "Home adapter includes distinct received/paid source rows, scoped company/branch/permissions, immutable names and reversed state, canonical detail links and no unsupported print/share. Linked commission suppressed only when transfer rows are included; Expense-only still exposes Other Income. Extracted unchanged snapshot schema to shared pure module. Native details route loads authorized source and checksum-verified private photo.",
+          "remaining_limitations": [
+            "Native creation form still pending; previous native launcher destination must be corrected when that form is supplied.",
+            "Reference direction toggles and dedicated source reversal controls pending.",
+            "No Android emulator/device UI/TalkBack/private-photo runtime verification.",
+            "Other original partial findings, final199 validation and main conflicts remain."
+          ]
         }
       ],
       "push_checkpoint_evidence": {
@@ -73217,6 +73228,40 @@
       ],
       "migrations": "No additional migration; existing147 chain unchanged. No production database changes.",
       "commit_sha": "Git commit containing this evidence."
+    },
+    "party_transfer_home_and_native_details_2026_10_23": {
+      "date": "2026-10-23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "implementation_status": "PARTIAL",
+      "actual_implementation": "Home adapter includes distinct received/paid source rows, scoped company/branch/permissions, immutable names and reversed state, canonical detail links and no unsupported print/share. Linked commission suppressed only when transfer rows are included; Expense-only still exposes Other Income. Extracted unchanged snapshot schema to shared pure module. Native details route loads authorized source and checksum-verified private photo.",
+      "modified_files": [
+        "src/lib/account/home-noncommercial.ts",
+        "src/lib/account/party-transfer-snapshot.ts",
+        "src/lib/account/party-transfers.ts",
+        "src/lib/account/party-transfers.integration.test.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/money/PartyTransferDetailScreen.kt",
+        "e2e/a090-settings.spec.ts",
+        ".github/workflows/targeted-validation.yml"
+      ],
+      "test_evidence": [
+        "25 passed /2 serialized DB files /3.72s, including source filters, no duplicate commission, permissions/branch exclusion and reversed Home status.",
+        "53 passed /5 focused unit/route/Home query files /1.28s.",
+        "2 desktop/mobile Chromium passed /1.1m: full form, reversal, native Home filters, unique received/paid row IDs, commission suppression and Web detail navigation.",
+        "Full tsc --noEmit PASS exit0; focused ESLint --max-warnings=0 PASS exit0.",
+        "Android compileDebugKotlin + selected JVM SalesPreview10/SalesEditSnapshot8 passed, 18 tests, 0 failures/errors/skips, BUILD SUCCESSFUL2m7s. These JVM tests are regression evidence, not native screen runtime verification.",
+        "CI39901132980 exact prior pushed898c739b succeeded Web/migration/Android; does not certify this newer slice."
+      ],
+      "remaining_limitations": [
+        "Native creation form still pending; previous native launcher destination must be corrected when that form is supplied.",
+        "Reference direction toggles and dedicated source reversal controls pending.",
+        "No Android emulator/device UI/TalkBack/private-photo runtime verification.",
+        "Other original partial findings, final199 validation and main conflicts remain."
+      ],
+      "commit_sha": "Git commit containing this evidence; no final status promotion."
     }
   },
   "approved_business_decisions": {
@@ -74252,6 +74297,14 @@
       ],
       "status": "PARTIAL",
       "evidence": "intermediate_validation.party_transfer_whole_source_reversal_2026_10_23"
+    },
+    {
+      "key": "party_transfer_home_and_native_details_2026_10_23",
+      "finding_ids": [
+        "A071-F05"
+      ],
+      "status": "PARTIAL",
+      "evidence": "intermediate_validation.party_transfer_home_and_native_details_2026_10_23"
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {

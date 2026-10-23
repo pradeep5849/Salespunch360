@@ -10530,3 +10530,11 @@ Both pass-through journals and the commission Other Income reverse atomically th
 Actual validation: 55 financial integration tests passed (3 files, 7.30s), 62 focused unit/route/accounting tests passed (3 files, 622ms), 2 desktop/mobile Chromium tests passed (52.6s) including actual native HTTP reversal/retry, Web/native status reads and equal-amount Web reversal. Final full TypeScript, focused ESLint and diff whitespace checks passed. Initial failure-injection fixture targeted the root client rather than the transaction service; corrected injector and final passing evidence retained. No extra migration or production write.
 
 Remaining: Home source rows/filters, reference direction toggles, native Android screens/device runtime, dedicated reversal UI controls and final 199-finding validation. Earlier entries are historical; the full-source reversal backend/API limitation is resolved by this entry. No final-status promotion.
+
+### 23 October 2026 — Home Party Transfer adapters and native details (A071-F05 PARTIAL)
+
+Home now returns distinct scoped Received/Paid source rows and reversed status with canonical details links; linked commission appears separately only in Expense-only filtering. Native has an authorized read-only details/photo screen for these links. No unsupported print/share actions. Shared immutable schema extraction preserves source validation.
+
+Actual checks: 25 serialized database tests passed (2 files, 3.72s); 53 focused tests passed (5 files, 1.28s); 2 desktop/mobile Chromium cases passed (1.1m), including native Home filters, unique keys, commission suppression and Web navigation. Full TypeScript, focused ESLint and whitespace checks passed. Android compile and 18 selected JVM regression tests passed (2m7s); no device/UI/TalkBack runtime claim. Prior exact898c739b CI passed all jobs; this newer slice needs its own CI.
+
+Native creation/launcher correction, direction toggles, reversal controls and final199 certification remain pending. Earlier Home source backend limitation is resolved by this evidence; original IDs and PARTIAL status preserved.

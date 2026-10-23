@@ -10,6 +10,7 @@ vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof Prism
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {reverseJournalInTx} from "@/lib/accounting/service";
 import {reverseExpenseForActor} from "./expenses";
+import {homeNonCommercialRows} from "./home-noncommercial";
 import * as expenseService from "./expenses";
 import {savePartyTransferForActor,partyTransferForActor,partyTransferPhotoForActor,reversePartyTransferForActor} from "./party-transfers";
 import type {ProjectActor} from "./projects";
@@ -116,6 +117,17 @@ describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",
   await expect(reversePartyTransferForActor({...actor,accountRole:"ACCOUNTANT"},saved.id,request)).rejects.toThrow();
   await expect(reversePartyTransferForActor({...actor,companyId:otherCompany,branchIds:[]},saved.id,request)).rejects.toThrow();
   expect(await client.accountOperationalAudit.count({where:{companyId,entityId:saved.id,eventType:"PARTY_TRANSFER_REVERSED"}})).toBe(0);
+ });
+
+ it("Home shows distinct scoped cash legs and suppresses duplicate commission only when transfer rows are included",async()=>{
+  const saved=await savePartyTransferForActor(actor,input()),context={mode:"BRANCH" as const,branchId,branchName:"Own"},modules=new Set(["EXPENSES"] as const),permissions=new Set(["ACCOUNT_MONEY_VIEW","ACCOUNT_EXPENSE_VIEW"] as const);
+  const received=await homeNonCommercialRows(actor,context,{q:saved.number,types:["P2P_RECEIVED"]},modules,permissions);expect(received).toHaveLength(1);expect(received[0]).toMatchObject({id:`${saved.id}:received`,filterType:"P2P_RECEIVED",grandTotal:"600.00",printType:null,showBalance:false,detailHref:`/workspace/account/money/party-transfers/${saved.id}`});
+  const paid=await homeNonCommercialRows(actor,context,{q:saved.number,types:["P2P_PAID"]},modules,permissions);expect(paid).toHaveLength(1);expect(paid[0].grandTotal).toBe("500.00");expect(paid[0].id).not.toBe(received[0].id);
+  const all=await homeNonCommercialRows(actor,context,{q:"",types:[]},modules,permissions);expect(all.some(row=>row.id===saved.commissionIncomeId)).toBe(false);
+  const onlyExpenses=await homeNonCommercialRows(actor,context,{q:"",types:["EXPENSE"]},modules,permissions);expect(onlyExpenses.some(row=>row.id===saved.commissionIncomeId&&row.type==="OTHER_INCOME")).toBe(true);
+  expect(await homeNonCommercialRows({...actor,branchAccessScope:"SELECTED_BRANCHES",branchIds:[]},context,{q:saved.number,types:["P2P_RECEIVED"]},modules,permissions)).toEqual([]);
+  expect(await homeNonCommercialRows(actor,context,{q:saved.number,types:["P2P_RECEIVED"]},modules,new Set())).toEqual([]);
+  const reversed=await reversePartyTransferForActor(actor,saved.id,{requestKey:randomUUID(),entryDate:"2026-10-24",reason:"Home source reversal status"});expect(reversed.status).toBe("REVERSED");expect((await homeNonCommercialRows(actor,context,{q:saved.number,types:["P2P_RECEIVED"]},modules,permissions))[0].status).toBe("REVERSED");
  });
 
 });
