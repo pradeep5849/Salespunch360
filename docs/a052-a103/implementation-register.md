@@ -8883,7 +8883,7 @@ Checkpoint work: verified original-line IDs preserve retained item metadata; for
 
 **Required tests:** USD/INR display; zero/four decimals; selected date format; supported language; exports; historical currency policy.
 
-**Current implementation status:** PARTIAL
+**Current implementation status:** IMPLEMENTED BUT NOT VERIFIED
 
 **Prior work mapping:** {"page_implementation_status": "PARTIAL", "work": "General form/server/display/native source reviewed; own authenticated save, reload, isolation, currency/date/precision and unsaved navigation checks passed.", "tests": "Two own-page browser cases passed (mobile and desktop), among ten passing A090–A094 cases in the 12-case run (1.9m). Targeted unit results: 67/68 initially; affected module file 9/9 after stale mock correction. TypeScript and targeted ESLint passed.", "finding_status": null, "evidence": ["SalesPunch360_A090_General_Settings_Followup.md", "SalesPunch360_Settings_Source_Audit.md", "SalesPunch360_Settings_Numbered_Implementation_Checkpoint.md", "SalesPunch360_A090-A094_Followup.md"], "final_head_regression": "NOT RUN"}
 
@@ -8895,7 +8895,7 @@ Checkpoint pricing progress: Price lists use company currency and date preferenc
 
 Intermediate validation: 25 focused tests, 8 isolated database tests, 4 desktop/mobile browser scenarios and 142 Android JVM tests passed; native compilation, TypeScript and focused lint passed. Web unit regression: 2705 passed, 103 skipped, 0 failed. Browser results precede the latest audit-snapshot/scope changes; all evidence remains intermediate.
 
-Remaining: Other display consumers and final-head preference regression remain pending. Final checkpoint-head validation remains required.
+Historical checkpoint remainder: other display consumers were pending at this earlier point. The 2026-10-23 finding-specific consumer matrix below completes approved English code scope; Hindi is user-deferred and final checkpoint-head/device verification remains required.
 
 Checkpoint recognized-summary progress: Shared currency formatting preserves exact large cents/scientific notation, currency and configured precision. This fixes display of A052-F06 totals and other existing money consumers.
 
