@@ -9,6 +9,7 @@ import { saleDetail } from "@/lib/account/sale-detail";
 import { Money } from "@/components/account/account-ui";
 import { SaleDetailActions } from "./sale-detail-actions";
 import styles from "./sale-detail.module.css";
+import {SaleDetailToolbar} from "./sale-detail-toolbar";
 import {AuthorizationError,requirePermission} from "@/lib/auth/authorization";
 import {listSaleAttachmentsForActor} from "@/lib/account/sale-attachments";
 
@@ -21,6 +22,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   const attachments=await listSaleAttachmentsForActor({...actor,companyId:actor.companyId},sale.id);
   const [settings,party,company]=await Promise.all([db.accountSettings.findUnique({where:{companyId:sale.companyId}}),sale.customerId?db.customer.findFirst({where:{id:sale.customerId,companyId:sale.companyId},select:{phone:true}}):null,db.company.findUnique({where:{id:sale.companyId},select:{primaryPhone:true}})]);
   const messaging=resolveTransactionMessaging(settings?.transactionDefaults),prefs=resolveDisplayPreferences(settings);
+  const transactionDefaults=settings?.transactionDefaults as {transactionPreferences?:{shareAs?:string}}|null;
   const message=`Hi ${sale.partyName}, invoice ${sale.documentNumber} dated ${formatCalendarDate(sale.issueDate,prefs)} totals ${formatMoney(sale.payableAmount??sale.grandTotal,prefs)}.${messaging.includeInvoiceLink&&sale.status==="POSTED"?`\n${invoiceShareUrl(sale)}`:""}`;
   const base=sale.payableAmount??sale.grandTotal;
   const {outstanding,received,paymentDiscount,advanceApplied,credits,canChange,lifecycle}=sale.paymentSummary;
@@ -29,10 +31,9 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
     <header className={styles.header}>
       <Link className={styles.back} href="/workspace/account" aria-label="Back">←</Link>
       <h1>Sale</h1>
-      {sale.invoiceRevision>0&&<p>Revision {sale.invoiceRevision}{sale.previousInvoiceId&&<> · <Link href={`/workspace/account/sales/${sale.previousInvoiceId}`}>View previous revision</Link></>}</p>}
-      <Link className={styles.icon} href={`/api/account/print/${sale.type}/${sale.id}?format=pdf`} aria-label="Share invoice">↗</Link>
-      <Link className={styles.icon} href={`/workspace/account/transactions/${sale.id}`} aria-label="More invoice details">⋮</Link>
+      <SaleDetailToolbar id={sale.id} number={sale.documentNumber} pdfUrl={`/api/account/print/${sale.type}/${sale.id}?format=pdf`} canChange={canChange} shareAs={transactionDefaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"}/>
     </header>
+    {sale.invoiceRevision>0&&<p className={styles.revision}>Revision {sale.invoiceRevision}{sale.previousInvoiceId&&<> · <Link href={`/workspace/account/sales/${sale.previousInvoiceId}`}>View previous revision</Link></>}</p>}
     <section className={styles.meta}>
       <div><small>Invoice No.</small><strong>{sale.documentNumber}⌄</strong></div>
       <div><small>Date</small><strong><AccountDate value={sale.issueDate.toISOString()}/>⌄</strong></div>

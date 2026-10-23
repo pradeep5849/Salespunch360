@@ -9,7 +9,7 @@ export function SaleDetailActions({id,canChange}:{id:string;canChange:boolean}){
   const [deleting,setDeleting]=useState(false);
   return <footer className={styles.footer}>
     <form action={deletePostedSaleAction} onSubmit={event=>{
-      if(!canChange||!confirm("Delete this saved Sale? SalesPunch will reverse it with a Credit Note. Actual payments will remain as customer advance credit; the original payment discount will be removed.")){event.preventDefault();return}
+      if(deleting||!canChange||!confirm("Delete this saved Sale? SalesPunch will reverse it with a Credit Note. Actual payments will remain as customer advance credit; the original payment discount will be removed.")){event.preventDefault();return}
       setDeleting(true);
     }}>
       <input type="hidden" name="id" value={id}/>
