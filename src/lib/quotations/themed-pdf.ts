@@ -53,11 +53,15 @@ export async function renderThemedQuotationPdf(revision:CustomerQuotationDto){
  if(profile.expanded&&y>H*.53){const bottom=H*.53;page.drawRectangle({x:M,y:bottom,width,height:y-bottom,borderColor:rule,borderWidth:.4});let columnX=M;const weightTotal=weights.reduce((sum,value)=>sum+value,0);for(const weight of weights.slice(0,-1)){columnX+=width*weight/weightTotal;page.drawLine({start:{x:columnX,y},end:{x:columnX,y:bottom},color:rule,thickness:.4});}y=bottom;}
  cells(["Recorded total",money(revision.grandTotal)],[3,1],true);y-=8;
  const words=printableAmountWords(revision.grandTotal.toString(),prefs.baseCurrency,revision.printPresentation?.amountWordsFormat);
- const D=Prisma.Decimal.clone({precision:48}),taxes=new Map<string,Prisma.Decimal>();for(const l of revision.lines)taxes.set(l.taxRate.toString(),(taxes.get(l.taxRate.toString())??new D(0)).add(l.taxAmount.toString()));
+ const D=Prisma.Decimal.clone({precision:48}),taxes=new Map<string,Prisma.Decimal>();
+ // Additional-charge tax is part of the retained total. Discounts already reduce saved line tax.
+ // Group recorded amounts only; never recalculate historical tax or infer a CGST/SGST jurisdiction.
+ const recordedTaxRows=[...revision.lines,...revision.adjustments.filter(row=>!new D(row.taxAmount.toString()).isZero())];
+ for(const row of recordedTaxRows){const rate=new D(row.taxRate.toString()).toString();taxes.set(rate,(taxes.get(rate)??new D(0)).add(row.taxAmount.toString()))}
  const taxSummary=[...taxes].map(([rate,value])=>`${rate}%: ${money(value)}`).join('\n');
  const amounts=`Amounts\nSubtotal: ${money(revision.subtotal)}\nDiscount: ${money(revision.discountTotal)}\nAdditional charges: ${money(revision.additionalChargeTotal)}\nTaxable: ${money(revision.taxableTotal)}\nGST/Tax: ${money(revision.taxTotal)}\nRound off: ${money(revision.roundOffAmount??0)}\nTotal: ${money(revision.grandTotal)}`;
  cells(profile.id==="GST_5"||profile.id==="LANDSCAPE_1"?[`Tax summary\n${taxSummary}`,amounts]:[`Amount in words\n${words}`,amounts],[1,1]);
- if(profile.id==="GST_5"||profile.id==="LANDSCAPE_1")paragraph(`Amount in words: ${words}`);else paragraph(`Tax summary (recorded line tax): ${taxSummary}`);
+ if(profile.id==="GST_5"||profile.id==="LANDSCAPE_1")paragraph(`Amount in words: ${words}`);else paragraph(`Tax summary (recorded line and adjustment tax): ${taxSummary}`);
  for(const a of revision.adjustments)paragraph(`${a.type==='DISCOUNT'?'Discount':'Additional charge'} — ${a.label}: ${money(a.amount)}${a.taxable?` + tax ${money(a.taxAmount)}`:''}`);
  for(const field of revision.customFields??[])paragraph(`${field.label}: ${field.value}`);
  for(const row of revision.paymentSchedule)paragraph(`Payment schedule — ${row.label}: ${money(row.amount)} ${row.dueDescription??''}`);
