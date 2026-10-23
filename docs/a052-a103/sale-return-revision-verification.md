@@ -90,3 +90,16 @@ A104, deployment and merging remain on hold.
   the saved printed number via one bounded identity query, and shows immutable
   cancellations with no unpaid balance. Legacy backfill/search and customer-list
   balance presentation remain outside this verified slice, not silently complete.
+
+## Source checkpoint and schema limitation
+
+Implementation source: `8e8f5ca780b379acb207983205fa5dc5934268fc`.
+Prisma schema validation PASS. Database-to-datamodel comparison exited2 with
+536lines of existing migration/datamodel differences. The pre-change schema at
+7015c6c8 against the original147-migration database produces exactly the same
+comparison text as the current schema against the fresh148-migration database.
+No new comparison drift was introduced. Existing differences (including legacy
+tables and manually enforced constraints/index names) were preserved rather than
+removed or misreported as a clean comparison. Final release validation must
+retain this explicit limitation. Latest browser rerun after Home integration:
+twoPASS,1.1minutes. No final199-finding status was promoted.

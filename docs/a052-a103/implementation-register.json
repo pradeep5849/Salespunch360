@@ -67757,14 +67757,16 @@
             "focused": "62PASS/5suites;20 new retained-return unit cases,existing identity plus backup/attachment tests.",
             "financial_grouped": "103PASS/6suites29.25s including Home regression. Expanded12integrationPASS5.61s includes two additional serial-return cases;overlapnotadditive.",
             "expanded_financial": "9PASS4.42s;overlaps grouped cases,not additive.",
-            "browser": "2PASS1.1m desktop/mobile Chromium,actual shared Web edit, original credit unchanged,noncash20advance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
+            "browser": "Latest2PASS1.1m desktop/mobile Chromium afterHome integration;realWebEdit,retained100credit/80applied/20noncashadvance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
             "migration": "Fresh147→148 rehearsal;123existing table row counts/content unchanged;no production access.",
             "android": "compileDebugKotlin+8JVM PASS2m13s;0fail/errors/skips:SaleDetailTotals4,SavedSalePayments4. No emulator/device/Compose/TalkBack runtime.",
             "final_199_head": "NOT RUN",
             "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
-            "static": "Full TypeScript and focused ESLint passed. WorkflowYAML parsed;gitdiff--check passed. Prisma schema validation and schema-diff pending."
+            "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
+            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
           },
-          "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted."
+          "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
+          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
         }
       }
     },
@@ -68434,14 +68436,16 @@
             "focused": "62PASS/5suites;20 new retained-return unit cases,existing identity plus backup/attachment tests.",
             "financial_grouped": "103PASS/6suites29.25s including Home regression. Expanded12integrationPASS5.61s includes two additional serial-return cases;overlapnotadditive.",
             "expanded_financial": "9PASS4.42s;overlaps grouped cases,not additive.",
-            "browser": "2PASS1.1m desktop/mobile Chromium,actual shared Web edit, original credit unchanged,noncash20advance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
+            "browser": "Latest2PASS1.1m desktop/mobile Chromium afterHome integration;realWebEdit,retained100credit/80applied/20noncashadvance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
             "migration": "Fresh147→148 rehearsal;123existing table row counts/content unchanged;no production access.",
             "android": "compileDebugKotlin+8JVM PASS2m13s;0fail/errors/skips:SaleDetailTotals4,SavedSalePayments4. No emulator/device/Compose/TalkBack runtime.",
             "final_199_head": "NOT RUN",
             "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
-            "static": "Full TypeScript and focused ESLint passed. WorkflowYAML parsed;gitdiff--check passed. Prisma schema validation and schema-diff pending."
+            "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
+            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
           },
-          "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted."
+          "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
+          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
         }
       },
       "push_checkpoint_evidence": {
@@ -69573,14 +69577,16 @@
             "focused": "62PASS/5suites;20 new retained-return unit cases,existing identity plus backup/attachment tests.",
             "financial_grouped": "103PASS/6suites29.25s including Home regression. Expanded12integrationPASS5.61s includes two additional serial-return cases;overlapnotadditive.",
             "expanded_financial": "9PASS4.42s;overlaps grouped cases,not additive.",
-            "browser": "2PASS1.1m desktop/mobile Chromium,actual shared Web edit, original credit unchanged,noncash20advance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
+            "browser": "Latest2PASS1.1m desktop/mobile Chromium afterHome integration;realWebEdit,retained100credit/80applied/20noncashadvance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
             "migration": "Fresh147→148 rehearsal;123existing table row counts/content unchanged;no production access.",
             "android": "compileDebugKotlin+8JVM PASS2m13s;0fail/errors/skips:SaleDetailTotals4,SavedSalePayments4. No emulator/device/Compose/TalkBack runtime.",
             "final_199_head": "NOT RUN",
             "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
-            "static": "Full TypeScript and focused ESLint passed. WorkflowYAML parsed;gitdiff--check passed. Prisma schema validation and schema-diff pending."
+            "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
+            "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
           },
-          "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted."
+          "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
+          "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
         }
       },
       "push_checkpoint_evidence": {
@@ -72869,7 +72875,7 @@
     "final_head_status": "NOT RUN",
     "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
     "ci_status": "CI39965827235 exacteddf37ca:Web/Android passed;migration client apt setup failedexit100 beforetests. Service-image Docker client fix locally verified9PASS;newhead CI pending. Fullfinal199head NOT RUN.",
-    "migration_status": "147-migration isolated clean-chain preservation/replay rehearsal passed on 23 October; no migration changed in latest UI slices. Complete final-head rehearsal pending; no production database change.",
+    "migration_status": "New148migration successfully rehearsed locally,123existingtables unchanged. Pre-existing536line migration/datamodel drift identical to pre-change baseline;not repaired or hidden. Production migrations not executed.",
     "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
   },
@@ -74265,7 +74271,7 @@
   "push_checkpoint": {
     "date": "2026-10-14",
     "timezone": "Asia/Calcutta",
-    "code_head": "855d451d604593e6a684e6ad3bee2dc8171cbbc2",
+    "code_head": "8e8f5ca780b379acb207983205fa5dc5934268fc",
     "base_commit": "a3e284bca56db3608193a3833b986bb57450d86c",
     "status": "DRAFT CHECKPOINT; NOT READY FOR MERGE",
     "counts": {
@@ -75664,14 +75670,16 @@
           "focused": "62PASS/5suites;20 new retained-return unit cases,existing identity plus backup/attachment tests.",
           "financial_grouped": "103PASS/6suites29.25s including Home regression. Expanded12integrationPASS5.61s includes two additional serial-return cases;overlapnotadditive.",
           "expanded_financial": "9PASS4.42s;overlaps grouped cases,not additive.",
-          "browser": "2PASS1.1m desktop/mobile Chromium,actual shared Web edit, original credit unchanged,noncash20advance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
+          "browser": "Latest2PASS1.1m desktop/mobile Chromium afterHome integration;realWebEdit,retained100credit/80applied/20noncashadvance,nativeHTTPdetail,PDF,AxeAA/nooverflow.",
           "migration": "Fresh147→148 rehearsal;123existing table row counts/content unchanged;no production access.",
           "android": "compileDebugKotlin+8JVM PASS2m13s;0fail/errors/skips:SaleDetailTotals4,SavedSalePayments4. No emulator/device/Compose/TalkBack runtime.",
           "final_199_head": "NOT RUN",
           "focused_final": "48PASS/5suites1.51s includes Home query+identity+retained credit+backup;overlaps earlier62test run.",
-          "static": "Full TypeScript and focused ESLint passed. WorkflowYAML parsed;gitdiff--check passed. Prisma schema validation and schema-diff pending."
+          "static": "Full TypeScript and focusedESLint PASS;workflowYAMLparse andgitdiff--check PASS.",
+          "schema": "Prisma validatePASS. Fresh148migrationPASS;123existingtables content unchanged. Prisma schema-diff exit2;536lines byte-equivalent to pre-change7015schema against original147DB. No new drift;pre-existing migration/datamodel mismatch remains a final validation limitation."
         },
-        "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted."
+        "remaining": "KeepPARTIAL: secondary-unit/batch,permission/module/isolation/as-of/report/export,legacy Home migration/search/party-balance presentation and final-head/device validation remain. Existing immutable history not rewritten. No final verification promoted.",
+        "code_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc"
       }
     }
   ],
@@ -75709,7 +75717,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "c99c5fccd495943a9e435e3f528309047e3415b1",
+    "code_head_commit": "8e8f5ca780b379acb207983205fa5dc5934268fc",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
@@ -75717,6 +75725,6 @@
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "193 implemented/resolved but not finally verified;6partial;0notstarted. Original45 reference report names:35 mapped,10 explicitly unavailable under A084-F03. Posted return valuation now resolved:keep original billed credit unchanged;implementation still pending. Hindi user-deferred;A084-F13 withdrawal retained. No final-head completion claim."
+    "scope_note": "193implemented/resolved but not finally verified;6PARTIAL;0notstarted. Original199IDs preserved. Returned-credit policy implemented with intermediatefinancial/browser/native/migration evidence, but remaining matrices and final-head validation still pending."
   }
 }
