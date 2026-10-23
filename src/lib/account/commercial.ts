@@ -2140,7 +2140,6 @@ export async function postCommercialDocumentForActor(
             source.vendorId !== doc.vendorId
           )
             throw new Error("INVALID_SOURCE_DOCUMENT");
-          if(doc.type==="CREDIT_NOTE")await assertSaleReturnQuantitiesInTx(tx,actor.companyId,source.id,doc.id,source.lines,doc.lines);
           const used = await tx.commercialDocument.aggregate({
               where: {
                 companyId: actor.companyId,
@@ -2166,6 +2165,7 @@ export async function postCommercialDocumentForActor(
             },
             outstanding.outstanding,
           );
+          if(doc.type==="CREDIT_NOTE")await assertSaleReturnQuantitiesInTx(tx,actor.companyId,source.id,doc.id,source.lines,doc.lines);
           debitSourceClassification = source.purchaseClassification;
         }
         const projectReturns =
