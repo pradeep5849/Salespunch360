@@ -10552,3 +10552,8 @@ Exact code mappings corrected in the machine register: core/API b6cf0f63; Web326
 ### Current code-status snapshot — 23 October 2026
 
 199 original findings retained:189 IMPLEMENTED BUT NOT VERIFIED,10 PARTIAL,0 NOT STARTED. No final-head verified status added. A071-F05 is now code-complete against its original supported-source/unavailable-state scope after its own targeted runtime/permission/branch/module checks; this does not claim implementation of the explicitly unavailable FA/job-work-out/repeating workflows. Full199 validation, remaining10 partial findings, main conflicts and merge approval remain outstanding. A104/deploy/merge remain on hold.
+
+
+### A080 recorded tax and PDF verification — 2026-10-23
+
+Implementation commit `eb72a4678c4494f0a3bec16ef207bc076c239456` includes saved additional-charge tax in rate summaries without recalculating historical values. All 15 layouts now check real PDF colour operators, two embedded images, supplied signatory, and multilingual multipage overflow. Focused validation: 48 tests passed in 3 suites (13.21s); TypeScript, focused ESLint and diff checks passed. Desktop and mobile-web theme workflow: 2 passed (1.4m), including Web and authenticated mobile PDF endpoints for all 15 themes. An initial enhanced-test fixture omitted the signatory it expected; corrected fixture passes. No native device runtime or final 199-finding verification claimed. A080-F01 remains PARTIAL; counts remain 189 implemented but not verified /10 partial. Prior exact `324102e2` targeted CI succeeded (39904572074).

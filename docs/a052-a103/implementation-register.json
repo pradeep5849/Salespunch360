@@ -55255,6 +55255,24 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A080-F01 remains PARTIAL for complete visual/reference and Android device/PrintManager/TalkBack matrix and checkpoint final validation; functional endpoint coverage does not prove pixel/device parity."
+        },
+        "recorded_adjustment_tax_and_all_layout_pdf_checks_2026_10_23": {
+          "implementation_commit": "eb72a4678c4494f0a3bec16ef207bc076c239456",
+          "work": "Include saved tax on additional-charge adjustments in themed PDF rate summaries, alongside saved line tax. Normalize recorded rate keys and use precision-48 Decimal accumulation; no tax recalculation, inferred jurisdiction split, document mutation or financial posting. Extend all15 layouts with real PDF colour-operator/image-resource checks and multilingual multipage content. Tally remains intentionally monochrome; Web/native already hide its palette.",
+          "files": [
+            "src/lib/quotations/themed-pdf.ts",
+            "src/lib/quotations/themed-pdf.test.ts"
+          ],
+          "tests": {
+            "focused": "48 PASS /3 existing quotation PDF/theme-settings suites,0 failures/skips,13.21s. All15 layouts check actual colour operators across7 palette colours (Tally gray),two embedded PNG image resources,authorized signatory,saved adjustment tax,and long multilingual item/notes overflow. Initial enhanced run15FAIL/4PASS due test expecting an unsupplied signatory label;fixture now supplies authorizedSignatory and checks actual renderer label.",
+            "browser": "2 PASS /1.4m desktop/mobile-web Chromium with isolated PostgreSQL:all15 Web and15 authenticated mobile PDF endpoints per profile;orientation,retained values,private headers,temporary preview,Apply/Cancel,permissions,Axe/nooverflow,immutable source.",
+            "typescript": "Full tsc --noEmit PASS.",
+            "eslint": "Focused ESLint and git diff --check PASS.",
+            "android": "No native sources changed;Android device/PrintManager/TalkBack not executed.",
+            "ci": "Prior exact324102e287a98b367ddcd6a7940a04850c70c5a5 targetedCI39904572074 SUCCESS. This slice not yet CI-validated.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A080-F01 remains PARTIAL pending complete visual/reference/device matrix and checkpoint-wide final validation. These focused passes are not a final verification claim."
         }
       }
     },
@@ -74439,6 +74457,27 @@
       ],
       "status": "IMPLEMENTED BUT NOT VERIFIED",
       "evidence": "intermediate_validation.home_supported_sources_and_explicit_gaps_2026_10_23"
+    },
+    {
+      "finding_ids": [
+        "A080-F01"
+      ],
+      "implementation_commit": "eb72a4678c4494f0a3bec16ef207bc076c239456",
+      "work": "Include saved tax on additional-charge adjustments in themed PDF rate summaries, alongside saved line tax. Normalize recorded rate keys and use precision-48 Decimal accumulation; no tax recalculation, inferred jurisdiction split, document mutation or financial posting. Extend all15 layouts with real PDF colour-operator/image-resource checks and multilingual multipage content. Tally remains intentionally monochrome; Web/native already hide its palette.",
+      "files": [
+        "src/lib/quotations/themed-pdf.ts",
+        "src/lib/quotations/themed-pdf.test.ts"
+      ],
+      "tests": {
+        "focused": "48 PASS /3 existing quotation PDF/theme-settings suites,0 failures/skips,13.21s. All15 layouts check actual colour operators across7 palette colours (Tally gray),two embedded PNG image resources,authorized signatory,saved adjustment tax,and long multilingual item/notes overflow. Initial enhanced run15FAIL/4PASS due test expecting an unsupplied signatory label;fixture now supplies authorizedSignatory and checks actual renderer label.",
+        "browser": "2 PASS /1.4m desktop/mobile-web Chromium with isolated PostgreSQL:all15 Web and15 authenticated mobile PDF endpoints per profile;orientation,retained values,private headers,temporary preview,Apply/Cancel,permissions,Axe/nooverflow,immutable source.",
+        "typescript": "Full tsc --noEmit PASS.",
+        "eslint": "Focused ESLint and git diff --check PASS.",
+        "android": "No native sources changed;Android device/PrintManager/TalkBack not executed.",
+        "ci": "Prior exact324102e287a98b367ddcd6a7940a04850c70c5a5 targetedCI39904572074 SUCCESS. This slice not yet CI-validated.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A080-F01 remains PARTIAL pending complete visual/reference/device matrix and checkpoint-wide final validation. These focused passes are not a final verification claim."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
