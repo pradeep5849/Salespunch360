@@ -67510,7 +67510,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -67880,6 +67880,16 @@
           "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
           "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
           "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
+        },
+        "original_scope_code_completion_2026_10_23": {
+          "code_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
+          "scope": "Original-finding implementation reconciliation,not a new audit or final verification",
+          "tests": "Current focused78PASS/7suites1.79s. Initial original-scope browser12cases:9PASS/3FAIL4.9m;one reused-customer fixture produced correct30advance instead of isolated20;two5s development-navigation waits hit webpack memory restart/slow route. Fixed unique customer,isolated report branch and30s route/attachment waits;no financial assertion weakened or product source changed. Desktop targeted rerun3PASS1.4m. ReturnedSale+classification/category/AllParties matrices4PASS2.4m desktop/mobile. Earlier9passes and reruns overlap;not additive. Final tsc/focusedbrowser ESLintPASS.",
+          "ci": "40014454354SUCCESS exact5a8aaea4306bae1cc6a9d9dd026d70a96619515e(all3jobs). Test/evidence head does not inherit exact-head CI status.",
+          "remaining": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge.",
+          "original_scope_mapping": "Original paid/advance/adjusted correction requirement implemented: actual receipts retained, old payment discount removed, excess retained as advance, safe cancellation, unchanged posted-return credits and covered returned identity/quantity. Own27returned-correction financial cases plus earlier paid/advance cancellation cases and current browser paid/returned Save/Edit evidence. No blanket financial final verification.",
+          "prior_implementation_status": "PARTIAL",
+          "new_implementation_status": "IMPLEMENTED BUT NOT VERIFIED"
         }
       }
     },
@@ -67997,7 +68007,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -68590,6 +68600,16 @@
           "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
           "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
           "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
+        },
+        "original_scope_code_completion_2026_10_23": {
+          "code_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
+          "scope": "Original-finding implementation reconciliation,not a new audit or final verification",
+          "tests": "Current focused78PASS/7suites1.79s. Initial original-scope browser12cases:9PASS/3FAIL4.9m;one reused-customer fixture produced correct30advance instead of isolated20;two5s development-navigation waits hit webpack memory restart/slow route. Fixed unique customer,isolated report branch and30s route/attachment waits;no financial assertion weakened or product source changed. Desktop targeted rerun3PASS1.4m. ReturnedSale+classification/category/AllParties matrices4PASS2.4m desktop/mobile. Earlier9passes and reruns overlap;not additive. Final tsc/focusedbrowser ESLintPASS.",
+          "ci": "40014454354SUCCESS exact5a8aaea4306bae1cc6a9d9dd026d70a96619515e(all3jobs). Test/evidence head does not inherit exact-head CI status.",
+          "remaining": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge.",
+          "original_scope_mapping": "Original controls individually implemented and independently exercised: saved Cheque/ordinary references and readonly receipt display, separate description, private images/documents and shipping snapshots, editable freight/other charges, retained printed number/revision history. Current shared-form browser cases,paid-file cases and payment-reference cases plus prior own shipping/description/charge/native snapshot tests. No device runtime claim.",
+          "prior_implementation_status": "PARTIAL",
+          "new_implementation_status": "IMPLEMENTED BUT NOT VERIFIED"
         }
       },
       "push_checkpoint_evidence": {
@@ -69200,7 +69220,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -69762,6 +69782,16 @@
           "work": "Reproduced correction revaluing retained units after a later purchase: net COGS95.71 instead of10. Retained units now use original immutable movement total costs; only extra units use current weighted cost. Pool allocation handles duplicate lines and cent remainder; full reversal uses original total rather than rounded stored unit cost. Immutable audit hash pins trusted replacement costs. Inconsistent original non-project stock/journal history blocks atomically without rewriting old history. No new model/migration.",
           "tests": "Intermediate109PASS/5financial suites30.42s;294PASS/27commercial suites7.43s;desktop+mobile-web original sharedEdit/returnedEdit4PASS1.7m, including freight5to8 andother7to11 and second-edit persistence. TypeScript/focusedESLintPASS. Initial cost reproduction failed as expected; stale browser charge expectations corrected and rerun. Tests overlap later groups, not additive.",
           "remaining": "No project-cost exhaustive matrix, final199-head suite or device/emulator runtime certification."
+        },
+        "original_scope_code_completion_2026_10_23": {
+          "code_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
+          "scope": "Original-finding implementation reconciliation,not a new audit or final verification",
+          "tests": "Current focused78PASS/7suites1.79s. Initial original-scope browser12cases:9PASS/3FAIL4.9m;one reused-customer fixture produced correct30advance instead of isolated20;two5s development-navigation waits hit webpack memory restart/slow route. Fixed unique customer,isolated report branch and30s route/attachment waits;no financial assertion weakened or product source changed. Desktop targeted rerun3PASS1.4m. ReturnedSale+classification/category/AllParties matrices4PASS2.4m desktop/mobile. Earlier9passes and reruns overlap;not additive. Final tsc/focusedbrowser ESLintPASS.",
+          "ci": "40014454354SUCCESS exact5a8aaea4306bae1cc6a9d9dd026d70a96619515e(all3jobs). Test/evidence head does not inherit exact-head CI status.",
+          "remaining": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge.",
+          "original_scope_mapping": "Original retained Detail fields/actions implemented:shipping/attachments,friendly states,working Web share/download/menu and paid Edit/Delete policy;posted returns retain Edit but unsafe cancellation remains guarded. Own toolbar/PDF/PNG/browser evidence plus current paid file/reference/correction cases. No OS/native device interaction claim.",
+          "prior_implementation_status": "PARTIAL",
+          "new_implementation_status": "IMPLEMENTED BUT NOT VERIFIED"
         }
       },
       "push_checkpoint_evidence": {
@@ -70004,7 +70034,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [],
@@ -70174,6 +70204,16 @@
           "date": "2026-10-23",
           "status": "PARTIAL",
           "work": "Account backup now includes all four immutable Sale correction history models scoped by company;fourfocusedbackup tests pass. Application restore/private-file/provider limitations unchanged."
+        },
+        {
+          "code_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
+          "scope": "Original-finding implementation reconciliation,not a new audit or final verification",
+          "tests": "Current focused78PASS/7suites1.79s. Initial original-scope browser12cases:9PASS/3FAIL4.9m;one reused-customer fixture produced correct30advance instead of isolated20;two5s development-navigation waits hit webpack memory restart/slow route. Fixed unique customer,isolated report branch and30s route/attachment waits;no financial assertion weakened or product source changed. Desktop targeted rerun3PASS1.4m. ReturnedSale+classification/category/AllParties matrices4PASS2.4m desktop/mobile. Earlier9passes and reruns overlap;not additive. Final tsc/focusedbrowser ESLintPASS.",
+          "ci": "40014454354SUCCESS exact5a8aaea4306bae1cc6a9d9dd026d70a96619515e(all3jobs). Test/evidence head does not inherit exact-head CI status.",
+          "remaining": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge.",
+          "original_scope_mapping": "Original finding concerns omitted ProjectMaterialMovement rows in company repeatable-read bundle. Own original4browser cases verify populated project-material backup IDs/unitcost30/total90;currentBackup desktop/mobile and focused snapshot/private-file tests pass. New company-scoped history models retained. Application JSON import and external provider/blob disaster recovery were broader limitations,not silently certified by this status change.",
+          "prior_implementation_status": "PARTIAL",
+          "new_implementation_status": "IMPLEMENTED BUT NOT VERIFIED"
         }
       ],
       "push_checkpoint_evidence": {
@@ -75968,6 +76008,13 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A084-F03 remainsPARTIAL:37of45supplied names mapped,8unavailable;53supported service destinations. Other report calculations/layouts and final-head/device verification pending."
+    },
+    {
+      "code_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
+      "scope": "Original-finding implementation reconciliation,not a new audit or final verification",
+      "tests": "Current focused78PASS/7suites1.79s. Initial original-scope browser12cases:9PASS/3FAIL4.9m;one reused-customer fixture produced correct30advance instead of isolated20;two5s development-navigation waits hit webpack memory restart/slow route. Fixed unique customer,isolated report branch and30s route/attachment waits;no financial assertion weakened or product source changed. Desktop targeted rerun3PASS1.4m. ReturnedSale+classification/category/AllParties matrices4PASS2.4m desktop/mobile. Earlier9passes and reruns overlap;not additive. Final tsc/focusedbrowser ESLintPASS.",
+      "ci": "40014454354SUCCESS exact5a8aaea4306bae1cc6a9d9dd026d70a96619515e(all3jobs). Test/evidence head does not inherit exact-head CI status.",
+      "remaining": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -76004,14 +76051,14 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "31160475abb76b9543157eda195e033e90afe0c2",
+    "code_head_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 6,
-      "IMPLEMENTED BUT NOT VERIFIED": 193
+      "PARTIAL": 2,
+      "IMPLEMENTED BUT NOT VERIFIED": 197
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "193implemented/resolved but not finally verified;6PARTIAL;0notstarted. Original199IDs preserved. Returned-credit policy implemented with intermediatefinancial/browser/native/migration evidence, but remaining matrices and final-head validation still pending."
+    "scope_note": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge."
   }
 }
