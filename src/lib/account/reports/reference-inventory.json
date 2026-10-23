@@ -22,9 +22,11 @@
     {
       "name": "Day Book",
       "group": "Transaction",
-      "destinations": [],
+      "destinations": [
+        "day-book"
+      ],
       "requirement": "MONEY",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "All Transactions",

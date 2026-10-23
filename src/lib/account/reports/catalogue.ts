@@ -1,6 +1,7 @@
 import {referenceReportAliases} from "./reference-inventory";
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["day-book", "Day Book", "Transaction"],
   ["hsn-sales", "Sale Summary by HSN", "Tax"],
   ["sac-sales", "SAC Report", "Tax"],
   ["order-transactions", "Order Transaction Report", "Order reports"],

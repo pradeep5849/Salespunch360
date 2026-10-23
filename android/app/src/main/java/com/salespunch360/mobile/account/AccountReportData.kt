@@ -36,8 +36,11 @@ fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<
  val supported=accountReportSpecificFilters(options,report)
  val lifetime=report=="projects"||report=="budget-vs-actual"
  val known=setOf("classificationSide","orderType","orderStatus","from","to","branchId","projectId","ledgerId","customerId","vendorId","ownerId","productId","accountType","categoryId","itemStatus","moneyAccountId","loanId","stockLevel","itemSearch")
- return candidates.filter{(key,value)->
+ val day=candidates["to"].orEmpty().ifBlank{candidates["from"].orEmpty()}
+ val source=if(report=="day-book"&&day.isNotBlank())candidates+mapOf("from" to day,"to" to day) else candidates
+ return source.filter{(key,value)->
   value.isNotBlank()&&key in known&&
+  (report!="day-book"||key in setOf("from","to","branchId"))&&
   (!lifetime||key=="branchId"||key=="projectId")&&
   (key !in setOf("orderType","orderStatus")||report in setOf("order-transactions","order-items"))&&
   (key!="classificationSide"||report=="sac-sales")&&

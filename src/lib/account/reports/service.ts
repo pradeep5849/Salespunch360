@@ -1,3 +1,4 @@
+import {dayBookFilterDates,dayBookReport} from "./day-book";
 import {classificationSalesReport} from "./classification-sales";
 import {orderReport} from "./order-reports";
 import {WITHHOLDING_REPORTS,withholdingReport} from "./withholding";
@@ -234,6 +235,7 @@ export async function runFinancialReportForActor(
     const allowed=new Set(["scope","from","to","asOf","branchId",...reportSpecificFilters(name)]);
     for(const [key,value]of Object.entries(raw))if(key in filterSchema.shape&&!allowed.has(key)&&value!==undefined&&value!==null&&String(value).trim())throw new Error("REPORT_FILTER_NOT_SUPPORTED");
   }
+  if(name==="day-book"){const filters=filterSchema.parse(raw);return dayBookReport(await context({...filters,...dayBookFilterDates(filters)},false,actor))}
   if(["order-transactions","order-items"].includes(name))return orderReport(await context(raw,false,actor),name==="order-items");
   if(["hsn-sales","sac-sales"].includes(name))return classificationSalesReport(await context(raw,false,actor),name==="sac-sales");
   if(name==="item-discount")return itemDiscountReport(await context(raw,false,actor));

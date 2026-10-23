@@ -86,7 +86,9 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
     val applicable=com.salespunch360.mobile.account.accountReportSpecificFilters(state.options,state.report.orEmpty())
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
         TextButton(onClick = { vm.choose(null) }) { Text("‹ Reports hub") }
-        if(state.report in setOf("stock-category","stock-summary","low-stock-summary","item-serial")){
+        if(state.report=="day-book"){
+            OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("Date (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
+        }else if(state.report in setOf("stock-category","stock-summary","low-stock-summary","item-serial")){
             OutlinedTextField(state.to,{vm.dates(it,it)},label={Text("As of (YYYY-MM-DD)")},modifier=Modifier.fillMaxWidth())
         }else if(state.report !in listOf("projects","budget-vs-actual")){
         var periodOpen by remember{mutableStateOf(false)}

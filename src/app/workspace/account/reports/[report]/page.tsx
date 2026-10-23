@@ -36,8 +36,8 @@ export default async function Page({
     options = await reportOptions(),
     projectLifetime = report === "projects" || report === "budget-vs-actual",
     applicableFilters = reportSpecificFilters(report),
-    to = q.to || q.asOf || reportCalendarDate(),
-    from = q.from || iso(reportFinancialYearStart(new Date(to)));
+    to = q.to || q.asOf || (report === "day-book" ? q.from : undefined) || reportCalendarDate(),
+    from = report === "day-book" ? to : q.from || iso(reportFinancialYearStart(new Date(to)));
   let data;
   try {
     data = await runFinancialReport(
@@ -94,7 +94,7 @@ export default async function Page({
               Project profitability and budget-versus-actual figures are
               lifetime-to-date. Date filters do not apply.
             </p>
-          ) : ["stock-category","stock-summary","low-stock-summary","item-serial"].includes(report) ? (
+          ) : report === "day-book" ? (<label>Date <input type="date" name="to" defaultValue={to} required/></label>) : ["stock-category","stock-summary","low-stock-summary","item-serial"].includes(report) ? (
             <label>As of <input type="date" name="to" defaultValue={to} required/></label>
           ) : (
             <ReportDateRange initialFrom={from} initialTo={to} today={reportCalendarDate()}/>

@@ -10,6 +10,8 @@ import type { ReportResult } from "./service";
 // percentage, identifiers and arbitrary text must never be treated as money.
 const moneyColumns = new Set([
   "Amount",
+  "Money In",
+  "Money Out",
   "Gross before discount/tax",
   "Sales",
   "Sale Discount",
