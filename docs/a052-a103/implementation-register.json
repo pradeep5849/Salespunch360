@@ -59396,6 +59396,8 @@
         "src/lib/account/reports/item-serial.ts",
         "src/lib/account/reports/order-reports.test.ts",
         "src/lib/account/reports/order-reports.ts",
+        "src/lib/account/reports/party-items.test.ts",
+        "src/lib/account/reports/party-items.ts",
         "src/lib/account/reports/party-trade.test.ts",
         "src/lib/account/reports/party-trade.ts",
         "src/lib/account/reports/profit-presentation.test.ts",
@@ -60738,18 +60740,42 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03 remains PARTIAL for the other 12 unavailable reference calculations/controls and final validation. A085 catalogue mapping is implemented but not finally verified. All 199 final statuses remain unpromoted."
+        },
+        "saved_party_item_cross_reports_2026_10_23": {
+          "implementation_commit": "93ff4088ccad6a50ab37d8f55429a5aa4d142316",
+          "work": "Implemented both original Party Report by Items and Item Report by Party references from saved posted sales/purchase lines, net of credit/debit note line values. Separate customer/vendor identities, saved names, item identities and invoice units; unknown/custom identities remain separate per line. Literal item search and product/customer/vendor filters, exact paged Decimal48 calculations, repeatable-read company/branch snapshot. Customer-only excludes vendor lines and vice versa. No current price revaluation, invoice-charge allocation, profit/balance inference or financial writes. Native server-advertised filters retained.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-items.test.ts",
+            "src/lib/account/reports/party-items.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "focused": "33 tests passed across three suites including 15 new party/item cases: return signs, each party side, inverse layout, snapshots/unit isolation, custom identity, literal search, pagination, exact amounts, empty rows, permissions/module denial and original100credit retained against later80sale. Separate saved cess/main tax verified.",
+            "grouped_reports": "240 passed across30 suites;11 DB tests skipped without explicit URL, then those exact11 passed in two isolated PostgreSQL suites. Two further pure regression cases were added afterward and passed in focused33; not counted as an executed242-test grouped run.",
+            "browser_database": "2 passed in1.5m desktop/mobile Chromium with actual local PostgreSQL: each new report shows saved goods despite master rename, one net unit,gross100,discount10,taxable90,tax16.20,total106.20. Native same values; vendor purchase/return2hours net80. ParsedCSV/XLSX/PDF preserve names/values, exclude next-day916.86; branch and project-manager denial, AxeAA/no overflow; original HSN/SAC and unchanged journal-count checks retained.",
+            "android": "compileDebugKotlin and33JVM tests passed in2m40s,0failures/errors/skips. Six reference-catalogue and27 report-data tests. No device/emulator/Compose/TalkBack runtime claimed.",
+            "typescript": "Final full tsc passed.",
+            "eslint": "Focused ESLint and gitdiff--check passed.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remains PARTIAL for10 other unavailable reference calculations/controls and final-head/device validation. Catalogue names45,mapped35,unavailable10;51 supported service destinations. A085 remains implemented but not finally verified."
         }
       },
       "current_unavailable_reference_reports": [
         "All Transactions",
         "All Parties Report",
-        "Party Report by Items",
         "GSTR-1",
         "GSTR-2",
         "GSTR-3B",
         "GST Transaction report",
         "GSTR-9",
-        "Item Report by Party",
         "Item Detail Report",
         "Sale/Purchase By Item Category",
         "Form No. 27EQ"
@@ -64348,6 +64374,8 @@
         "src/lib/account/reports/item-serial.ts",
         "src/lib/account/reports/order-reports.test.ts",
         "src/lib/account/reports/order-reports.ts",
+        "src/lib/account/reports/party-items.test.ts",
+        "src/lib/account/reports/party-items.ts",
         "src/lib/account/reports/party-trade.test.ts",
         "src/lib/account/reports/party-trade.ts",
         "src/lib/account/reports/profit-presentation.test.ts",
@@ -65604,6 +65632,32 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03 remains PARTIAL for the other 12 unavailable reference calculations/controls and final validation. A085 catalogue mapping is implemented but not finally verified. All 199 final statuses remain unpromoted."
+        },
+        "saved_party_item_cross_reports_2026_10_23": {
+          "implementation_commit": "93ff4088ccad6a50ab37d8f55429a5aa4d142316",
+          "work": "Implemented both original Party Report by Items and Item Report by Party references from saved posted sales/purchase lines, net of credit/debit note line values. Separate customer/vendor identities, saved names, item identities and invoice units; unknown/custom identities remain separate per line. Literal item search and product/customer/vendor filters, exact paged Decimal48 calculations, repeatable-read company/branch snapshot. Customer-only excludes vendor lines and vice versa. No current price revaluation, invoice-charge allocation, profit/balance inference or financial writes. Native server-advertised filters retained.",
+          "files": [
+            ".github/workflows/targeted-validation.yml",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/party-items.test.ts",
+            "src/lib/account/reports/party-items.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/service.ts"
+          ],
+          "tests": {
+            "focused": "33 tests passed across three suites including 15 new party/item cases: return signs, each party side, inverse layout, snapshots/unit isolation, custom identity, literal search, pagination, exact amounts, empty rows, permissions/module denial and original100credit retained against later80sale. Separate saved cess/main tax verified.",
+            "grouped_reports": "240 passed across30 suites;11 DB tests skipped without explicit URL, then those exact11 passed in two isolated PostgreSQL suites. Two further pure regression cases were added afterward and passed in focused33; not counted as an executed242-test grouped run.",
+            "browser_database": "2 passed in1.5m desktop/mobile Chromium with actual local PostgreSQL: each new report shows saved goods despite master rename, one net unit,gross100,discount10,taxable90,tax16.20,total106.20. Native same values; vendor purchase/return2hours net80. ParsedCSV/XLSX/PDF preserve names/values, exclude next-day916.86; branch and project-manager denial, AxeAA/no overflow; original HSN/SAC and unchanged journal-count checks retained.",
+            "android": "compileDebugKotlin and33JVM tests passed in2m40s,0failures/errors/skips. Six reference-catalogue and27 report-data tests. No device/emulator/Compose/TalkBack runtime claimed.",
+            "typescript": "Final full tsc passed.",
+            "eslint": "Focused ESLint and gitdiff--check passed.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "A084-F03 remains PARTIAL for10 other unavailable reference calculations/controls and final-head/device validation. Catalogue names45,mapped35,unavailable10;51 supported service destinations. A085 remains implemented but not finally verified."
         }
       },
       "current_reference_inventory": {
@@ -72696,7 +72750,7 @@
   "validation": {
     "final_head_status": "NOT RUN",
     "pr_url": "https://github.com/pradeep5849/Salespunch360/pull/153",
-    "ci_status": "Targeted CI 39932734072 succeeded on exact prior head 1ebe3afdfb7ea2cac67f48f36fd5b3bfce9a809f. New Item Batch checkpoint awaits its own CI; full final-199 validation NOT RUN.",
+    "ci_status": "TargetedCI39958420154 succeeded on exact prior head37002d9445cc0b482a54503da273d1947ca80147. New party/item report checkpoint awaits ownCI;full final199head validation NOT RUN.",
     "migration_status": "147-migration isolated clean-chain preservation/replay rehearsal passed on 23 October; no migration changed in latest UI slices. Complete final-head rehearsal pending; no production database change.",
     "conflict_status": "GitHub reports CONFLICTING with main; no conflict resolution or merge performed.",
     "ready_for_merge": false
@@ -75403,6 +75457,36 @@
         "final_199_head": "NOT RUN"
       },
       "remaining": "A087-F02 remains PARTIAL for all original shared paid/returned-sale correction/action requirements and final-head/device validation. A086-F05 return-valuation decision remains unanswered; existing safe guard retained."
+    },
+    {
+      "finding_ids": [
+        "A084-F03",
+        "A085-F02"
+      ],
+      "implementation_commit": "93ff4088ccad6a50ab37d8f55429a5aa4d142316",
+      "work": "Implemented both original Party Report by Items and Item Report by Party references from saved posted sales/purchase lines, net of credit/debit note line values. Separate customer/vendor identities, saved names, item identities and invoice units; unknown/custom identities remain separate per line. Literal item search and product/customer/vendor filters, exact paged Decimal48 calculations, repeatable-read company/branch snapshot. Customer-only excludes vendor lines and vice versa. No current price revaluation, invoice-charge allocation, profit/balance inference or financial writes. Native server-advertised filters retained.",
+      "files": [
+        ".github/workflows/targeted-validation.yml",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "e2e/a090-settings.spec.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/party-items.test.ts",
+        "src/lib/account/reports/party-items.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/service.ts"
+      ],
+      "tests": {
+        "focused": "33 tests passed across three suites including 15 new party/item cases: return signs, each party side, inverse layout, snapshots/unit isolation, custom identity, literal search, pagination, exact amounts, empty rows, permissions/module denial and original100credit retained against later80sale. Separate saved cess/main tax verified.",
+        "grouped_reports": "240 passed across30 suites;11 DB tests skipped without explicit URL, then those exact11 passed in two isolated PostgreSQL suites. Two further pure regression cases were added afterward and passed in focused33; not counted as an executed242-test grouped run.",
+        "browser_database": "2 passed in1.5m desktop/mobile Chromium with actual local PostgreSQL: each new report shows saved goods despite master rename, one net unit,gross100,discount10,taxable90,tax16.20,total106.20. Native same values; vendor purchase/return2hours net80. ParsedCSV/XLSX/PDF preserve names/values, exclude next-day916.86; branch and project-manager denial, AxeAA/no overflow; original HSN/SAC and unchanged journal-count checks retained.",
+        "android": "compileDebugKotlin and33JVM tests passed in2m40s,0failures/errors/skips. Six reference-catalogue and27 report-data tests. No device/emulator/Compose/TalkBack runtime claimed.",
+        "typescript": "Final full tsc passed.",
+        "eslint": "Focused ESLint and gitdiff--check passed.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "A084-F03 remains PARTIAL for10 other unavailable reference calculations/controls and final-head/device validation. Catalogue names45,mapped35,unavailable10;51 supported service destinations. A085 remains implemented but not finally verified."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -75439,7 +75523,7 @@
   },
   "current_implementation_counts": {
     "as_of_date": "2026-10-23",
-    "code_head_commit": "bc738b6b3b4c4969415ad91efc6a4d8a8944d3cb",
+    "code_head_commit": "93ff4088ccad6a50ab37d8f55429a5aa4d142316",
     "finding_count": 199,
     "by_status": {
       "PARTIAL": 6,
@@ -75447,6 +75531,6 @@
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "193 implemented/resolved but not finally verified; 6 partial; 0 not started. All 45 original reference report names are mapped: 33 supported, 12 explicitly unavailable under A084-F03. A084-F13 withdrawal retained; Hindi explicitly user-deferred. No final-head completion claim."
+    "scope_note": "193 implemented/resolved but not finally verified;6partial;0notstarted. Original45 reference report names:35 mapped,10 explicitly unavailable under A084-F03. Posted return valuation now resolved:keep original billed credit unchanged;implementation still pending. Hindi user-deferred;A084-F13 withdrawal retained. No final-head completion claim."
   }
 }
