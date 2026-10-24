@@ -2,7 +2,7 @@
 
 ## Outcome
 
-**BLOCKED: both existing PostgreSQL connection secrets are rejected with Prisma P1000.** No production-changing migrations, secret creation/update, password reset or deployment occurred. Main is unchanged; workflow implementation is on `ops/supabase-readonly-connection-test`.
+**UPDATE: authentication rerun PASSED for both existing secrets on 24 October 2026 at 23:39 IST.** The earlier P1000 results below are historical and superseded. No production-changing migrations, secret creation/update, password reset or deployment occurred. Main is unchanged; workflow implementation is on `ops/supabase-readonly-connection-test`.
 
 Repository/organization secret-name listing and variable listing return403Resource not accessible by integration. The existing main workflow references DATABASE_URL and DIRECT_URL. Dispatched runtime checks independently establish both bindings are present, so lack of secret-list permission is not treated as proof that the secrets are missing. GitHub does not expose encrypted secret values for retrieval; no attempt was made to print or export them.
 
@@ -36,3 +36,14 @@ The existing secrets have a suitable endpoint format but cannot yet be certified
 Owner action: privately compare the existing GitHub Actions DIRECT_URL and DATABASE_URL with the known-working PostgreSQL connection in the application's private configuration/password manager and the Salespunch360 Connect→Session pooler details. Correct the existing entries if necessary, without adding duplicates or resetting database/application passwords. Preserve URL encoding and the full pooler username. Do not paste credentials into chat. After correction, dispatch the feature branch's read-only connection-test for the corrected secret; do not select migrate or run main's unchanged deploy workflow.
 
 No Hostinger SSH access is required for this approach once the existing Actions credential authenticates. No merge/production deployment is included in this verification task.
+
+## Authentication rerun — 24 October 2026, 23:39 IST
+
+Both independent read-only runs passed on exact workflow head `8ad6e3d3ede40b6ca69a25be2ac2d468262327e8`:
+
+- DIRECT_URL: https://github.com/pradeep5849/Salespunch360/actions/runs/40119334716 — PASS.
+- DATABASE_URL: https://github.com/pradeep5849/Salespunch360/actions/runs/40119337123 — PASS.
+
+Both authenticated to the expected project through Session Pooler5432 with strict TLS and the official public CA. Both reported read_only=on,89successful migrations,59pending,exact pending sequence matched,0unresolved attempts,0checksum mismatches,7application users,1Super Admin and1eligible active global Super Admin. Supabase Auth users0; missing runtime columns235. The database-login blocker is resolved; original Super Admin browser/password login remains untested.
+
+The migration jobs were skipped in both runs. No database changes, migrations, secret creation/update, password reset or deployment were executed by this task. No reason for the externally corrected credentials is inferred. These results establish a working Actions/native-Prisma connection path using existing secrets; migration authorization and maintenance controls remain separate.
