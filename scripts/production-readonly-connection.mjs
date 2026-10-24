@@ -198,9 +198,17 @@ export async function main() {
       result: "BLOCKED",
       reason: "READ_ONLY_CONNECTION_OR_QUERY_FAILED",
       phase,
-      prisma_code: /^P[0-9]{4}$/.test(error?.code ?? "")
-        ? error.code
+      prisma_code: /^P[0-9]{4}$/.test(error?.code ?? error?.errorCode ?? "")
+        ? (error.code ?? error.errorCode)
         : undefined,
+      tls_error: /certificate|TLS|SSL/i.test(error?.message ?? ""),
+      authentication_error:
+        /authentication failed|password authentication|P1000/i.test(
+          error?.message ?? "",
+        ),
+      network_error: /reach database|timed out|connection refused|P1001/i.test(
+        error?.message ?? "",
+      ),
       database_code: /^[A-Z0-9]{5}$/.test(error?.meta?.code ?? "")
         ? error.meta.code
         : undefined,
