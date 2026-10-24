@@ -11,6 +11,8 @@ const titles={"gstr-1":"GSTR-1 Working Report","gstr-2":"GSTR-2 Working Report",
 export const TAX_WORKING_REPORTS=Object.keys(titles);
 const selection={id:true,companyId:true,branchId:true,type:true,documentNumber:true,issueDate:true,partyName:true,partyGstin:true,stateOfSupplyCode:true,reverseCharge:true,taxCreditTreatment:true,taxableTotal:true,cgstTotal:true,sgstTotal:true,igstTotal:true,cessTotal:true,tcsAmount:true} as const satisfies Prisma.CommercialDocumentSelect;
 type Document=Prisma.CommercialDocumentGetPayload<{select:typeof selection}>;
+const expenseSelection={id:true,transactionNumber:true,transactionDate:true,type:true,journalEntryId:true,taxableAmount:true,cgstAmount:true,sgstAmount:true,igstAmount:true,cessAmount:true,stateOfSupplyCode:true,taxCreditTreatment:true} as const satisfies Prisma.ExpenseTransactionSelect;
+type Expense=Prisma.ExpenseTransactionGetPayload<{select:typeof expenseSelection}>;
 type RecordRow={date:Date;number:string;type:string;party:string;gstin:string|null;state:string|null;rcm:string;treatment:string;outward:boolean;values:Prisma.Decimal[];tcs:Prisma.Decimal};
 /** Approved PDF/Excel working papers only. Saved tax flags/amounts are shown;
  * statutory eligibility, offsets, remittance and filing sections are not inferred. */
@@ -33,7 +35,7 @@ export async function taxWorkingReport(c:FinancialReportContext,key:string):Prom
    if(documents.length<1000)break;cursor=documents[documents.length-1].id;
   }
   if(!form){cursor=undefined;for(;;){
-   const expenses=await tx.expenseTransaction.findMany({where:{companyId,...c.branch,status:{in:["POSTED","REVERSED"]},journalEntryId:{not:null},transactionDate:{gte:c.from,lte:c.to},...(outwardOnly?{type:"OTHER_INCOME" as const}:inwardOnly?{type:{not:"OTHER_INCOME" as const}}:{})},select:{id:true,transactionNumber:true,transactionDate:true,type:true,journalEntryId:true,taxableAmount:true,cgstAmount:true,sgstAmount:true,igstAmount:true,cessAmount:true,stateOfSupplyCode:true,taxCreditTreatment:true},orderBy:[{transactionDate:"asc"},{id:"asc"}],take:1000,...(cursor?{cursor:{id:cursor},skip:1}:{})});
+   const expenses:Expense[]=await tx.expenseTransaction.findMany({where:{companyId,...c.branch,status:{in:["POSTED","REVERSED"]},journalEntryId:{not:null},transactionDate:{gte:c.from,lte:c.to},...(outwardOnly?{type:"OTHER_INCOME" as const}:inwardOnly?{type:{not:"OTHER_INCOME" as const}}:{})},select:expenseSelection,orderBy:[{transactionDate:"asc"},{id:"asc"}],take:1000,...(cursor?{cursor:{id:cursor},skip:1}:{})});
    if(!expenses.length)break;
    const eligible=new Set((await tx.journalEntry.findMany({where:{companyId,...c.branch,...postedJournalAt(c.to),id:{in:expenses.flatMap(row=>row.journalEntryId?[row.journalEntryId]:[])}},select:{id:true}})).map(row=>row.id));
    for(const expense of expenses){if(!expense.journalEntryId||!eligible.has(expense.journalEntryId))continue;const outward=expense.type==="OTHER_INCOME";consume({date:expense.transactionDate,number:expense.transactionNumber,type:expense.type.replaceAll("_"," "),party:"Not recorded on expense/income",gstin:null,state:expense.stateOfSupplyCode,rcm:"Not recorded",treatment:outward?"Not applicable":expense.taxCreditTreatment,outward,values:[expense.taxableAmount,expense.cgstAmount,expense.sgstAmount,expense.igstAmount,expense.cessAmount].map(value=>new D(value)),tcs:new D(0)})}
