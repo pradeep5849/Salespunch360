@@ -1,3 +1,4 @@
+import { compactSource } from "@/lib/testing/compact-source";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(path, "utf8");
@@ -16,7 +17,12 @@ describe("A8-A10 correction contracts", () => {
     expect(expenses).toContain("approvalRequired(tx, a.companyId, row.totalAmount)");
     expect(expenses).toContain('a.accountRole === "PROJECT_MANAGER" && !t.projectId');
     expect(expenses).toContain("EXPENSE_CATEGORY_CLASS_MISMATCH");
-    expect(money.match(/manageableMoneyAccountScope\(a\)/g)).toHaveLength(2);
+    const scoped = compactSource(money);
+    expect(scoped).toContain('where:{id,companyId:a.companyId,...manageableMoneyAccountScope(a),}');
+    expect(scoped).toContain('if(!before)throw new AuthorizationError()');
+    expect(scoped).toContain('mutateMoneyAccountForActor(a,id,patch,"MONEY_ACCOUNT_UPDATED")');
+    expect(scoped).toContain('mutateMoneyAccountForActor(a,id,{isActive:false},"MONEY_ACCOUNT_DEACTIVATED",)');
+    expect(scoped).toContain('isolationLevel:Prisma.TransactionIsolationLevel.Serializable');
   });
   it("provides a non-financial PO finalizer and source selector", () => {
     expect(read("src/lib/account/commercial.ts")).toContain(

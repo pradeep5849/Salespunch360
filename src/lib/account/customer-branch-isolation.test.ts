@@ -16,6 +16,7 @@ const m = vi.hoisted(() => ({
   transaction: vi.fn(),
   branch: vi.fn(),
   customer: vi.fn(),
+  customerMany: vi.fn(),
   settings: vi.fn(),
   documentCreate: vi.fn(),
   documentFind: vi.fn(),
@@ -88,7 +89,7 @@ vi.mock("@/lib/db", () => ({
     company: { findUniqueOrThrow: m.company },
     commercialDocument: { findMany: m.documentMany },
     branch: { findMany: m.findMany },
-    customer: { findMany: m.findMany },
+    customer: { findMany: m.customerMany },
     vendor: { findMany: m.findMany },
     accountProduct: { findMany: m.findMany },
     accountUnit: { findMany: m.findMany },
@@ -181,6 +182,7 @@ beforeEach(() => {
   m.lock.mockResolvedValue(null);
   m.post.mockResolvedValue({ id: "journal" });
   m.findMany.mockResolvedValue([]);
+  m.customerMany.mockResolvedValue([]);
   m.advanceMany.mockResolvedValue([]);
   m.allocationAggregate.mockResolvedValue({ _sum: { amount: 0 } });
   m.applicationAggregate.mockResolvedValue({ _sum: { amount: 0 } });
@@ -189,7 +191,7 @@ describe("commercial Account Customer Branch options", () => {
   it("limits selected-Branch customers to authorized Branch IDs", async () => {
     m.auth.mockResolvedValue(actor("SELECTED_BRANCHES"));
     await commercialEditorOptions();
-    expect(m.findMany).toHaveBeenCalledWith({
+    expect(m.customerMany).toHaveBeenCalledWith({
       where: {
         companyId: COMPANY,
         isActive: true,
@@ -202,12 +204,13 @@ describe("commercial Account Customer Branch options", () => {
         phone: true,
         branchId: true,
         stateCode: true,
+        shippingAddress: true,
       },
     });
   });
   it("retains company-wide customers for ALL_BRANCHES", async () => {
     await commercialEditorOptions();
-    expect(m.findMany).toHaveBeenCalledWith({
+    expect(m.customerMany).toHaveBeenCalledWith({
       where: { companyId: COMPANY, isActive: true, isAccountCustomer: true },
       select: {
         id: true,
@@ -215,6 +218,7 @@ describe("commercial Account Customer Branch options", () => {
         phone: true,
         branchId: true,
         stateCode: true,
+        shippingAddress: true,
       },
     });
   });

@@ -6,11 +6,11 @@ describe("A11-A14 runtime closure", () => {
   it("wires stock and component tax into the atomic commercial post", () => {
     const s = compactSource(read("src/lib/account/commercial.ts"));
     expect(s).toMatch(
-      /commercialInventoryInTx\(tx,actor,inventoryDocument,?\)/,
+      /commercialInventoryInTx\(tx,actor,inventoryDocument,correction\?financialDate:undefined,correction\?\.stockCosts,?\)/,
     );
     expect(s).toMatch(/projectPurchaseReturnsInTx\(tx,actor,doc,source,?\)/);
     expect(s).toMatch(
-      /line\.stockReturnQuantity\.sub\(projectReturns\.projectReturnQuantities\.get\(line\.id\)\?\?0,?\)/,
+      /commercialReturnBaseQuantity\(line\)\.sub\(projectReturns\.projectReturnQuantities\.get\(line\.id\)\?\?0,?\)/,
     );
     expect(s).toContain("INVENTORY_ASSET");
     expect(s).toContain("COGS");

@@ -33,7 +33,8 @@ describe("native project, category and money boundaries", () => {
       "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
     );
     for (const x of [
-      "ExpenseCategoryScreen(padding)",
+      "ExpenseCategoryScreen(padding,initialQuery=",
+      "accountBranchQuery(state.selectedPath,account?.branch?.branchId",
       "ProjectScreen(padding,vm::select,initialProjectId=",
       'getQueryParameter("projectId")',
       "MoneyScreen(",
