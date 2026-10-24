@@ -19,7 +19,8 @@ describe("A048 dashboard destinations and truthful trends", () => {
         from,
         to,
       );
-      expect(links.items).toContain("inventory?branchId=authorized");
+      expect(links.items).toContain("inventory/catalog?branchId=authorized");
+      expect(links.items).toContain("type=PRODUCT");
       expect(links.lowStock).toContain("inventory/low-stock?");
       expect(links.lowStock).toContain("asOf=2026-10-09");
       expect(links.expenseReport).toContain("from=2026-10-01");

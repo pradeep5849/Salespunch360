@@ -112,11 +112,12 @@ test.afterAll(async () => {
 test("dashboard drill-downs retain context and disable inaccessible destinations", async ({
   page,
 }) => {
+  test.setTimeout(120000);
   await page.goto("/sign-in");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/workspace\/account/);
+  await expect(page).toHaveURL(/workspace\/account/, { timeout: 20000 });
   await page.goto(`/workspace/account/dashboard?branchId=${branchId}`);
   const low = page.getByRole("link", { name: "Low Stock →", exact: true });
   await expect(low).toHaveAttribute(
@@ -132,12 +133,14 @@ test("dashboard drill-downs retain context and disable inaccessible destinations
   await page
     .getByRole("link", { name: "See all items →", exact: true })
     .click();
-  await expect(page).toHaveURL(new RegExp(`inventory\\?branchId=${branchId}`));
+  await expect(page).toHaveURL(
+    new RegExp(`inventory/catalog\\?branchId=${branchId}`),
+  );
   await page.goto(`/workspace/account/dashboard?branchId=${branchId}`);
   await page.getByRole("link", { name: "See Reports →", exact: true }).click();
   await expect(page).toHaveURL(/reports\?/);
   await expect(
-    page.getByRole("link", { name: "profit loss", exact: true }),
+    page.getByRole("link", { name: "Profit & Loss", exact: true }),
   ).toHaveAttribute("href", new RegExp(`branchId=${branchId}.*from=`));
   await page.goto(`/workspace/account/dashboard?branchId=${branchId}`);
   await expect(

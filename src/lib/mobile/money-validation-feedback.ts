@@ -1,0 +1,11 @@
+import type { ZodError } from "zod";
+const fieldMessages:Record<string,string>={
+ name:"Enter an account name.",lender:"Enter a lender name.",displayName:"Check the display name.",branchId:"Select an available posting branch.",openingBranchId:"Select the opening journal branch.",moneyAccountId:"Select an available payment account.",sourceAccountId:"Select a source account.",destinationAccountId:"Select a destination account.",offsetLedgerId:"Select an offset ledger.",ownerId:"Select an owner or partner.",loanId:"Select an active loan.",partyId:"Select a party.",amount:"Check the amount and use at most two decimal places.",openingBalance:"Check the starting balance.",principal:"Check the principal amount.",interest:"Check the interest amount.",charges:"Check the charges amount.",interestRate:"Check the interest rate.",durationMonths:"Enter whole months from 1 to 1200.",reason:"Enter a valid reason within the allowed length.",date:"Enter a valid transaction date.",openingDate:"Enter a valid opening date.",startDate:"Enter a valid loan start date.",paymentDate:"Enter a valid payment date.",operationDate:"Enter a valid operation date.",actionDate:"Enter a valid action date.",maturityDate:"Enter a valid maturity date.",reference:"Check the payment reference.",description:"Check the description length.",expectedVersion:"Reload the latest record before saving.",requestKey:"Reload the form before saving.",idempotencyKey:"Reload the form before saving.",creationRequestKey:"Reload the form before saving.",ifsc:"Check the IFSC.",upiId:"Enter a valid UPI ID.",type:"Select an account or transaction type.",direction:"Select Add or Reduce balance.",action:"Select an available action.",chequeNumber:"Enter the cheque number.",chequeDate:"Enter a valid cheque date."
+};
+/** Only allowlisted field names and static help escape the validation boundary. */
+export function moneyValidationFeedback(error:ZodError){
+ const fieldErrors:Record<string,string>={};
+ for(const issue of error.issues){const name=String(issue.path[0]??"");if(Object.hasOwn(fieldMessages,name))fieldErrors[name]=fieldMessages[name];}
+ const messages=[...new Set(Object.values(fieldErrors))];
+ return {error:"INVALID_INPUT",message:messages.slice(0,3).join(" ")||"Check the entered details and try again.",fieldErrors};
+}

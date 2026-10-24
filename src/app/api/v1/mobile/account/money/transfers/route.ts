@@ -1,3 +1,4 @@
+import {readTransferRequestJson} from "@/lib/mobile/transfer-request";
 import { authenticateMobileToken } from "@/lib/mobile/auth";
 import { mobileMoneyTransfer } from "@/lib/mobile/account-money";
 import {
@@ -11,7 +12,7 @@ export async function POST(r: Request) {
     return mobileJson(
       await mobileMoneyTransfer(
         await authenticateMobileToken(r.headers.get("authorization")),
-        await r.json(),
+        await readTransferRequestJson(r),
       ),
       201,
     );

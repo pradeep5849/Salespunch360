@@ -1,0 +1,13 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const m=vi.hoisted(()=>({entitlement:vi.fn(),quotation:vi.fn(),save:vi.fn()}));
+vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:m.entitlement}));
+vi.mock("./service",()=>({getCustomerQuotationForActor:m.quotation}));
+vi.mock("@/lib/account/settings-persistence",()=>({updateSettingsSectionForActor:m.save}));
+import {saveQuotationThemeForActor} from "./theme-settings";
+const actor={id:"actor",companyId:"company",accountRole:"ACCOUNT_ADMIN"} as never,id="11111111-1111-4111-8111-111111111111";
+beforeEach(()=>{vi.clearAllMocks();m.quotation.mockResolvedValue({grandTotal:"100",status:"APPROVED"});m.entitlement.mockResolvedValue(undefined);m.save.mockResolvedValue({})});
+it("authorizes the scoped quotation and patches only presentation settings",async()=>{expect(await saveQuotationThemeForActor(actor,id,{theme:"GST_6",color:"#abc123"})).toEqual({theme:"GST_6",color:"#ABC123"});expect(m.quotation).toHaveBeenCalledWith(actor,id);expect(m.save).toHaveBeenCalledWith(actor,"quotationPrintTheme",{theme:"GST_6",color:"#ABC123"})});
+it("denies non-admin before any source, settings or financial access",async()=>{await expect(saveQuotationThemeForActor({...actor as object,accountRole:"ACCOUNTANT"} as never,id,{theme:"GST_1",color:"#998BDF"})).rejects.toThrow();expect(m.quotation).not.toHaveBeenCalled();expect(m.save).not.toHaveBeenCalled()});
+it("rejects malformed settings before querying or writing",async()=>{await expect(saveQuotationThemeForActor(actor,id,{theme:"url(test)",color:"#fff"})).rejects.toThrow();expect(m.quotation).not.toHaveBeenCalled();expect(m.save).not.toHaveBeenCalled()});
+it("retains company and branch source denials with no settings write",async()=>{m.quotation.mockRejectedValue(new Error("NOT_FOUND"));await expect(saveQuotationThemeForActor(actor,id,{theme:"GST_1",color:"#998BDF"})).rejects.toThrow("NOT_FOUND");expect(m.save).not.toHaveBeenCalled()});
+it("requires operational entitlement before saving",async()=>{m.entitlement.mockRejectedValue(new Error("SUBSCRIPTION_REQUIRED"));await expect(saveQuotationThemeForActor(actor,id,{theme:"GST_1",color:"#998BDF"})).rejects.toThrow("SUBSCRIPTION_REQUIRED");expect(m.save).not.toHaveBeenCalled()});

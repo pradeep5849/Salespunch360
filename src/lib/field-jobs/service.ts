@@ -20,7 +20,7 @@ export async function withAttendanceEvent<T extends{id:string;startedAt:Date;end
 export async function enqueueVisitAddress(tx:Prisma.TransactionClient,companyId:string,visitId:string){
  await tx.fieldJob.upsert({where:{key:`GEOCODE:${visitId}`},create:{companyId,key:`GEOCODE:${visitId}`,kind:'GEOCODE',payload:{visitId}},update:{}});
 }
-const eventSchema=z.object({eventType:z.enum(['ATTENDANCE_STARTED','ATTENDANCE_ENDED','VISIT_CHECKOUT']),actorUserId:z.string().uuid(),attendanceId:z.string().uuid().optional(),visitId:z.string().uuid().optional(),occurredAt:z.coerce.date(),subject:z.string().optional(),sentiment:z.string().optional()});
+const eventSchema=z.object({eventType:z.enum(['ATTENDANCE_STARTED','ATTENDANCE_ENDED','VISIT_CHECKOUT']),actorUserId:z.string().guid(),attendanceId:z.string().guid().optional(),visitId:z.string().guid().optional(),occurredAt:z.coerce.date(),subject:z.string().optional(),sentiment:z.string().optional()});
 export async function processFieldJobs(limit=10){
  const now=new Date();const jobs=await db.fieldJob.findMany({where:{completedAt:null,nextAttemptAt:{lte:now},OR:[{lockedUntil:null},{lockedUntil:{lt:now}}]},orderBy:[{nextAttemptAt:'asc'},{id:'asc'}],take:Math.max(1,Math.min(limit,50))});
  let completed=0;
@@ -29,7 +29,7 @@ export async function processFieldJobs(limit=10){
   if(!claim.count)continue;
   try{
    if(job.kind==='GEOCODE'){
-    const {visitId}=z.object({visitId:z.string().uuid()}).parse(job.payload);
+    const {visitId}=z.object({visitId:z.string().guid()}).parse(job.payload);
     const visit=await db.customerVisit.findFirst({where:{id:visitId,companyId:job.companyId,checkInAddress:null},select:{checkInLatitude:true,checkInLongitude:true}});
     if(visit){
      if(!process.env.GOOGLE_MAPS_SERVER_API_KEY)throw new Error('GEOCODE_NOT_CONFIGURED');

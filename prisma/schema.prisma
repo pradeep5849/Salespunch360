@@ -101,6 +101,7 @@ enum InventoryTrackingMode {
   BATCH
   SERIAL
 }
+
 enum StockMovementType {
   OPENING
   PURCHASE
@@ -112,26 +113,31 @@ enum StockMovementType {
   ADJUSTMENT_IN
   ADJUSTMENT_OUT
 }
+
 enum InventoryPriceType {
   RETAIL
   WHOLESALE
   CUSTOMER
 }
+
 enum TaxMode {
   EXCLUSIVE
   INCLUSIVE
 }
+
 enum GstRegistrationType {
   UNREGISTERED
   REGULAR
   COMPOSITION
   SEZ
 }
+
 enum TaxCreditTreatment {
   ELIGIBLE
   INELIGIBLE
   BLOCKED
 }
+
 enum AssetType {
   VEHICLE
   EQUIPMENT
@@ -140,6 +146,7 @@ enum AssetType {
   TOOL
   OTHER
 }
+
 enum AssetStatus {
   ACTIVE
   ASSIGNED
@@ -147,6 +154,7 @@ enum AssetStatus {
   RETIRED
   DISPOSED
 }
+
 enum DepreciationMethod {
   NONE
   STRAIGHT_LINE
@@ -276,10 +284,14 @@ enum PurchaseClassification {
 enum PaymentMode {
   CASH
   BANK
+  CHEQUE
+  ACCOUNT_CREDIT
 }
 
 enum SettlementStatus {
   POSTED
+  PENDING_CHEQUE
+  REVERSED
 }
 
 enum PaymentReminderStatus {
@@ -573,6 +585,7 @@ enum QuotationValueType {
 }
 
 enum QuotationAuditEventType {
+  DRAFT_UPDATED
   CREATED
   REVISION_CREATED
   SUBMITTED_FOR_APPROVAL
@@ -585,6 +598,7 @@ enum QuotationAuditEventType {
   DECLINED
   EXPIRED
   CANCELLED
+  CONVERTED
 }
 
 enum BillingAuditType {
@@ -649,6 +663,14 @@ enum ExpenseTransactionStatus {
   REVERSED
 }
 
+enum ExpenseApprovalReviewStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum ExpenseCategoryScope {
   EXPENSE
   INCOME
@@ -681,6 +703,13 @@ enum OwnerTransactionType {
   INVESTMENT
   WITHDRAWAL
   OWNER_LOAN
+  CAPITAL_WITHDRAWAL
+  PROFIT_DISTRIBUTION
+}
+
+enum OwnerPartyType {
+  OWNER
+  PARTNER
 }
 
 enum LoanStatus {
@@ -712,6 +741,9 @@ enum ProjectAuditEventType {
 }
 
 model Company {
+  saleLifecycleSnapshots SaleLifecycleSnapshot[]
+  saleReturnRevisions SaleReturnRevision[]
+  reportFavourites AccountReportFavourite[]
   fieldJobs FieldJob[]
   id                                  String                     @id @default(uuid()) @db.Uuid
   name                                String
@@ -797,6 +829,8 @@ model Company {
   dailyTravelApprovals                DailyTravelApproval[]
   quotationDocuments                  QuotationDocument[]
   quotationRevisions                  QuotationRevision[]
+  quotationAttachments                QuotationAttachment[]
+  commercialAttachments               CommercialAttachment[]
   quotationLines                      QuotationLine[]
   quotationAdjustments                QuotationAdjustment[]
   quotationPaymentSchedules           QuotationPaymentSchedule[]
@@ -817,12 +851,18 @@ model Company {
   projectTasks                        ProjectTask[]
   projectDocuments                    ProjectDocument[]
   projectAuditEvents                  ProjectAuditEvent[]
+  expenseItems                        ExpenseItem[]
 
   @@index([subscriptionStatus, trialEndsAt])
   @@map("companies")
 }
 
 model User {
+  saleReturnRevisions SaleReturnRevision[] @relation("SaleReturnRevisionCreator")
+  reportFavourites AccountReportFavourite[]
+  loanOperations LoanOperation[] @relation("LoanOperationCreator")
+
+  completedServiceReminders ServiceReminderCompletion[] @relation("ServiceReminderCompleter")
   id                         String                   @id @default(uuid()) @db.Uuid
   companyId                  String?                  @db.Uuid
   company                    Company?                 @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -889,6 +929,8 @@ model User {
   createdQuotationDocuments  QuotationDocument[]      @relation("QuotationCreator")
   acceptedQuotationDocuments QuotationDocument[]      @relation("QuotationAcceptor")
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
+  quotationAttachments      QuotationAttachment[]
+  commercialAttachments     CommercialAttachment[]
   commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
   settlements                AccountSettlement[]      @relation("SettlementCreator")
   commercialAudits           CommercialAuditEvent[]   @relation("CommercialAuditActor")
@@ -905,6 +947,8 @@ model User {
   createdProjectMilestones   ProjectMilestone[]
   uploadedProjectDocuments   ProjectDocument[]
   projectAuditEvents         ProjectAuditEvent[]
+
+  expenseApprovalReviews ExpenseTransaction[] @relation("ExpenseApprovalReviewer")
 
   @@unique([companyId, id])
   @@unique([companyId, employeeCode])
@@ -1755,6 +1799,8 @@ model AccountUnit {
   symbol       String           @db.VarChar(20)
   isActive     Boolean          @default(true)
   products     AccountProduct[]
+  secondaryProducts AccountProduct[] @relation("ProductSecondaryUnit")
+  secondaryServices AccountService[] @relation("ServiceSecondaryUnit")
   services     AccountService[]
   workPackages WorkPackage[]
   createdAt    DateTime         @default(now())
@@ -1795,8 +1841,16 @@ model AccountProduct {
   category    AccountCategory? @relation(fields: [companyId, categoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId      String?          @db.Uuid
   unit        AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.VarChar(64)
+  itemLocation String? @db.VarChar(240)
+  secondaryUnitId String? @db.Uuid
+  secondaryUnit AccountUnit? @relation("ProductSecondaryUnit",map:"account_products_secondary_unit_fkey",fields:[companyId,secondaryUnitId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  secondaryUnitsPerBase Decimal? @db.Decimal(18,4)
   name        String
   code        String?          @db.VarChar(60)
+  photoObjectKey String? @db.VarChar(512)
+  pricing     Json?
   description String?
   salePrice   Decimal?         @db.Decimal(18, 2)
   costPrice   Decimal?         @db.Decimal(18, 2)
@@ -1813,6 +1867,7 @@ model AccountProduct {
   quotationLines  QuotationLine[]
   commercialLines CommercialDocumentLine[]
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, code])
   @@unique([companyId, barcode])
@@ -1828,8 +1883,13 @@ model AccountService {
   category      AccountCategory? @relation(fields: [companyId, categoryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   unitId        String?          @db.Uuid
   unit          AccountUnit?     @relation(fields: [companyId, unitId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  secondaryUnitId String? @db.Uuid
+  secondaryUnit AccountUnit? @relation("ServiceSecondaryUnit",map:"account_services_secondary_unit_fkey",fields:[companyId,secondaryUnitId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  secondaryUnitsPerBase Decimal? @db.Decimal(18,4)
   name          String
   code          String?          @db.VarChar(60)
+  photoObjectKey String? @db.VarChar(512)
+  pricing       Json?
   description   String?
   sellingRate   Decimal?         @db.Decimal(18, 2)
   estimatedCost Decimal?         @db.Decimal(18, 2)
@@ -2066,6 +2126,9 @@ model CostCentre {
 }
 
 model JournalEntry {
+  saleReturnRevision SaleReturnRevision? @relation("SaleReturnRevisionJournal")
+  loanOperations LoanOperation[] @relation("LoanOperationJournal")
+
   id                  String               @id @default(uuid()) @db.Uuid
   companyId           String               @db.Uuid
   company             Company              @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -2169,6 +2232,8 @@ model AccountingAuditEvent {
 model QuotationDocument {
   id                    String                @id @default(uuid()) @db.Uuid
   companyId             String                @db.Uuid
+  creationRequestKey     String?               @db.Uuid
+  creationRequestHash    String?               @db.VarChar(64)
   branchId              String                @db.Uuid
   documentType          QuotationDocumentType
   documentNumber        String                @db.VarChar(80)
@@ -2176,6 +2241,9 @@ model QuotationDocument {
   sourceLeadId          String?               @db.Uuid
   projectId             String?               @db.Uuid
   status                QuotationStatus       @default(DRAFT)
+  convertedCommercialDocumentId String? @db.Uuid
+  convertedAt DateTime?
+  convertedCommercialDocument CommercialDocument? @relation("QuotationCommercialTarget", fields: [companyId, convertedCommercialDocumentId], references: [companyId, id], onDelete: NoAction, onUpdate: NoAction, map: "quotation_documents_convertedCommercialDocument_fkey")
   currentRevisionNumber Int                   @default(0)
   createdById           String                @db.Uuid
   acceptedById          String?               @db.Uuid
@@ -2193,6 +2261,8 @@ model QuotationDocument {
   revisions             QuotationRevision[]
   audits                QuotationAuditEvent[]
 
+  @@unique([companyId, convertedCommercialDocumentId])
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, branchId, documentType, documentNumber])
   @@index([companyId, branchId, status])
@@ -2201,6 +2271,7 @@ model QuotationDocument {
 }
 
 model QuotationRevision {
+  billingName          String?                    @db.VarChar(240)
   id                    String                     @id @default(uuid()) @db.Uuid
   companyId             String                     @db.Uuid
   documentId            String                     @db.Uuid
@@ -2225,6 +2296,10 @@ model QuotationRevision {
   additionalChargeTotal Decimal                    @default(0) @db.Decimal(18, 2)
   taxableTotal          Decimal                    @default(0) @db.Decimal(18, 2)
   taxTotal              Decimal                    @default(0) @db.Decimal(18, 2)
+  taxMode               TaxMode                    @default(EXCLUSIVE)
+  stateOfSupplyCode     String?                    @db.VarChar(2)
+  roundOffEnabled       Boolean                    @default(false)
+  roundOffAmount        Decimal                    @default(0) @db.Decimal(18, 2)
   grandTotal            Decimal                    @default(0) @db.Decimal(18, 2)
   internalCostTotal     Decimal                    @default(0) @db.Decimal(18, 2)
   expectedProfit        Decimal                    @default(0) @db.Decimal(18, 2)
@@ -2237,11 +2312,14 @@ model QuotationRevision {
   adjustments           QuotationAdjustment[]
   paymentSchedule       QuotationPaymentSchedule[]
   shares                QuotationShare[]
+  attachments           QuotationAttachment[]
 
   @@unique([companyId, id])
   @@unique([documentId, revisionNumber])
   @@index([companyId, documentId])
   @@map("quotation_revisions")
+  convertedDocuments CommercialDocument[] @relation("CommercialQuotationSource")
+
 }
 
 model QuotationLine {
@@ -2354,6 +2432,12 @@ model QuotationAuditEvent {
 }
 
 model CommercialDocument {
+  lifecycleSnapshot SaleLifecycleSnapshot? @relation("SaleLifecycleSource")
+  previousLifecycleSources SaleLifecycleSnapshot[] @relation("SaleLifecycleReplacement")
+  lifecycleAdjustmentSource SaleLifecycleSnapshot? @relation("SaleLifecycleCredit")
+  returnRevisionSource SaleReturnRevision? @relation("SaleReturnRevisionSource")
+  returnRevisionTarget SaleReturnRevision? @relation("SaleReturnRevisionTarget")
+  retainedCreditUses SaleRevisionCredit[] @relation("SaleRetainedCreditNote")
   id                     String                   @id @default(uuid()) @db.Uuid
   creationRequestKey     String?                  @db.VarChar(120)
   creationRequestHash    String?                  @db.VarChar(64)
@@ -2366,8 +2450,14 @@ model CommercialDocument {
   vendorId               String?                  @db.Uuid
   partyId                String                   @db.Uuid
   partyName              String                   @db.VarChar(240)
+  billingName            String?                  @db.VarChar(240)
+  customerPoNumber       String?                  @db.VarChar(100)
+  customerPoDate         DateTime?                @db.Date
+  transactionTime        String?                  @db.VarChar(8)
+  ewayBillNumber         String?                  @db.VarChar(12)
   sourceDocumentId       String?                  @db.Uuid
   sourcePurchaseOrderId  String?                  @db.Uuid
+  sourceSalesOrderId     String?                  @db.Uuid
   purchasePurpose        PurchasePurpose?
   purchaseClassification PurchaseClassification?
   materialTreatment      MaterialTreatment?
@@ -2380,6 +2470,7 @@ model CommercialDocument {
   postingDate            DateTime?                @db.Date
   paymentTerms           String?                  @db.VarChar(500)
   partyAddress           String?
+  shippingAddress        String?
   grnReference           String?                  @db.VarChar(160)
   purchaseLocation       String?                  @db.VarChar(240)
   vendorInvoiceAttachmentKey String?              @db.VarChar(512)
@@ -2408,9 +2499,13 @@ model CommercialDocument {
   grandTotal             Decimal                  @db.Decimal(18, 2)
   balanceDue             Decimal                  @db.Decimal(18, 2)
   payableAmount          Decimal?                 @db.Decimal(18, 2)
+  invoiceDescription     String?                  @db.VarChar(5000)
   notes                  String?
   journalEntryId         String?                  @db.Uuid
   createdById            String                   @db.Uuid
+  sourceQuotationRevisionId String? @db.Uuid
+  sourceQuotationRevision QuotationRevision? @relation("CommercialQuotationSource", fields: [companyId, sourceQuotationRevisionId], references: [companyId, id], onDelete: NoAction, onUpdate: NoAction, map: "commercial_documents_sourceQuotationRevision_fkey")
+  convertedQuotation QuotationDocument? @relation("QuotationCommercialTarget")
   signatureVersionId     String?                  @db.Uuid
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
@@ -2426,10 +2521,13 @@ model CommercialDocument {
   adjustments            CommercialDocument[]     @relation("CommercialSource")
   sourcePurchaseOrder    CommercialDocument?      @relation("PurchaseOrderFulfillment", fields: [companyId, sourcePurchaseOrderId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   purchaseBills          CommercialDocument[]     @relation("PurchaseOrderFulfillment")
+  sourceSalesOrder       CommercialDocument? @relation("SalesOrderFulfillment", fields: [companyId, sourceSalesOrderId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  salesOrderInvoices     CommercialDocument[] @relation("SalesOrderFulfillment")
   lines                  CommercialDocumentLine[]
   reminders              PaymentReminder[]
   allocations            SettlementAllocation[]
   advanceApplications    AdvanceApplication[]
+  attachments            CommercialAttachment[]
 
   @@unique([companyId, id])
   @@unique([companyId, creationRequestKey])
@@ -2440,15 +2538,60 @@ model CommercialDocument {
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
   @@index([companyId, projectId])
+  @@index([companyId, sourceQuotationRevisionId])
   @@index([companyId, sourcePurchaseOrderId, status])
+  @@index([companyId, sourceSalesOrderId, status])
   @@map("commercial_documents")
 }
 
+model CommercialAttachment {
+  id           String @id @default(uuid()) @db.Uuid
+  companyId    String @db.Uuid
+  documentId   String @db.Uuid
+  position     Int
+  displayName  String @db.VarChar(240)
+  mimeType     String @db.VarChar(120)
+  sizeBytes    Int
+  contentHash  String @db.Char(64)
+  storageKey   String @db.VarChar(512)
+  uploadedById String @db.Uuid
+  createdAt    DateTime @default(now())
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document     CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  uploadedBy   User @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([companyId, documentId, position])
+  @@index([companyId, storageKey])
+  @@map("commercial_attachments")
+}
+
+model ServiceReminderCompletion {
+  companyId String @db.Uuid
+  lineId String @db.Uuid
+  completedById String @db.Uuid
+  completedAt DateTime @default(now())
+  line          CommercialDocumentLine @relation(fields: [companyId, lineId], references: [companyId, id], onDelete: Cascade, onUpdate: Restrict)
+  completedBy   User                   @relation("ServiceReminderCompleter", fields: [companyId, completedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([companyId, lineId])
+  @@map("service_reminder_completions")
+}
+
 model CommercialDocumentLine {
+  retainedCreditLineUses SaleRevisionCreditLine[] @relation("SaleRetainedCreditLine")
+  retainedReturnBindings SaleRevisionCreditLine[] @relation("SaleReturnRevisionLine")
+  // NULL on historical rows: quantity retains its original primary-unit meaning.
+  baseQuantity Decimal? @db.Decimal(18,4)
+  unitConversionSnapshot Json?
+  serviceReminderCompletion ServiceReminderCompletion?
+  servicePeriodDays Int?
   id             String             @id @default(uuid()) @db.Uuid
   companyId      String             @db.Uuid
   documentId     String             @db.Uuid
   sourceCommercialLineId String?    @db.Uuid
+  sourceOrderLineId String? @db.Uuid
+  sourceOrderLine CommercialDocumentLine? @relation("OrderLineFulfilment", fields: [companyId, sourceOrderLineId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  fulfilmentLines CommercialDocumentLine[] @relation("OrderLineFulfilment")
   position       Int
   lineType       CommercialLineType
   productId      String?            @db.Uuid
@@ -2492,6 +2635,7 @@ model CommercialDocumentLine {
 }
 
 model PurchaseLineAllocation {
+  baseQuantity Decimal? @db.Decimal(18,4)
   id                  String                 @id @default(uuid()) @db.Uuid
   companyId           String                 @db.Uuid
   documentLineId      String                 @db.Uuid
@@ -2518,6 +2662,13 @@ model PurchaseLineAllocation {
 }
 
 model AccountSettlement {
+  saleRevisionCreditSourceId String? @db.Uuid
+  saleRevisionCreditSource SaleRevisionCredit? @relation("SaleRevisionCreditAdvance",fields:[companyId,saleRevisionCreditSourceId],references:[companyId,id],onDelete:NoAction,onUpdate:Restrict,map:"sale_revision_advance_source_fkey")
+  @@unique([companyId,saleRevisionCreditSourceId],map:"account_settlement_sale_revision_credit_key")
+  advanceCreditSourceApplicationId String? @db.Uuid
+  advanceCreditSourceApplication AdvanceApplication? @relation("AdvanceCreditSource", fields:[companyId,advanceCreditSourceApplicationId], references:[companyId,id], onDelete:NoAction, onUpdate:Restrict, map:"advance_credit_source_fkey")
+  receiptCreditSourceAllocationId String? @db.Uuid
+  receiptCreditSourceAllocation SettlementAllocation? @relation("ReceiptCreditSource", fields:[companyId,receiptCreditSourceAllocationId], references:[companyId,id], onDelete:NoAction, onUpdate:Restrict, map:"receipt_credit_source_fkey")
   id               String                 @id @default(uuid()) @db.Uuid
   companyId        String                 @db.Uuid
   branchId         String                 @db.Uuid
@@ -2532,23 +2683,30 @@ model AccountSettlement {
   moneyAccountId   String?                @db.Uuid
   projectId        String?                @db.Uuid
   amount           Decimal                @db.Decimal(18, 2)
+  discountAmount   Decimal                @default(0) @db.Decimal(18, 2)
   remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
   transactionDate  DateTime               @db.Date
   reference        String?                @db.VarChar(160)
   notes            String?
-  journalEntryId   String                 @db.Uuid
+  journalEntryId   String?                @db.Uuid
   createdById      String                 @db.Uuid
   createdAt        DateTime               @default(now())
   company          Company                @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   branch           Branch                 @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
-  journalEntry     JournalEntry           @relation("SettlementJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
+  journalEntry     JournalEntry?          @relation("SettlementJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   createdBy        User                   @relation("SettlementCreator", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   customer         Customer?              @relation("SettlementCustomer", fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   vendor           Vendor?                @relation("SettlementVendor", fields: [companyId, vendorId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   allocations      SettlementAllocation[]
   applications     AdvanceApplication[]
   openingAllocations OpeningBalanceAllocation[]
+  creationRequestHash String? @db.VarChar(64)
+  chequeId String? @db.Uuid
+  cheque Cheque? @relation("ChequeSettlementHistory", fields: [companyId, chequeId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "settlement_cheque_company_fkey")
+  currentCheques Cheque[] @relation("ChequeCurrentSettlement")
 
+  @@unique([companyId, advanceCreditSourceApplicationId], map:"account_settlements_advance_credit_source_key")
+  @@unique([companyId, receiptCreditSourceAllocationId], map:"account_settlements_receipt_credit_source_key")
   @@unique([companyId, id])
   @@unique([companyId, branchId, type, settlementNumber])
   @@unique([companyId, idempotencyKey])
@@ -2557,16 +2715,19 @@ model AccountSettlement {
 }
 
 model SettlementAllocation {
+  receiptAdvanceCredit AccountSettlement? @relation("ReceiptCreditSource")
   id           String             @id @default(uuid()) @db.Uuid
   companyId    String             @db.Uuid
   settlementId String             @db.Uuid
   documentId   String             @db.Uuid
   amount       Decimal            @db.Decimal(18, 2)
+  discountAmount Decimal          @default(0) @db.Decimal(18, 2)
   createdAt    DateTime           @default(now())
   company      Company            @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   settlement   AccountSettlement  @relation(fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   document     CommercialDocument @relation(fields: [companyId, documentId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  @@unique([companyId, id], map:"settlement_allocations_company_id_key")
   @@unique([companyId, settlementId, documentId])
   @@map("settlement_allocations")
 }
@@ -2614,6 +2775,7 @@ model OpeningBalanceAllocation {
 }
 
 model AdvanceApplication {
+  releasedAdvanceCredit AccountSettlement? @relation("AdvanceCreditSource")
   id              String             @id @default(uuid()) @db.Uuid
   companyId       String             @db.Uuid
   advanceId       String             @db.Uuid
@@ -2631,6 +2793,7 @@ model AdvanceApplication {
   journalEntry    JournalEntry       @relation("AdvanceApplicationJournal", fields: [companyId, journalEntryId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   createdBy       User               @relation("AdvanceApplicationActor", fields: [companyId, createdById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
 
+  @@unique([companyId,id], map:"advance_applications_company_id_key")
   @@unique([companyId, idempotencyKey])
   @@unique([companyId, advanceId, documentId, idempotencyKey])
   @@map("advance_applications")
@@ -2723,12 +2886,12 @@ model Project {
   @@unique([companyId, branchId, projectNumber])
   @@unique([companyId, sourceLeadId])
   @@unique([companyId, sourceQuotationId])
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, status])
   @@index([companyId, branchId, status])
   @@index([companyId, customerId])
   @@index([companyId, projectManagerId])
   @@index([companyId, branchId, createdAt])
-  @@unique([companyId, creationRequestKey])
   @@map("projects")
 }
 
@@ -2879,8 +3042,8 @@ model ProjectChangeOrder {
 
   @@unique([companyId, id])
   @@unique([companyId, projectId, changeOrderNumber])
-  @@index([companyId, projectId, status])
   @@unique([companyId, requestKey])
+  @@index([companyId, projectId, status])
   @@map("project_change_orders")
 }
 
@@ -2936,6 +3099,12 @@ model ExpenseTransaction {
   employeeReimbursementId String?                  @db.Uuid
   reference               String?                  @db.VarChar(160)
   notes                   String?
+  paidDate                DateTime?                    @db.Date
+  approvalReviewStatus    ExpenseApprovalReviewStatus?
+  approvalReviewAt        DateTime?
+  approvalReviewById      String?                      @db.Uuid
+  approvalReviewReason    String?                      @db.VarChar(500)
+  approvalReviewer        User?                        @relation("ExpenseApprovalReviewer", fields: [companyId, approvalReviewById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict)
   approvedById            String?                  @db.Uuid
   approvedAt              DateTime?
   createdById             String                   @db.Uuid
@@ -2947,6 +3116,7 @@ model ExpenseTransaction {
   @@unique([companyId, occurrenceKey])
   @@unique([companyId, journalEntryId])
   @@index([companyId, projectId, status])
+  @@index([companyId, approvalReviewStatus, branchId], map: "expense_transactions_companyId_approvalReviewStatus_branchId_id")
   @@map("expense_transactions")
 }
 
@@ -2958,6 +3128,8 @@ model RecurringExpenseTemplate {
   categoryId  String             @db.Uuid
   frequency   RecurringFrequency
   nextDueDate DateTime           @db.Date
+  anchorDate DateTime?           @db.Date
+  creationRequestKey String?     @db.Uuid
   amount      Decimal            @db.Decimal(18, 2)
   isActive    Boolean            @default(true)
   createdById String             @db.Uuid
@@ -2965,6 +3137,7 @@ model RecurringExpenseTemplate {
   updatedAt   DateTime           @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, nextDueDate, isActive])
   @@map("recurring_expense_templates")
 }
@@ -2987,19 +3160,29 @@ model ExpenseAttachment {
 }
 
 model MoneyAccount {
+  loanOperations LoanOperation[] @relation("LoanOperationMoneyAccount")
+
   id                  String           @id @default(uuid()) @db.Uuid
   companyId           String           @db.Uuid
   branchId            String?          @db.Uuid
   type                MoneyAccountType
   name                String           @db.VarChar(160)
   ledgerAccountId     String           @db.Uuid
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.VarChar(64)
   bankName            String?          @db.VarChar(160)
   accountNumberMasked String?          @db.VarChar(40)
   ifsc                String?          @db.VarChar(20)
+  accountHolderName   String? @db.VarChar(160)
+  bankBranchName      String? @db.VarChar(160)
+  upiId               String? @db.VarChar(322)
+  printBankDetails    Boolean @default(false)
+  printUpiQr          Boolean @default(false)
   isActive            Boolean          @default(true)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@unique([companyId, ledgerAccountId])
   @@index([companyId, type, isActive])
@@ -3007,6 +3190,7 @@ model MoneyAccount {
 }
 
 model MoneyTransfer {
+  image MoneyTransferImage?
   id                   String   @id @default(uuid()) @db.Uuid
   companyId            String   @db.Uuid
   branchId             String   @db.Uuid
@@ -3017,6 +3201,7 @@ model MoneyTransfer {
   idempotencyKey       String   @db.VarChar(160)
   journalEntryId       String   @db.Uuid
   reference            String?  @db.VarChar(160)
+  description          String?  @db.VarChar(2000)
   createdById          String   @db.Uuid
   createdAt            DateTime @default(now())
 
@@ -3024,6 +3209,23 @@ model MoneyTransfer {
   @@unique([companyId, idempotencyKey])
   @@unique([companyId, journalEntryId])
   @@map("money_transfers")
+}
+
+model MoneyTransferImage {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  transferId String @unique @db.Uuid
+  transfer MoneyTransfer @relation(fields:[companyId,transferId],references:[companyId,id],onDelete:Restrict)
+  storageKey String @db.VarChar(1000)
+  displayName String @db.VarChar(240)
+  mimeType String @db.VarChar(80)
+  sizeBytes Int
+  contentHash String @db.VarChar(64)
+  uploadedById String @db.Uuid
+  createdAt DateTime @default(now())
+  @@unique([companyId,transferId])
+  @@index([companyId])
+  @@map("money_transfer_images")
 }
 
 model Cheque {
@@ -3038,31 +3240,59 @@ model Cheque {
   clearedDate    DateTime?    @db.Date
   reference      String?      @db.VarChar(160)
   journalEntryId String?      @db.Uuid
+  amount         Decimal? @db.Decimal(18, 2)
+  settlementId   String? @db.Uuid
+  settlement     AccountSettlement? @relation("ChequeCurrentSettlement", fields: [companyId, settlementId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "cheque_settlement_company_fkey")
+  settlements    AccountSettlement[] @relation("ChequeSettlementHistory")
+  actionVersion  Int @default(0)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@unique([companyId, id])
+  @@unique([companyId, settlementId])
   @@unique([companyId, moneyAccountId, chequeNumber])
   @@map("cheques")
 }
 
 model OwnerFinancialAccount {
-  id               String @id @default(uuid()) @db.Uuid
-  companyId        String @db.Uuid
-  userId           String @db.Uuid
-  capitalLedgerId  String @db.Uuid
-  drawingsLedgerId String @db.Uuid
-  loanLedgerId     String @db.Uuid
+  assetFundings AssetOwnerFunding[]
+
+  id                 String         @id @default(uuid()) @db.Uuid
+  companyId          String         @db.Uuid
+  userId             String?        @db.Uuid
+  legacyUserId       String?        @db.Uuid
+  name               String         @default("Owner") @db.VarChar(160)
+  partyType          OwnerPartyType @default(OWNER)
+  phone              String?        @db.VarChar(40)
+  email              String?        @db.VarChar(320)
+  address            String?        @db.VarChar(2000)
+  isActive           Boolean        @default(true)
+  creationRequestKey String?        @db.Uuid
+  creationInputHash  String?        @db.VarChar(64)
+  capitalLedgerId    String         @db.Uuid
+  drawingsLedgerId   String         @db.Uuid
+  loanLedgerId       String         @db.Uuid
 
   @@unique([companyId, id])
   @@unique([companyId, userId])
+  @@unique([companyId, creationRequestKey])
+  @@index([companyId, isActive, name])
   @@map("owner_financial_accounts")
 }
 
 model Loan {
+  version Int @default(0)
+  creationRequestHash String? @db.VarChar(64)
+  archivedAt DateTime?
+  operations LoanOperation[]
+
   id                String     @id @default(uuid()) @db.Uuid
   companyId         String     @db.Uuid
   branchId          String     @db.Uuid
+  displayName       String?    @db.VarChar(240)
+  loanAccountNumber String?    @db.VarChar(160)
+  description       String?    @db.VarChar(2000)
+  durationMonths    Int?
   lender            String     @db.VarChar(240)
   loanType          String     @db.VarChar(80)
   principal         Decimal    @db.Decimal(18, 2)
@@ -3085,6 +3315,32 @@ model Loan {
   @@map("loans")
 }
 
+model LoanOperation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  loanId String @db.Uuid
+  loan Loan @relation(fields:[companyId,loanId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_loan_company_fkey")
+  action String @db.VarChar(24)
+  requestKey String @db.Uuid
+  requestHash String @db.VarChar(64)
+  expectedVersion Int
+  resultingVersion Int
+  amount Decimal? @db.Decimal(18,2)
+  operationDate DateTime? @db.Date
+  moneyAccountId String? @db.Uuid
+  moneyAccount MoneyAccount? @relation("LoanOperationMoneyAccount",fields:[companyId,moneyAccountId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_money_company_fkey")
+  journalEntryId String? @db.Uuid
+  journalEntry JournalEntry? @relation("LoanOperationJournal",fields:[companyId,journalEntryId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_journal_company_fkey")
+  createdById String @db.Uuid
+  createdBy User @relation("LoanOperationCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict,map:"loan_operations_creator_company_fkey")
+  metadata Json?
+  createdAt DateTime @default(now())
+  @@unique([companyId,id])
+  @@unique([companyId,requestKey])
+  @@index([companyId,loanId,createdAt])
+  @@map("loan_operations")
+}
+
 model LoanPayment {
   id             String   @id @default(uuid()) @db.Uuid
   companyId      String   @db.Uuid
@@ -3093,6 +3349,7 @@ model LoanPayment {
   paymentDate    DateTime @db.Date
   principal      Decimal  @db.Decimal(18, 2)
   interest       Decimal  @db.Decimal(18, 2)
+  description    String?  @db.VarChar(2000)
   charges        Decimal  @default(0) @db.Decimal(18, 2)
   idempotencyKey String   @db.VarChar(160)
   journalEntryId String   @db.Uuid
@@ -3105,6 +3362,8 @@ model LoanPayment {
 }
 
 model AccountOperationalAudit {
+  saleLifecycleSnapshot SaleLifecycleSnapshot?
+  @@unique([companyId,id])
   id          String   @id @default(uuid()) @db.Uuid
   companyId   String   @db.Uuid
   actorUserId String   @db.Uuid
@@ -3118,7 +3377,77 @@ model AccountOperationalAudit {
   @@map("account_operational_audits")
 }
 
+model AssetFundingConfirmation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  assetId String @db.Uuid
+  asset Asset @relation(fields:[companyId,assetId],references:[companyId,id],onDelete:Restrict)
+  costBasis Decimal @db.Decimal(18,2)
+  confirmed Boolean
+  revision Int
+  reason String @db.VarChar(1000)
+  requestKey String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  @@unique([companyId,requestKey])
+  @@unique([companyId,assetId,revision])
+  @@map("asset_funding_confirmations")
+}
+
+model AssetOwnerFunding {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  branchId String @db.Uuid
+  assetId String @db.Uuid
+  asset Asset @relation(fields:[companyId,assetId],references:[companyId,id],onDelete:Restrict)
+  ownerFinancialAccountId String @db.Uuid
+  owner OwnerFinancialAccount @relation(fields:[companyId,ownerFinancialAccountId],references:[companyId,id],onDelete:Restrict)
+  contributionTransactionId String @db.Uuid
+  contribution OwnerTransaction @relation("AssetFundingContribution",fields:[companyId,contributionTransactionId],references:[companyId,id],onDelete:Restrict)
+  amount Decimal @db.Decimal(18,2)
+  allocationDate DateTime @db.Date
+  requestKey String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  repayments OwnerAssetFundingReturn[]
+  cancellation AssetOwnerFundingCancellation?
+  @@unique([companyId,id])
+  @@unique([companyId,requestKey])
+  @@index([companyId,branchId,assetId])
+  @@map("asset_owner_fundings")
+}
+model AssetOwnerFundingCancellation {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  fundingId String @unique @db.Uuid
+  funding AssetOwnerFunding @relation(fields:[companyId,fundingId],references:[companyId,id],onDelete:Restrict)
+  reason String @db.VarChar(1000)
+  requestKey String @db.Uuid
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  @@unique([companyId,fundingId])
+  @@unique([companyId,requestKey])
+  @@map("asset_owner_funding_cancellations")
+}
+model OwnerAssetFundingReturn {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  fundingId String @db.Uuid
+  funding AssetOwnerFunding @relation(fields:[companyId,fundingId],references:[companyId,id],onDelete:Restrict)
+  ownerTransactionId String @db.Uuid
+  transaction OwnerTransaction @relation("AssetFundingRepayment",fields:[companyId,ownerTransactionId],references:[companyId,id],onDelete:Restrict)
+  amount Decimal @db.Decimal(18,2)
+  createdAt DateTime @default(now())
+  @@unique([companyId,ownerTransactionId,fundingId])
+  @@index([companyId,fundingId])
+  @@map("owner_asset_funding_returns")
+}
+
 model OwnerTransaction {
+  assetFundingContributions AssetOwnerFunding[] @relation("AssetFundingContribution")
+  assetFundingRepayments OwnerAssetFundingReturn[] @relation("AssetFundingRepayment")
+
   id                      String               @id @default(uuid()) @db.Uuid
   companyId               String               @db.Uuid
   branchId                String               @db.Uuid
@@ -3151,6 +3480,7 @@ model Warehouse {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   @@unique([companyId, id])
   @@unique([companyId, branchId, code])
   @@index([companyId, branchId, isActive])
@@ -3165,6 +3495,7 @@ model InventoryBatch {
   manufacturedDate DateTime? @db.Date
   expiryDate       DateTime? @db.Date
   createdAt        DateTime  @default(now())
+
   @@unique([companyId, id])
   @@unique([companyId, productId, batchNumber])
   @@map("inventory_batches")
@@ -3177,6 +3508,7 @@ model InventorySerialNumber {
   serialNumber String    @db.VarChar(160)
   expiryDate   DateTime? @db.Date
   createdAt    DateTime  @default(now())
+
   @@unique([companyId, id])
   @@unique([companyId, productId, serialNumber])
   @@map("inventory_serial_numbers")
@@ -3201,6 +3533,7 @@ model StockMovement {
   movementDate   DateTime          @db.Date
   createdById    String            @db.Uuid
   createdAt      DateTime          @default(now())
+
   @@unique([companyId, id])
   @@unique([companyId, sourceType, sourceId, sourceLineId, movementType])
   @@index([companyId, warehouseId, productId, movementDate])
@@ -3219,12 +3552,16 @@ model ProductPrice {
   isActive      Boolean            @default(true)
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+
   @@unique([companyId, id])
   @@index([companyId, productId, priceType, customerId, isActive])
   @@map("product_prices")
 }
 
 model Asset {
+  fundingConfirmations AssetFundingConfirmation[]
+  ownerFundings AssetOwnerFunding[]
+
   id                              String             @id @default(uuid()) @db.Uuid
   companyId                       String             @db.Uuid
   branchId                        String             @db.Uuid
@@ -3261,6 +3598,7 @@ model Asset {
   createdById                     String              @db.Uuid
   createdAt                       DateTime            @default(now())
   updatedAt                       DateTime            @updatedAt
+
   @@unique([companyId, id])
   @@unique([companyId, assetNumber])
   @@unique([companyId, creationRequestKey])
@@ -3277,11 +3615,11 @@ model AssetAssignmentHistory {
   returnedAt   DateTime?
   assignedById String    @db.Uuid
   notes        String?
+
   @@unique([companyId, id])
   @@index([companyId, assetId, assignedAt])
   @@map("asset_assignment_history")
 }
-
 
 model PublicTestimonial {
   id          String   @id @default(uuid()) @db.Uuid
@@ -3300,7 +3638,6 @@ model PublicTestimonial {
   @@map("public_testimonials")
 }
 
-
 model PublicSiteSettings {
   id           String   @id @default("default") @db.VarChar(32)
   facebookUrl  String?  @db.VarChar(500)
@@ -3309,9 +3646,9 @@ model PublicSiteSettings {
   youtubeUrl   String?  @db.VarChar(500)
   googlePlayUrl String? @db.VarChar(500)
   updatedAt    DateTime @updatedAt
+
   @@map("public_site_settings")
 }
-
 
 model PublicBlogPost {
   id              String   @id @default(uuid()) @db.Uuid
@@ -3326,10 +3663,10 @@ model PublicBlogPost {
   publishedAt     DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@index([isPublished, publishedAt])
   @@map("public_blog_posts")
 }
-
 
 model PublicVideoTutorial {
   id           String   @id @default(uuid()) @db.Uuid
@@ -3342,6 +3679,7 @@ model PublicVideoTutorial {
   isPublished  Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
   @@index([isPublished, displayOrder])
   @@map("public_video_tutorials")
 }
@@ -3349,7 +3687,7 @@ model PublicVideoTutorial {
 model FieldJob {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
- company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
  key String @unique @db.VarChar(160)
  kind String @db.VarChar(30)
  payload Json
@@ -3360,7 +3698,153 @@ model FieldJob {
  completedAt DateTime?
  lastError String? @db.VarChar(80)
  createdAt DateTime @default(now())
- @@index([completedAt,nextAttemptAt,lockedUntil])
+
+  @@index([completedAt, nextAttemptAt, lockedUntil])
  @@index([companyId])
  @@map("field_jobs")
+}
+
+model ExpenseItem {
+  id                  String   @id @default(uuid()) @db.Uuid
+  companyId           String   @db.Uuid
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  name                String   @db.VarChar(240)
+  normalizedName      String   @db.VarChar(240)
+  creationRequestKey  String   @db.Uuid
+  creationRequestHash String   @db.VarChar(64)
+  photoObjectKey      String?  @db.VarChar(500)
+  photoMimeType       String?  @db.VarChar(80)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([companyId, id])
+  @@unique([companyId, normalizedName])
+  @@unique([companyId, creationRequestKey])
+  @@index([companyId, isActive, name])
+  @@map("expense_items")
+}
+
+model AccountReportFavourite {
+ companyId String @db.Uuid
+ userId String @db.Uuid
+ reportKey String @db.VarChar(60)
+ createdAt DateTime @default(now())
+ company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+ user User @relation(fields:[companyId,userId],references:[companyId,id],onDelete:Cascade)
+ @@id([companyId,userId,reportKey])
+ @@map("account_report_favourites")
+}
+
+model QuotationAttachment {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @db.Uuid
+  revisionId    String   @db.Uuid
+  requestKey    String   @db.Uuid
+  requestHash   String   @db.Char(64)
+  displayName   String   @db.VarChar(240)
+  mimeType      String   @db.VarChar(120)
+  sizeBytes     Int
+  contentHash   String   @db.Char(64)
+  storageKey    String   @db.VarChar(512)
+  uploadedById  String   @db.Uuid
+  createdAt     DateTime @default(now())
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  revision      QuotationRevision @relation(fields: [companyId, revisionId], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "quotation_attachments_revision_fkey")
+  uploadedBy    User @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: Restrict, onUpdate: Restrict, map: "quotation_attachments_uploader_fkey")
+
+  @@unique([companyId, id])
+  @@unique([companyId, revisionId, requestKey])
+  @@index([companyId, revisionId, createdAt])
+  @@index([companyId, storageKey])
+  @@map("quotation_attachments")
+}
+
+
+// Append-only carry of existing posted credits into a corrected Sale. Original
+// invoice, credit-note lines, journals and stock history are never rewritten.
+model SaleReturnRevision {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  sourceInvoiceId String @db.Uuid
+  sourceInvoice CommercialDocument @relation("SaleReturnRevisionSource",fields:[companyId,sourceInvoiceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  invoiceId String @db.Uuid
+  invoice CommercialDocument @relation("SaleReturnRevisionTarget",fields:[companyId,invoiceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  reversalJournalId String @db.Uuid
+  reversalJournal JournalEntry @relation("SaleReturnRevisionJournal",fields:[companyId,reversalJournalId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  postingDate DateTime @db.Date
+  createdById String @db.Uuid
+  createdBy User @relation("SaleReturnRevisionCreator",fields:[companyId,createdById],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdAt DateTime @default(now())
+  credits SaleRevisionCredit[]
+  @@unique([companyId,id])
+  @@unique([companyId,sourceInvoiceId])
+  @@unique([companyId,invoiceId])
+  @@unique([companyId,reversalJournalId])
+  @@map("sale_return_revisions")
+}
+
+model SaleRevisionCredit {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  revisionId String @db.Uuid
+  revision SaleReturnRevision @relation(fields:[companyId,revisionId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  creditNoteId String @db.Uuid
+  creditNote CommercialDocument @relation("SaleRetainedCreditNote",fields:[companyId,creditNoteId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  originalAmount Decimal @db.Decimal(18,2)
+  availableAmount Decimal @db.Decimal(18,2)
+  appliedAmount Decimal @db.Decimal(18,2)
+  excessAmount Decimal @db.Decimal(18,2)
+  createdAt DateTime @default(now())
+  lines SaleRevisionCreditLine[]
+  excessAdvance AccountSettlement? @relation("SaleRevisionCreditAdvance")
+  @@unique([companyId,id])
+  @@unique([companyId,revisionId,creditNoteId])
+  @@index([companyId,creditNoteId])
+  @@map("sale_revision_credits")
+}
+
+model SaleRevisionCreditLine {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  creditId String @db.Uuid
+  credit SaleRevisionCredit @relation(fields:[companyId,creditId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  creditLineId String @db.Uuid
+  creditLine CommercialDocumentLine @relation("SaleRetainedCreditLine",fields:[companyId,creditLineId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  invoiceLineId String @db.Uuid
+  invoiceLine CommercialDocumentLine @relation("SaleReturnRevisionLine",fields:[companyId,invoiceLineId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  quantity Decimal @db.Decimal(18,4)
+  physicalQuantity Decimal @db.Decimal(18,4)
+  createdAt DateTime @default(now())
+  @@unique([companyId,id])
+  @@unique([companyId,creditId,creditLineId])
+  @@index([companyId,invoiceLineId])
+  @@map("sale_revision_credit_lines")
+}
+
+
+// Indexed read model for immutable cancellation/revision audit events. The
+// original posted invoice remains untouched and is available in history.
+model SaleLifecycleSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId],references:[id],onDelete:Restrict,onUpdate:Restrict)
+  invoiceId String @db.Uuid
+  invoice CommercialDocument @relation("SaleLifecycleSource",fields:[companyId,invoiceId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  state String @db.VarChar(16)
+  auditId String @db.Uuid
+  audit AccountOperationalAudit @relation(fields:[companyId,auditId],references:[companyId,id],onDelete:NoAction,onUpdate:Restrict,map:"sale_lifecycle_audit_fkey")
+  replacementId String? @db.Uuid
+  replacement CommercialDocument? @relation("SaleLifecycleReplacement",fields:[companyId,replacementId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  correctionCreditId String? @db.Uuid
+  correctionCredit CommercialDocument? @relation("SaleLifecycleCredit",fields:[companyId,correctionCreditId],references:[companyId,id],onDelete:Restrict,onUpdate:Restrict)
+  createdAt DateTime @default(now())
+  @@unique([companyId,id])
+  @@unique([companyId,invoiceId])
+  @@unique([companyId,auditId])
+  @@unique([companyId,correctionCreditId])
+  @@index([companyId,state,invoiceId])
+  @@index([companyId,replacementId])
+  @@map("sale_lifecycle_snapshots")
 }

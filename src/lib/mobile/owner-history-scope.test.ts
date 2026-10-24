@@ -1,0 +1,12 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const m=vi.hoisted(()=>({scope:vi.fn(),history:vi.fn()}));
+vi.mock("@/lib/account/money-context",()=>({moneyReadContext:m.scope}));
+vi.mock("@/lib/account/owner-history",()=>({ownerHistoryForActor:m.history}));
+vi.mock("./account-transactions",()=>({mobileAccountActor:(user:object)=>({...user,companyId:"tenant",accountRole:"ACCOUNT_ADMIN",isActive:true,accountAccessActive:true,role:"ACCOUNT_USER",salesAccessActive:false,salesRole:null})}));
+import {mobileOwnerHistory} from "./account-money";
+import type {MobileAppPrincipal} from "./auth";
+const user={id:"actor",productEdition:"SALESPUNCH360_ACCOUNT"} as MobileAppPrincipal;
+beforeEach(()=>{vi.clearAllMocks();m.scope.mockResolvedValue({actor:{id:"scoped-actor"},context:{mode:"BRANCH",branchId:"00000000-0000-4000-8000-000000000001"}});m.history.mockResolvedValue({items:[]})});
+it("resolves the same default branch as the native money context before loading owner history",async()=>{await mobileOwnerHistory(user,"owner",{from:"",to:"",offset:"0"});expect(m.scope).toHaveBeenCalledWith(expect.objectContaining({companyId:"tenant"}),{branchId:undefined,scope:undefined});expect(m.history).toHaveBeenCalledWith({id:"scoped-actor"},"owner",{from:"",to:"",offset:"0",branchId:"00000000-0000-4000-8000-000000000001"})});
+it("retains an authorized company scope without leaking stale branch selection into history",async()=>{m.scope.mockResolvedValue({actor:{id:"company-actor"},context:{mode:"COMPANY"}});await mobileOwnerHistory(user,"owner",{scope:"all",offset:50});expect(m.history).toHaveBeenCalledWith({id:"company-actor"},"owner",{scope:"all",offset:50})});
+it("stops before owner reads when branch resolution denies access",async()=>{m.scope.mockRejectedValue(new Error("DENIED"));await expect(mobileOwnerHistory(user,"owner",{})).rejects.toThrow("DENIED");expect(m.history).not.toHaveBeenCalled()});

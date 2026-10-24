@@ -1,0 +1,3 @@
+import {expect,it} from "vitest";
+import {readTransferRequestJson} from "./transfer-request";
+it("parses bounded JSON and rejects streamed excess independent of headers",async()=>{expect(await readTransferRequestJson(new Request("https://local.test",{method:"POST",body:'{"amount":"5"}'}))).toEqual({amount:"5"});let cancelled=false;const body=new ReadableStream<Uint8Array>({start(controller){controller.enqueue(new Uint8Array(8*1024*1024+1))},cancel(){cancelled=true}});await expect(readTransferRequestJson(new Request("https://local.test",{method:"POST",body,duplex:"half"} as RequestInit))).rejects.toThrow("Request too large");expect(cancelled).toBe(true)});

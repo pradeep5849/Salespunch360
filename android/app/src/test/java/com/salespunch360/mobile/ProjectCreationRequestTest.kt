@@ -15,4 +15,14 @@ class ProjectCreationRequestTest {
         val intent=buildJsonObject { put("name","Project A") }
         assertNotEquals(projectCreationPayload(intent,"request-1"),projectCreationPayload(intent,"request-2"))
     }
+    @Test fun newProjectDoesNotInheritTheLastProjectsCustomValues() {
+        val options=buildJsonObject{putJsonObject("customValues"){put("site_reference","Previous site");put("confirmed",false)}}
+        assertTrue(projectEditorCustomValues(null,options).isEmpty())
+        assertTrue(projectEditorCustomValues("",options).isEmpty())
+        assertEquals(mapOf("site_reference" to "Previous site","confirmed" to "false"),projectEditorCustomValues("existing-id",options))
+    }
+    @Test fun customFieldsRemainInTheRetryPayload() {
+        val input=buildJsonObject{put("name","Project A");putJsonObject("customFields"){put("site_reference","SITE-1")}}
+        assertEquals(input["customFields"],projectCreationPayload(input,"request")["customFields"])
+    }
 }

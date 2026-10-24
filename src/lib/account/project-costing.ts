@@ -1,3 +1,4 @@
+import { EFFECTIVE_DOCUMENT_ALLOCATION, EFFECTIVE_ADVANCE_APPLICATION, EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { retrySerializable } from "./transaction-retry";
 import { Prisma, ProjectChangeOrderStatus } from "@prisma/client";
@@ -239,8 +240,8 @@ async function scopedProject(actor: Actor, id: string) {
         commercialDocuments: {
           include: {
             lines: true,
-            allocations: true,
-            advanceApplications: true,
+            allocations: {where:EFFECTIVE_DOCUMENT_ALLOCATION},
+            advanceApplications: {where:EFFECTIVE_ADVANCE_APPLICATION},
             adjustments: { where: { status: "POSTED" } },
           },
         },
@@ -448,7 +449,7 @@ export async function loadProjectCostingForActor(
       orderBy: [{ movementDate: "asc" }, { id: "asc" }],
     }),
     projectSettlements = await db.accountSettlement.findMany({
-      where: { companyId: actor.companyId, projectId },
+      where: { ...EFFECTIVE_SETTLEMENT, companyId: actor.companyId, projectId },
       include: { applications: true },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
@@ -501,7 +502,7 @@ export async function loadProjectCostingForActor(
     ).actual,
     advanceReceived = sum(
       projectSettlements
-        .filter((x) => x.type === "CUSTOMER_ADVANCE")
+        .filter((x) => x.type === "CUSTOMER_ADVANCE" && x.paymentMode!=="ACCOUNT_CREDIT")
         .map((x) => x.amount),
     ),
     amountReceived = sum(
@@ -685,7 +686,7 @@ export async function loadProjectCosting(projectId: string) {
 const signedMoney = z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/);
 const changeInput = z
   .object({
-    projectId: z.string().uuid(),
+    projectId: z.string().guid(),
     title: z.string().trim().min(1).max(240),
     description: z.string().trim().max(5000).optional(),
     valueDelta: signedMoney,
@@ -781,7 +782,7 @@ export async function createChangeOrder(raw: unknown) {
 export async function updateChangeOrderForActor(actor: Actor, raw: unknown) {
   const data = changeInput
     .omit({ idempotencyKey: true })
-    .extend({ changeOrderId: z.string().uuid() })
+    .extend({ changeOrderId: z.string().guid() })
     .parse(raw);
   const project = await editableCostProject(actor, data.projectId);
   return retrySerializable(() =>
@@ -857,8 +858,8 @@ export async function transitionChangeOrderForActor(
   to: ProjectChangeOrderStatus,
 ) {
   z.object({
-    projectId: z.string().uuid(),
-    changeOrderId: z.string().uuid(),
+    projectId: z.string().guid(),
+    changeOrderId: z.string().guid(),
     to: z.nativeEnum(ProjectChangeOrderStatus),
   }).parse({ projectId, changeOrderId, to });
   const project = await editableCostProject(actor, projectId);

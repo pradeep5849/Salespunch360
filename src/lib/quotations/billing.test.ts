@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from "vitest";
+import {Prisma} from "@prisma/client";
+const m=vi.hoisted(()=>({transaction:vi.fn(),find:vi.fn(),balances:vi.fn(),permission:vi.fn()}));
+vi.mock("@/lib/db",()=>({db:{$transaction:m.transaction}}));
+vi.mock("@/lib/account/commercial",()=>({documentOutstandingsBatch:m.balances}));
+vi.mock("@/lib/auth/permissions",()=>({canUsePermission:m.permission}));
+import {quotationBillingForActor} from "./billing";
+const actor={companyId:"company",branchAccessScope:"SELECTED_BRANCHES",branchIds:["branch"]} as Parameters<typeof quotationBillingForActor>[0];
+const quote={id:"quote",branchId:"branch",customerId:"party",convertedCommercialDocumentId:"sale"};
+const sale={id:"sale",branchId:"branch",customerId:"party",type:"SALES_INVOICE",status:"POSTED",documentNumber:"INV-1",grandTotal:new Prisma.Decimal(100),payableAmount:null,journalEntry:{status:"POSTED"}};
+beforeEach(()=>{vi.resetAllMocks();m.permission.mockReturnValue(true);m.transaction.mockImplementation(fn=>fn({commercialDocument:{findMany:m.find}}));m.find.mockResolvedValue([sale]);m.balances.mockResolvedValue(new Map([["sale",new Prisma.Decimal(30)]]))});
+it("never treats an unconverted estimate as a receivable or queries financial data",async()=>{expect((await quotationBillingForActor(actor,[{...quote,convertedCommercialDocumentId:null}],["SALES"])).get("quote")).toEqual({kind:"NOT_BILLED"});expect(m.transaction).not.toHaveBeenCalled()});
+it("withholds converted balances when module or ledger permission is absent",async()=>{expect((await quotationBillingForActor(actor,[quote],[])).get("quote")).toEqual({kind:"UNAVAILABLE"});m.permission.mockReturnValue(false);expect((await quotationBillingForActor(actor,[quote],["SALES"])).get("quote")).toEqual({kind:"UNAVAILABLE"});expect(m.transaction).not.toHaveBeenCalled()});
+it("uses authoritative payment-adjusted balances in one scoped snapshot",async()=>{const r=await quotationBillingForActor(actor,[quote],["SALES"]);expect(r.get("quote")).toMatchObject({kind:"SALE",documentId:"sale",outstanding:"30.00"});expect(m.find.mock.calls[0][0].where).toMatchObject({companyId:"company",branchId:{in:["branch"]},id:{in:["sale"]}});expect(m.balances).toHaveBeenCalledWith("company",[sale],undefined,expect.any(Object));expect(m.transaction).toHaveBeenCalledWith(expect.any(Function),{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead})});
+it("does not expose a mismatched customer or branch",async()=>{for(const change of [{customerId:"other"},{branchId:"other"}]){m.find.mockResolvedValue([{...sale,...change}]);expect((await quotationBillingForActor(actor,[quote],["SALES"])).get("quote")).toEqual({kind:"UNAVAILABLE"})}});
+it("keeps orders unbilled and cancelled or reversed sales at zero",async()=>{for(const change of [{type:"SALES_ORDER"},{status:"CANCELLED"},{journalEntry:{status:"REVERSED"}}]){m.find.mockResolvedValue([{...sale,...change}]);m.balances.mockResolvedValue(new Map());const r=(await quotationBillingForActor(actor,[quote],["SALES"])).get("quote");expect(r?.kind).toBe(change.type?"SALE_ORDER":"SALE");expect(r?.outstanding).toBe(change.type?undefined:"0.00");expect(m.balances.mock.calls.at(-1)?.[1]).toEqual([])}});

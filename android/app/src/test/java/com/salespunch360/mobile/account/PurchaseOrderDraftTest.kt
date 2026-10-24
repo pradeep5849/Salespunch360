@@ -1,0 +1,12 @@
+package com.salespunch360.mobile.account
+import kotlinx.serialization.json.*
+import org.junit.Assert.*
+import org.junit.Test
+class PurchaseOrderDraftTest{
+ private val preview=Json.parseToJsonElement("""{"sourcePurchaseOrderId":"order","branchId":"branch","partyId":"vendor","purchasePurpose":"GENERAL_OFFICE","purchaseClassification":"GENERAL_EXPENSES","issueDate":"2026-10-21","taxMode":"EXCLUSIVE","lines":[{"sourceOrderLineId":"line","lineType":"CUSTOM","itemName":"Work","quantity":"6","rate":"10","unitSelection":"PRIMARY","taxRate":"0"}]}""").jsonObject
+ private val state=PurchaseState(types=listOf("PURCHASE_BILL"),branches=listOf(SalesOption("branch","Main")),vendors=listOf(SalesOption("vendor","Supplier")))
+ @Test fun keepsSourceAndPurposeWithoutInventingVendorInvoiceOrPosting(){val d=purchaseOrderDraft(preview,state,"order");assertEquals("order",d.sourcePurchaseOrderId);assertEquals("GENERAL_OFFICE",d.purpose);assertEquals("GENERAL_EXPENSES",d.classification);assertEquals("",d.vendorInvoiceNumber);assertEquals("",d.vendorInvoiceDate);assertEquals("6",d.lines.single().quantity);assertEquals("line",d.lines.single().sourceOrderLineId);val payload=purchasePayload(d);assertEquals("order",payload.str("sourcePurchaseOrderId"));assertEquals("line",payload.array("lines").single().str("sourceOrderLineId"));assertFalse(payload.containsKey("status"));assertFalse(payload.containsKey("journalEntryId"))}
+ @Test fun rejectsUnavailableTypeBranchVendorAndStaleIdentity(){assertThrows(IllegalArgumentException::class.java){purchaseOrderDraft(preview,state,"other")};for(s in listOf(state.copy(types=emptyList()),state.copy(branches=emptyList()),state.copy(vendors=emptyList())))assertThrows(IllegalArgumentException::class.java){purchaseOrderDraft(preview,s,"order")}}
+ @Test fun missingClassificationRequiresAnExplicitChoice(){val d=purchaseOrderDraft(JsonObject(preview-"purchaseClassification"),state,"order");assertEquals("",d.classification);assertEquals("Select a purchase classification for this bill.",purchaseValidation(d.copy(vendorInvoiceNumber="X",vendorInvoiceDate="2026-10-21"),state));assertFalse(purchasePayload(d).str("purchaseClassification")=="PURCHASE_COST")}
+ @Test fun requiresSourceLineAndRemainingItems(){for(lines in listOf(buildJsonArray{},buildJsonArray{add(buildJsonObject{put("lineType","CUSTOM")})})){assertThrows(IllegalArgumentException::class.java){purchaseOrderDraft(JsonObject(preview+mapOf("lines" to lines)),state,"order")}}}
+}

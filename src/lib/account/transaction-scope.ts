@@ -5,12 +5,14 @@ import { retrySerializable } from "./transaction-retry";
 export function inAccountTransaction<T>(
   transaction: Prisma.TransactionClient | undefined,
   work: (tx: Prisma.TransactionClient) => Promise<T>,
+  options?: { timeout: number },
 ): Promise<T> {
   return transaction
     ? work(transaction)
     : retrySerializable(() =>
         db.$transaction(work, {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          ...options,
         }),
       );
 }

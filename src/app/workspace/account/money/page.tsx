@@ -1,1 +1,120 @@
-import Link from"next/link";import{moneyDashboard}from"@/lib/account/money";import{WorkspacePageHeader}from"@/components/workspace/workspace-page-header";export default async function Page(){const d=await moneyDashboard(),totals=(type:string)=>d.accounts.filter(x=>x.type===type).reduce((a,x)=>a.add(x.balance),d.accounts[0]?.balance.mul(0)??({toFixed:()=>"0.00"}as never));return <main className="employees-shell"><section className="employees-content"><WorkspacePageHeader title="Cash, bank, capital & loans" backHref="/workspace/account"/><nav>{[["accounts","Accounts"],["transfers","Transfers / Deposits"],["cheques","Cheques"],["capital","Capital / Drawings"],["loans","Loans / EMI"]].map(([p,l])=><Link key={p} href={`/workspace/account/money/${p}`}>{l} · </Link>)}</nav><div className="metric-grid"><article><b>Bank</b><p>{totals("BANK").toFixed(2)}</p></article><article><b>Cash In-Hand</b><p>{totals("CASH").toFixed(2)}</p></article><article><b>Petty Cash</b><p>{totals("PETTY_CASH").toFixed(2)}</p></article><article><b>Active Loans</b><p>{d.loans.length}</p></article><article><b>Customer Advances</b><p>{d.advances.filter(x=>x.type==="CUSTOMER_ADVANCE").length}</p></article><article><b>Vendor Advances</b><p>{d.advances.filter(x=>x.type==="VENDOR_ADVANCE").length}</p></article></div><h2>Accounts</h2><ul>{d.accounts.map(x=><li key={x.id}>{x.name} · {x.type} · {x.balance.toFixed(2)}</li>)}</ul><h2>Recent transfers</h2><ul>{d.transfers.map(x=><li key={x.id}>{x.transferDate.toISOString().slice(0,10)} · {x.amount.toFixed(2)}</li>)}</ul></section></main>}
+import Link from "next/link";
+import { Prisma } from "@prisma/client";
+import { moneyDashboard } from "@/lib/account/money";
+import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
+import {
+  ClientMoney,
+  AccountDate,
+} from "@/components/account/display-preferences";
+import {
+  isMoneyReadScopeError,
+  MoneyReadUnavailable,
+} from "@/components/account/money-read-unavailable";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string; scope?: string }>;
+}) {
+  let d: Awaited<ReturnType<typeof moneyDashboard>>;
+  try {
+    d = await moneyDashboard(await searchParams);
+  } catch (error) {
+    if (isMoneyReadScopeError(error)) return <MoneyReadUnavailable />;
+    throw error;
+  }
+  const totals = (type: string) =>
+    d.accounts
+      .filter((row) => row.type === type)
+      .reduce((sum, row) => sum.add(row.balance), new Prisma.Decimal(0));
+  const scopeQuery =
+    d.branchContext.mode === "COMPANY"
+      ? "scope=all"
+      : `branchId=${d.branchContext.branchId}`;
+  return (
+    <main className="employees-shell">
+      <section className="employees-content">
+        <WorkspacePageHeader
+          title="Cash, bank, capital & loans"
+          backHref="/workspace/account"
+        />
+        <p>
+          Scope:{" "}
+          {d.branchContext.mode === "COMPANY"
+            ? "All company branches"
+            : d.branchContext.branchName}
+        </p>
+        <nav aria-label="Cash and bank navigation">
+          {[
+            ["bank-accounts", "Bank Accounts"],
+            ["cash-in-hand", "Cash In-Hand"],
+            ["accounts", "All money accounts"],
+            ["transfers", "Transfers / Deposits"],
+            ["cheques", "Cheques"],
+            ["capital", "Capital / Drawings"],
+            ["loans", "Loans / EMI"],
+          ].map(([path, label]) => (
+            <Link
+              key={path}
+              href={`/workspace/account/money/${path}${["bank-accounts", "cash-in-hand", "accounts", "transfers", "cheques", "capital"].includes(path) ? `?${scopeQuery}` : ""}`}
+            >
+              {label} ·{" "}
+            </Link>
+          ))}
+        </nav>
+        <div className="metric-grid">
+          {[
+            ["BANK", "Bank"],
+            ["CASH", "Cash In-Hand"],
+            ["PETTY_CASH", "Petty Cash"],
+          ].map(([type, label]) => (
+            <article key={type}>
+              <b>{label}</b>
+              <p>
+                <ClientMoney value={totals(type).toFixed()} />
+              </p>
+            </article>
+          ))}
+          <article>
+            <b>Active Loans</b>
+            <p>{d.loans.length}</p>
+          </article>
+          <article>
+            <b>Customer Advances</b>
+            <p>
+              {
+                d.advances.filter((row) => row.type === "CUSTOMER_ADVANCE")
+                  .length
+              }
+            </p>
+          </article>
+          <article>
+            <b>Vendor Advances</b>
+            <p>
+              {d.advances.filter((row) => row.type === "VENDOR_ADVANCE").length}
+            </p>
+          </article>
+        </div>
+        <h2>Accounts</h2>
+        <ul>
+          {d.accounts.map((row) => (
+            <li key={row.id}>
+              {row.name} · {row.type} ·{" "}
+              <ClientMoney value={row.balance.toFixed()} />
+            </li>
+          ))}
+        </ul>
+        <h2>Recent transfers</h2>
+        <ul>
+          {d.transfers.map((row) => (
+            <li key={row.id}>
+              <AccountDate value={row.transferDate.toISOString()} /> ·{" "}
+              <ClientMoney value={row.amount.toFixed()} />
+              {row.description&&<p>{row.description}</p>}
+              {row.image&&<a href={`/api/account/money/transfers/${row.id}/image`}>View transfer image</a>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}

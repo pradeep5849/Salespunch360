@@ -1,11 +1,111 @@
-import {readFileSync} from "node:fs";import {describe,expect,it} from "vitest";
-const read=(path:string)=>readFileSync(path,"utf8");
-describe("Party settings and inventory UI contracts",()=>{
- it("maps every Party info dialog to specific approved copy",()=>{const source=read("src/components/account/party-settings-form.tsx");for(const title of ["GSTIN Number","Party Grouping","Party Additional Fields","Party Shipping Address","Print Shipping Address","Loyalty Points"])expect(source).toContain(`title:\"${title}\"`);expect(source).toContain('status:"Coming Soon"')});
- it("keeps Loyalty Points, Transaction SMS and Multi-Currency unavailable without Sync",()=>{const modules=read("src/lib/account/module-setup.ts"),sms=read("src/app/workspace/account/settings/transaction-sms/page.tsx");for(const key of ["LOYALTY_POINTS","TRANSACTION_SMS","MULTI_CURRENCY"])expect(modules).toContain(`key:\"${key}\"`);for(const row of ["Send to party","Send SMS Copy to Self","Automatically Share Invoices on SalesPunch360 Network"])expect(sms).toContain(row);expect(sms).toContain("type=\"checkbox\" disabled");expect(modules).not.toMatch(/SYNC|Sync/)});
- it("uses dedicated inner routes and Employees terminology",()=>{const menu=read("src/components/account/account-settings-menu.tsx");expect(menu).toContain('label:"Employees"');expect(menu).toContain('/settings/party');expect(menu).toContain('/settings/transaction-sms');expect(menu).not.toContain("User Management")});
- it("keeps settings and staff destinations out of Account root chrome",()=>{const shell=read("src/components/account/account-shell.tsx"),employees=read("src/app/workspace/employees/page.tsx");for(const path of ["settings/party","settings/transaction-sms","employees"])expect(shell).not.toContain(`\"/workspace/account/${path}\"`);for(const root of ["/workspace/account\"","/workspace/account/dashboard","/workspace/account/projects","/workspace/account/inventory"])expect(shell).toContain(root);expect(employees).toContain('title="Employees"')});
- it("renders search icon inside the field and separate filter and plain dots",()=>{const items=read("src/components/account/items-screen.tsx"),css=read("src/app/globals.css");expect(items).toContain('<label className="items-search-box"><AccountIcon name="search"/><input');expect(items).toContain('className="items-filter-button"');expect(items).toContain('className="items-more-button"');expect(items).toContain('>⋮</button>');expect(css).toContain('.items-more-button{border-color:transparent!important')});
- it("keeps Item Name and Unit in one outlined field while Category remains a normal selector",()=>{const editor=read("src/app/workspace/account/inventory/items/new/add-item-editor.tsx"),css=read("src/app/workspace/account/add-item-unit-inline-fix.css");expect(editor).toContain('className="add-item-name-unit-field"');expect(editor).toContain('className="add-item-name-unit-row"');expect(editor).toContain('className="add-item-unit-pill"');expect(editor).not.toContain('className="selector-field add-item-unit-field"');expect(editor).toContain('<small>Item Category</small>');expect(css).toContain('.add-item-page .add-item-name-unit-field {');expect(css).toContain('grid-template-columns: minmax(0,1fr) auto;');expect(css).toContain('.add-item-page .add-item-unit-pill {')});
- it("keeps Android Party, SMS, module and party-master state aligned",()=>{const admin=read("android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt"),master=read("android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt");for(const mode of ["party-settings","party-additional-fields","transaction-sms"])expect(admin).toContain(`\"${mode}\"`);for(const label of ["GSTIN Number","Party Grouping","Loyalty Points","Coming Soon"])expect(admin).toContain(label);expect(master).toContain("options.partySettings.gstinEnabled");expect(master).toContain("options.partySettings.shippingAddressEnabled");expect(master).toContain("options.partyCustomFields")});
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+const read = (path: string) => readFileSync(path, "utf8");
+describe("Party settings and inventory UI contracts", () => {
+  it("maps every Party info dialog to specific approved copy", () => {
+    const source = read("src/components/account/party-settings-form.tsx");
+    for (const title of [
+      "GSTIN Number",
+      "Party Grouping",
+      "Party Additional Fields",
+      "Party Shipping Address",
+      "Print Shipping Address",
+      "Loyalty Points",
+    ])
+      expect(source).toContain(`title:\"${title}\"`);
+    expect(source).toContain('status:"Coming Soon"');
+  });
+  it("retains module entries while Transaction SMS prepares manual messages", () => {
+    const modules = read("src/lib/account/module-setup.ts"),
+      sms = read("src/app/workspace/account/settings/transaction-sms/page.tsx");
+    for (const key of ["LOYALTY_POINTS", "TRANSACTION_SMS", "MULTI_CURRENCY"])
+      expect(modules).toContain(`key:\"${key}\"`);
+    for (const row of [
+      "Send to party",
+      "Prepare Copy to Self",
+      "Include Invoice Link",
+    ])
+      expect(sms).toContain(row);
+    expect(sms).toContain("Prepare messages for manual sending");
+    expect(sms).toContain("saveTransactionMessaging");
+    expect(modules).not.toMatch(/SYNC|Sync/);
+  });
+  it("uses dedicated inner routes and Employees terminology", () => {
+    const menu = read("src/components/account/account-settings-menu.tsx");
+    expect(menu).toContain('label:"Employees"');
+    expect(menu).toContain("/settings/party");
+    expect(menu).toContain("/settings/transaction-sms");
+    expect(menu).not.toContain("User Management");
+  });
+  it("keeps settings and staff destinations out of Account root chrome", () => {
+    const shell = read("src/components/account/account-shell.tsx"),
+      employees = read("src/app/workspace/employees/page.tsx");
+    for (const path of [
+      "settings/party",
+      "settings/transaction-sms",
+      "employees",
+    ])
+      expect(shell).not.toContain(`\"/workspace/account/${path}\"`);
+    for (const root of [
+      '/workspace/account"',
+      "/workspace/account/dashboard",
+      "/workspace/account/projects",
+      "/workspace/account/inventory",
+    ])
+      expect(shell).toContain(root);
+    expect(employees).toContain('title="Employees"');
+  });
+  it("renders search icon inside the field and separate filter and plain dots", () => {
+    const items = read("src/components/account/items-screen.tsx"),
+      css = read("src/app/globals.css");
+    expect(items).toMatch(
+      /<label className="items-search-box">\s*<AccountIcon name="search"\s*\/>\s*<input/,
+    );
+    expect(items).toContain('className="items-filter-button"');
+    expect(items).toContain('className="items-more-button"');
+    expect(items).toMatch(/>\s*⋮\s*<\/button>/);
+    expect(css).toContain(
+      ".items-more-button{border-color:transparent!important",
+    );
+  });
+  it("keeps Item Name and Unit in one outlined field while Category remains a normal selector", () => {
+    const editor = read(
+        "src/app/workspace/account/inventory/items/new/add-item-editor.tsx",
+      ),
+      css = read("src/app/workspace/account/add-item-unit-inline-fix.css");
+    expect(editor).toContain('className="add-item-name-unit-field"');
+    expect(editor).toContain('className="add-item-name-unit-row"');
+    expect(editor).toContain('className="add-item-unit-pill"');
+    expect(editor).not.toContain(
+      'className="selector-field add-item-unit-field"',
+    );
+    expect(editor).toContain("<small>Item Category</small>");
+    expect(css).toContain(".add-item-page .add-item-name-unit-field {");
+    expect(css).toContain("grid-template-columns: minmax(0,1fr) auto;");
+    expect(css).toContain(".add-item-page .add-item-unit-pill {");
+  });
+  it("keeps Android Party, SMS, module and party-master state aligned", () => {
+    const admin = read(
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/admin/AccountAdministrationScreen.kt",
+      ),
+      master = read(
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt",
+      );
+    for (const mode of [
+      "party-settings",
+      "party-additional-fields",
+      "transaction-sms",
+    ])
+      expect(admin).toContain(`\"${mode}\"`);
+    for (const label of [
+      "GSTIN Number",
+      "Party Grouping",
+      "Loyalty Points",
+      "Coming Soon",
+    ])
+      expect(admin).toContain(label);
+    expect(master).toContain("options.partySettings.gstinEnabled");
+    expect(master).toContain("options.partySettings.shippingAddressEnabled");
+    expect(master).toContain("options.partyCustomFields");
+  });
 });

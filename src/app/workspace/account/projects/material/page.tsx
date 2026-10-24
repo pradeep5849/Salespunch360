@@ -1,3 +1,4 @@
+import { AccountPageHeader } from "@/components/account/account-shell";
 import { requirePermission } from "@/lib/auth/authorization";
 import { projectMaterialContextForActor } from "@/lib/account/project-material-service";
 import type { ProjectActor } from "@/lib/account/projects";
@@ -29,7 +30,14 @@ export default async function Page({
   });
   return (
     <main>
-      <h1>Project Material</h1>
+      <AccountPageHeader
+        title="Project Material"
+        backHref={
+          query.projectId
+            ? `/workspace/account/projects/${query.projectId}`
+            : "/workspace/account/projects"
+        }
+      />
       <p>
         Available material and its original cost are checked again when posting.
         Negative inventory follows General settings; Project consumption, return

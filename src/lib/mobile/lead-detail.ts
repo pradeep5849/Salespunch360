@@ -8,7 +8,7 @@ const VISIT_LIMIT=50;
 const ACTIVITY_LIMIT=100;
 
 export async function mobileLeadDetail(user:MobilePrincipal,rawId:string){
- const id=z.string().uuid().parse(rawId),branches=await operationalBranchContext(user);
+ const id=z.string().guid().parse(rawId),branches=await operationalBranchContext(user);
  const lead=await db.lead.findFirst({
   where:{id,companyId:user.companyId,branchId:branches.branchId,...visibilityWhere(user)},
   include:{

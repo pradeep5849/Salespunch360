@@ -1,7 +1,11 @@
+import {OrderProgress} from "@/components/account/order-progress";
+import {Money,AccountTimestamp} from "@/components/account/account-ui";
+import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import {
   applyAdvanceAction,
+  confirmSalesOrderAction,
   finalizeCommercialAction,
   postCommercialAction,
   reminderStatusAction,
@@ -11,7 +15,7 @@ import {
   commercialDocumentControls,
   getCommercialDocument,
 } from "@/lib/account/commercial";
-import { SaleInvoiceDetail } from "./sale-invoice-detail";
+import { redirect } from "next/navigation";
 export default async function Page({
   params,
 }: {
@@ -23,11 +27,9 @@ export default async function Page({
       commercialDocumentControls(id),
     ]),
     today = new Date().toISOString().slice(0, 10);
-  if (x.type === "SALES_INVOICE") {
-    const balance=x.financial?.outstanding.toString()??x.balanceDue.toString();
-    const received=Math.max(0,Number(x.grandTotal.toString())-Number(balance)).toFixed(2);
-    return <SaleInvoiceDetail id={x.id} documentNumber={x.documentNumber} issueDate={x.issueDate.toISOString()} firmName={x.branch.name} partyName={x.partyName} status={x.status} subtotal={x.subtotal.toString()} discountTotal={x.discountTotal.toString()} taxTotal={x.taxTotal.toString()} roundOffAmount={x.roundOffAmount.toString()} grandTotal={x.grandTotal.toString()} received={received} balance={balance} lines={x.lines.map(line=>({id:line.id,itemName:line.itemName,quantity:line.quantity.toString(),unitSymbol:line.unitSymbol,rate:line.rate.toString(),discountAmount:line.discountAmount.toString(),taxRate:line.taxRate.toString(),taxAmount:line.taxAmount.toString(),lineTotal:line.lineTotal.toString()}))}/>;
-  }
+  // Every invoice entry point uses the scoped financial snapshot and retained metadata.
+  if (x.type === "SALES_INVOICE") redirect(`/workspace/account/sales/${x.id}`);
+
   return (
     <main>
       <h1>
@@ -37,9 +39,10 @@ export default async function Page({
         {x.partyName} · {x.branch.name} · {x.status}
       </p>
       <p>
-        Issue {x.issueDate.toLocaleDateString()}{" "}
-        {x.dueDate && `· Due ${x.dueDate.toLocaleDateString()}`}
+        Issue {<AccountDate value={x.issueDate.toISOString()}/>}{" "}
+        {x.dueDate && <>· Due <AccountDate value={x.dueDate.toISOString()}/></>}
       </p>
+      {["SALES_ORDER","PURCHASE_ORDER"].includes(x.type)&&<OrderProgress id={x.id}/>}
       {x.purchasePurpose && (
         <section className="account-card">
           <h2>Purchase information</h2>
@@ -52,9 +55,9 @@ export default async function Page({
           <p>
             Vendor invoice {x.vendorInvoiceNumber ?? "—"}{" "}
             {x.vendorInvoiceDate &&
-              `· ${x.vendorInvoiceDate.toLocaleDateString()}`}{" "}
+              <>· <AccountDate value={x.vendorInvoiceDate.toISOString()}/></>}{" "}
             · Accounting date{" "}
-            {(x.postingDate ?? x.issueDate).toLocaleDateString()}
+            {<AccountDate value={(x.postingDate ?? x.issueDate).toISOString()}/>}
           </p>
           <p>
             Vendor GSTIN {x.partyGstin ?? "—"} · Address {x.partyAddress ?? "—"}{" "}
@@ -65,9 +68,9 @@ export default async function Page({
             {x.purchaseLocation ?? "—"}
           </p>
           <p>
-            Freight {x.freightAmount.toString()} · Other charges{" "}
-            {x.otherChargesAmount.toString()} · Round-off{" "}
-            {x.roundOffAmount.toString()}
+            Freight {<Money value={x.freightAmount}/>} · Other charges{" "}
+            {<Money value={x.otherChargesAmount}/>} · Round-off{" "}
+            {<Money value={x.roundOffAmount}/>}
           </p>
         </section>
       )}
@@ -77,9 +80,9 @@ export default async function Page({
         </p>
       )}
       {x.sourcePurchaseOrder && (
-        <p>Purchase Order {x.sourcePurchaseOrder.documentNumber}</p>
+        <p><Link href={`/workspace/account/transactions/${x.sourcePurchaseOrder.id}`}>Purchase Order {x.sourcePurchaseOrder.documentNumber}</Link></p>
       )}
-      <table>
+      <div className="table-wrap" role="region" aria-label="Commercial line items" tabIndex={0}><table>
         <thead>
           <tr>
             <th>Item</th>
@@ -97,10 +100,10 @@ export default async function Page({
               <td>{line.itemName}</td>
               <td>{line.description}</td>
               <td>{line.quantity.toString()}</td>
-              <td>{line.rate.toString()}</td>
-              <td>{line.discountAmount.toString()}</td>
-              <td>{line.taxAmount.toString()}</td>
-              <td>{line.lineTotal.toString()}</td>
+              <td>{<Money value={line.rate}/>}</td>
+              <td>{<Money value={line.discountAmount}/>}</td>
+              <td>{<Money value={line.taxAmount}/>}</td>
+              <td>{<Money value={line.lineTotal}/>}</td>
             </tr>
           ))}
           {x.lines
@@ -110,33 +113,34 @@ export default async function Page({
                   <td colSpan={7}>
                     Allocation: {allocation.allocationType.replaceAll("_", " ")}{" "}
                     · Qty {allocation.quantity.toString()} · Taxable{" "}
-                    {allocation.taxableAmount.toString()} · Tax{" "}
-                    {allocation.taxAmount.toString()}
+                    {<Money value={allocation.taxableAmount}/>} · Tax{" "}
+                    {<Money value={allocation.taxAmount}/>}
                   </td>
                 </tr>
               )),
             )
             .map((row) => row)}
         </tbody>
-      </table>
+      </table></div>
       <p>
-        Subtotal {x.subtotal.toString()} · Discounts{" "}
-        {x.discountTotal.toString()} · Taxable {x.taxableTotal.toString()} · Tax{" "}
-        {x.taxTotal.toString()} · Total {x.grandTotal.toString()}
+        Subtotal {<Money value={x.subtotal}/>} · Discounts{" "}
+        {<Money value={x.discountTotal}/>} · Taxable {<Money value={x.taxableTotal}/>} · Tax{" "}
+        {<Money value={x.taxTotal}/>} · Total {<Money value={x.grandTotal}/>}
       </p>
       {x.financial && (
         <p>
-          Outstanding {x.financial.outstanding.toString()} ·{" "}
+          Outstanding {<Money value={x.financial.outstanding}/>} ·{" "}
           {x.financial.paymentStatus}
         </p>
       )}
-      {x.status === "DRAFT" && x.type === "PURCHASE_ORDER" && (
+      {controls.canConfirmSalesOrder&&<form action={confirmSalesOrderAction}><input type="hidden" name="id" value={x.id}/><button>Confirm Sale Order</button><p>Confirmation closes the linked estimate. No accounting entry is posted for an order.</p></form>}
+      {controls.canConfirmPurchaseOrder && x.status === "DRAFT" && x.type === "PURCHASE_ORDER" && (
         <form action={finalizeCommercialAction}>
           <input type="hidden" name="id" value={x.id} />
           <button>Finalize / Issue Purchase Order</button>
         </form>
       )}
-      {x.status === "DRAFT" &&
+      {controls.canPost && x.status === "DRAFT" &&
         [
           "SALES_INVOICE",
           "CREDIT_NOTE",
@@ -155,13 +159,13 @@ export default async function Page({
           {x.stockMovements.map((m) => (
             <p key={m.id}>
               Stock {m.movementType.replaceAll("_", " ")} · Qty{" "}
-              {m.quantity.toString()} · Value {m.totalCost.toString()}
+              {m.quantity.toString()} · Value {<Money value={m.totalCost}/>}
             </p>
           ))}
           {x.projectMaterialMovements.map((m) => (
             <p key={m.id}>
               Project material {m.movementType.replaceAll("_", " ")} · Qty{" "}
-              {m.quantity.toString()} · Value {m.totalCost.toString()}
+              {m.quantity.toString()} · Value {<Money value={m.totalCost}/>}
             </p>
           ))}
         </section>
@@ -178,16 +182,16 @@ export default async function Page({
       <h2>Adjustments and payments</h2>
       {x.adjustments.map((a) => (
         <p key={a.id}>
-          {a.type} {a.documentNumber}: {a.grandTotal.toString()}
+          {a.type} {a.documentNumber}: {<Money value={a.grandTotal}/>}
         </p>
       ))}
       {x.allocations.map((a) => (
-        <p key={a.id}>Allocated payment: {a.amount.toString()}</p>
+        <p key={a.id}>Allocated payment: {<Money value={a.amount}/>}</p>
       ))}
       {x.advanceApplications.map((a) => (
         <p key={a.id}>
-          Applied advance: {a.amount.toString()} on{" "}
-          {a.applicationDate.toLocaleDateString()}
+          Applied advance: {<Money value={a.amount}/>} on{" "}
+          {<AccountDate value={a.applicationDate.toISOString()}/>}
         </p>
       ))}
       {controls.canManage &&
@@ -207,7 +211,7 @@ export default async function Page({
                 />
                 <span>
                   {a.settlementNumber} · Available{" "}
-                  {a.remainingAmount.toString()}{" "}
+                  {<Money value={a.remainingAmount}/>}{" "}
                 </span>
                 <label>
                   Amount{" "}
@@ -256,8 +260,8 @@ export default async function Page({
       {x.reminders.map((r) => (
         <div key={r.id}>
           <p>
-            {r.status} · {r.remindAt.toLocaleString()} · {r.message}
-            {r.sentAt && ` · Sent ${r.sentAt.toLocaleString()}`}
+            {r.status} · <AccountTimestamp value={r.remindAt}/> · {r.message}
+            {r.sentAt && <> · Sent <AccountTimestamp value={r.sentAt}/></>}
           </p>
           {controls.canRemind && r.status === "PENDING" && (
             <form action={reminderStatusAction}>

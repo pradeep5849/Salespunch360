@@ -1,6 +1,8 @@
 import{describe,expect,it,vi}from"vitest";
 import{executeSave,INITIAL_SAVE_FEEDBACK,SAVE_FEEDBACK_DISMISS_MS}from"./save-feedback";
 describe("shared Account save feedback",()=>{
+ it("uses safe structured branch failures without reporting success",async()=>{const data=new FormData();data.set("code","PRIMARY");const result=await executeSave(async()=>({saveError:"DUPLICATE_BRANCH_CODE"}),data,5,{DUPLICATE_BRANCH_CODE:"Choose another branch code."});expect(result).toEqual({kind:"error",message:"Choose another branch code.",id:5});expect(data.get("code")).toBe("PRIMARY")});
+ it("does not expose unrecognized structured error details",async()=>{const result=await executeSave(async()=>({saveError:"private database detail"}),new FormData(),6);expect(result.kind).toBe("error");expect(result.message).not.toContain("private")});
  it("starts without premature success",()=>expect(INITIAL_SAVE_FEEDBACK).toEqual({kind:"idle",message:"",id:0}));
  it("shows success only after the async action resolves",async()=>{let resolve!:()=>void;const action=vi.fn(()=>new Promise<void>(done=>{resolve=done})),pending=executeSave(action,new FormData(),1);expect(action).toHaveBeenCalledOnce();let settled=false;pending.then(()=>{settled=true});await Promise.resolve();expect(settled).toBe(false);resolve();await expect(pending).resolves.toMatchObject({kind:"success",message:"Saved successfully"})});
  it("maps failures to safe error feedback without success",async()=>{const result=await executeSave(async()=>{throw new Error("database secret")},new FormData(),2);expect(result).toEqual({kind:"error",message:"Unable to save. Check the details and try again.",id:2});expect(result.message).not.toContain("secret")});

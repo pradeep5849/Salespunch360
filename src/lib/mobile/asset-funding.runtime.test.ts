@@ -1,0 +1,17 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const m=vi.hoisted(()=>({permission:vi.fn(),actor:vi.fn(),entitlement:vi.fn(),scope:vi.fn(),options:vi.fn(),allocate:vi.fn(),confirm:vi.fn(),cancel:vi.fn()}));
+vi.mock("@/lib/auth/permissions",()=>({canUsePermission:m.permission}));
+vi.mock("./account-transactions",()=>({mobileAccountActor:m.actor}));
+vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:m.entitlement}));
+vi.mock("@/lib/account/money-context",()=>({moneyReadContext:m.scope}));
+vi.mock("@/lib/account/owner-asset-funding",async importOriginal=>({...await importOriginal<typeof import("@/lib/account/owner-asset-funding")>(),ownerAssetFundingOptionsForActor:m.options,allocateOwnerAssetFundingForActor:m.allocate,confirmAssetFundingForActor:m.confirm,cancelOwnerAssetFundingForActor:m.cancel,ownerFundingRepaymentOptionsForActor:vi.fn()}));
+import {mobileAssetFundingMutation,mobileAssetFundingOptions} from "./account-money";
+const principal={id:"user",companyId:"company",productEdition:"SALESPUNCH360_ACCOUNT"} as import("./auth").MobileAppPrincipal;
+const actor={id:"user",companyId:"company"};
+beforeEach(()=>{vi.resetAllMocks();m.actor.mockReturnValue(actor);m.permission.mockReturnValue(true);m.entitlement.mockResolvedValue(undefined);m.scope.mockResolvedValue({actor:{...actor,branchIds:["branch"]},context:{mode:"BRANCH"}});m.options.mockResolvedValue({summary:[]});m.allocate.mockResolvedValue({id:"funding"})});
+it("applies canonical selected-branch context before querying options",async()=>{await mobileAssetFundingOptions(principal,{q:"owner",scope:"all"});expect(m.scope).toHaveBeenCalledWith(actor,{scope:"all"});expect(m.options).toHaveBeenCalledWith({...actor,branchIds:["branch"]},"owner")});
+it("rejects unknown scope keys instead of accepting a caller company",async()=>{await expect(mobileAssetFundingOptions(principal,{companyId:"foreign"})).rejects.toThrow();expect(m.options).not.toHaveBeenCalled()});
+it("enforces read/write permissions before services",async()=>{m.permission.mockReturnValue(false);await expect(mobileAssetFundingOptions(principal)).rejects.toThrow("MOBILE_FORBIDDEN");await expect(mobileAssetFundingMutation(principal,{operation:"ALLOCATE",payload:{}})).rejects.toThrow("MOBILE_FORBIDDEN");expect(m.options).not.toHaveBeenCalled();expect(m.allocate).not.toHaveBeenCalled();expect(m.entitlement).not.toHaveBeenCalled()});
+it("checks subscription write entitlement before allocations",async()=>{m.entitlement.mockRejectedValue(new Error("READ_ONLY"));await expect(mobileAssetFundingMutation(principal,{operation:"ALLOCATE",payload:{}})).rejects.toThrow("READ_ONLY");expect(m.allocate).not.toHaveBeenCalled()});
+it.each(["ALLOCATE","CONFIRM","CANCEL"])("routes %s to the shared guarded actor service",async operation=>{const payload={requestKey:"stable"};await mobileAssetFundingMutation(principal,{operation,payload});expect(({ALLOCATE:m.allocate,CONFIRM:m.confirm,CANCEL:m.cancel})[operation]).toHaveBeenCalledWith(actor,payload)});
+it("never dispatches unknown mutation operations",async()=>{await expect(mobileAssetFundingMutation(principal,{operation:"DELETE",payload:{}})).rejects.toThrow();expect(m.allocate).not.toHaveBeenCalled();expect(m.cancel).not.toHaveBeenCalled()});

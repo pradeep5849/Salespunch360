@@ -1,21 +1,30 @@
+import {AccountDate} from "@/components/account/display-preferences";
 import { inventoryContext } from "@/lib/account/inventory-context";
 import type { ProjectActor } from "@/lib/account/projects";
 import { inventorySnapshotForActor } from "@/lib/account/inventory";
 import { ItemsScreen } from "@/components/account/items-screen";
 import { requirePermission } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
 export const metadata = { title: "Items | SalesPunch360" };
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string; scope?: string }>;
+  searchParams: Promise<{
+    branchId?: string;
+    scope?: string;
+    type?: string;
+    view?: string;
+    asOf?: string;
+  }>;
 }) {
   const actor = await requirePermission("ACCOUNT_STOCK"),
     companyId = actor.companyId!;
+  const query = await searchParams;
   const scoped = await inventoryContext(
     { ...actor, companyId } as ProjectActor,
-    await searchParams,
+    { branchId: query.branchId, scope: query.scope, asOf: query.asOf },
   );
   const [products, services, stock, settings, categories] = await Promise.all([
     db.accountProduct.findMany({
@@ -45,15 +54,18 @@ export default async function Page({
       quantityDecimals?: number;
     } | null) ?? {};
   if (itemSettings.enabled === false) notFound();
-  const quantities = new Map<string, number>();
+  const quantities = new Map<string, Prisma.Decimal>();
   stock.forEach((row) =>
     quantities.set(
       row.productId,
-      (quantities.get(row.productId) ?? 0) + Number(row.quantity),
+      (quantities.get(row.productId) ?? new Prisma.Decimal(0)).add(
+        row.quantity,
+      ),
     ),
   );
   const items = [
     ...products.map((p) => ({
+      hasPhoto:!!p.photoObjectKey,
       id: p.id,
       type: "PRODUCT" as const,
       name: p.name,
@@ -62,9 +74,10 @@ export default async function Page({
       category: p.category?.name ?? null,
       salePrice: p.salePrice?.toString() ?? "0",
       purchasePrice: p.costPrice?.toString() ?? "0",
-      stock: quantities.get(p.id) ?? 0,
+      stock: quantities.get(p.id)?.toString() ?? "0",
     })),
     ...services.map((s) => ({
+      hasPhoto:!!s.photoObjectKey,
       id: s.id,
       type: "SERVICE" as const,
       name: s.name,
@@ -80,12 +93,27 @@ export default async function Page({
     <>
       <p>
         Company product/service catalog · Stock as of{" "}
-        {scoped.asOf?.toISOString().slice(0, 10) ?? "today"}:{" "}
+        {scoped.asOf ? <AccountDate value={scoped.asOf.toISOString()}/> : "today"}:{" "}
         {scoped.context.mode === "COMPANY"
           ? "company consolidated"
           : scoped.context.branchName}
       </p>
       <ItemsScreen
+        key={`${query.view ?? "quick"}-${query.type ?? "all"}`}
+        catalogMode={query.view === "catalog"}
+        contextQuery={new URLSearchParams({
+          ...(scoped.context.mode === "COMPANY"
+            ? { scope: "all" }
+            : { branchId: scoped.context.branchId }),
+          ...(query.asOf ? { asOf: query.asOf } : {}),
+        }).toString()}
+        initialType={
+          query.type === "PRODUCT" || query.type === "SERVICE"
+            ? query.type
+            : query.view === "catalog"
+              ? "PRODUCT"
+              : undefined
+        }
         quantityDecimals={itemSettings.quantityDecimals ?? 2}
         canConfigure={actor.accountRole === "ACCOUNT_ADMIN"}
         items={items}

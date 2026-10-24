@@ -50,3 +50,19 @@ describe("A9 expenses", () => {
     );
   });
 });
+it("requires a calendar payment date and stable recurring payment identity", async () => {
+  const { recurringPaymentInput } = await import("./expenses");
+  const input = {
+    requestKey: "11111111-1111-4111-8111-111111111111",
+    moneyAccountId: "22222222-2222-4222-8222-222222222222",
+    paymentDate: "2026-10-12",
+  };
+  expect(recurringPaymentInput.parse(input)).toEqual(input);
+  expect(
+    recurringPaymentInput.safeParse({ ...input, paymentDate: "2026-02-30" })
+      .success,
+  ).toBe(false);
+  expect(
+    recurringPaymentInput.safeParse({ ...input, requestKey: "" }).success,
+  ).toBe(false);
+});

@@ -22,11 +22,22 @@ const securityHeaders = [
     : []),
 ];
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/*": ["./assets/fonts/*.ttf"] },
+  experimental: { serverActions: { bodySizeLimit: "6mb" } },
   agentRules: false,
   poweredByHeader: false,
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      {
+        source: "/workspace/account/transactions/new",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=(self)",
+          },
+        ],
+      },
       {
         source: "/workspace/:path*",
         headers: [

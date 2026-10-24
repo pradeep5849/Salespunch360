@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.sales
 
+import com.salespunch360.mobile.ui.account.accountMoney
+import com.salespunch360.mobile.ui.account.accountDate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,21 +20,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.AccountSalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, vm: AccountSalesViewModel = viewModel()) {
+fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, initialDocumentId:String?=null, initialDuplicateId:String?=null, initialQuotationId:String?=null,initialQuotationRevisionId:String?=null,initialOrderId:String?=null, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
-    var initialEditorOpened by remember(initialType, initialProjectId, projectMode) { mutableStateOf(false) }
-    LaunchedEffect(initialType, initialProjectId, projectMode, state.loading) {
-        if (!initialEditorOpened && initialType == "SALES_INVOICE" && !state.loading && state.options.types.isNotEmpty()) {
+    LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
+    LaunchedEffect(initialType,state.options.types) { if (initialType != null && initialType!="SALES_INVOICE" && state.options.types.isNotEmpty()) vm.filter(initialType) }
+    var initialEditorOpened by remember(initialType, initialProjectId, projectMode,initialOrderId,initialDuplicateId,initialQuotationId,initialQuotationRevisionId) { mutableStateOf(false) }
+    LaunchedEffect(initialType, initialProjectId, projectMode,initialOrderId,initialDuplicateId,initialQuotationId,initialQuotationRevisionId, state.loading) {
+        if (!initialEditorOpened && (initialType == "SALES_INVOICE"||initialQuotationId!=null) && !state.loading && state.options.types.isNotEmpty()) {
             initialEditorOpened = true
-            vm.newDocument(initialType, initialProjectId, projectMode)
+            if(initialOrderId!=null)vm.prepareOrder(initialOrderId) else if(initialQuotationId!=null&&initialQuotationRevisionId!=null&&initialType!=null)vm.convertQuotation(initialQuotationId,initialQuotationRevisionId,initialType) else if(initialDuplicateId!=null)vm.duplicateSale(initialDuplicateId) else if(initialType!=null)vm.newDocument(initialType, initialProjectId, projectMode)
         }
     }
+    DisposableEffect(initialOrderId,initialQuotationId,initialQuotationRevisionId){onDispose{vm.cancelQuotationConversion()}}
     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+        if(initialQuotationId!=null&&initialQuotationRevisionId!=null&&initialType!=null&&state.error!=null&&state.editor==null)TextButton(enabled=!state.loading,onClick={vm.convertQuotation(initialQuotationId,initialQuotationRevisionId,initialType)}){Text("Retry conversion")}
+        if(initialOrderId!=null&&state.error!=null&&state.editor==null)TextButton(enabled=!state.loading,onClick={vm.prepareOrder(initialOrderId)}){Text("Reload order")}
+        if(initialDuplicateId!=null&&state.error!=null&&state.editor==null)TextButton(enabled=!state.loading,onClick={vm.duplicateSale(initialDuplicateId)}){Text("Retry duplicate")}
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(state.query, vm::search, label = { Text("Search number or customer") }, singleLine = true, modifier = Modifier.weight(1f))
             IconButton(onClick = vm::refresh) { Icon(Icons.Default.Refresh, "Refresh") }
@@ -54,15 +62,16 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
                     Column {
                         Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=11.dp),horizontalArrangement=Arrangement.SpaceBetween){
                             Column(Modifier.weight(1f)){Text(row.party,fontWeight=FontWeight.SemiBold);Text(if(isSale)paymentLabel else row.type.replace('_',' '),style=MaterialTheme.typography.labelSmall,color=if(row.paymentStatus=="PAID")MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)}
-                            Column{Text("#${row.number}",fontWeight=FontWeight.Medium,style=MaterialTheme.typography.bodySmall);Text(row.date,style=MaterialTheme.typography.labelSmall)}
+                            Column{Text("#${row.number}",fontWeight=FontWeight.Medium,style=MaterialTheme.typography.bodySmall);Text(accountDate(row.date),style=MaterialTheme.typography.labelSmall)}
                         }
-                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text("₹${row.total}",fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text("₹${row.balance.ifBlank{row.total}}",fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
+                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.total),fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.balance.ifBlank{row.total}),fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
                     }
                 }
             }
         }
     }
     state.editor?.let { SalesDocumentEditor(it, state.options, state.saving, vm::editDraft, vm::addLine, vm::updateLine, vm::removeLine, vm::closeEditor, vm::save,vm::updateInvoicePrefix,vm::createSaleCustomer,navigate) }
-    state.detail?.let { SalesDocumentDetail(it, state.saving, vm::closeDetail, vm::requestPost, vm::editSavedSale, vm::deleteSavedSale) }
-    state.postingId?.let { AlertDialog(onDismissRequest = vm::cancelPost,title = { Text("Post document?") },text = { Text("Posting is authoritative and may create ledger and stock movements. This requires server confirmation.") },confirmButton = { Button(onClick = vm::confirmPost) { Text("Post") } },dismissButton = { TextButton(onClick = vm::cancelPost) { Text("Cancel") } }) }
+    state.detail?.let { SalesDocumentDetail(it, state.saving, vm::closeDetail, vm::requestPost, vm::editSavedSale, vm::deleteSavedSale,navigate) }
+    state.salePriceDocumentId?.let{SalePriceConfirmation(it,vm::closePriceConfirmation)}
+    state.postingId?.let { AlertDialog(onDismissRequest = vm::cancelPost,title = { Text(if(state.detail?.str("type")=="SALES_ORDER")"Confirm Sale Order?" else "Post document?") },text = { Text(if(state.detail?.str("type")=="SALES_ORDER")"Confirm this order and close its linked estimate. No accounting entry is posted for an order." else "Posting is authoritative and may create ledger and stock movements. This requires server confirmation.") },confirmButton = { Button(onClick = vm::confirmPost) { Text(if(state.detail?.str("type")=="SALES_ORDER")"Confirm" else "Post") } },dismissButton = { TextButton(onClick = vm::cancelPost) { Text("Cancel") } }) }
 }

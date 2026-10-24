@@ -1,3 +1,4 @@
+import { EFFECTIVE_SETTLEMENT } from "./settlement-policy";
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -20,7 +21,7 @@ import {
 
 export const projectCloseInput = z
   .object({
-    billingServiceId: z.string().uuid().optional(),
+    billingServiceId: z.string().guid().optional(),
     postingDate: z.coerce.date().optional(),
   })
   .strict();
@@ -31,7 +32,7 @@ export async function closeAndBillProjectForActor(
   projectId: string,
   raw: unknown = {},
 ) {
-  projectId = z.string().uuid().parse(projectId);
+  projectId = z.string().guid().parse(projectId);
   const input = projectCloseInput.parse(raw);
   await requireProjectFunction(actor);
   const branches = await authorizedProjectBranchIds(actor);
@@ -166,7 +167,7 @@ export async function closeAndBillProjectForActor(
           .map((x) => x.id);
         if (finalInvoiceId) targets.push(finalInvoiceId);
         const advances = await tx.accountSettlement.findMany({
-          where: {
+          where: { ...EFFECTIVE_SETTLEMENT,
             companyId: actor.companyId,
             projectId,
             branchId: project.branchId,

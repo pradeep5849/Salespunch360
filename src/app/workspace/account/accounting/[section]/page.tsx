@@ -1,3 +1,4 @@
+import {AccountDate} from "@/components/account/display-preferences";
 import { ManualJournalForm } from "@/components/account/manual-journal-form";
 import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
 import { SaveSubmitButton } from "@/components/account/save-feedback";
@@ -108,7 +109,7 @@ export default async function Page({
                 <option value="">Select a journal</option>
                 {opening.journals.map((x) => (
                   <option key={x.id} value={x.id}>
-                    {x.journalNumber} · {x.entryDate.toISOString().slice(0, 10)}
+                    {x.journalNumber} · {<AccountDate value={x.entryDate.toISOString()}/>}
                   </option>
                 ))}
               </select>
@@ -232,7 +233,7 @@ export default async function Page({
                 {x.journalNumber} · {x.status}
               </strong>
               <p>
-                {x.entryDate.toISOString().slice(0, 10)} · {x.narration}
+                {<AccountDate value={x.entryDate.toISOString()}/>} · {x.narration}
               </p>
             </article>
           ))}

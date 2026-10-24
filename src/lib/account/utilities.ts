@@ -1,4 +1,6 @@
-import { createHash } from "node:crypto";
+import {collectBackupPrivateFiles,verifyBackupPrivateFiles} from "./backup-private-files";
+import {privateStorage} from "@/lib/storage";
+import { createHash,randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -482,41 +484,194 @@ export async function createAccountBackupForActor(actor: {
   id: string;
   companyId: string;
   accountRole: string | null;
-}) {
+},archive=false,includePrivateFiles=false) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const companyId = actor.companyId!;
-  const company = await db.company.findUniqueOrThrow({
-    where: { id: companyId },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      createdAt: true,
-      financialYears: true,
-      customers: {
-        select: {
-          id: true,
-          branchId: true,
-          name: true,
-          phone: true,
-          email: true,
-          gstin: true,
-          isActive: true,
-        },
-      },
-      vendors: true,
-      accountProducts: true,
-      projects: true,
-      ledgerAccounts: true,
-    },
-  });
+  // Repeatable read keeps invoices, payments and ledger balances from different moments out of one bundle.
+  const company = await db.$transaction(async tx => {
+    const identity=await tx.company.findUniqueOrThrow({where:{id:companyId},select:{
+      id:true,name:true,slug:true,createdAt:true,primaryPhone:true,contactEmail:true,gstin:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,logoObjectKey:true,
+      financialYears:true,
+      customers:true,
+      vendors:true,
+      accountProducts:true,
+      accountServices:true,
+      accountUnits:true,
+      accountCategories:true,
+      workCategories:true,
+      workPackages:true,
+      ledgerAccounts:true,
+      costCentres:true,
+      branches:true,
+      numberingSeries:true,
+      accountSettings:true,
+      journalEntries:true,
+      journalLines:true,
+      accountingPeriodLocks:true,
+      customFieldDefinitions:true,
+      customFieldValues:true,
+      printTemplates:true,
+      termsTemplates:true,
+      commercialDocuments:true,
+      settlements:true,
+      settlementAllocations:true,
+      partyOpeningBalances:true,
+      advanceApplications:true,
+      paymentReminders:true,
+      projects:true,
+      projectMembers:true,
+      projectBudgetLines:true,
+      projectMilestones:true,
+      projectTasks:true,
+      projectDocuments:true,
+      quotationDocuments:true,
+      quotationRevisions:true,
+      quotationLines:true,
+      quotationAdjustments:true,
+      quotationPaymentSchedules:true,
+      authorizedSignatureVersions:true,
+      recycleBinRecords:true,
+      users:{select:{id:true,name:true,email:true,isActive:true,accountRole:true,branchAccessScope:true}},
+    }});
+    const [
+      commercialDocumentLine,
+      purchaseLineAllocation,
+      openingBalanceAllocation,
+      serviceReminderCompletion,
+      projectChangeOrder,
+      projectMaterialMovement,
+      quotationAttachment,
+      commercialAttachment,
+      accountOperationalAudit,
+      saleReturnRevision,
+      saleRevisionCredit,
+      saleRevisionCreditLine,
+      saleLifecycleSnapshot,
+      expenseItem,
+      expenseCategory,
+      expenseTransaction,
+      recurringExpenseTemplate,
+      expenseAttachment,
+      moneyAccount,
+      moneyTransfer,
+      moneyTransferImage,
+      cheque,
+      ownerFinancialAccount,
+      loan,
+      loanOperation,
+      accountReportFavourite,
+      loanPayment,
+      ownerTransaction,
+      assetOwnerFunding,
+      ownerAssetFundingReturn,
+      assetOwnerFundingCancellation,
+      assetFundingConfirmation,
+      warehouse,
+      inventoryBatch,
+      inventorySerialNumber,
+      stockMovement,
+      productPrice,
+      asset,
+      assetAssignmentHistory,
+    ]=await Promise.all([
+      tx.commercialDocumentLine.findMany({where:{companyId}}),
+      tx.purchaseLineAllocation.findMany({where:{companyId}}),
+      tx.openingBalanceAllocation.findMany({where:{companyId}}),
+      tx.serviceReminderCompletion.findMany({where:{companyId}}),
+      tx.projectChangeOrder.findMany({where:{companyId}}),
+      tx.projectMaterialMovement.findMany({where:{companyId}}),
+      tx.quotationAttachment.findMany({where:{companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]}),
+      tx.commercialAttachment.findMany({where:{companyId},orderBy:[{documentId:"asc"},{position:"asc"}]}),
+      tx.accountOperationalAudit.findMany({where:{companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]}),
+      tx.saleReturnRevision.findMany({where:{companyId}}),
+      tx.saleRevisionCredit.findMany({where:{companyId}}),
+      tx.saleRevisionCreditLine.findMany({where:{companyId}}),
+      tx.saleLifecycleSnapshot.findMany({where:{companyId}}),
+      tx.expenseItem.findMany({where:{companyId},orderBy:[{name:"asc"},{id:"asc"}]}),
+      tx.expenseCategory.findMany({where:{companyId}}),
+      tx.expenseTransaction.findMany({where:{companyId}}),
+      tx.recurringExpenseTemplate.findMany({where:{companyId}}),
+      tx.expenseAttachment.findMany({where:{companyId}}),
+      tx.moneyAccount.findMany({where:{companyId}}),
+      tx.moneyTransfer.findMany({where:{companyId}}),
+      tx.moneyTransferImage.findMany({where:{companyId}}),
+      tx.cheque.findMany({where:{companyId}}),
+      tx.ownerFinancialAccount.findMany({where:{companyId}}),
+      tx.loan.findMany({where:{companyId}}),
+      tx.loanOperation.findMany({where:{companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]}),
+      tx.accountReportFavourite.findMany({where:{companyId},orderBy:[{userId:"asc"},{reportKey:"asc"}]}),
+      tx.loanPayment.findMany({where:{companyId}}),
+      tx.ownerTransaction.findMany({where:{companyId}}),
+      tx.assetOwnerFunding.findMany({where:{companyId}}),
+      tx.ownerAssetFundingReturn.findMany({where:{companyId}}),
+      tx.assetOwnerFundingCancellation.findMany({where:{companyId}}),
+      tx.assetFundingConfirmation.findMany({where:{companyId}}),
+      tx.warehouse.findMany({where:{companyId}}),
+      tx.inventoryBatch.findMany({where:{companyId}}),
+      tx.inventorySerialNumber.findMany({where:{companyId}}),
+      tx.stockMovement.findMany({where:{companyId}}),
+      tx.productPrice.findMany({where:{companyId}}),
+      tx.asset.findMany({where:{companyId}}),
+      tx.assetAssignmentHistory.findMany({where:{companyId}}),
+    ]);
+    // Financial source snapshots are immutable; these image references remain live.
+    const partyTransferPhotos=accountOperationalAudit.flatMap(row=>{
+      const metadata=row.metadata as Record<string,unknown>|null;
+      return row.entityType==="PARTY_TRANSFER"&&row.eventType==="PARTY_TRANSFER_POSTED"&&typeof metadata?.photoObjectKey==="string"?[{sourceId:row.entityId,photoObjectKey:metadata.photoObjectKey,expectedSha256:metadata.photoSha256}]:[];
+    });
+    return {...identity,
+      partyTransferPhotos,
+      commercialDocumentLine,
+      purchaseLineAllocation,
+      openingBalanceAllocation,
+      serviceReminderCompletion,
+      projectChangeOrder,
+      projectMaterialMovement,
+      quotationAttachment,
+      commercialAttachment,
+      accountOperationalAudit,
+      saleReturnRevision,
+      saleRevisionCredit,
+      saleRevisionCreditLine,
+      saleLifecycleSnapshot,
+      expenseItem,
+      expenseCategory,
+      expenseTransaction,
+      recurringExpenseTemplate,
+      expenseAttachment,
+      moneyAccount,
+      moneyTransfer,
+      moneyTransferImage,
+      cheque,
+      ownerFinancialAccount,
+      loan,
+      loanOperation,
+      accountReportFavourite,
+      loanPayment,
+      ownerTransaction,
+      assetOwnerFunding,
+      ownerAssetFundingReturn,
+      assetOwnerFundingCancellation,
+      assetFundingConfirmation,
+      warehouse,
+      inventoryBatch,
+      inventorySerialNumber,
+      stockMovement,
+      productPrice,
+      asset,
+      assetAssignmentHistory,
+    };
+  },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:60000});
+  const privateFiles=includePrivateFiles?await collectBackupPrivateFiles(companyId,company,privateStorage()):undefined;
+  if(privateFiles)verifyBackupPrivateFiles(companyId,company,privateFiles);
   const manifest = {
     format: "SalesPunch360 Account Backup",
-    formatVersion: 1,
+    formatVersion: includePrivateFiles?3:2,
     generatedAt: new Date().toISOString(),
     company: { id: company.id, name: company.name },
     appVersion: process.env.npm_package_version ?? "unknown",
     recordCounts: {
+      ...Object.fromEntries(Object.entries(company).filter(([,value])=>Array.isArray(value)).map(([key,value])=>[key,(value as unknown[]).length])),
       customers: company.customers.length,
       vendors: company.vendors.length,
       items: company.accountProducts.length,
@@ -524,10 +679,12 @@ export async function createAccountBackupForActor(actor: {
       ledgers: company.ledgerAccounts.length,
       financialYears: company.financialYears.length,
     },
+    uploadedFiles: includePrivateFiles?"Live typed private-file references are embedded with SHA-256 checksums. Historical audit/recycle metadata references are excluded; retain provider storage backups for full historical recovery.":"Uploaded files and signatures are referenced by private object keys; retain the corresponding private-storage backup.",
+    privateFileCount: privateFiles?.length??0,
     recovery:
       "Use authenticated imports and Recycle Bin for application recovery. Provider PostgreSQL backups remain required for disaster recovery.",
   };
-  const bundle = { manifest, data: company },
+  const bundle = { manifest, data: company, ...(privateFiles?{privateFiles}:{}) },
     bytes = new TextEncoder().encode(
       JSON.stringify(
         bundle,
@@ -536,19 +693,16 @@ export async function createAccountBackupForActor(actor: {
       ),
     ),
     checksum = createHash("sha256").update(bytes).digest("hex");
-  const record = await db.accountBackupRecord.create({
-    data: { companyId, generatedById: actor.id, manifest, checksum },
-  });
-  await db.accountingAuditEvent.create({
-    data: {
-      companyId,
-      actorUserId: actor.id,
-      eventType: "BACKUP_GENERATED",
-      entityType: "ACCOUNT_BACKUP",
-      entityId: record.id,
-      metadata: { checksum, recordCounts: manifest.recordCounts },
-    },
-  });
+  const backupId=randomUUID(),objectKey=`companies/${companyId}/account-backups/${backupId}.json`;
+  if(archive)await privateStorage().put(objectKey,Buffer.from(bytes));
+  let record;
+  try{
+    record=await db.$transaction(async tx=>{
+      const created=await tx.accountBackupRecord.create({data:{id:backupId,companyId,generatedById:actor.id,manifest:archive?{...manifest,objectKey}:manifest,checksum}});
+      await tx.accountingAuditEvent.create({data:{companyId,actorUserId:actor.id,eventType:"BACKUP_GENERATED",entityType:"ACCOUNT_BACKUP",entityId:created.id,metadata:{checksum,recordCounts:manifest.recordCounts}}});
+      return created;
+    });
+  }catch(error){if(archive)await privateStorage().delete(objectKey).catch(()=>undefined);throw error}
   return {
     fileName: `salespunch360-${company.slug}-${record.id}.json`,
     bytes,
@@ -575,8 +729,9 @@ export async function restoreMaster(recycleId: string) {
     recycleId,
   );
 }
-export async function createAccountBackup() {
+export async function createAccountBackup(includePrivateFiles=false) {
   return createAccountBackupForActor(
     (await requirePermissionForMutation("ACCOUNT_SETTINGS")) as never,
+    false,includePrivateFiles,
   );
 }

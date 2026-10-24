@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { expect, test } from "@playwright/test";
 
+// Network-fault scenarios need observable browser requests; normal PWA cases remain enabled.
+const networkTest = test.extend({ serviceWorkers: "block" });
 const db = new PrismaClient(),
   companyId = randomUUID(),
   branchId = randomUUID(),
@@ -70,59 +72,62 @@ test.afterAll(async () => {
   await db.$disconnect();
 });
 
-test("login offline retry retains credentials and confirms session before another attempt", async ({
-  page,
-}) => {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  let intercepted = false;
-  await page.route("**/sign-in", async (route) => {
-    if (route.request().method() === "POST" && !intercepted) {
-      intercepted = true;
-      await route.abort("internetdisconnected");
-    } else await route.continue();
-  });
-  await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Connection interrupted" }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Email", { exact: true })).toHaveValue(email);
-  await expect(page.getByLabel("Password", { exact: true })).toHaveValue(
-    password,
-  );
-  await expect(
-    page.getByRole("button", { name: "Sign In", exact: true }),
-  ).toBeEnabled();
-  await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
-});
-test("lost login body revalidates the established cookie without another session rotation", async ({
-  page,
-}) => {
-  await page.goto("/sign-in");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  let lost = false;
-  await page.route("**/sign-in", async (route) => {
-    if (route.request().method() === "POST" && !lost) {
-      lost = true;
-      const response = await route.fetch();
-      await route.fulfill({
-        response,
-        body: "invalid interrupted server-action response",
-      });
-    } else await route.continue();
-  });
-  await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Connection interrupted" }),
-  ).toBeVisible();
-  const version = (await db.user.findUniqueOrThrow({ where: { id: userId } }))
-    .sessionVersion;
-  await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
-  expect(
-    (await db.user.findUniqueOrThrow({ where: { id: userId } })).sessionVersion,
-  ).toBe(version);
-});
+networkTest(
+  "login offline retry retains credentials and confirms session before another attempt",
+  async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    let intercepted = false;
+    await page.route("**/sign-in", async (route) => {
+      if (route.request().method() === "POST" && !intercepted) {
+        intercepted = true;
+        await route.abort("internetdisconnected");
+      } else await route.continue();
+    });
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Connection interrupted" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Email", { exact: true })).toHaveValue(email);
+    await expect(page.getByLabel("Password", { exact: true })).toHaveValue(
+      password,
+    );
+    await expect(
+      page.getByRole("button", { name: "Sign In", exact: true }),
+    ).toBeEnabled();
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/);
+  },
+);
+networkTest(
+  "lost login body revalidates the established cookie without another session rotation",
+  async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    let lost = false;
+    await page.route("**/sign-in", async (route) => {
+      if (route.request().method() === "POST" && !lost) {
+        lost = true;
+        const response = await route.fetch();
+        await route.fulfill({
+          response,
+          body: "invalid interrupted server-action response",
+        });
+      } else await route.continue();
+    });
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Connection interrupted" }),
+    ).toBeVisible();
+    const version = (await db.user.findUniqueOrThrow({ where: { id: userId } }))
+      .sessionVersion;
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/);
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: userId } }))
+        .sessionVersion,
+    ).toBe(version);
+  },
+);

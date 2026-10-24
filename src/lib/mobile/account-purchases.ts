@@ -2,6 +2,7 @@ import type { CommercialDocumentType } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
+  finalizeNonFinancialDocumentForActor,
   commercialDocumentPolicies,
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
@@ -63,7 +64,11 @@ export async function mobilePurchaseDetail(u: MobileAppPrincipal, id: string) {
     id,
   );
   if (!TYPES.has(x.type)) throw new Error("MOBILE_FORBIDDEN");
-  return x;
+  return {
+    ...x,
+    canPost: x.status === "DRAFT" && ["PURCHASE_BILL", "DEBIT_NOTE"].includes(x.type) && canUsePermission(mobileAccountActor(u), u.productEdition, "ACCOUNT_JOURNAL_POST"),
+    canConfirmOrder: x.status === "DRAFT" && x.type === "PURCHASE_ORDER" && canUsePermission(mobileAccountActor(u), u.productEdition, "ACCOUNT_PURCHASE_ENTRY"),
+  };
 }
 
 export async function mobileCreatePurchase(
@@ -182,4 +187,10 @@ export async function mobileVendorPaymentContext(u: MobileAppPrincipal) {
       .filter((x) => x.outstanding !== "0"),
     payments,
   };
+}
+
+export async function mobileConfirmPurchaseOrder(u: MobileAppPrincipal, id: string) {
+  await assertOperationalWrite(u.companyId);
+  const actor = permit(u, "ACCOUNT_PURCHASE_ENTRY");
+  return finalizeNonFinancialDocumentForActor(actor, {documentId: id});
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
+import {ACCOUNT_REPORT_KEYS} from "../account/reports/catalogue";
 const read = (p: string) => fs.readFileSync(p, "utf8");
 describe("native accounting and reports boundaries", () => {
   it("delegates journal posting and reversal to authoritative accounting", () => {
@@ -50,8 +51,10 @@ describe("native accounting and reports boundaries", () => {
       "customers",
       "tax",
       "budget-vs-actual",
+      "loan-statement",
     ])
-      expect(s).toContain(r);
+      expect(ACCOUNT_REPORT_KEYS).toContain(r);
+    expect(s).toContain("ACCOUNT_REPORTS=ACCOUNT_REPORT_KEYS");
     for (const f of ["csv", "xlsx", "pdf"]) expect(ui).toContain(f);
   });
   it("routes accounting and reports only to Compose", () => {

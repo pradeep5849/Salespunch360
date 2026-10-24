@@ -10,15 +10,21 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 
-data class AssetState(val hasMore:Boolean=false,val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val error:String?=null,val message:String?=null)
+data class AssetState(val capitalSummary:JsonObject?=null,val capitalLoading:Boolean=false,val capitalError:String?=null,val hasMore:Boolean=false,val loading:Boolean=false,val saving:Boolean=false,val query:String="",val status:String?=null,val rows:List<JsonObject> = emptyList(),val options:JsonObject=buildJsonObject{},val detail:JsonObject?=null,val editing:JsonObject?=null,val error:String?=null,val message:String?=null)
 class AccountAssetViewModel(app:Application):AndroidViewModel(app){
  private val api=ApiClient(SecureSession(app))
  private val _state=MutableStateFlow(AssetState())
  val state:StateFlow<AssetState> = _state
  private var loadJob:Job?=null
  private var detailJob:Job?=null
- init{load()}
- fun refresh(){_state.value=_state.value.copy(options=buildJsonObject{});load()}
+ init{load();loadCapital()}
+ fun refresh(){_state.value=_state.value.copy(options=buildJsonObject{});load();loadCapital()}
+ private fun loadCapital()=viewModelScope.launch{
+  _state.value=_state.value.copy(capitalLoading=true,capitalError=null)
+  try{val summary=api.ownerCapitalSummary();_state.value=_state.value.copy(capitalLoading=false,capitalSummary=summary)}
+  catch(e:CancellationException){throw e}
+  catch(e:Exception){_state.value=_state.value.copy(capitalLoading=false,capitalSummary=null,capitalError=if(e is ApiException&&e.status==403)null else "Owner capital could not be loaded. Refresh to retry.")}
+ }
  fun load(){loadJob?.cancel();loadJob=viewModelScope.launch{fetch()}}
  private suspend fun fetch(){
   _state.value=_state.value.copy(loading=true,error=null)
@@ -34,7 +40,7 @@ class AccountAssetViewModel(app:Application):AndroidViewModel(app){
  fun search(q:String){_state.value=_state.value.copy(query=q);loadJob?.cancel();loadJob=viewModelScope.launch{delay(250);fetch()}}
  fun filter(s:String?){_state.value=_state.value.copy(status=s);load()}
  fun create(){if(_state.value.saving)return;_state.value=_state.value.copy(detail=null,editing=buildJsonObject{put("requestKey",java.util.UUID.randomUUID().toString())},error=null)}
- fun edit(){if(!_state.value.saving)_state.value=_state.value.copy(editing=_state.value.detail?.get("asset")?.jsonObject,error=null)}
+ fun edit(){if(!_state.value.saving)_state.value=_state.value.copy(editing=_state.value.detail?.get("asset")?.jsonObject?.let{asset->JsonObject(asset+mapOf("customValues" to (_state.value.detail?.get("customValues")?:buildJsonObject{})))},error=null)}
  fun close(){if(!_state.value.saving){detailJob?.cancel();_state.value=_state.value.copy(detail=null,editing=null)}}
  fun open(id:String){detailJob?.cancel();detailJob=viewModelScope.launch{try{val detail=api.asset(id);currentCoroutineContext().ensureActive();_state.value=_state.value.copy(detail=detail)}catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}}}
  fun save(p:JsonObject,saveNew:Boolean=false)=viewModelScope.launch{

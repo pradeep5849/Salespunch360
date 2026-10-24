@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.purchase
+import com.salespunch360.mobile.ui.account.accountDate
 
+import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,7 +29,7 @@ fun VendorPaymentScreen(padding: PaddingValues, vm: VendorPaymentViewModel = vie
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         item { SelectField("Branch", state.branchId, state.branches.map { it.id to it.name }) { id -> vm.update { it.copy(branchId = id, vendorId = "", billId = "") } } }
         item { SelectField("Vendor", state.vendorId, state.vendors.map { it.id to it.name }) { id -> vm.update { it.copy(vendorId = id, billId = "") } } }
-        item { SelectField("Purchase bill", state.billId, bills.map { it.id to "${it.number} · Outstanding ₹${it.outstanding}" }) { id -> val bill = bills.first { it.id == id }; vm.update { it.copy(billId = id, amount = bill.outstanding) } } }
+        item { SelectField("Purchase bill", state.billId, bills.map { it.id to "${it.number} · Outstanding ${accountMoney(it.outstanding)}" }) { id -> val bill = bills.first { it.id == id }; vm.update { it.copy(billId = id, amount = bill.outstanding) } } }
         item { OutlinedTextField(state.amount, { value -> vm.update { it.copy(amount = value) } }, label = { Text("Amount") }) }
         item { OutlinedTextField(state.date, { value -> vm.update { it.copy(date = value) } }, label = { Text("Payment date") }) }
         item { SelectField("Method", state.mode, listOf("CASH" to "Cash", "BANK" to "Bank")) { value -> vm.update { it.copy(mode = value) } } }
@@ -37,7 +39,7 @@ fun VendorPaymentScreen(padding: PaddingValues, vm: VendorPaymentViewModel = vie
         item { Button(onClick = vm::save, enabled = !state.saving && state.billId.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(if (state.saving) "Posting…" else "Post payment") } }
         item { Text("Recent payments", style = MaterialTheme.typography.titleLarge) }
         items(state.history, key = { it.id }) { row ->
-            ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${row.date} · ${row.mode}") }, trailingContent = { Text("₹${row.amount}") })
+            ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${accountDate(row.date)} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) })
         }
     }
 }

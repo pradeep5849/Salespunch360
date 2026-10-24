@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.project
 
+import com.salespunch360.mobile.ui.account.accountDate
+import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -54,10 +56,10 @@ fun ProjectScreen(
                         ProjectMetric("Projects Closed",s.metrics["projectsClosed"]?.jsonPrimitive?.content?:"0",Modifier.weight(1f))
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                        ProjectMetric("Received","₹${s.metrics["received"]?.jsonPrimitive?.content?:"0"}",Modifier.weight(1f))
-                        ProjectMetric("Outstanding","₹${s.metrics["outstanding"]?.jsonPrimitive?.content?:"0"}",Modifier.weight(1f))
+                        ProjectMetric("Received","${accountMoney(s.metrics["received"]?.jsonPrimitive?.content?:"0")}",Modifier.weight(1f))
+                        ProjectMetric("Outstanding","${accountMoney(s.metrics["outstanding"]?.jsonPrimitive?.content?:"0")}",Modifier.weight(1f))
                     }
-                    ProjectMetric("Total Project Value","₹${s.metrics["totalProjectValue"]?.jsonPrimitive?.content?:"0"}",Modifier.fillMaxWidth())
+                    ProjectMetric("Total Project Value","${accountMoney(s.metrics["totalProjectValue"]?.jsonPrimitive?.content?:"0")}",Modifier.fillMaxWidth())
                 }
             }
             item {
@@ -69,7 +71,7 @@ fun ProjectScreen(
                                 Triple("Project Invoice",Icons.Default.ReceiptLong,"/workspace/account/transactions/new?type=SALES_INVOICE&project=select"),
                                 Triple("Move / Return Stock",Icons.Default.Inventory2,"/workspace/account/projects/material"),
                                 Triple("Project Settings",Icons.Default.Settings,"/workspace/account/settings/modules"),
-                                Triple("View All",Icons.Default.Apps,"/workspace/account/projects/actions")
+                                Triple("Project Actions",Icons.Default.Apps,"/workspace/account/projects/actions")
                             ).filter { (label, _, _) ->
                                 val caps = s.options["capabilities"]?.jsonObject
                                 when (label) {
@@ -105,8 +107,8 @@ fun ProjectScreen(
                             Text(workflowStatusLabel(row.str("status")),style=MaterialTheme.typography.labelMedium)
                         }
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                            Text("Value ₹${row.str("finalProjectValue").ifBlank{row.str("projectValue")}}",style=MaterialTheme.typography.bodySmall)
-                            Text("Received ₹${row.str("received").ifBlank{row.str("customerPayments")}}",style=MaterialTheme.typography.bodySmall)
+                            Text("Value ${accountMoney(row.str("finalProjectValue").ifBlank{row.str("projectValue")})}",style=MaterialTheme.typography.bodySmall)
+                            Text("Received ${accountMoney(row.str("received").ifBlank{row.str("customerPayments")})}",style=MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -162,6 +164,9 @@ private fun ProjectEditor(
     var siteContactPhone by remember { mutableStateOf(x.str("siteContactPhone")) }
     var start by remember { mutableStateOf(x.str("startDate").take(10)) }
     var status by remember { mutableStateOf(workflowStatus(x.str("status"))) }
+    val customFields=options.array("customFields").map{it.jsonObject}
+    var customValues by remember(x){mutableStateOf(projectEditorCustomValues(x.str("id"),options))}
+
 
     AlertDialog(
         onDismissRequest = {if(!saving)close()},
@@ -184,6 +189,14 @@ private fun ProjectEditor(
                 item { OutlinedTextField(siteContactName, { siteContactName = it }, label = { Text("Site contact") },enabled=!saving) }
                 item { OutlinedTextField(siteContactPhone, { siteContactPhone = it }, label = { Text("Mobile number") },enabled=!saving) }
                 item { OutlinedTextField(start, { start = it }, label = { Text("Start date") },enabled=!saving) }
+                items(customFields,key={it.str("fieldKey")}){field->
+                    val key=field.str("fieldKey");val current=customValues[key].orEmpty()
+                    val label=field.str("label")+if(field["isRequired"]?.jsonPrimitive?.booleanOrNull==true)" *"else ""
+                    if(field.str("dataType") in listOf("SELECT","BOOLEAN")){
+                        val choices=if(field.str("dataType")=="BOOLEAN")listOf("true" to "Yes","false" to "No")else field.array("options").map{it.jsonPrimitive.content to it.jsonPrimitive.content}
+                        Pick(label,current,choices.map{(id,name)->buildJsonObject{put("id",id);put("name",name)}},enabled=!saving){customValues=customValues+(key to it)}
+                    }else OutlinedTextField(current,{customValues=customValues+(key to it)},label={Text(if(field.str("dataType")=="DATE")"$label (YYYY-MM-DD)"else label)},enabled=!saving,singleLine=field.str("dataType")!="TEXTAREA",isError=field["isRequired"]?.jsonPrimitive?.booleanOrNull==true&&current.isBlank())
+                }
                 if (edit) {
                     item {
                         PickText(
@@ -200,7 +213,7 @@ private fun ProjectEditor(
         },
         confirmButton = {
             Button(
-                enabled = !saving && name.trim().length in 1..240 && (edit || branch.isNotBlank()) &&
+                enabled = !saving && customFields.filter{it["isRequired"]?.jsonPrimitive?.booleanOrNull==true}.all{!customValues[it.str("fieldKey")].isNullOrBlank()} && name.trim().length in 1..240 && (edit || branch.isNotBlank()) &&
                     Regex("^[0-9]{1,16}(\\.[0-9]{1,2})?$").matches(value) && siteName.length<=240 && siteAddress.length<=4000 &&
                     siteContactName.length<=160 && siteContactPhone.length<=30 &&
                     (start.isBlank() || runCatching { java.time.LocalDate.parse(start) }.isSuccess),
@@ -214,6 +227,7 @@ private fun ProjectEditor(
                                 put("branchId", branch)
                             }
                             put("name", name)
+                            putJsonObject("customFields"){customValues.forEach{put(it.key,it.value)}}
                             (if(managerEditable)manager else caps?.str("actorId").orEmpty()).takeIf { it.isNotBlank() }?.let { put("projectManagerId", it) }
                             siteName.takeIf { it.isNotBlank() }?.let { put("siteName", it) }
                             siteAddress.takeIf { it.isNotBlank() }?.let { put("siteAddress", it) }
@@ -258,7 +272,7 @@ private fun ProjectDetail(
                         "${x["customer"]?.jsonObject?.str("name")} · ${x["branch"]?.jsonObject?.str("name")}",
                     )
                 }
-                item { Text("Status ${workflowStatusLabel(x.str("status"))} · Value ₹${x.str("projectValue")}") }
+                item { Text("Status ${workflowStatusLabel(x.str("status"))} · Value ${accountMoney(x.str("projectValue"))}") }
                 x.str("siteAddress").takeIf { it.isNotBlank() }?.let { address ->
                     item { Text("Site: $address") }
                 }
@@ -275,7 +289,7 @@ private fun ProjectDetail(
                 }
                 item {
                     Text(
-                        "Customer received ₹${x.str("customerPayments")} · Vendor paid ₹${x.str("vendorPayments")}",
+                        "Customer received ${accountMoney(x.str("customerPayments"))} · Vendor paid ${accountMoney(x.str("vendorPayments"))}",
                     )
                 }
                 x.str("sourceQuotationId").takeIf { it.isNotBlank() }?.let { quotation ->
@@ -284,19 +298,22 @@ private fun ProjectDetail(
                 costing?.get("metrics")?.jsonObject?.let { metrics ->
                     item { Text("Project report / costing", style = MaterialTheme.typography.titleMedium) }
                     listOf(
-                        "originalValue", "approvedChangeOrders", "contractRevenueBase",
-                        "actualCost", "expenseCost", "contractProfit", "unbilledContractRevenue", "revenue", "profit", "finalProfit",
-                        "advanceReceived", "amountReceived", "accountingReceivable",
-                        "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned", "materialReturnedToInventory", "materialReturnedToVendor",
-                        "materialTransferredIn", "materialTransferredOut", "actualMarginPercent",
-                    ).forEach { key ->
-                        item {
-                            ListItem(
-                                headlineContent = {
-                                    Text(key.replace(Regex("([A-Z])"), " $1"))
-                                },
-                                trailingContent = { Text(metrics.str(key)) },
-                            )
+                        "Contract and revenue" to listOf("originalValue", "approvedChangeOrders", "contractRevenueBase", "revenue", "unbilledContractRevenue"),
+                        "Costs and materials" to listOf("actualCost", "expenseCost", "inventoryMaterialIssued", "materialConsumed", "materialUnused", "materialReturned", "materialReturnedToInventory", "materialReturnedToVendor", "materialTransferredIn", "materialTransferredOut"),
+                        "Payments and outstanding" to listOf("advanceReceived", "amountReceived", "accountingReceivable"),
+                        "Profit" to listOf("contractProfit", "profit", "finalProfit", "actualMarginPercent"),
+                    ).forEach { (title, keys) ->
+                        item { Text(title, style = MaterialTheme.typography.titleSmall) }
+                        keys.forEach { key ->
+                            val value = metrics.str(key)
+                            if (key != "finalProfit" || (value.isNotBlank() && value != "null")) {
+                                item {
+                                    ListItem(
+                                        headlineContent = { Text(key.replace(Regex("([A-Z])"), " $1")) },
+                                        trailingContent = { Text(if (key == "actualMarginPercent") "$value%" else accountMoney(value)) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -311,7 +328,7 @@ private fun ProjectDetail(
                         val row = element.jsonObject
                         Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                             Text("${row.str("changeOrderNumber")} · ${row.str("title")}")
-                            Text("${row.str("status")} · Value ${row.str("valueDelta")} · Estimated cost ${row.str("estimatedCostDelta")}")
+                            Text("${row.str("status")} · Value ${accountMoney(row.str("valueDelta"))} · Estimated cost ${accountMoney(row.str("estimatedCostDelta"))}")
                             if (canEdit && row.str("status")=="DRAFT") {
                                 Row { TextButton(onClick={editChange(row)},enabled=!saving){Text("Edit draft")};TextButton(onClick={transitionChange(row.str("id"),"PENDING_APPROVAL")},enabled=!saving){Text("Submit")} }
                             }
@@ -338,7 +355,13 @@ private fun ProjectDetail(
                             val record = element.jsonObject
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 record.entries.filter { it.key != "id" && it.value != JsonNull }.forEach { (field, value) ->
-                                    Text("${field.replace(Regex("([A-Z])"), " $1")}: ${value.jsonPrimitive.content}")
+                                    val raw = value.jsonPrimitive.content
+                                    val displayed = when(projectReportFieldType(field)) {
+                                        ProjectReportFieldType.MONEY -> accountMoney(raw)
+                                        ProjectReportFieldType.DATE -> accountDate(raw)
+                                        ProjectReportFieldType.TEXT -> raw
+                                    }
+                                    Text("${field.replace(Regex("([A-Z])"), " $1")}: $displayed")
                                 }
                             }
                         }
@@ -351,9 +374,9 @@ private fun ProjectDetail(
                         ListItem(
                             headlineContent = { Text(row.str("name")) },
                             supportingContent = {
-                                Text("Revenue ${row.str("actualRevenue")} · Cost ${row.str("actualCost")}")
+                                Text("Revenue ${accountMoney(row.str("actualRevenue"))} · Cost ${accountMoney(row.str("actualCost"))}")
                             },
-                            trailingContent = { Text("Profit ${row.str("profit")}") },
+                            trailingContent = { Text("Profit ${accountMoney(row.str("profit"))}") },
                         )
                     }
                 }

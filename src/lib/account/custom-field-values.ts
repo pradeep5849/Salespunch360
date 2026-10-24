@@ -85,7 +85,12 @@ export async function saveCustomFieldValuesInTx(
       definition,
       values[definition.fieldKey],
     );
-    if (value === undefined) continue;
+    if (value === undefined || value === "") {
+      if (Object.prototype.hasOwnProperty.call(values, definition.fieldKey)) {
+        await tx.customFieldValue.deleteMany({where:{companyId,definitionId:definition.id,entityType,entityId}});
+      }
+      continue;
+    }
     await tx.customFieldValue.upsert({
       where: {
         companyId_definitionId_entityId: {

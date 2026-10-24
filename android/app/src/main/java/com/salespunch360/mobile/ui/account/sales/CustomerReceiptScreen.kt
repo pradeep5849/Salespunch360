@@ -1,5 +1,7 @@
 package com.salespunch360.mobile.ui.account.sales
+import com.salespunch360.mobile.ui.account.accountDate
 
+import com.salespunch360.mobile.ui.account.accountMoney
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,9 +35,10 @@ fun CustomerReceiptScreen(padding: PaddingValues, initialProjectId:String?=null,
         item { SelectField("Branch", state.branchId, state.branches.map { it.id to it.name }) { id -> vm.update { it.copy(branchId = id, customerId = "", projectId="", invoiceId = "",advanceId="") } } }
         item { SelectField("Customer", state.customerId, customers.map { it.id to it.name }) { id -> vm.update { it.copy(customerId = id,projectId="",invoiceId = "",advanceId="") } } }
         item { SelectField("Project", state.projectId, listOf("" to "Non-project") + projects.map { it.id to it.name }) { id -> vm.update { it.copy(projectId = id, invoiceId = "",advanceId="") } } }
-        if(state.type!="CUSTOMER_ADVANCE") item { SelectField("Invoice", state.invoiceId, invoices.map { it.id to "${it.number} · Outstanding ₹${it.outstanding}" }) { id -> val invoice = invoices.first { it.id == id }; vm.update { it.copy(invoiceId = id, amount = invoice.outstanding) } } }
-        if(state.type=="APPLY_ADVANCE")item{SelectField("Unused advance",state.advanceId,state.advances.filter{it.branchId==state.branchId&&it.customerId==state.customerId&&it.projectId==state.projectId}.map{it.id to "${it.number} · remaining ₹${it.remaining}"}){value->vm.update{it.copy(advanceId=value)}}}
+        if(state.type!="CUSTOMER_ADVANCE") item { SelectField("Invoice", state.invoiceId, invoices.map { it.id to "${it.number} · Outstanding ${accountMoney(it.outstanding)}" }) { id -> val invoice = invoices.first { it.id == id }; vm.update { it.copy(invoiceId = id, amount = invoice.outstanding) } } }
+        if(state.type=="APPLY_ADVANCE")item{SelectField("Unused advance",state.advanceId,state.advances.filter{it.branchId==state.branchId&&it.customerId==state.customerId&&it.projectId==state.projectId}.map{it.id to "${it.number} · remaining ${accountMoney(it.remaining)}"}){value->vm.update{it.copy(advanceId=value)}}}
         item { OutlinedTextField(state.amount, { value -> vm.update { it.copy(amount = value) } }, label = { Text("Amount") }, modifier = Modifier.fillMaxWidth()) }
+        if(state.type=="CUSTOMER_RECEIPT"&&state.discountEnabled)item{OutlinedTextField(state.discountAmount,{value->vm.update{it.copy(discountAmount=value)}},label={Text("Payment Discount")},supportingText={Text("Cash received plus discount settles the invoice.")},modifier=Modifier.fillMaxWidth())}
         item { OutlinedTextField(state.date, { value -> vm.update { it.copy(date = value) } }, label = { Text("Receipt date (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth()) }
         if(state.type!="APPLY_ADVANCE")item { SelectField("Payment method", state.mode, listOf("CASH" to "Cash", "BANK" to "Bank")) { value -> vm.update { it.copy(mode = value) } } }
         if(state.type!="APPLY_ADVANCE")item { SelectField("Money account", state.moneyAccountId, state.moneyAccounts.filter { it.branchId == null || it.branchId == state.branchId }.map { it.id to it.name }) { value -> vm.update { it.copy(moneyAccountId = value) } } }
@@ -43,6 +46,6 @@ fun CustomerReceiptScreen(padding: PaddingValues, initialProjectId:String?=null,
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.notes, { value -> vm.update { it.copy(notes = value) } }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth()) }
         item { Button(onClick = vm::save, enabled = !state.saving && !state.loading && state.type in state.allowedTypes && state.customerId.isNotBlank() && (state.type=="CUSTOMER_ADVANCE" || state.invoiceId.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text(if (state.saving) "Posting…" else if(state.type=="APPLY_ADVANCE")"Apply advance" else if(state.type=="CUSTOMER_ADVANCE")"Post advance" else "Post receipt") } }
         item { Text("Recent receipts and advances", style = MaterialTheme.typography.titleLarge) }
-        items(state.history, key = { it.id }) { row -> ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${row.date} · ${row.mode}") }, trailingContent = { Text("₹${row.amount}") }) }
+        items(state.history, key = { it.id }) { row -> ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${accountDate(row.date)} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) }) }
     }
 }

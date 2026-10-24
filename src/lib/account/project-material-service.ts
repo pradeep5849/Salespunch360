@@ -127,13 +127,13 @@ async function recordMaterialAudit(
 }
 export const inventoryIssueInput = z
   .object({
-    projectId: z.string().uuid(),
-    warehouseId: z.string().uuid(),
-    productId: z.string().uuid(),
-    batchId: z.string().uuid().optional(),
-    serialNumberId: z.string().uuid().optional(),
+    projectId: z.string().guid(),
+    warehouseId: z.string().guid(),
+    productId: z.string().guid(),
+    batchId: z.string().guid().optional(),
+    serialNumberId: z.string().guid().optional(),
     quantity: decimal,
-    projectBudgetLineId: z.string().uuid().optional(),
+    projectBudgetLineId: z.string().guid().optional(),
     movementDate: z.coerce.date(),
     notes: z.string().max(5000).optional(),
     attachmentKey: z.string().max(500).optional(),
@@ -433,11 +433,11 @@ export async function issueInventoryToProject(raw: unknown) {
 }
 export const consumeMaterialInput = z
   .object({
-    projectId: z.string().uuid(),
-    sourceMovementId: z.string().uuid(),
+    projectId: z.string().guid(),
+    sourceMovementId: z.string().guid(),
     quantity: decimal,
     movementDate: z.coerce.date(),
-    projectBudgetLineId: z.string().uuid().optional(),
+    projectBudgetLineId: z.string().guid().optional(),
     notes: z.string().max(5000).optional(),
     attachmentKey: z.string().max(500).optional(),
     idempotencyKey: z.string().min(8).max(160),
@@ -623,9 +623,9 @@ export async function consumeProjectMaterial(raw: unknown) {
 }
 export const returnMaterialInput = z
   .object({
-    projectId: z.string().uuid(),
-    sourceMovementId: z.string().uuid(),
-    warehouseId: z.string().uuid(),
+    projectId: z.string().guid(),
+    sourceMovementId: z.string().guid(),
+    warehouseId: z.string().guid(),
     quantity: decimal,
     movementDate: z.coerce.date(),
     reason: z.string().trim().min(1).max(1000),
@@ -778,10 +778,10 @@ export async function returnProjectMaterial(raw: unknown) {
 }
 export const transferProjectMaterialInput = z
   .object({
-    sourceProjectId: z.string().uuid(),
-    destinationProjectId: z.string().uuid(),
-    destinationBudgetLineId: z.string().uuid().optional(),
-    sourceMovementId: z.string().uuid(),
+    sourceProjectId: z.string().guid(),
+    destinationProjectId: z.string().guid(),
+    destinationBudgetLineId: z.string().guid().optional(),
+    sourceMovementId: z.string().guid(),
     quantity: decimal,
     movementDate: z.coerce.date(),
     reason: z.string().trim().min(1).max(1000),
@@ -999,7 +999,7 @@ export async function transferProjectMaterial(raw: unknown) {
 }
 export const reverseProjectMaterialInput = z
   .object({
-    movementId: z.string().uuid(),
+    movementId: z.string().guid(),
     movementDate: z.coerce.date(),
     reason: z.string().trim().min(1).max(1000),
     idempotencyKey: z.string().min(8).max(160),
@@ -1354,10 +1354,10 @@ export async function projectMaterialContextForActor(
     scope = projectRecordScope(actor, ids),
     paging = z
       .object({
-        projectId: z.string().uuid().optional(),
-        productId: z.string().uuid().optional(),
-        sourcePage: z.number().int().min(1).max(100000).default(1),
-        historyPage: z.number().int().min(1).max(100000).default(1),
+        projectId: z.string().guid().optional(),
+        productId: z.string().guid().optional(),
+        sourcePage: z.number().int().min(1).max(100000).prefault(1),
+        historyPage: z.number().int().min(1).max(100000).prefault(1),
       })
       .parse(input),
     scopedProjects = await db.project.findMany({

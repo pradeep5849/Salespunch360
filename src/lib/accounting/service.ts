@@ -1,3 +1,4 @@
+import {assertOwnerAssetFundingCapitalInTx} from "@/lib/account/owner-asset-funding";
 import { journalMatchesInput } from "./journal-replay";
 import { retrySerializable } from "@/lib/account/transaction-retry";
 import { z } from "zod";
@@ -160,6 +161,7 @@ export async function postJournalInTx(
   },
   raw: unknown,
   event: "JOURNAL_POSTED" | "OPENING_BALANCE_POSTED" = "JOURNAL_POSTED",
+  checkAssetFunding = false,
 ) {
   const d = postingSchema.parse(raw);
   assertBalanced(d.lines);
@@ -212,6 +214,7 @@ export async function postJournalInTx(
   if (accounts.length !== accountIds.length)
     throw new Error("INVALID_LEDGER_ACCOUNT");
   if (costs.length !== costIds.length) throw new Error("INVALID_COST_CENTRE");
+  if(checkAssetFunding)await assertOwnerAssetFundingCapitalInTx(tx,a.companyId,d.lines);
   const journalNumber = await number(tx, a.companyId, d.branchId);
   const draft = await tx.journalEntry.create({
     data: {
@@ -260,7 +263,7 @@ export async function postJournalForActor(
   raw: unknown,
 ) {
   return retrySerializable(() =>
-    db.$transaction((tx) => postJournalInTx(tx, a, raw), {
+    db.$transaction((tx) => postJournalInTx(tx, a, raw,"JOURNAL_POSTED",true), {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     }),
   );
@@ -275,7 +278,7 @@ export async function postOpeningBalancesForActor(
         const input = postingSchema.parse(raw);
         if (input.sourceType !== "OPENING_BALANCE")
           throw new Error("INVALID_SOURCE");
-        return postJournalInTx(tx, a, input, "OPENING_BALANCE_POSTED");
+        return postJournalInTx(tx, a, input, "OPENING_BALANCE_POSTED",true);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     ),
@@ -353,6 +356,13 @@ export async function reverseJournalInTx(
   tx: Prisma.TransactionClient,
   a: ReversalActor,
   raw: unknown,
+  sourceLifecycle?: {
+    expenseId?: string;
+    settlementId?: string;
+    advanceApplicationId?: string;
+    loanReceiptId?: string;
+    partyTransferId?: string;
+  },
 ) {
   const d = reversalSchema.parse(raw);
   await lockCompany(tx, a.companyId);
@@ -366,6 +376,48 @@ export async function reverseJournalInTx(
     include: { lines: true },
   });
   if (!original) throw new Error("JOURNAL_NOT_REVERSIBLE");
+  // Loan balances are managed by the loan lifecycle. A generic journal reversal
+  // cannot change its principal/status and must never detach the two records.
+  if(["PARTY_TRANSFER_PASS_RECEIPT","PARTY_TRANSFER_PASS_PAYMENT"].includes(original.sourceType)&&sourceLifecycle?.partyTransferId!==original.sourceId)throw new Error("PARTY_TRANSFER_SOURCE_REQUIRED");
+
+  if (["LOAN_RECEIPT", "LOAN_PAYMENT", "LOAN_TOP_UP"].includes(original.sourceType) && !(original.sourceType === "LOAN_RECEIPT" && !!sourceLifecycle?.loanReceiptId && sourceLifecycle.loanReceiptId === original.sourceId))
+    throw new Error("MANAGED_LOAN_REVERSAL_NOT_SUPPORTED");
+  if (
+    [
+      "PROJECT_EXPENSE",
+      "OFFICE_EXPENSE",
+      "OTHER_INCOME",
+      "REIMBURSEMENT",
+    ].includes(original.sourceType) &&
+    sourceLifecycle?.expenseId !== original.sourceId
+  )
+    throw new Error("MANAGED_EXPENSE_REVERSAL_REQUIRED");
+  if(original.sourceType==="OTHER_INCOME"){
+    const parent=await tx.accountOperationalAudit.findFirst({where:{companyId:a.companyId,entityType:"PARTY_TRANSFER",eventType:"PARTY_TRANSFER_POSTED",metadata:{path:["commissionIncomeId"],equals:original.sourceId}},select:{entityId:true}});
+    if(parent&&sourceLifecycle?.partyTransferId!==parent.entityId)throw new Error("PARTY_TRANSFER_SOURCE_REQUIRED");
+  }
+  if (
+    [
+      "CUSTOMER_RECEIPT",
+      "CUSTOMER_ADVANCE",
+      "VENDOR_PAYMENT",
+      "VENDOR_ADVANCE",
+    ].includes(original.sourceType) &&
+    sourceLifecycle?.settlementId !== original.sourceId
+  )
+    throw new Error("MANAGED_SETTLEMENT_REVERSAL_REQUIRED");
+  if (
+    original.sourceType === "ADVANCE_APPLICATION" &&
+    sourceLifecycle?.advanceApplicationId !== original.sourceId
+  )
+    throw new Error("MANAGED_ADVANCE_REVERSAL_REQUIRED");
+  // Return stable domain errors before the database's immutable-history guard.
+  if(["CUSTOMER_RECEIPT","CUSTOMER_ADVANCE"].includes(original.sourceType)){
+    const credit=await tx.accountSettlement.findFirst({where:{companyId:a.companyId,journalEntryId:original.id},select:{id:true,paymentMode:true}});
+    if(credit?.paymentMode==="ACCOUNT_CREDIT")throw new Error("RECEIPT_ADVANCE_CREDIT_NOT_REVERSIBLE");
+    if(credit&&await tx.accountSettlement.count({where:{companyId:a.companyId,OR:[{receiptCreditSourceAllocation:{is:{settlementId:credit.id}}},{advanceCreditSourceApplication:{is:{advanceId:credit.id}}}]}}))throw new Error("RECEIPT_HAS_ADVANCE_CREDIT");
+  }
+  if(original.sourceType==="ADVANCE_APPLICATION"&&await tx.accountSettlement.count({where:{companyId:a.companyId,advanceCreditSourceApplication:{is:{journalEntryId:original.id}}}}))throw new Error("RECEIPT_HAS_ADVANCE_CREDIT");
   const reversalYear = await tx.financialYear.findFirst({
     where: {
       companyId: a.companyId,
@@ -380,6 +432,17 @@ export async function reverseJournalInTx(
     branchId: original.branchId,
     entryDate: d.entryDate,
   });
+  // A generic reversal of a managed correction cannot reopen its business record.
+  const managedCorrections=new Set(["PARTY_TRANSFER_PASS_RECEIPT","PARTY_TRANSFER_PASS_PAYMENT","PROJECT_EXPENSE","OFFICE_EXPENSE","OTHER_INCOME","REIMBURSEMENT","CUSTOMER_RECEIPT","CUSTOMER_ADVANCE","VENDOR_PAYMENT","VENDOR_ADVANCE","ADVANCE_APPLICATION","LOAN_RECEIPT","LOAN_PAYMENT","LOAN_TOP_UP","INVESTMENT","CAPITAL_WITHDRAWAL","WITHDRAWAL","PROFIT_DISTRIBUTION","OWNER_LOAN"]);
+  let correctionParent=original.sourceType==="REVERSAL"?original.reversalOfId:null;const visited=new Set<string>();
+  while(correctionParent){if(visited.has(correctionParent)||visited.size>=64)throw new Error("MANAGED_CORRECTION_REVERSAL_REQUIRED");visited.add(correctionParent);const source=await tx.journalEntry.findFirst({where:{id:correctionParent,companyId:a.companyId},select:{sourceType:true,reversalOfId:true}});if(!source)throw new Error("JOURNAL_NOT_REVERSIBLE");if(managedCorrections.has(source.sourceType))throw new Error("MANAGED_CORRECTION_REVERSAL_REQUIRED");correctionParent=source.sourceType==="REVERSAL"?source.reversalOfId:null;}
+  if(original.sourceType==="INVESTMENT"&&await tx.assetOwnerFunding.count({where:{companyId:a.companyId,contribution:{journalEntryId:original.id},cancellation:null}}))throw new Error("OWNER_CONTRIBUTION_HAS_ASSET_FUNDING");
+  if(["INVESTMENT","OWNER_LOAN"].includes(original.sourceType)){
+    const contribution=await tx.ownerTransaction.findFirst({where:{companyId:a.companyId,journalEntryId:original.id,type:{in:["INVESTMENT","OWNER_LOAN"]}},select:{moneyAccountId:true,amount:true}});
+    if(contribution){const account=await tx.moneyAccount.findFirst({where:{companyId:a.companyId,id:contribution.moneyAccountId},select:{ledgerAccountId:true}});if(!account)throw new Error("INVALID_OWNER_TRANSACTION_ACCOUNT");const cash=await tx.journalLine.aggregate({where:{companyId:a.companyId,ledgerAccountId:account.ledgerAccountId,journalEntry:{status:{in:["POSTED","REVERSED"]}}},_sum:{debit:true,credit:true}});if(new Prisma.Decimal(cash._sum.debit??0).sub(cash._sum.credit??0).lt(contribution.amount))throw new Error("INSUFFICIENT_MONEY_BALANCE");}
+  }
+  const returnedCapital=original.sourceType==="CAPITAL_WITHDRAWAL"?await tx.ownerTransaction.findFirst({where:{companyId:a.companyId,journalEntryId:original.id,type:"CAPITAL_WITHDRAWAL"},select:{id:true}}):null;
+  await assertOwnerAssetFundingCapitalInTx(tx,a.companyId,original.lines.map(line=>({ledgerAccountId:line.ledgerAccountId,debit:line.credit,credit:line.debit})),returnedCapital?.id);
   const journalNumber = await number(tx, a.companyId, original.branchId);
   const draft = await tx.journalEntry.create({
     data: {
@@ -464,8 +527,8 @@ export async function postOpeningBalances(raw: unknown) {
 
 const journalHistoryQuery = z.object({
   q: z.string().trim().max(160).optional(),
-  page: z.coerce.number().int().min(1).max(1000000).default(1),
-  branchId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).max(1000000).prefault(1),
+  branchId: z.string().guid().optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
 });

@@ -1,3 +1,12 @@
+import {loanStatementOptionsForActor} from "@/lib/account/reports/loan-statement";
+import {itemDiscountCategoriesForActor} from "@/lib/account/reports/item-discount";
+import {bankStatementOptionsForActor} from "@/lib/account/reports/bank-statement";
+import {stockDetailCategoriesForActor} from "@/lib/account/reports/stock-detail-options";
+import {ACCOUNT_REPORT_KEYS} from "@/lib/account/reports/catalogue";
+import {availableReportCatalogueForActor,unavailableReportCatalogueForActor,reportFavouritesForActor,setReportFavouriteForActor} from "@/lib/account/reports/favourites";
+import {reportExportRows} from "@/lib/account/reports/export-data";
+import {formatReport} from "@/lib/account/reports/display";
+import {resolveDisplayPreferences} from "@/lib/account/display-preferences";
 import { canUsePermission } from "@/lib/auth/permissions";
 import {
   exportCsv,
@@ -11,26 +20,7 @@ import {
 import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
-export const ACCOUNT_REPORTS = [
-  "profit-loss",
-  "balance-sheet",
-  "trial-balance",
-  "cash-flow",
-  "general-ledger",
-  "customer-ledger",
-  "vendor-ledger",
-  "receivable-aging",
-  "payable-aging",
-  "cash-bank",
-  "owner-capital",
-  "projects",
-  "branches",
-  "items",
-  "invoices",
-  "customers",
-  "tax",
-  "budget-vs-actual",
-] as const;
+export const ACCOUNT_REPORTS=ACCOUNT_REPORT_KEYS;
 function actor(u: MobileAppPrincipal) {
   const a = mobileAccountActor(u);
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_REPORTS"))
@@ -43,10 +33,16 @@ function valid(name: string) {
 }
 export async function mobileAccountReportOptions(u: MobileAppPrincipal) {
   const a = actor(u),
-    options = await reportOptionsForActor(a);
+    options = await reportOptionsForActor(a),catalogue=await availableReportCatalogueForActor(a);
   return {
-    reports:
-      a.accountRole === "PROJECT_MANAGER" ? ["projects"] : ACCOUNT_REPORTS,
+    loanAccounts: catalogue.some(x=>x.key==="loan-statement")?await loanStatementOptionsForActor(a):[],
+    bankAccounts: catalogue.some(x=>x.key === "bank-statement") ? await bankStatementOptionsForActor(a) : [],
+    itemCategories: catalogue.some(x=>x.key==="item-discount")?await itemDiscountCategoriesForActor(a):[],
+    stockCategories: catalogue.some(x=>["stock-detail","stock-summary","low-stock-summary"].includes(x.key)) ? await stockDetailCategoriesForActor(a) : [],
+    reports:catalogue.map(x=>x.key),
+    catalogue,
+    unavailableCatalogue:await unavailableReportCatalogueForActor(a),
+    favourites:await reportFavouritesForActor(a),
     ...options,
   };
 }
@@ -56,7 +52,9 @@ export async function mobileAccountReport(
   filters: unknown,
 ) {
   valid(name);
-  return runFinancialReportForActor(actor(u), name, filters);
+  const a = actor(u);
+  const [data, settings] = await Promise.all([runFinancialReportForActor(a, name, filters), db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}})]);
+  return formatReport(data, resolveDisplayPreferences(settings));
 }
 export async function mobileAccountReportExport(
   u: MobileAppPrincipal,
@@ -66,7 +64,9 @@ export async function mobileAccountReportExport(
 ) {
   valid(name);
   const a = actor(u),
-    data = await runFinancialReportForActor(a, name, filters),
+    raw = await runFinancialReportForActor(a, name, filters),
+    settings = await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}}),
+    data = formatReport(raw, resolveDisplayPreferences(settings), true),
     company = await db.company.findUniqueOrThrow({
       where: { id: a.companyId },
       select: { name: true },
@@ -76,11 +76,11 @@ export async function mobileAccountReportExport(
       company: company.name,
       filter: new URLSearchParams(filters).toString(),
       columns: data.columns,
-      rows: data.rows,
+      rows: reportExportRows(data, new URLSearchParams(filters).toString()),
     };
   if (format === "csv")
     return {
-      bytes: new TextEncoder().encode(exportCsv(data.columns, data.rows)),
+      bytes: new TextEncoder().encode(exportCsv(data.columns, input.rows)),
       mime: "text/csv",
       extension: "csv",
     };
@@ -92,9 +92,11 @@ export async function mobileAccountReportExport(
     };
   if (format === "pdf")
     return {
-      bytes: new Uint8Array(exportPdf(input)),
+      bytes: new Uint8Array(await exportPdf(input)),
       mime: "application/pdf",
       extension: "pdf",
     };
   throw new Error("INVALID_FORMAT");
 }
+
+export async function mobileSetReportFavourite(u:MobileAppPrincipal,raw:unknown){return {favourites:await setReportFavouriteForActor(actor(u),raw)}}

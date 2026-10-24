@@ -1,3 +1,4 @@
+import {AccountDate} from "@/components/account/display-preferences";
 import Link from "next/link";
 import {documentOutstanding,listCommercialDocuments} from "@/lib/account/commercial";
 import {AccountEmptyState,AccountPageHeader} from "@/components/account/account-shell";
@@ -18,7 +19,7 @@ export default async function Page(){
   <nav className="account-segment-nav" aria-label="Transaction areas"><Link href="/workspace/account/transactions">Documents</Link><Link href="/workspace/account/transactions/money">Receipts, payments & advances</Link></nav>
   {cards.length?<div className={styles.list}>{cards.map(({x,financial})=>{const payment=financial?.paymentStatus;const sale=x.type==="SALES_INVOICE";const status=sale?(payment==="PAID"?"SALE : PAID":payment==="PARTIALLY_PAID"?"SALE : PARTIAL":"SALE : UNPAID"):humanize(x.status);const statusClass=payment==="PAID"?styles.paid:payment==="PARTIALLY_PAID"?styles.partial:styles.unpaid;const balance=financial?.outstanding??x.grandTotal;return <article className={styles.card} key={x.id}>
     <Link href={`/workspace/account/transactions/${x.id}`} style={{color:"inherit",textDecoration:"none"}}>
-     <div className={styles.top}><div><div className={styles.party}>{x.partyName}</div><span className={`${styles.status} ${sale?statusClass:""}`}>{status}</span></div><div className={styles.meta}><strong>{x.documentNumber}</strong>{x.issueDate.toLocaleDateString("en-IN")}</div></div>
+     <div className={styles.top}><div><div className={styles.party}>{x.partyName}</div><span className={`${styles.status} ${sale?statusClass:""}`}>{status}</span></div><div className={styles.meta}><strong>{x.documentNumber}</strong><AccountDate value={x.issueDate.toISOString()}/></div></div>
      <div className={styles.amounts}><div className={styles.amount}><small>Total</small><strong><Money value={x.grandTotal}/></strong></div><div className={styles.amount}><small>Balance</small><strong><Money value={balance}/></strong></div></div>
     </Link>
     <TransactionCardActions id={x.id} type={x.type} number={x.documentNumber} party={x.partyName} total={x.grandTotal.toString()}/>

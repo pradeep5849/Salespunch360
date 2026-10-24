@@ -1,5 +1,6 @@
 "use client";
 
+import {AccountText} from "./display-preferences";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { accountNavSectionId, hasAccountNavigationItem, type AccountNavGroup } from "@/lib/account/navigation";
@@ -19,11 +20,11 @@ export function AccountShell({children,companyName,companyAddress,hasCompanyLogo
  return <div className={`account-shell${isRoot?"":" account-inner-shell"}`}>
   {isRoot&&<><header className="account-topbar"><Link className="account-hamburger" href="/workspace/account/menu" aria-label="Open Account menu"><AccountIcon name="menu"/></Link><CompanyIdentity href="/workspace/account" name={companyName} address={companyAddress} hasLogo={hasCompanyLogo} version={companyLogoVersion} className="account-identity workspace-identity"/><div className="account-top-actions">
    <Link aria-label={`${notifications} account notifications`} className="account-icon-button" href="/workspace/account/notifications"><AccountIcon name="bell"/>{notifications>0&&<b>{notifications>99?"99+":notifications}</b>}</Link><AccountProfileMenu userName={userName} role={role} isPlusPrimaryAdmin={isPlusPrimaryAdmin} canSwitchWorkspace={canSwitchWorkspace}/></div></header>
-   <div className="account-desktop-nav" aria-label="Account modules">{navigation.map(group=><Link key={group.label} href={`/workspace/account/menu#${accountNavSectionId(group.label)}`}>{group.label}</Link>)}</div></>}
+   <div className="account-desktop-nav" aria-label="Account modules">{navigation.map(group=><Link key={group.label} href={`/workspace/account/menu#${accountNavSectionId(group.label)}`}><AccountText>{group.label}</AccountText></Link>)}</div></>}
   <main className="account-main">{children}</main>
   {isRoot&&<AccountBottomNav items={bottom}/>}
  </div>;
 }
-export function AccountPageHeader({title,subtitle,action,backHref}:{title:string;subtitle?:string;action?:React.ReactNode;backHref?:string}){return <header className="account-page-header"><div>{backHref&&<Link className="account-page-back" href={backHref} aria-label={`Back from ${title}`}>←</Link>}<h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div>{action&&<div className="account-page-action">{action}</div>}</header>}
+export function AccountPageHeader({title,subtitle,action,backHref}:{title:string;subtitle?:React.ReactNode;action?:React.ReactNode;backHref?:string}){return <header className="account-page-header"><div>{backHref&&<Link className="account-page-back" href={backHref} aria-label={`Back from ${title}`}>←</Link>}<h1><AccountText>{title}</AccountText></h1>{subtitle&&<p>{subtitle}</p>}</div>{action&&<div className="account-page-action">{action}</div>}</header>}
 export function AccountCard({children,className=""}:{children:React.ReactNode;className?:string}){return <section className={`account-card ${className}`}>{children}</section>}
 export function AccountEmptyState({title,detail,action}:{title:string;detail:string;action?:React.ReactNode}){return <div className="account-empty"><span className="account-empty-icon" aria-hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h16v12H4zM8 7V5h8v2M8 12h8"/></svg></span><strong>{title}</strong><p>{detail}</p>{action}</div>}

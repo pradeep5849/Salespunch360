@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useDisplayPreferences } from "@/components/account/display-preferences";
+import { formatMoney } from "@/lib/account/display-preferences";
+import { AddExpenseItem } from "@/components/account/add-expense-item";
+import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
+import Link from "next/link";
+import styles from "./expense-editor.module.css";
 import { Prisma } from "@prisma/client";
 import {
   ActionFeedbackForm,
@@ -26,6 +32,7 @@ export type ExpenseValue = {
   projectId?: string | null;
   moneyAccountId?: string | null;
   transactionDate: string;
+  occurrenceKey?: string | null;
   taxableAmount: string;
   billedItems?: Line[] | null;
   additionalCharges?: string;
@@ -63,12 +70,15 @@ export function ExpenseEditor({
   expense: x,
   action,
   requestKey,
+  backHref = "/workspace/account/expenses",
 }: {
   options: ExpenseEditorOptions;
   expense?: ExpenseValue;
   action: (f: FormData) => Promise<AccountActionResult>;
   requestKey: string;
+  backHref?: string;
 }) {
+  const displayPreferences = useDisplayPreferences();
   const [stableKey] = useState(requestKey),
     [branch, setBranch] = useState(x?.branchId ?? o.branches[0]?.id ?? ""),
     [type, setType] = useState(
@@ -91,7 +101,28 @@ export function ExpenseEditor({
     [credit, setCredit] = useState(x?.taxCreditTreatment ?? "ELIGIBLE"),
     [supply, setSupply] = useState(x?.stateOfSupplyCode ?? ""),
     [inlineCategory, setInlineCategory] = useState(false),
+    [addingItem, setAddingItem] = useState(false),
     [dirty, setDirty] = useState(false);
+  const [taxSettingsOpen, setTaxSettingsOpen] = useState(gst);
+  const taxSettingsRef = useRef<HTMLDetailsElement>(null);
+  const toggleGst = (checked: boolean) => {
+    setGst(checked);
+    setDirty(true);
+    if (checked) setTaxSettingsOpen(true);
+    else {
+      setTax("0");
+      setCess("0");
+    }
+  };
+  const openTaxSettings = () => {
+    setTaxSettingsOpen(true);
+    requestAnimationFrame(() =>
+      taxSettingsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      }),
+    );
+  };
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -174,13 +205,7 @@ export function ExpenseEditor({
     </label>
   );
   return (
-    <div className="expense-entry">
-      <p>Firm: {o.companyName}</p>
-      <p>
-        {x
-          ? `Number: ${x.transactionNumber ?? "Existing draft"}`
-          : `Number preview: ${numberPreview}. The server assigns the final number when saved.`}
-      </p>
+    <div className={`expense-entry ${styles.root}`}>
       {inlineCategory && (
         <section aria-label="Create category inline">
           <h2>Add expense / income category</h2>
@@ -204,6 +229,48 @@ export function ExpenseEditor({
       >
         {x && <input type="hidden" name="id" value={x.id} />}
         <input type="hidden" name="requestKey" value={stableKey} />
+        <input
+          type="hidden"
+          name="recordAsPaid"
+          value={String(!x && type !== "REIMBURSEMENT")}
+        />
+        <ExpenseEntryHeader
+          title={x ? "Edit Expense" : income ? "Other Income" : "Expense"}
+          backHref={backHref}
+          dirty={dirty}
+          gst={gst && !income}
+          income={income}
+          toggleGst={toggleGst}
+          openTaxSettings={openTaxSettings}
+        />
+        <section className={styles.meta} aria-label="Expense number and date">
+          <div>
+            <span>Expense No.</span>
+            <strong>{x?.transactionNumber ?? numberPreview}</strong>
+            {!x && (
+              <small>Number preview; assigned by server when saved.</small>
+            )}
+          </div>
+          <label>
+            Transaction date
+            <input
+              type="date"
+              name="transactionDate"
+              readOnly={!!x?.occurrenceKey}
+              required
+              defaultValue={
+                x?.transactionDate.slice(0, 10) ??
+                new Date().toLocaleDateString("en-CA")
+              }
+              onChange={() => setDirty(true)}
+            />
+            <AccountFieldError name="transactionDate" />
+          </label>
+        </section>
+        <div className={styles.firm}>
+          <span>Firm Name</span>
+          <strong>{o.companyName}</strong>
+        </div>
         <label>
           Transaction type
           <select
@@ -273,27 +340,23 @@ export function ExpenseEditor({
             ? "Reimbursement payable"
             : "Select cash / bank account",
         )}
-        <label>
-          Transaction date
-          <input
-            type="date"
-            name="transactionDate"
-            required
-            defaultValue={
-              x?.transactionDate.slice(0, 10) ??
-              new Date().toLocaleDateString("en-CA")
-            }
-            onChange={() => setDirty(true)}
-          />
-          <AccountFieldError name="transactionDate" />
-        </label>
         <fieldset>
           <legend>Billed items</legend>
+          {lines.length > 0 && (
+            <div className={styles.billedHeaders} aria-hidden="true">
+              <span>Item Name</span>
+              <span>Qty</span>
+              <span>Rate</span>
+              <span>Amount</span>
+            </div>
+          )}
           {lines.map((line, i) => (
-            <div className="stack" key={i}>
+            <div className={styles.billedLine} key={i}>
               {(["name", "quantity", "rate"] as const).map((k) => (
                 <label key={k}>
-                  {`${k} · item ${i + 1}`}
+                  <span
+                    className={styles.itemLabel}
+                  >{`${k} · item ${i + 1}`}</span>
                   <input
                     aria-label={`${k} item ${i + 1}`}
                     value={line[k]}
@@ -313,7 +376,11 @@ export function ExpenseEditor({
                   />
                 </label>
               ))}
+              <span className={styles.lineAmount}>
+                {expenseLineDisplayAmount(line, displayPreferences)}
+              </span>
               <button
+                className={styles.removeItem}
                 type="button"
                 onClick={() => {
                   setLines(lines.filter((_, j) => j !== i));
@@ -327,13 +394,24 @@ export function ExpenseEditor({
           <button
             type="button"
             disabled={lines.length >= 200}
-            onClick={() => {
-              setLines([...lines, { name: "", quantity: "1", rate: "0" }]);
-              setDirty(true);
-            }}
+            onClick={() => setAddingItem(true)}
           >
             Add billed item
           </button>
+          {addingItem && (
+            <AddExpenseItem
+              onClose={() => setAddingItem(false)}
+              onSave={(name) => {
+                setLines((current) =>
+                  current.length < 200
+                    ? [...current, { name, quantity: "1", rate: "0" }]
+                    : current,
+                );
+                setDirty(true);
+                setAddingItem(false);
+              }}
+            />
+          )}
           <input
             type="hidden"
             name="billedItems"
@@ -384,31 +462,25 @@ export function ExpenseEditor({
               setDirty(true);
             }}
           />
-          Round total to nearest rupee
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={gst && !income}
-            disabled={income}
-            onChange={(e) => {
-              setGst(e.target.checked);
-              if (!e.target.checked) {
-                setTax("0");
-                setCess("0");
-              }
-              setDirty(true);
-            }}
-          />
-          GST / tax
+          Round Off
         </label>
         {income && (
           <p>
             Other Income supports non-taxable entries. GST and CESS remain zero.
           </p>
         )}
-        <details open={gst && !income}>
+        <details
+          id="expense-tax-settings"
+          ref={taxSettingsRef}
+          open={taxSettingsOpen}
+          onToggle={(event) => setTaxSettingsOpen(event.currentTarget.open)}
+        >
           <summary>Tax settings</summary>
+          {!gst && !income && (
+            <button type="button" onClick={() => toggleGst(true)}>
+              Enable GST for this expense
+            </button>
+          )}
           <label>
             GST rate (%)
             <input
@@ -488,7 +560,7 @@ export function ExpenseEditor({
         </details>
         <p role="status" aria-live="polite">
           {preview
-            ? `Taxable ₹${preview.taxable.toFixed(2)} · GST/CESS ₹${preview.totalTax.toFixed(2)} · Round off ₹${preview.roundOffAmount.toFixed(2)} · Total ₹${preview.grandTotal.toFixed(2)}`
+            ? `Taxable ${formatMoney(preview.taxable, displayPreferences)} · GST/CESS ${formatMoney(preview.totalTax, displayPreferences)} · Round off ${formatMoney(preview.roundOffAmount, displayPreferences)} · Total ${formatMoney(preview.grandTotal, displayPreferences)}`
             : "Complete positive amounts and billed items to preview the total."}
         </p>
         <label>
@@ -510,13 +582,96 @@ export function ExpenseEditor({
             onChange={() => setDirty(true)}
           />
         </label>
-        <SaveSubmitButton>Save draft</SaveSubmitButton>
-        {!x && (
-          <SaveSubmitButton name="saveMode" value="new">
-            Save &amp; New
+        <footer className={styles.footer}>
+          {!x && (
+            <SaveSubmitButton name="saveMode" value="new">
+              Save &amp; New
+            </SaveSubmitButton>
+          )}
+          <SaveSubmitButton>
+            {x || type === "REIMBURSEMENT"
+              ? "Save draft"
+              : income
+                ? "Save receipt"
+                : "Save"}
           </SaveSubmitButton>
-        )}
+        </footer>
       </ActionFeedbackForm>
     </div>
+  );
+}
+
+function expenseLineDisplayAmount(
+  line: Line,
+  preferences: Parameters<typeof formatMoney>[1],
+) {
+  try {
+    const quantity = new Prisma.Decimal(line.quantity),
+      rate = new Prisma.Decimal(line.rate);
+    return quantity.isFinite() &&
+      rate.isFinite() &&
+      quantity.gt(0) &&
+      rate.gte(0)
+      ? formatMoney(quantity.mul(rate), preferences)
+      : "—";
+  } catch {
+    return "—";
+  }
+}
+function ExpenseEntryHeader({
+  title,
+  backHref,
+  dirty,
+  gst,
+  income,
+  toggleGst,
+  openTaxSettings,
+}: {
+  title: string;
+  backHref: string;
+  dirty: boolean;
+  gst: boolean;
+  income: boolean;
+  toggleGst: (value: boolean) => void;
+  openTaxSettings: () => void;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <header className={styles.header}>
+      <Link
+        href={backHref}
+        aria-label="Back from expense"
+        aria-disabled={pending}
+        onClick={(event) => {
+          if (
+            pending ||
+            (dirty && !window.confirm("Discard unsaved expense changes?"))
+          )
+            event.preventDefault();
+        }}
+      >
+        ‹
+      </Link>
+      <h1>{title}</h1>
+      <label>
+        GST
+        <input
+          aria-label="GST / tax"
+          type="checkbox"
+          checked={gst}
+          disabled={income || pending}
+          onChange={(event) => toggleGst(event.target.checked)}
+        />
+      </label>
+      <button
+        type="button"
+        aria-label="Open tax settings"
+        title="Tax settings"
+        disabled={income || pending}
+        onClick={openTaxSettings}
+      >
+        ⚙
+      </button>
+    </header>
   );
 }

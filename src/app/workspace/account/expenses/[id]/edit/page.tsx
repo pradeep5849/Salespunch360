@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { updateExpenseAction } from "@/app/actions/expenses";
 import { expenseOptions, getExpense } from "@/lib/account/expenses";
-import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
 import { ExpenseForm } from "../../expense-form";
 export default async function Page({
   params,
@@ -14,11 +13,8 @@ export default async function Page({
   return (
     <div className="employees-shell">
       <section className="employees-content">
-        <WorkspacePageHeader
-          title={`Edit ${expense.transactionNumber}`}
-          backHref={`/workspace/account/expenses/${id}`}
-        />
         <ExpenseForm
+          backHref={`/workspace/account/expenses/${id}`}
           options={await expenseOptions()}
           expense={expense}
           action={updateExpenseAction}

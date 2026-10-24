@@ -5,7 +5,7 @@ import {operationalBranchContext} from '@/lib/branches/operational-scope';
 import {pendingVisitWhere} from '@/lib/leads/policy';
 import type {MobilePrincipal} from './auth';
 
-const pagingSchema=z.object({page:z.coerce.number().int().min(1).optional(),pageSize:z.coerce.number().int().min(1).max(100).optional(),q:z.string().trim().max(100).optional(),employeeId:z.string().uuid().optional()}).passthrough();
+const pagingSchema=z.object({page:z.coerce.number().int().min(1).optional(),pageSize:z.coerce.number().int().min(1).max(100).optional(),q:z.string().trim().max(100).optional(),employeeId:z.string().guid().optional()}).passthrough();
 async function scopedWhere(user:MobilePrincipal,employeeId?:string,q?:string):Promise<Prisma.CustomerVisitWhereInput>{
  const base=pendingVisitWhere(user);let selected:Prisma.CustomerVisitWhereInput={};
  if(employeeId){

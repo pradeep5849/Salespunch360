@@ -1,3 +1,8 @@
+import {
+  stockSummaryReportForActor,
+  type StockSummaryQuery,
+} from "@/lib/account/stock-summary-report";
+import { stockSummaryExportForActor } from "@/lib/account/stock-summary-export";
 import { inventoryContext } from "@/lib/account/inventory-context";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
@@ -131,4 +136,18 @@ export async function mobileTransfer(u: MobileAppPrincipal, raw: unknown) {
   const a = permit(u);
   await assertOperationalWrite(u.companyId);
   return transferStockForActor(a, raw);
+}
+
+export function mobileStockSummary(
+  user: MobileAppPrincipal,
+  query: StockSummaryQuery,
+) {
+  return stockSummaryReportForActor(permit(user), query);
+}
+export function mobileStockSummaryExport(
+  user: MobileAppPrincipal,
+  query: StockSummaryQuery,
+  format: "pdf" | "xlsx",
+) {
+  return stockSummaryExportForActor(permit(user), query, format);
 }

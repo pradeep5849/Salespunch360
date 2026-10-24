@@ -16,19 +16,19 @@ const decimalFields = new Set([
 ]);
 /** Hash the validated business intent, including ordered lines and allocations. */
 export function commercialCreationHash(input: Record<string, unknown>) {
-  function canonical(value: unknown, key = ""): unknown {
+  function canonical(value: unknown, key = "",custom=false): unknown {
     if (value instanceof Date) return value.toISOString();
-    if (Array.isArray(value)) return value.map((row) => canonical(row));
+    if (Array.isArray(value)) return value.map((row) => canonical(row,"",custom));
     if (value && typeof value === "object")
       return Object.fromEntries(
         Object.entries(value)
           .filter(
-            ([field, item]) => field !== "idempotencyKey" && item !== undefined,
+            ([field, item]) => (custom || key === "customFields" || field !== "idempotencyKey") && item !== undefined,
           )
           .sort(([a], [b]) => a.localeCompare(b))
-          .map(([field, item]) => [field, canonical(item, field)]),
+          .map(([field, item]) => [field, canonical(item, field,custom||key==="customFields")]),
       );
-    if (value !== null && value !== undefined && decimalFields.has(key)) {
+    if (!custom && value !== null && value !== undefined && decimalFields.has(key)) {
       const number = new Prisma.Decimal(String(value));
       if (!number.isFinite()) throw new Error("INVALID_AMOUNT");
       return number.toString();

@@ -1,3 +1,6 @@
+import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
+import type { ProjectActor } from "@/lib/account/projects";
+import { resolveDisplayPreferences } from "@/lib/account/display-preferences";
 import { dashboardLinks } from "@/lib/account/dashboard-links";
 import type { AccountModule } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -50,28 +53,31 @@ export async function mobileAccountBootstrap(
     effectiveEntitlement(actor.companyId),
     db.accountSettings.findUnique({
       where: { companyId: actor.companyId },
-      select: { itemSettings: true },
+      select: {
+        itemSettings: true,
+        appLanguage: true,
+        baseCurrency: true,
+        displayDecimalPlaces: true,
+        dateFormat: true,
+      },
     }),
   ]);
-  const filter =
-    branch.context.mode === "BRANCH"
-      ? { branchId: branch.context.branchId }
-      : {};
-  const pendingExpenseApprovals = modules.includes("EXPENSES")
-    ? await db.expenseTransaction.count({
-        where: {
-          companyId: actor.companyId,
-          status: "PENDING_APPROVAL",
-          ...filter,
-        },
-      })
-    : 0;
+  const pendingExpenseApprovals = (
+    await pendingExpenseAlertsForActor(
+      actor as ProjectActor,
+      branch.context.mode === "COMPANY"
+        ? { scope: "all" }
+        : { branchId: branch.context.branchId },
+      true,
+    )
+  ).total;
   return {
     user: { id: actor.id, name: actor.name, accountRole: actor.accountRole },
     company: { name: company.name },
     productEdition: company.productEdition,
     enabledModules: modules,
     itemSettings: settings?.itemSettings ?? {},
+    displayPreferences: resolveDisplayPreferences(settings),
     effectivePermissions: rolePermissionSummary(actor.accountRole),
     canSwitchWorkspace: user.authorizedWorkspaces.includes("SALES"),
     branch: branch.context,
@@ -86,6 +92,8 @@ export async function mobileAccountBootstrap(
       actor,
       company.productEdition,
       modules,
+      (settings?.itemSettings as { enabled?: boolean } | null)?.enabled !==
+        false,
     ).map((group) => ({
       label: group.label,
       items: group.items,
@@ -240,11 +248,14 @@ export async function mobileAccountHome(
     scope?: string | null;
     q?: string;
     types?: string[];
+    includeNonCommercial?: boolean;
   },
 ) {
   const actor = accountActor(user);
   if (!canUsePermission(actor, user.productEdition, "ACCOUNT_LEDGER_VIEW"))
     throw new Error("MOBILE_FORBIDDEN");
   const branch = await resolveAccountBranchContext(actor, input);
-  return accountMobileHomeData(actor, branch.context, input);
+  const settings=await db.accountSettings.findUnique({where:{companyId:actor.companyId},select:{transactionDefaults:true}});
+  const defaults=settings?.transactionDefaults as {transactionPreferences?:{shareAs?:unknown}}|null;
+  return {...await accountMobileHomeData(actor, branch.context, input),shareAs:defaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"};
 }

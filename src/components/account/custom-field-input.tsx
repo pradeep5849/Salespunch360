@@ -7,12 +7,14 @@ type Definition = Pick<
 export function CustomFieldInput({
   field,
   value,
+  idPrefix="party",
 }: {
   field: Definition;
   value?: unknown;
+  idPrefix?: string;
 }) {
   const name = `custom_${field.fieldKey}`,
-    id = `party-${field.fieldKey}`,
+    id = `${idPrefix}-${field.fieldKey}`,
     current = value === undefined || value === null ? "" : String(value),
     props = {
       name,

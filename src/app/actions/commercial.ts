@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   applyAdvance,
+  confirmSalesOrder,
   createCommercialDocument,
   createSettlement,
   finalizeNonFinancialDocument,
@@ -11,15 +12,15 @@ import {
   schedulePaymentReminder,
   setPaymentReminderStatus,
 } from "@/lib/account/commercial";
-import { ensureOpenFinancialYearForDate } from "@/lib/account/financial-year";
-import { db } from "@/lib/db";
+import {submitSaleForActor} from "@/lib/account/sale-submit";
+import {requirePermissionForMutation} from "@/lib/auth/authorization";
 import { randomUUID } from "node:crypto";
 import {
   commercialActionFailure,
   type CommercialCreateResult,
 } from "@/lib/account/commercial-action-errors";
 import { logEvent } from "@/lib/logging";
-const payload = (form: FormData) => JSON.parse(String(form.get("payload")));
+const payload = (form: FormData) => {const input=JSON.parse(String(form.get("payload")));const fields=[...form.entries()].filter(([key])=>key.startsWith("custom_"));return fields.length?{...input,customFields:Object.fromEntries(fields.map(([key,value])=>[key.slice(7),String(value)]))}:input;};
 function normalizeClientCommercialInput(raw: unknown) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const input = { ...(raw as Record<string, unknown>) };
@@ -28,13 +29,20 @@ function normalizeClientCommercialInput(raw: unknown) {
   if (input.documentNumber === "") input.documentNumber = undefined;
   return input;
 }
+async function saveExplicitCommercialDocument(raw:unknown){
+ if(raw&&typeof raw==="object"&&!Array.isArray(raw)&&(raw as {type?:unknown}).type==="SALES_INVOICE"){
+  const actor=await requirePermissionForMutation("ACCOUNT_JOURNAL_POST");
+  return submitSaleForActor(actor as Parameters<typeof submitSaleForActor>[0],normalizeClientCommercialInput(raw));
+ }
+ return createCommercialDocument(raw);
+}
 export async function saveCommercialDocument(form: FormData) {
-  const row = await createCommercialDocument(payload(form));
+  const row = await saveExplicitCommercialDocument(payload(form));
   redirect(`/workspace/account/transactions/${row.id}`);
 }
 export async function saveCommercialDocumentWithFeedback(form: FormData) {
   return accountAction(async () => {
-    const row = await createCommercialDocument(payload(form));
+    const row = await saveExplicitCommercialDocument(payload(form));
     return `/workspace/account/transactions/${row.id}`;
   }, "Document saved");
 }
@@ -43,7 +51,7 @@ export async function createCommercialDocumentAction(
   raw: unknown,
 ): Promise<CommercialCreateResult> {
   try {
-    const row = await createCommercialDocument(
+    const row = await saveExplicitCommercialDocument(
       normalizeClientCommercialInput(raw),
     );
     return { ok: true, id: row.id, documentNumber: row.documentNumber };
@@ -60,18 +68,11 @@ export async function createCommercialDocumentAction(
   }
 }
 
-/**
- * Normal Sale Save is a final submit: create + post, then allocate any amount
- * marked Received. The client never autosaves, so leaving the editor without
- * pressing Save creates nothing. If posting fails, a newly-created draft is
- * removed best-effort instead of leaving a normal sale visible as Draft.
- */
+/** Explicit Sale Save posts the real sale and optional receipt atomically; no autosave. */
 export async function submitSaleInvoiceAction(
   raw: unknown,
-  payment?: { receivedAmount?: number; paymentType?: string },
+  payment?: { receivedAmount?: number; receivedInFull?:boolean; paymentType?: string; chequeNumber?: string; chequeDate?: string; moneyAccountId?: string; reference?: string },
 ): Promise<CommercialCreateResult> {
-  let createdId = "";
-  let durableRequest = false;
   try {
     const normalized = normalizeClientCommercialInput(raw);
     if (
@@ -81,47 +82,12 @@ export async function submitSaleInvoiceAction(
     ) {
       throw new Error("INVALID_INPUT");
     }
-    const input = normalized as Record<string, unknown>;
-    if (input.type !== "SALES_INVOICE") throw new Error("INVALID_INPUT");
-    durableRequest =
-      typeof input.idempotencyKey === "string" &&
-      input.idempotencyKey.length > 0;
-    const row = await createCommercialDocument(input);
-    createdId = row.id;
-    await ensureOpenFinancialYearForDate(
-      row.companyId,
-      new Date(String(input.issueDate)),
-    );
-    await postCommercialDocument({ documentId: row.id });
-
-    const received = Number(payment?.receivedAmount ?? 0);
-    if (Number.isFinite(received) && received > 0) {
-      const paymentMode = payment?.paymentType === "CASH" ? "CASH" : "BANK";
-      await createSettlement({
-        idempotencyKey: `sale-save-receipt:${row.id}`,
-        type: "CUSTOMER_RECEIPT",
-        branchId: String(input.branchId),
-        partyId: String(input.partyId),
-        paymentMode,
-        amount: received.toFixed(2),
-        transactionDate: String(input.issueDate),
-        allocations: [{ documentId: row.id, amount: received.toFixed(2) }],
-      });
-    }
-
+    const actor=await requirePermissionForMutation("ACCOUNT_JOURNAL_POST");
+    const row=await submitSaleForActor(actor as Parameters<typeof submitSaleForActor>[0],normalized,payment??{});
     revalidatePath("/workspace/account/transactions");
     revalidatePath(`/workspace/account/transactions/${row.id}`);
     return { ok: true, id: row.id, documentNumber: row.documentNumber };
   } catch (error) {
-    if (createdId && !durableRequest) {
-      try {
-        await db.commercialDocument.deleteMany({
-          where: { id: createdId, status: "DRAFT" },
-        });
-      } catch (cleanupError) {
-        console.error("Sale draft cleanup failed", createdId, cleanupError);
-      }
-    }
     const result = commercialActionFailure(error);
     const correlationId = randomUUID();
     logEvent("error", {
@@ -143,6 +109,12 @@ export async function postCommercialAction(form: FormData) {
   const id = String(form.get("id"));
   await postCommercialDocument({ documentId: id });
   revalidatePath(`/workspace/account/transactions/${id}`);
+}
+export async function saveSettlementWithFeedback(form: FormData) {
+  return accountAction(async () => {
+    await createSettlement(payload(form));
+    return "/workspace/account/transactions";
+  }, "Payment posted");
 }
 export async function saveSettlementAction(form: FormData) {
   await createSettlement(payload(form));
@@ -174,4 +146,18 @@ export async function reminderStatusAction(form: FormData) {
     status: String(form.get("status")),
   });
   revalidatePath(`/workspace/account/transactions/${reminder.documentId}`);
+}
+
+export async function confirmSalesOrderAction(form:FormData){
+ await confirmSalesOrder({documentId:String(form.get("id"))});
+ revalidatePath("/workspace/account/quotations");
+ revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
+}
+
+export async function closeRemainingOrderAction(form:FormData){
+ return accountAction(async()=>{
+  const actor=await requirePermissionForMutation("ACCOUNT_LEDGER_VIEW");
+  await (await import("@/lib/account/orders/lifecycle")).closeRemainingOrderForActor(actor as Parameters<typeof import("@/lib/account/orders/lifecycle").closeRemainingOrderForActor>[0],{documentId:String(form.get("id")),reason:String(form.get("reason")??"")});
+  revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
+ },"Remaining order closed");
 }

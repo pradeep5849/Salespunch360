@@ -27,6 +27,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
       DIRECT_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
+      ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
       ACCOUNT_INTEGRATION_DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_test
       AUTH_SECRET: "ci-only-auth-secret-not-used-outside-github-actions"
       APP_URL: "https://www.salespunch360.com"
@@ -91,6 +92,20 @@ jobs:
           E2E_PRODUCTION: "1"
       - name: Check isolated database backup and restoration
         run: |
+          export RECOVERY_POSTGRES_IMAGE="$(docker inspect --format='{{.Image}}' '${{ job.services.postgres.id }}')"
+          task_recovery_tools="$(mktemp -d)"
+          cat > "$task_recovery_tools/pg_dump" <<'TOOL'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          task_backup_path="${!#}"
+          task_backup_directory="$(dirname "$task_backup_path")"
+          exec docker run --rm --network host --read-only --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$task_backup_directory,target=$task_backup_directory" \
+            --entrypoint "$(basename "$0")" "$RECOVERY_POSTGRES_IMAGE" "$@"
+          TOOL
+          cp "$task_recovery_tools/pg_dump" "$task_recovery_tools/pg_restore"
+          chmod +x "$task_recovery_tools/pg_dump" "$task_recovery_tools/pg_restore"
+          export PATH="$task_recovery_tools:$PATH"
           createdb --host=127.0.0.1 --username=salespunch360_ci salespunch360_restore_drill
           npm run test:recovery
           DATABASE_URL="$RESTORE_DRILL_DATABASE_URL" DIRECT_URL="$RESTORE_DRILL_DATABASE_URL" npx prisma migrate status
@@ -115,10 +130,10 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Run Android release tests and lint
         working-directory: android
-        run: ./gradlew --no-daemon testDebugUnitTest testReleaseUnitTest lintRelease
+        run: ./gradlew --no-daemon --max-workers=1 "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process testDebugUnitTest testReleaseUnitTest lintRelease
       - name: Assemble unsigned release for verification
         working-directory: android
-        run: ./gradlew --no-daemon assembleRelease
+        run: ./gradlew --no-daemon --max-workers=1 "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process assembleRelease
       - name: Verify release configuration
         shell: bash
         run: |

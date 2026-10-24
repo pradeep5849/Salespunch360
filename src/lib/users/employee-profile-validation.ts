@@ -46,7 +46,7 @@ export const employeeProfileFields = {
 };
 
 export const employeeProfileUpdateSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string().guid(),
   ...employeeProfileFields,
 }).strict();
 

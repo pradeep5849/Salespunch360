@@ -79,7 +79,7 @@ async function assertOperationalWrite(actor: MobilePrincipal) {
 }
 
 async function accessibleLead(actor: MobilePrincipal, leadId: string) {
-  const id = z.string().uuid().parse(leadId);
+  const id = z.string().guid().parse(leadId);
   await assertTelecallerPackage(actor);
   const lead = await db.lead.findFirst({
     where: { id, companyId: actor.companyId, ...actorLeadWhere(actor) },
@@ -134,7 +134,7 @@ export async function mobileLeadCallHistory(actor: MobilePrincipal, leadId: stri
 export async function mobileRecordLeadCall(actor: MobilePrincipal, raw: unknown) {
   if (!raw || typeof raw !== "object") throw new Error("INVALID_INPUT");
   const input = raw as Record<string, unknown>;
-  const leadId = z.string().uuid().parse(input.leadId);
+  const leadId = z.string().guid().parse(input.leadId);
   const resultText = typeof input.result === "string" ? input.result : "";
   if (!(TELECALLING_RESULTS as readonly string[]).includes(resultText)) throw new Error("INVALID_CALL_RESULT");
   const result = resultText as TelecallingResult;
@@ -203,7 +203,7 @@ export async function mobileUpdateSalesAction(actor: MobilePrincipal, raw: unkno
   if (!raw || typeof raw !== "object") throw new Error("INVALID_INPUT");
   if (isTelecaller(actor)) throw new Error("NOT_AUTHORIZED");
   const input = raw as Record<string, unknown>;
-  const id = z.string().uuid().parse(input.actionId);
+  const id = z.string().guid().parse(input.actionId);
   const status = input.status;
   if (status !== "ACKNOWLEDGED" && status !== "ACTION_TAKEN") throw new Error("INVALID_STATUS");
   await assertOperationalWrite(actor);

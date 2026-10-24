@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     return mobileJson(await mobileAccountHome(await authenticateMobileToken(request.headers.get("authorization")), {
       branchId: url.searchParams.get("branchId"), scope: url.searchParams.get("scope"),
+      includeNonCommercial:url.searchParams.get("homeVersion")==="2",
       q: url.searchParams.get("q") ?? "", types: url.searchParams.getAll("type"),
     }));
   } catch (error) {

@@ -3,6 +3,7 @@ package com.salespunch360.mobile
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.salespunch360.mobile.account.AppliedAccountReport
 import com.salespunch360.mobile.data.ApiClient
 import com.salespunch360.mobile.data.SecureSession
 import java.io.IOException
@@ -15,17 +16,30 @@ import kotlinx.serialization.json.*
 
 data class AccountReportState(
     val loading: Boolean = false,
+    val favouriteSaving:Boolean=false,
     val report: String? = null,
-    val from: String = java.time.LocalDate.now().withDayOfYear(1).toString(),
-    val to: String = java.time.LocalDate.now().toString(),
+    val from: String = com.salespunch360.mobile.account.accountReportFinancialYearStart().toString(),
+    val to: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val branchId: String = "",
     val projectId: String = "",
     val ledgerId: String = "",
     val customerId: String = "",
     val vendorId: String = "",
     val productId: String = "",
+    val ownerId: String = "",
+    val classificationSide:String="",
+    val orderType:String="",
+    val orderStatus:String="",
+    val accountType:String="",
+    val loanId:String="",
+    val moneyAccountId:String="",
+    val categoryId:String="",
+    val itemStatus:String="",
+    val itemSearch:String="",
+    val stockLevel:String="",
     val options: JsonObject = buildJsonObject {},
     val data: JsonObject? = null,
+    val appliedFilters: Map<String,String> = emptyMap(),
     val export: Pair<String, ByteArray>? = null,
     val error: String? = null
 )
@@ -37,6 +51,7 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
     private var reportJob: Job? = null
     private var exportJob: Job? = null
     private var requestGeneration = 0L
+    private var appliedRequest: AppliedAccountReport? = null
 
     init { options() }
 
@@ -50,15 +65,24 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun favourite(key:String,selected:Boolean)=viewModelScope.launch{
+        if(_state.value.favouriteSaving)return@launch
+        _state.value=_state.value.copy(favouriteSaving=true,error=null)
+        try{val result=api.setAccountReportFavourite(key,selected);_state.value=_state.value.copy(favouriteSaving=false,options=JsonObject(_state.value.options.toMutableMap().apply{put("favourites",result["favourites"]?:JsonArray(emptyList()))}))}
+        catch(error:CancellationException){throw error}
+        catch(error:Exception){_state.value=_state.value.copy(favouriteSaving=false);fail(error)}
+    }
+
     fun context(query:String) {
         val q=android.net.Uri.parse("https://internal.invalid/?$query")
-        _state.value=_state.value.copy(branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
+        _state.value=_state.value.copy(classificationSide=q.getQueryParameter("classificationSide").orEmpty(),orderType=q.getQueryParameter("orderType").orEmpty(),orderStatus=q.getQueryParameter("orderStatus").orEmpty(),loanId=q.getQueryParameter("loanId").orEmpty(),itemSearch=q.getQueryParameter("itemSearch").orEmpty(),stockLevel=q.getQueryParameter("stockLevel").orEmpty(),moneyAccountId=q.getQueryParameter("moneyAccountId").orEmpty(),categoryId=q.getQueryParameter("categoryId").orEmpty(),itemStatus=q.getQueryParameter("itemStatus").orEmpty(),accountType=q.getQueryParameter("accountType").orEmpty(),branchId=q.getQueryParameter("branchId").orEmpty(),from=q.getQueryParameter("from")?:_state.value.from,to=q.getQueryParameter("to")?:q.getQueryParameter("asOf")?:_state.value.to)
     }
     fun choose(report: String?) {
         requestGeneration++
+        appliedRequest = null
         reportJob?.cancel()
         exportJob?.cancel()
-        _state.value = _state.value.copy(report = report, data = null, export = null, loading = false, error = null)
+        _state.value = _state.value.copy(report = report, data = null, appliedFilters = emptyMap(), export = null, loading = false, error = null)
         if (report != null) run()
     }
 
@@ -73,27 +97,33 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
             "ledger" -> _state.value.copy(ledgerId = value)
             "customer" -> _state.value.copy(customerId = value)
             "vendor" -> _state.value.copy(vendorId = value)
+            "owner" -> _state.value.copy(ownerId = value)
+            "loanId" -> _state.value.copy(loanId=value)
+            "moneyAccountId" -> _state.value.copy(moneyAccountId=value)
+            "categoryId" -> _state.value.copy(categoryId=value)
+            "stockLevel" -> _state.value.copy(stockLevel=value)
+            "itemSearch" -> _state.value.copy(itemSearch=value)
+            "itemStatus" -> _state.value.copy(itemStatus=value)
+            "classificationSide" -> _state.value.copy(classificationSide=value)
+            "orderType" -> _state.value.copy(orderType=value,customerId="",vendorId="")
+            "orderStatus" -> _state.value.copy(orderStatus=value)
+            "accountType" -> _state.value.copy(accountType=value)
             else -> _state.value.copy(productId = value)
         }
     }
 
-    private fun filters(report: String? = _state.value.report) = buildMap {
-        val lifetimeProject = report == "projects" || report == "budget-vs-actual"
-        if (!lifetimeProject) {
-            put("from", _state.value.from)
-            put("to", _state.value.to)
-        }
-        listOf(
-            "branchId" to _state.value.branchId,
-            "projectId" to _state.value.projectId,
-            "ledgerId" to _state.value.ledgerId,
-            "customerId" to _state.value.customerId,
-            "vendorId" to _state.value.vendorId,
-            "productId" to _state.value.productId
-        ).forEach { (key, value) ->
-            if (value.isNotBlank() && (!lifetimeProject || key == "branchId" || key == "projectId")) put(key, value)
-        }
-    }
+    private fun filters(report: String? = _state.value.report) = com.salespunch360.mobile.account.accountReportRequestFilters(
+        _state.value.options,report.orEmpty(),mapOf(
+            "from" to _state.value.from,"to" to _state.value.to,
+            "branchId" to _state.value.branchId,"projectId" to _state.value.projectId,
+            "ledgerId" to _state.value.ledgerId,"customerId" to _state.value.customerId,
+            "vendorId" to _state.value.vendorId,"ownerId" to _state.value.ownerId,
+            "loanId" to _state.value.loanId,"moneyAccountId" to _state.value.moneyAccountId,"categoryId" to _state.value.categoryId,"itemSearch" to _state.value.itemSearch,"itemStatus" to _state.value.itemStatus,"stockLevel" to _state.value.stockLevel,
+            "classificationSide" to _state.value.classificationSide,
+            "orderType" to _state.value.orderType,"orderStatus" to _state.value.orderStatus,
+            "productId" to _state.value.productId,"accountType" to _state.value.accountType
+        )
+    )
 
     fun run() {
         val report = _state.value.report ?: return
@@ -105,7 +135,8 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = _state.value.copy(loading = true, error = null)
                 val data = api.accountReport(report, requestFilters)
                 if (generation == requestGeneration && _state.value.report == report) {
-                    _state.value = _state.value.copy(loading = false, data = data)
+                    appliedRequest = AppliedAccountReport(report, requestFilters)
+                    _state.value = _state.value.copy(loading = false, data = data, appliedFilters = requestFilters)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -117,9 +148,10 @@ class AccountReportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun export(format: String) {
         val report = _state.value.report ?: return
+        val shown = appliedRequest?.takeIf { it.report == report && _state.value.data != null } ?: return
         exportJob?.cancel()
         val generation = requestGeneration
-        val requestFilters = filters(report)
+        val requestFilters = shown.filters
         exportJob = viewModelScope.launch {
             try {
                 val bytes = api.accountReportExport(report, format, requestFilters)

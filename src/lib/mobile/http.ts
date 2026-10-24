@@ -1,3 +1,4 @@
+import {moneyValidationFeedback} from "./money-validation-feedback";
 import { ZodError } from "zod";
 import {
   accountErrorMessage,
@@ -43,13 +44,43 @@ export const mobileAuthorizationFailure = (error: unknown) =>
     ? mobileJson({ error: "FORBIDDEN" }, 403)
     : null;
 export function mobileUnexpected(category: string, error: unknown) {
+  if(error instanceof ZodError && /^MOBILE_(MONEY|LOAN|OWNER|CHEQUE|ASSET_FUNDING)/.test(category))
+    return mobileJson(moneyValidationFeedback(error),400);
   if (error instanceof ZodError || error instanceof SyntaxError)
     return mobileJson({ error: "INVALID_INPUT" }, 400);
   if (isAccountDomainError(error))
     return mobileJson(
       { error: error.message, message: accountErrorMessage(error) },
       [
+        "SALE_ALREADY_REVISED",
+        "SALE_RETURN_LINE_HISTORY_REQUIRED",
+        "SALE_RETURN_HISTORY_INCONSISTENT",
+        "SALE_STOCK_SOURCE_HISTORY_REQUIRED",
+        "SALE_STOCK_COST_HISTORY_INCONSISTENT",
+        "RETURN_REVISION_STOCK_CONFIGURATION_CHANGED",
+        "SALE_HAS_PENDING_CHEQUE",
+        "SALE_HAS_PAYMENTS_OR_ADJUSTMENTS",
+        "SALE_NOT_EDITABLE",
+        "SALE_REPLACEMENT_ALREADY_POSTED",
+        "OWNER_CORRECTION_ALREADY_POSTED",
         "IDEMPOTENCY_KEY_REUSED",
+        "IDEMPOTENCY_CONFLICT",
+        "LOAN_CHANGED",
+        "QUOTATION_ALREADY_CONVERTED",
+        "QUOTATION_APPROVAL_REQUIRED",
+        "QUOTATION_REVISION_CHANGED",
+        "SALE_PRICE_CHANGED",
+        "SALE_PRICE_DOCUMENT_CHANGED",
+        "CHEQUE_CHANGED",
+        "CHEQUE_NUMBER_EXISTS",
+        "INVALID_CHEQUE_SOURCE",
+        "EXPENSE_REVIEW_RETRY_CONFLICT",
+        "INVALID_EXPENSE_REVIEW_TRANSITION",
+        "RECURRING_SCHEDULE_CHANGED",
+        "RECURRING_BILL_NOT_PAYABLE",
+        "RECURRING_OCCURRENCE_ALREADY_EXISTS",
+        "ITEM_IDENTIFIER_EXISTS",
+        "BUSINESS_CURRENCY_LOCKED",
         "EXPENSE_CATEGORY_NAME_EXISTS",
         "INVALID_EXPENSE_TRANSITION",
         "INVALID_CHANGE_ORDER_TRANSITION",

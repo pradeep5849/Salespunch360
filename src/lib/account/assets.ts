@@ -1,3 +1,5 @@
+import { fundingRowsInTx, remainingFunding } from "./owner-asset-funding";
+import {saveCustomFieldValuesInTx} from "./custom-field-values";
 import { retrySerializable } from "./transaction-retry";
 import { createHash } from "node:crypto";
 import {
@@ -21,6 +23,7 @@ const D = Prisma.Decimal,
   base = z
     .object({
       name: z.string().trim().min(1).max(240),
+      customFields:z.record(z.string(),z.string().max(10000)).optional(),
       assetType: z.nativeEnum(AssetType),
       category: z.string().max(120).nullable().optional(),
       hsnCode: z
@@ -37,9 +40,9 @@ const D = Prisma.Decimal,
       effectiveDate: z.coerce.date().nullable().optional(),
       purchaseDate: z.coerce.date(),
       purchaseValue: money,
-      vendorId: z.string().uuid().nullable().optional(),
-      purchaseDocumentId: z.string().uuid().nullable().optional(),
-      purchaseDocumentLineId: z.string().uuid().nullable().optional(),
+      vendorId: z.string().guid().nullable().optional(),
+      purchaseDocumentId: z.string().guid().nullable().optional(),
+      purchaseDocumentLineId: z.string().guid().nullable().optional(),
       description: z.string().max(5000).nullable().optional(),
       serialNumber: z.string().max(160).nullable().optional(),
       registrationNumber: z.string().max(80).nullable().optional(),
@@ -52,23 +55,23 @@ const D = Prisma.Decimal,
         .nullable()
         .optional(),
       location: z.string().max(240).nullable().optional(),
-      depreciationMethod: z.nativeEnum(DepreciationMethod).default("NONE"),
+      depreciationMethod: z.nativeEnum(DepreciationMethod).prefault("NONE"),
       usefulLifeMonths: z.coerce
         .number()
         .int()
         .positive()
         .nullable()
         .optional(),
-      salvageValue: money.default("0"),
+      salvageValue: money.prefault("0"),
       depreciationStartDate: z.coerce.date().nullable().optional(),
-      assetLedgerId: z.string().uuid().nullable().optional(),
-      accumulatedDepreciationLedgerId: z.string().uuid().nullable().optional(),
-      depreciationExpenseLedgerId: z.string().uuid().nullable().optional(),
+      assetLedgerId: z.string().guid().nullable().optional(),
+      accumulatedDepreciationLedgerId: z.string().guid().nullable().optional(),
+      depreciationExpenseLedgerId: z.string().guid().nullable().optional(),
     })
     .strict(),
   createInput = base.extend({
-    branchId: z.string().uuid(),
-    requestKey: z.string().uuid().optional(),
+    branchId: z.string().guid(),
+    requestKey: z.string().guid().optional(),
   });
 export async function assertAssetAccess(a: ProjectActor) {
   if (
@@ -181,10 +184,10 @@ export async function listAssetsForActor(a: ProjectActor, raw: unknown = {}) {
   await assertAssetAccess(a);
   const input = z
     .object({
-      q: z.string().trim().max(240).default(""),
+      q: z.string().trim().max(240).prefault(""),
       status: z.nativeEnum(AssetStatus).optional(),
-      offset: z.coerce.number().int().min(0).default(0),
-      limit: z.coerce.number().int().min(1).max(100).default(50),
+      offset: z.coerce.number().int().min(0).prefault(0),
+      limit: z.coerce.number().int().min(1).max(100).prefault(50),
     })
     .strict()
     .parse(raw);
@@ -226,6 +229,7 @@ export async function assetOptionsForActor(a: ProjectActor) {
   });
   return {
     branches,
+    customFields:await db.customFieldDefinition.findMany({where:{companyId:a.companyId,entityType:"ASSET",isActive:true},orderBy:{position:"asc"}}),
     hsnCodes: (
       await db.accountProduct.findMany({
         where: { companyId: a.companyId, hsnCode: { not: null } },
@@ -289,9 +293,9 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
     db.$transaction(
       async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${a.companyId + ":asset-number"}))`;
-        const { requestKey, ...values } = d;
+        const { requestKey, customFields, ...values } = d;
         const requestHash = createHash("sha256")
-          .update(JSON.stringify(values))
+          .update(JSON.stringify({...values,...(customFields?{customFields:Object.fromEntries(Object.entries(customFields).sort(([a],[b])=>a.localeCompare(b)))}:{})}))
           .digest("hex");
         if (requestKey) {
           const existing = await tx.asset.findUnique({
@@ -350,6 +354,7 @@ export async function createAssetForActor(a: ProjectActor, raw: unknown) {
             createdById: a.id,
           },
         });
+        await saveCustomFieldValuesInTx(tx,a.companyId,"ASSET",row.id,customFields??{});
         await audit(tx, a, "ASSET_CREATED", row.id);
         return row;
       },
@@ -373,6 +378,7 @@ export async function getAssetForActor(a: ProjectActor, id: string) {
   const asset = await scoped(a, id);
   return {
     asset,
+    customValues:Object.fromEntries((await db.customFieldValue.findMany({where:{companyId:a.companyId,entityType:"ASSET",entityId:id,definition:{isActive:true}},include:{definition:{select:{fieldKey:true}}}})).map(row=>[row.definition.fieldKey,row.value])),
     history: await db.assetAssignmentHistory.findMany({
       where: { companyId: a.companyId, assetId: id },
       orderBy: { assignedAt: "desc" },
@@ -394,6 +400,8 @@ export async function updateAssetForActor(
 ) {
   await scoped(a, id);
   return db.$transaction(async (tx) => {
+    // Serialize cost corrections with funding allocations and capital repayments.
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
     await tx.$queryRaw`SELECT "id" FROM "assets" WHERE "id"=${id}::uuid AND "companyId"=${a.companyId}::uuid FOR UPDATE`;
     const current = await scoped(a, id, tx);
     const d = base.parse({
@@ -414,10 +422,14 @@ export async function updateAssetForActor(
       d,
       current.vendorId,
     );
+    const allocated=(await fundingRowsInTx(tx,a.companyId)).filter(row=>row.assetId===id).reduce((sum,row)=>sum.add(remainingFunding(row)),new D(0));
+    if(allocated.gt(purchaseValue))throw new Error("ASSET_FUNDING_EXCEEDS_AVAILABLE");
+    const {customFields,...values}=d;
     const row = await tx.asset.update({
       where: { id },
-      data: { ...d, purchaseValue, salvageValue: new D(d.salvageValue) },
+      data: { ...values, purchaseValue, salvageValue: new D(d.salvageValue) },
     });
+    await saveCustomFieldValuesInTx(tx,a.companyId,"ASSET",id,customFields??{},true);
     await audit(tx, a, "ASSET_UPDATED", id);
     return row;
   });

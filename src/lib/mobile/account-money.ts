@@ -1,7 +1,30 @@
+import {ownerBalancesForActor} from "@/lib/account/owner-balances";
+import { allocateOwnerAssetFundingForActor, cancelOwnerAssetFundingForActor, confirmAssetFundingForActor, ownerAssetFundingOptionsForActor, ownerFundingRepaymentOptionsForActor } from "@/lib/account/owner-asset-funding";
+import {prepareTransferImagePayload,addTransferImageForActor,transferImageForActor} from "@/lib/account/money-transfer-image";
+import {editLoanMetadataForActor,topUpLoanForActor,changeLoanLifecycleForActor} from "@/lib/account/loan-operations";
+import {loanOverviewForActor} from "@/lib/account/loan-overview";
+import {loanHistoryForActor} from "@/lib/account/loan-history";
+import {
+  moneyAdjustmentOptionsForActor,
+  postMoneyAdjustmentForActor,
+} from "@/lib/account/money-adjustment";
+import { moneyReadContext } from "@/lib/account/money-context";
+import { chequeFinancialActionForActor } from "@/lib/account/cheque-finance";
+import {
+  chequePageForActor,
+  chequeListQuerySchema,
+} from "@/lib/account/cheque-list";
+import { resolveAccountBranchContext } from "@/lib/account/branch-context";
+import { z } from "zod";
+import { ownerHistoryForActor } from "@/lib/account/owner-history";
+import { ownerCapitalSummaryForActor } from "@/lib/account/owner-capital-summary";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
+  createChequeForActor,
   createAndReceiveLoanForActor,
+  createOwnerFinancialAccountForActor,
+  updateOwnerFinancialAccountForActor,
   createMoneyAccountForActor,
   createMoneyTransferForActor,
   deactivateMoneyAccountForActor,
@@ -26,18 +49,28 @@ function permit(
 }
 const write = async (u: MobileAppPrincipal) =>
   assertOperationalWrite(u.companyId);
-export async function mobileMoneyContext(u: MobileAppPrincipal) {
-  const a = permit(u, "ACCOUNT_MONEY_VIEW"),
+export async function mobileMoneyContext(
+  u: MobileAppPrincipal,
+  query: unknown = {},
+) {
+  const readScope = await moneyReadContext(
+    permit(u, "ACCOUNT_MONEY_VIEW"),
+    query,
+  );
+  const a = readScope.actor,
     data = await listMoneyDataForActor(a),
     scope =
       a.branchAccessScope === "SELECTED_BRANCHES"
         ? { branchId: { in: a.branchIds ?? [] } }
         : {},
     loanIds = data.loans.map((x) => x.id),
-    ownerIds = data.owners.map((x) => x.userId);
+    ownerIds = data.owners
+      .map((x) => x.userId)
+      .filter((id): id is string => Boolean(id));
   const [transfers, ownerTransactions, loanPayments, users] = await Promise.all(
     [
       db.moneyTransfer.findMany({
+        include:{image:{select:{id:true}}},
         where: { companyId: a.companyId, ...scope },
         orderBy: { transferDate: "desc" },
         take: 200,
@@ -58,11 +91,18 @@ export async function mobileMoneyContext(u: MobileAppPrincipal) {
       }),
     ],
   );
+  const ownerBalances=await ownerBalancesForActor(a,data.owners);
   return {
     ...data,
+    adjustmentOptions: data.capabilities.postMoneyEntries
+      ? await moneyAdjustmentOptionsForActor(a)
+      : null,
+    branchContext: readScope.context,
+    fundingRepayments: await ownerFundingRepaymentOptionsForActor(a),
     owners: data.owners.map((x) => ({
       ...x,
-      name: users.find((u) => u.id === x.userId)?.name ?? "Owner",
+      currentBalances:ownerBalances[x.id],
+      name: x.name || users.find((u) => u.id === x.userId)?.name || "Owner",
     })),
     transfers,
     ownerTransactions,
@@ -96,14 +136,17 @@ export async function mobileDisableMoneyAccount(
 }
 export async function mobileMoneyTransfer(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
-  return createMoneyTransferForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+  const actor=permit(u,"ACCOUNT_MONEY_ENTRY"),input=z.object({image:z.unknown().optional()}).passthrough().parse(raw),image=await prepareTransferImagePayload(input.image);
+  const row=await createMoneyTransferForActor(actor,raw);
+  if(image)try{await addTransferImageForActor(actor,row.id,image);}catch(error){if(error instanceof Error&&error.message==="TRANSFER_IMAGE_ALREADY_ATTACHED")throw error;throw new Error("TRANSFER_POSTED_IMAGE_UPLOAD_FAILED");}
+  return row;
 }
 export async function mobileOwnerTransaction(
   u: MobileAppPrincipal,
   raw: unknown,
 ) {
   await write(u);
-  return postOwnerTransactionForActor(permit(u, "ACCOUNT_LOAN_ADMIN"), raw);
+  return postOwnerTransactionForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
 }
 export async function mobileLoan(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
@@ -116,11 +159,186 @@ export async function mobileLoanPayment(u: MobileAppPrincipal, raw: unknown) {
 
 export async function mobileOwnerSetup(u: MobileAppPrincipal, raw: unknown) {
   await write(u);
-  const d = raw as { userId?: string; branchId?: string };
-  if (!d.userId || !d.branchId) throw new Error("INVALID_INPUT");
-  return setupOwnerFinancialAccountForActor(
-    permit(u, "ACCOUNT_LOAN_ADMIN"),
-    d.userId,
-    d.branchId,
+  const a = permit(u, "ACCOUNT_LOAN_ADMIN");
+  const d = raw as { name?: string; userId?: string; branchId?: string };
+  const row = d.name
+    ? await createOwnerFinancialAccountForActor(a, raw)
+    : d.userId && d.branchId
+      ? await setupOwnerFinancialAccountForActor(a, d.userId, d.branchId)
+      : null;
+  if (!row) throw new Error("INVALID_INPUT");
+  return ownerIdentityView(row);
+}
+function ownerIdentityView(row: {
+  id: string;
+  name: string;
+  partyType: string;
+  userId: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  isActive: boolean;
+}) {
+  return {
+    id: row.id,
+    name: row.name,
+    partyType: row.partyType,
+    userId: row.userId,
+    phone: row.phone,
+    email: row.email,
+    address: row.address,
+    isActive: row.isActive,
+  };
+}
+export async function mobileUpdateOwnerIdentity(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await write(u);
+  return ownerIdentityView(
+    await updateOwnerFinancialAccountForActor(
+      permit(u, "ACCOUNT_LOAN_ADMIN"),
+      id,
+      raw,
+    ),
   );
+}
+
+export async function mobileOwnerCapitalSummary(u: MobileAppPrincipal) {
+  const a = mobileAccountActor(u);
+  if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
+    throw new Error("MOBILE_FORBIDDEN");
+  return ownerCapitalSummaryForActor(a);
+}
+
+export async function mobileOwnerHistory(
+  u: MobileAppPrincipal,
+  id: string,
+  filters: unknown,
+) {
+  const a = mobileAccountActor(u);
+  if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
+    throw new Error("MOBILE_FORBIDDEN");
+  const query=z.object({branchId:z.string().guid().optional(),scope:z.literal("all").optional()}).passthrough().parse(filters);
+  const selected=await moneyReadContext(a,{branchId:query.branchId,scope:query.scope});
+  const dates=Object.fromEntries(Object.entries(query).filter(([key])=>key!=="branchId"&&key!=="scope"));
+  return ownerHistoryForActor(selected.actor,id,{...dates,...(selected.context.mode==="BRANCH"?{branchId:selected.context.branchId}:{scope:"all"})});
+}
+
+export async function mobileChequePage(
+  u: MobileAppPrincipal,
+  raw: unknown = {},
+) {
+  const actor = permit(u, "ACCOUNT_MONEY_VIEW");
+  const { scope, ...query } = chequeListQuerySchema
+    .extend({ scope: z.literal("all").optional() })
+    .parse(raw);
+  const context = await resolveAccountBranchContext(actor, {
+    branchId: query.branchId,
+    scope,
+  });
+  return chequePageForActor(actor, {
+    ...query,
+    branchId:
+      context.context.mode === "BRANCH" ? context.context.branchId : undefined,
+  });
+}
+
+export async function mobileCreateCheque(u: MobileAppPrincipal, raw: unknown) {
+  await write(u);
+  return createChequeForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+export async function mobileChequeFinancialAction(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await write(u);
+  return chequeFinancialActionForActor(
+    permit(u, "ACCOUNT_MONEY_ENTRY"),
+    id,
+    raw,
+  );
+}
+
+export async function mobileCompleteLegacyChequeSource(
+  u: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
+  await write(u);
+  const { completeLegacyChequeSourceForActor } =
+    await import("@/lib/account/cheque-finance");
+  return completeLegacyChequeSourceForActor(
+    permit(u, "ACCOUNT_MONEY_ENTRY"),
+    id,
+    raw,
+  );
+}
+
+export async function mobileChequeParties(u: MobileAppPrincipal, raw: unknown) {
+  const { searchChequePartiesForActor } =
+    await import("@/lib/account/cheque-parties");
+  return searchChequePartiesForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+export async function mobileChequeEntryOptions(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  const { chequeEntryOptionsForActor } =
+    await import("@/lib/account/cheque-entry-options");
+  return chequeEntryOptionsForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+
+export async function mobileMoneyAccountHistory(
+  u: MobileAppPrincipal,
+  id: string,
+  query: unknown = {},
+) {
+  const { moneyAccountHistoryForActor } =
+    await import("@/lib/account/money-account-history");
+  return moneyAccountHistoryForActor(
+    permit(u, "ACCOUNT_MONEY_VIEW"),
+    id,
+    query,
+  );
+}
+
+export async function mobileMoneyAdjustment(
+  u: MobileAppPrincipal,
+  raw: unknown,
+) {
+  await write(u);
+  return postMoneyAdjustmentForActor(permit(u, "ACCOUNT_MONEY_ENTRY"), raw);
+}
+
+export async function mobileLoanOverview(u:MobileAppPrincipal,query:unknown={}) { return loanOverviewForActor(permit(u,"ACCOUNT_MONEY_VIEW"),query); }
+export async function mobileLoanHistory(u:MobileAppPrincipal,id:string,query:unknown={}) { return loanHistoryForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id,query); }
+
+export async function mobileEditLoanMetadata(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return editLoanMetadataForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
+
+export async function mobileTopUpLoan(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return topUpLoanForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
+export async function mobileChangeLoanLifecycle(u:MobileAppPrincipal,id:string,raw:unknown){await write(u);return changeLoanLifecycleForActor(permit(u,"ACCOUNT_LOAN_ADMIN"),id,raw);}
+
+export async function mobileMoneyTransferImage(u:MobileAppPrincipal,id:string){return transferImageForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id);}
+
+export async function mobileAssetFundingOptions(u: MobileAppPrincipal, raw: unknown = {}) {
+  const {q,...scope}=z.object({q:z.string().max(100).optional(),branchId:z.string().guid().optional(),scope:z.literal("all").optional()}).strict().parse(raw);
+  const read=await moneyReadContext(permit(u,"ACCOUNT_MONEY_VIEW"),scope);
+  return { ...await ownerAssetFundingOptionsForActor(read.actor,q),branchContext:read.context };
+}
+export async function mobileAssetFundingMutation(u: MobileAppPrincipal, raw: unknown) {
+  const actor=permit(u,"ACCOUNT_MONEY_ENTRY");
+  await write(u);
+  const {operation,payload}=z.object({operation:z.enum(["ALLOCATE","CONFIRM","CANCEL"]),payload:z.unknown()}).strict().parse(raw);
+  if(operation==="ALLOCATE") return allocateOwnerAssetFundingForActor(actor,payload);
+  if(operation==="CONFIRM") return confirmAssetFundingForActor(actor,payload);
+  return cancelOwnerAssetFundingForActor(actor,payload);
+}
+
+export async function mobileReverseOwnerTransaction(u:MobileAppPrincipal,ownerId:string,raw:unknown){
+ await write(u);const actor=permit(u,"ACCOUNT_MONEY_ENTRY");permit(u,"ACCOUNT_JOURNAL_REVERSE");
+ const {reverseOwnerTransactionForActor}=await import("@/lib/account/owner-corrections");
+ return reverseOwnerTransactionForActor(actor,{...z.object({branchId:z.string().guid().optional(),transactionId:z.string().guid(),entryDate:z.string(),reason:z.string()}).strict().parse(raw),ownerId});
 }

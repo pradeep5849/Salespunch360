@@ -1,5 +1,9 @@
 package com.salespunch360.mobile.ui.account.inventory
 
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import com.salespunch360.mobile.ui.account.accountMoney
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,9 +22,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.AccountInventoryViewModel
 import com.salespunch360.mobile.data.AccountMasterRecord
+import com.salespunch360.mobile.account.productStockTotals
+import com.salespunch360.mobile.account.formatStockQuantity
+import java.math.BigDecimal
 import kotlinx.serialization.json.*
 
-private data class ItemsDisplayItem(val kind:String,val record:AccountMasterRecord,val stock:Double?)
+private data class ItemsDisplayItem(val kind:String,val record:AccountMasterRecord,val stock:BigDecimal?)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,9 +36,20 @@ fun AccountItemsScreen(
     canSettings:Boolean,
     navigate:(String)->Unit,
     vm:AccountInventoryViewModel=viewModel(),
-    initialQuery:String=""
+    initialQuery:String="",
+    quantityDecimals:Int=2,
+    catalogMode:Boolean=false
 ){
+    fun catalogPath(type:String):String {
+        val original=android.net.Uri.parse("https://local.invalid/?$initialQuery")
+        val builder=android.net.Uri.Builder().path("/workspace/account/inventory/catalog")
+        listOf("branchId","scope","asOf").forEach{key->original.getQueryParameter(key)?.let{builder.appendQueryParameter(key,it)}}
+        return builder.appendQueryParameter("type",type).build().toString()
+    }
+    val catalogType=android.net.Uri.parse("https://local.invalid/?$initialQuery").getQueryParameter("type")?.takeIf{it=="SERVICE"}?:"PRODUCT"
     val state=vm.state.collectAsStateWithLifecycle().value
+    val context=LocalContext.current
+    var shareError by remember{mutableStateOf<String?>(null)}
     var query by remember{mutableStateOf("")}
     var filterOpen by remember{mutableStateOf(false)}
     var moreOpen by remember{mutableStateOf(false)}
@@ -39,16 +57,16 @@ fun AccountItemsScreen(
     var categories by remember{mutableStateOf(setOf<String>())}
     var draftTypes by remember{mutableStateOf(setOf<String>())}
     var draftCategories by remember{mutableStateOf(setOf<String>())}
-    LaunchedEffect(initialQuery){vm.context(initialQuery);vm.show("stock")}
-
-    val stockById=remember(state.rows){
-        state.rows.groupBy{row->row["product"]?.jsonObject?.get("id")?.jsonPrimitive?.content.orEmpty()}.mapValues{(_,rows)->rows.sumOf{row->
-                        (row["quantity"]?.jsonPrimitive?.content?.toDoubleOrNull()?:0.0)
-        }}
+    LaunchedEffect(initialQuery){
+        val uri=android.net.Uri.parse("https://local.invalid/?$initialQuery")
+        types=uri.getQueryParameter("type")?.takeIf{it in setOf("PRODUCT","SERVICE")}?.let{setOf(it)}?:if(catalogMode)setOf("PRODUCT")else emptySet()
+        vm.context(initialQuery);vm.show("stock")
     }
+
+    val stockById=remember(state.rows){productStockTotals(state.rows)}
     val allItems=remember(state.itemRecords,state.serviceRecords,state.rows){
         buildList{
-            state.itemRecords.forEach{add(ItemsDisplayItem("PRODUCT",it,stockById[it.id]?:0.0))}
+            state.itemRecords.forEach{add(ItemsDisplayItem("PRODUCT",it,stockById[it.id]?:BigDecimal.ZERO))}
             state.serviceRecords.forEach{add(ItemsDisplayItem("SERVICE",it,null))}
         }.sortedBy{it.record.name.lowercase()}
     }
@@ -56,7 +74,7 @@ fun AccountItemsScreen(
         val search="${item.record.name} ${item.record.code.orEmpty()}".contains(query,true)
         val typeOk=types.isEmpty()||item.kind in types
         val categoryOk=categories.isEmpty()||item.record.categoryId in categories
-        search&&typeOk&&categoryOk
+        search&&typeOk&&categoryOk&&(!catalogMode||item.kind==catalogType)
     }
     val categoryOptions=state.categories
 
@@ -67,7 +85,15 @@ fun AccountItemsScreen(
             verticalArrangement=Arrangement.spacedBy(12.dp)
         ){
             item{Text("Items",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
-            item{
+            if(catalogMode)item{
+                Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    FilterChip(selected=catalogType=="PRODUCT",onClick={navigate(catalogPath("PRODUCT"))},label={Text("Products")})
+                    FilterChip(selected=catalogType=="SERVICE",onClick={navigate(catalogPath("SERVICE"))},label={Text("Services")})
+                    AssistChip(onClick={navigate("/workspace/account/inventory/categories")},label={Text("Categories")})
+                    AssistChip(onClick={navigate("/workspace/account/inventory/units")},label={Text("Units")})
+                }
+            }
+            if(!catalogMode)item{
                 ElevatedCard{
                     Column(Modifier.padding(14.dp)){
                         Text("Quick Links",fontWeight=FontWeight.Bold)
@@ -75,7 +101,7 @@ fun AccountItemsScreen(
                             Quick("Online Store",Icons.Default.Storefront,Modifier.weight(1f)){navigate("/workspace/account/inventory/online-store")}
                             Quick("Stock Summary",Icons.Default.Assessment,Modifier.weight(1f)){navigate("/workspace/account/inventory/stock-summary")}
                             if(canSettings)Quick("Item Settings",Icons.Default.Settings,Modifier.weight(1f)){navigate("/workspace/account/inventory/item-settings")}
-                            Quick("Show All",Icons.Default.Apps,Modifier.weight(1f)){navigate("/workspace/account/inventory/items")}
+                            Quick("Show All",Icons.Default.Apps,Modifier.weight(1f)){navigate(catalogPath("PRODUCT"))}
                         }
                     }
                 }
@@ -94,34 +120,43 @@ fun AccountItemsScreen(
                 }
             }
             if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
-            state.error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}}
-            if(!state.loading&&shown.isEmpty())item{
+            shareError?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}}
+            state.error?.let{item{Column{Text(it,color=MaterialTheme.colorScheme.error);OutlinedButton(onClick={vm.load()}){Text("Retry")}}}}
+            if(!state.loading&&state.error==null&&shown.isEmpty())item{
                 Box(Modifier.fillMaxWidth().height(210.dp),contentAlignment=Alignment.Center){
-                    Column(horizontalAlignment=Alignment.CenterHorizontally){Text("No items found",fontWeight=FontWeight.Bold);Text("Try another item name, code or category.",color=Color(0xFF64748B))}
+                    Column(horizontalAlignment=Alignment.CenterHorizontally){Text(if(catalogMode)if(catalogType=="SERVICE")"No services found" else "No products found" else "No items found",fontWeight=FontWeight.Bold);Text("Try another item name, code or category.",color=Color(0xFF64748B))}
                 }
             }
             items(shown,key={it.record.id}){item->
                 val r=item.record
+                val shareText="${r.name}${r.code?.takeIf{it.isNotBlank()}?.let{" ($it)"}.orEmpty()} · ${accountMoney(r.salePrice.orEmpty().ifBlank{"0.00"})}"
                 ElevatedCard(Modifier.fillMaxWidth()){
                     Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                            if(r.hasPhoto)ItemPhotoViewer(if(item.kind=="PRODUCT")"products"else "services",r.id,r.name)
                             Text(r.name,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+                            IconButton(onClick={
+                                shareError=null
+                                try {
+                                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,shareText)},"Share item"))
+                                } catch (_: Exception) { shareError="Unable to share item details. Please try again." }
+                            }){Icon(Icons.Default.Share,"Share ${r.name}")}
                             r.categoryId?.let{id->categoryOptions.firstOrNull{it.id==id}?.name?.let{name->AssistChip({},label={Text(name)})}}
                         }
                         if(!r.code.isNullOrBlank())Text(r.code.orEmpty(),style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                            Column{Text("Sale Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text("₹${r.salePrice.orEmpty().ifBlank{"0.00"}}")}
-                            Column{Text("Purchase Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text("₹${r.costPrice.orEmpty().ifBlank{"0.00"}}")}
-                            Column{Text(if(item.kind=="PRODUCT")"In Stock" else "Type",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(item.stock?.let{"%.2f".format(it)}?:"Service",color=if((item.stock?:0.0)<0)Color(0xFFDC2654) else MaterialTheme.colorScheme.onSurface)}
+                            Column{Text("Sale Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(accountMoney(r.salePrice.orEmpty().ifBlank{"0.00"}))}
+                            Column{Text("Purchase Price",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(accountMoney(r.costPrice.orEmpty().ifBlank{"0.00"}))}
+                            Column{Text(if(item.kind=="PRODUCT")"In Stock" else "Type",style=MaterialTheme.typography.labelSmall,color=Color(0xFF94A3B8));Text(item.stock?.let{formatStockQuantity(it,quantityDecimals)}?:"Service",color=if((item.stock?:BigDecimal.ZERO).signum()<0)Color(0xFFDC2654) else MaterialTheme.colorScheme.onSurface)}
                         }
                     }
                 }
             }
         }
         ExtendedFloatingActionButton(
-            onClick={navigate("/workspace/account/inventory/items/new")},
+            onClick={navigate("/workspace/account/inventory/items/new"+if(catalogMode&&catalogType=="SERVICE")"?kind=services" else "")},
             icon={Icon(Icons.Default.Add,null)},
-            text={Text("Add New Item")},
+            text={Text(if(catalogMode)if(catalogType=="SERVICE")"Add Service" else "Add Product" else "Add New Item")},
             modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp)
         )
     }

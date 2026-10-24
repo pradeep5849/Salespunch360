@@ -5,7 +5,7 @@ import { AuthorizationError } from "@/lib/auth/authorization";
 describe("safe commercial errors", () => {
   it("maps invalid input without exposing validation input", () => {
     const parsed = z
-      .object({ branchId: z.string().uuid() })
+      .object({ branchId: z.string().guid() })
       .safeParse({ branchId: "private" });
     if (parsed.success) throw new Error("Expected invalid input");
     expect(commercialActionFailure(parsed.error)).toMatchObject({

@@ -91,3 +91,8 @@ describe("serialization retry policy", () => {
     expect(operation).toHaveBeenCalledTimes(3);
   });
 });
+
+it("retries only the explicitly named child identities of a composed financial request",async()=>{
+ for(const target of [["companyId","sourceType","sourceId","postingPurpose"],["companyId","creationRequestKey"]]){const operation=vi.fn().mockRejectedValueOnce(Object.assign(new Error("child replay"),{code:"P2002",meta:{target}})).mockResolvedValue("parent committed");expect(await retrySerializable(operation,3,["companyId","entityId"],[["companyId","sourceType","sourceId","postingPurpose"],["companyId","creationRequestKey"]])).toBe("parent committed");expect(operation).toHaveBeenCalledTimes(2)}
+ const unrelated=vi.fn().mockRejectedValue(Object.assign(new Error("ledger code collision"),{code:"P2002",meta:{target:["companyId","code"]}}));await expect(retrySerializable(unrelated,3,["companyId","entityId"],[["companyId","creationRequestKey"]])).rejects.toThrow("ledger code collision");expect(unrelated).toHaveBeenCalledOnce();
+});

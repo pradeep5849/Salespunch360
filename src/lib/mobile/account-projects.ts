@@ -21,25 +21,26 @@ import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 
 const optionalText = (max: number) => z.string().trim().max(max).optional();
-const projectValue = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).default("0");
+const projectValue = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).prefault("0");
 const createInput = z
   .object({
     idempotencyKey: z.string().trim().min(1).max(120).optional(),
-    branchId: z.string().uuid(),
+    branchId: z.string().guid(),
     name: z.string().trim().min(1).max(240),
     siteName: optionalText(240),
     siteAddress: optionalText(4000),
     siteContactName: optionalText(160),
     siteContactPhone: optionalText(30),
-    projectManagerId: z.string().uuid().optional(),
+    projectManagerId: z.string().guid().optional(),
     startDate: z.string().trim().optional(),
     projectValue,
+    customFields:z.record(z.string(),z.string().max(10000)).optional(),
   })
   .strict();
 const updateInput = createInput
   .omit({ branchId: true, idempotencyKey: true })
   .extend({
-    projectId: z.string().uuid(),
+    projectId: z.string().guid(),
     status: z.enum(["ACTIVE", "ON_HOLD"]),
   })
   .strict();
@@ -135,7 +136,7 @@ export async function mobileProjectAction(
 ) {
   await assertOperationalWrite(u.companyId);
   const actor = (await permit(u, "ACCOUNT_PROJECTS")) as ProjectActor;
-  const action = z.object({ action: z.literal("COMPLETE"), billingServiceId: z.string().uuid().optional(), postingDate: z.coerce.date().optional() }).strict().parse(raw);
+  const action = z.object({ action: z.literal("COMPLETE"), billingServiceId: z.string().guid().optional(), postingDate: z.coerce.date().optional() }).strict().parse(raw);
   await completeSimpleProjectForActor(actor, id, {billingServiceId: action.billingServiceId, postingDate: action.postingDate});
   return getProjectForActor(actor, id);
 }
@@ -158,8 +159,8 @@ export async function mobileProjectChangeOrder(u: MobileAppPrincipal, projectId:
   const actor = await permit(u, "ACCOUNT_PROJECTS");
   const request = z.discriminatedUnion("operation", [
     z.object({operation: z.literal("CREATE"), payload: z.object({title: z.string(), description: z.string().optional(), valueDelta: z.string(), estimatedCostDelta: z.string(), idempotencyKey: z.string().min(1).max(120)}).strict()}).strict(),
-    z.object({operation: z.literal("EDIT"), payload: z.object({changeOrderId: z.string().uuid(), title: z.string(), description: z.string().optional(), valueDelta: z.string(), estimatedCostDelta: z.string()}).strict()}).strict(),
-    z.object({operation: z.enum(["PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED"]), changeOrderId: z.string().uuid()}).strict(),
+    z.object({operation: z.literal("EDIT"), payload: z.object({changeOrderId: z.string().guid(), title: z.string(), description: z.string().optional(), valueDelta: z.string(), estimatedCostDelta: z.string()}).strict()}).strict(),
+    z.object({operation: z.enum(["PENDING_APPROVAL", "APPROVED", "REJECTED", "CANCELLED"]), changeOrderId: z.string().guid()}).strict(),
   ]).parse(raw);
   if (request.operation === "CREATE") await createChangeOrderForActor(actor, {...request.payload, projectId});
   else if (request.operation === "EDIT") await updateChangeOrderForActor(actor, {...request.payload, projectId});

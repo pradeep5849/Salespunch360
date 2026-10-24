@@ -1,3 +1,76 @@
-import {describe,expect,it} from "vitest";import {renderQuotationPdf} from "./pdf";
+import {PDFPage} from "pdf-lib";
+import {describe,expect,it,vi} from "vitest";
+import {renderQuotationPdf} from "./pdf";
+import {extractPdfText} from "../../../tests/helpers/pdf-text";
 const dto={revisionNumber:2,issueDate:new Date("2026-09-10"),validUntil:new Date("2026-10-10"),customerName:"Acme",contactPerson:"Buyer",phone:"1",email:"a@example.com",billingAddress:"Billing",siteAddress:"Site",gstin:"GST",pan:"PAN",terms:"Terms",inclusions:"Included",exclusions:"Excluded",notes:"Notes",subtotal:{toString:()=>"100"},discountTotal:{toString:()=>"10"},additionalChargeTotal:{toString:()=>"5"},taxableTotal:{toString:()=>"95"},taxTotal:{toString:()=>"17.1"},grandTotal:{toString:()=>"112.1"},lines:[{position:0,lineType:"CUSTOM",itemName:"Work",itemCode:null,description:"Description",specification:"Materials",unitName:"Number",unitSymbol:"Nos",quantity:{toString:()=>"1"},rate:{toString:()=>"100"},discountType:"FIXED",discountValue:{toString:()=>"10"},baseAmount:{toString:()=>"100"},discountAmount:{toString:()=>"10"},taxableAmount:{toString:()=>"90"},taxRate:{toString:()=>"18"},taxAmount:{toString:()=>"16.2"},lineTotal:{toString:()=>"106.2"}}],adjustments:[{position:0,type:"ADDITIONAL_CHARGE",label:"Freight",valueType:"FIXED",value:{toString:()=>"5"},amount:{toString:()=>"5"},taxable:true,taxRate:{toString:()=>"18"},taxAmount:{toString:()=>"0.9"}}],paymentSchedule:[{position:0,label:"Advance",valueType:"PERCENTAGE",value:{toString:()=>"100"},amount:{toString:()=>"112.1"},dueDescription:"Now"}],document:{documentType:"QUOTATION",documentNumber:"Q-1",company:{name:"Seller",addressLine1:"Address",addressLine2:null,locality:null,city:"City",state:"State",postalCode:"1",country:"India",primaryContactName:"Owner",primaryPhone:"2",contactEmail:"s@example.com",website:"example.com",gstin:"SGST",pan:"SPAN",registrationNumber:"REG"},branch:{name:"Main",code:"M",addressLine1:"Branch address",addressLine2:null,locality:null,city:"City",state:"State",postalCode:"1",country:"India",phone:"3",email:"b@example.com",gstin:"BGST"}}};
-describe("customer PDF",()=>{it("is a real PDF containing required safe customer fields",()=>{const pdf=renderQuotationPdf(dto as never),text=pdf.toString();expect(text.startsWith("%PDF-1.4")).toBe(true);for(const value of ["Seller","Q-1","Acme","Materials","Freight","Advance","Terms","Included","Excluded"])expect(text).toContain(value)});it("cannot contain private fields absent from the DTO",()=>{const text=renderQuotationPdf(dto as never).toString();expect(text).not.toMatch(/internalCost|expectedProfit|subscriptionStatus|logoObjectKey|companyId/)})});
+describe("customer Unicode PDF",()=>{
+ it("contains required safe customer content in a parseable embedded-font PDF",async()=>{
+  const pdf=await renderQuotationPdf(dto as never),{text,pages}=await extractPdfText(pdf);
+  expect(pdf.subarray(0,4).toString()).toBe("%PDF");expect(pages).toBeGreaterThan(0);
+  for(const value of ["Seller","Q-1","Acme","Materials","Freight","Advance","Terms","Included","Excluded"])expect(text).toContain(value);
+ });
+ it("retains accented, Hindi and Kannada customer text and rupee values",async()=>{
+  const data={...dto,customerName:"José Café",notes:"अजय सेवा ಕನ್ನಡ ₹125"};
+  const {text}=await extractPdfText(await renderQuotationPdf(data as never));
+  for(const value of ["José Café","अजय","सेवा","ಕನ್ನಡ","₹125"])expect(text).toContain(value);
+  expect(text).not.toContain("????");
+ });
+ it("wraps long words and multiline notes over pages without losing content",async()=>{
+  const notes=Array.from({length:90},(_,i)=>`Row-${i} ${"abcdefghij".repeat(20)}`).join("\n");
+  const {text,pages}=await extractPdfText(await renderQuotationPdf({...dto,notes} as never));
+  expect(pages).toBeGreaterThan(2);expect(text).toContain("Row-0");expect(text).toContain("Row-89");
+  expect(text.replace(/\s/g,"")).toContain("abcdefghij".repeat(20));
+ },15000);
+ it("escapes PDF operators and retains literal customer punctuation",async()=>{
+  const notes="Literal (customer) \\ BT /F1 999 Tf <00> Tj ET";
+  const {text,pages}=await extractPdfText(await renderQuotationPdf({...dto,notes} as never));
+  expect(text).toContain(notes);expect(pages).toBe(1);
+ });
+ it("does not serialize private fields even if an extra property reaches the renderer",async()=>{
+  const data={...dto,internalCost:"SECRET-COST-9000",expectedProfit:"SECRET-PROFIT",companyId:"PRIVATE-COMPANY",lines:dto.lines.map(line=>({...line,internalUnitCost:"SECRET-LINE-COST"}))};
+  const pdf=await renderQuotationPdf(data as never),{text}=await extractPdfText(pdf);
+  expect(text).not.toMatch(/SECRET|PRIVATE-COMPANY|internalCost|expectedProfit|companyId/);
+  expect(pdf.toString()).not.toMatch(/SECRET-COST|SECRET-PROFIT|PRIVATE-COMPANY|SECRET-LINE-COST/);
+ });
+});
+
+ it("uses company currency, decimal precision and calendar dates without modifying saved amounts",async()=>{
+  const data={...dto,displayPreferences:{appLanguage:"en",baseCurrency:"USD",displayDecimalPlaces:3,dateFormat:"MM/DD/YYYY"}};
+  const {text}=await extractPdfText(await renderQuotationPdf(data as never));
+  expect(text).toContain("Issue: 09/10/2026 | Valid until: 10/10/2026");
+  expect(text).toContain("GRAND TOTAL: $112.100");
+  expect(text).toContain("Rate $100.000");expect(text).toContain("Taxable $90.000");
+  expect(text).toContain("GST 18%");expect(text).toContain("Qty 1");
+  expect(dto.grandTotal.toString()).toBe("112.1");expect(text).not.toContain("₹");
+ });
+
+ it("prints the saved supply state and keeps unknown historical supply explicit",async()=>{
+  expect((await extractPdfText(await renderQuotationPdf({...dto,stateOfSupplyCode:"29"} as never))).text).toContain("State of supply: Karnataka");
+  expect((await extractPdfText(await renderQuotationPdf({...dto,stateOfSupplyCode:null} as never))).text).toContain("State of supply: Not recorded");
+ });
+
+ it("prints an optional billing display name without replacing the saved customer identity",async()=>{
+  const {text}=await extractPdfText(await renderQuotationPdf({...dto,billingName:"Acme site division"} as never));
+  expect(text).toContain("Customer/Lead: Acme");expect(text).toContain("Billing name: Acme site division");
+  expect((await extractPdfText(await renderQuotationPdf({...dto,billingName:null} as never))).text).not.toContain("Billing name:");
+ });
+
+ it("draws saved theme accents and layout while retaining safe amounts in words",async()=>{
+  const draw=vi.spyOn(PDFPage.prototype,"drawLine");
+  try {
+   const {text}=await extractPdfText(await renderQuotationPdf({...dto,printPresentation:{theme:"#123456",amountWordsFormat:"INTERNATIONAL"}} as never));
+   expect(draw).toHaveBeenCalledWith(expect.objectContaining({thickness:1.5,color:expect.objectContaining({red:18/255,green:52/255,blue:86/255})}));
+   expect(text).toContain("Amount in words: one hundred twelve INR and ten hundredths only");
+   expect(text).toContain("GRAND TOTAL:");expect(text).not.toMatch(/internalCost|companyId/);
+  } finally {draw.mockRestore()}
+ });
+
+ it("embeds company logo and signature without serializing private keys",async()=>{
+  const sharp=(await import("sharp")).default;
+  const bytes=await sharp({create:{width:4,height:4,channels:4,background:"#123456"}}).png().toBuffer();
+  const image=`data:image/png;base64,${bytes.toString("base64")}`,draw=vi.spyOn(PDFPage.prototype,"drawImage");
+  try{
+   const {text}=await extractPdfText(await renderQuotationPdf({...dto,printAssets:{logoDataUrl:image,signatureDataUrl:image,authorizedSignatory:"Authorized Buyer"}} as never));
+   expect(draw).toHaveBeenCalledTimes(2);expect(text).toContain("Authorized signatory: Authorized Buyer");expect(text).toContain("GRAND TOTAL:");
+  }finally{draw.mockRestore()}
+ });

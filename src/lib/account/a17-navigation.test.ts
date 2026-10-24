@@ -1,9 +1,183 @@
-import { describe, expect, it } from "vitest"; import { accountNavSectionId, buildAccountNavigation, hasAccountNavigationItem, type AccountNavGroup } from "./navigation";
-const base = { id: "u", companyId: "c", role: "COMPANY_ADMIN", isActive: true, managerType: null, salesRole: null, accountAccessActive: true, salesAccessActive: false, branchAccessScope: "ALL_BRANCHES", branchIds: ["b"] } as const;
-const items=(groups:AccountNavGroup[]):AccountNavGroup["items"]=>groups.flatMap(group=>[...group.items,...items(group.children??[])]);
-describe("A17 role and module navigation", () => { it("keeps Settings in Menu and hides disabled Inventory/Projects", () => { const nav = buildAccountNavigation({ ...base, accountRole: "ACCOUNT_ADMIN" }, "SALESPUNCH360_ACCOUNT", ["SALES"]), text = items(nav); expect(text.some((x) => x.label === "Settings")).toBe(true); expect(text.some((x) => x.href.includes("/inventory"))).toBe(false); expect(text.some((x) => x.href.includes("/projects"))).toBe(false); }); it("does not leak Company settings or financial KPIs to Data Entry", () => { const nav = buildAccountNavigation({ ...base, accountRole: "DATA_ENTRY" }, "SALESPUNCH360_ACCOUNT", ["SALES", "PURCHASES"]), text = items(nav); expect(text.some((x) => x.label === "Settings")).toBe(false); expect(text.some((x) => x.label === "Profit & Loss")).toBe(false); }); it("shows Project navigation only when enabled and authorized", () => { const nav = buildAccountNavigation({ ...base, accountRole: "PROJECT_MANAGER" }, "SALESPUNCH360_ACCOUNT", ["PROJECTS", "PROJECT_COSTING"]); expect(items(nav).some((x) => x.label === "Projects")).toBe(true); });
-it("derives the Projects bottom tab from filtered navigation",()=>{const authorized=buildAccountNavigation({...base,accountRole:"PROJECT_MANAGER"},"SALESPUNCH360_ACCOUNT",["PROJECTS"]),costingOnly=buildAccountNavigation({...base,accountRole:"PROJECT_MANAGER"},"SALESPUNCH360_ACCOUNT",["PROJECT_COSTING"]),unauthorized=buildAccountNavigation({...base,accountRole:"DATA_ENTRY"},"SALESPUNCH360_ACCOUNT",["PROJECTS"]);expect(hasAccountNavigationItem(authorized,"Projects","/workspace/account/projects")).toBe(true);expect(hasAccountNavigationItem(costingOnly,"Projects","/workspace/account/projects")).toBe(false);expect(hasAccountNavigationItem(unauthorized,"Projects","/workspace/account/projects")).toBe(false)});
-it("requires every child document module",()=>{const actor={...base,accountRole:"ACCOUNT_ADMIN" as const},disabled=items(buildAccountNavigation(actor,"SALESPUNCH360_ACCOUNT",["SALES","PURCHASES"])),enabled=items(buildAccountNavigation(actor,"SALESPUNCH360_ACCOUNT",["SALES","CREDIT_NOTE","PURCHASES","PURCHASE_BILLS"]));expect(disabled.some(x=>x.label==="Sale Return (Credit Note)"||x.label==="Purchase Bills")).toBe(false);expect(enabled.some(x=>x.label==="Sale Return (Credit Note)")).toBe(true);expect(enabled.some(x=>x.label==="Purchase Bills")).toBe(true)});
-it.each([["Sales","sales"],["Cash & Bank","cash-bank"],["Users & Permissions","users-permissions"],["Company / Branch","company-branch"],["Help / Support","help-support"]])("creates a shared safe section ID for %s",(label,id)=>expect(accountNavSectionId(label)).toBe(id));
-it("uses one My Business group with nested Sales and Purchase and one Expenses row",()=>{const nav=buildAccountNavigation({...base,accountRole:"ACCOUNT_ADMIN"},"SALESPUNCH360_ACCOUNT",["SALES","PURCHASES","EXPENSES"]),business=nav.find(x=>x.label==="My Business");expect(business?.children?.map(x=>x.label)).toEqual(["Sales","Purchase"]);expect(items(nav).filter(x=>x.label==="Expenses")).toHaveLength(1)});
+import { describe, expect, it } from "vitest";
+import {
+  accountNavSectionId,
+  buildAccountNavigation,
+  hasAccountNavigationItem,
+  type AccountNavGroup,
+} from "./navigation";
+const base = {
+  id: "u",
+  companyId: "c",
+  role: "COMPANY_ADMIN",
+  isActive: true,
+  managerType: null,
+  salesRole: null,
+  accountAccessActive: true,
+  salesAccessActive: false,
+  branchAccessScope: "ALL_BRANCHES",
+  branchIds: ["b"],
+} as const;
+const items = (groups: AccountNavGroup[]): AccountNavGroup["items"] =>
+  groups.flatMap((group) => [...group.items, ...items(group.children ?? [])]);
+describe("A17 role and module navigation", () => {
+  it("keeps Settings in Menu and hides disabled Inventory/Projects", () => {
+    const nav = buildAccountNavigation(
+        { ...base, accountRole: "ACCOUNT_ADMIN" },
+        "SALESPUNCH360_ACCOUNT",
+        ["SALES"],
+      ),
+      text = items(nav);
+    expect(text.some((x) => x.label === "Settings")).toBe(true);
+    expect(text.some((x) => x.href.includes("/inventory"))).toBe(false);
+    expect(text.some((x) => x.href.includes("/projects"))).toBe(false);
+  });
+  it("does not leak Company settings or financial KPIs to Data Entry", () => {
+    const nav = buildAccountNavigation(
+        { ...base, accountRole: "DATA_ENTRY" },
+        "SALESPUNCH360_ACCOUNT",
+        ["SALES", "PURCHASES"],
+      ),
+      text = items(nav);
+    expect(text.some((x) => x.label === "Settings")).toBe(false);
+    expect(text.some((x) => x.label === "Profit & Loss")).toBe(false);
+  });
+  it("shows Project navigation only when enabled and authorized", () => {
+    const nav = buildAccountNavigation(
+      { ...base, accountRole: "PROJECT_MANAGER" },
+      "SALESPUNCH360_ACCOUNT",
+      ["PROJECTS", "PROJECT_COSTING"],
+    );
+    expect(items(nav).some((x) => x.label === "Projects")).toBe(true);
+  });
+  it("derives the Projects bottom tab from filtered navigation", () => {
+    const authorized = buildAccountNavigation(
+        { ...base, accountRole: "PROJECT_MANAGER" },
+        "SALESPUNCH360_ACCOUNT",
+        ["PROJECTS"],
+      ),
+      costingOnly = buildAccountNavigation(
+        { ...base, accountRole: "PROJECT_MANAGER" },
+        "SALESPUNCH360_ACCOUNT",
+        ["PROJECT_COSTING"],
+      ),
+      unauthorized = buildAccountNavigation(
+        { ...base, accountRole: "DATA_ENTRY" },
+        "SALESPUNCH360_ACCOUNT",
+        ["PROJECTS"],
+      );
+    expect(
+      hasAccountNavigationItem(
+        authorized,
+        "Projects",
+        "/workspace/account/projects",
+      ),
+    ).toBe(true);
+    expect(
+      hasAccountNavigationItem(
+        costingOnly,
+        "Projects",
+        "/workspace/account/projects",
+      ),
+    ).toBe(false);
+    expect(
+      hasAccountNavigationItem(
+        unauthorized,
+        "Projects",
+        "/workspace/account/projects",
+      ),
+    ).toBe(false);
+  });
+  it("requires every child document module", () => {
+    const actor = { ...base, accountRole: "ACCOUNT_ADMIN" as const },
+      disabled = items(
+        buildAccountNavigation(actor, "SALESPUNCH360_ACCOUNT", [
+          "SALES",
+          "PURCHASES",
+        ]),
+      ),
+      enabled = items(
+        buildAccountNavigation(actor, "SALESPUNCH360_ACCOUNT", [
+          "SALES",
+          "CREDIT_NOTE",
+          "PURCHASES",
+          "PURCHASE_BILLS",
+        ]),
+      );
+    expect(
+      disabled.some(
+        (x) =>
+          x.label === "Sale Return (Credit Note)" ||
+          x.label === "Purchase Bills",
+      ),
+    ).toBe(false);
+    expect(enabled.some((x) => x.label === "Sale Return (Credit Note)")).toBe(
+      true,
+    );
+    expect(enabled.some((x) => x.label === "Purchase Bills")).toBe(true);
+  });
+  it.each([
+    ["Sales", "sales"],
+    ["Cash & Bank", "cash-bank"],
+    ["Users & Permissions", "users-permissions"],
+    ["Company / Branch", "company-branch"],
+    ["Help / Support", "help-support"],
+  ])("creates a shared safe section ID for %s", (label, id) =>
+    expect(accountNavSectionId(label)).toBe(id),
+  );
+  it("uses one My Business group with nested Sales and Purchase and one Expenses row", () => {
+    const nav = buildAccountNavigation(
+        { ...base, accountRole: "ACCOUNT_ADMIN" },
+        "SALESPUNCH360_ACCOUNT",
+        ["SALES", "PURCHASES", "EXPENSES"],
+      ),
+      business = nav.find((x) => x.label === "My Business");
+    expect(business?.children?.map((x) => x.label)).toEqual([
+      "Sales",
+      "Purchase",
+    ]);
+    expect(items(nav).filter((x) => x.label === "Expenses")).toHaveLength(1);
+  });
+});
+
+describe("A052 expense navigation matches Project module enforcement", () => {
+  it("hides Expenses for Project Manager when Projects is OFF", () => {
+    const actor = { ...base, accountRole: "PROJECT_MANAGER" as const };
+    expect(
+      items(
+        buildAccountNavigation(actor, "SALESPUNCH360_ACCOUNT", ["EXPENSES"]),
+      ).some((x) => x.href === "/workspace/account/expenses"),
+    ).toBe(false);
+    expect(
+      items(
+        buildAccountNavigation(actor, "SALESPUNCH360_ACCOUNT", [
+          "EXPENSES",
+          "PROJECTS",
+        ]),
+      ).some((x) => x.href === "/workspace/account/expenses"),
+    ).toBe(true);
+  });
+});
+
+it("hides Inventory when Items is OFF while retaining other core accounting destinations", () => {
+  const actor = { ...base, accountRole: "ACCOUNT_ADMIN" as const };
+  const enabled = ["INVENTORY", "PROJECTS"] as const;
+  const off = buildAccountNavigation(
+      actor,
+      "SALESPUNCH360_ACCOUNT",
+      enabled,
+      false,
+    ),
+    on = buildAccountNavigation(actor, "SALESPUNCH360_ACCOUNT", enabled, true);
+  expect(off.some((g) => g.label === "Inventory")).toBe(false);
+  expect(on.some((g) => g.label === "Inventory")).toBe(true);
+  expect(
+    hasAccountNavigationItem(
+      off,
+      "Bank Accounts",
+      "/workspace/account/money/bank-accounts",
+    ),
+  ).toBe(true);
+  expect(
+    hasAccountNavigationItem(off, "Projects", "/workspace/account/projects"),
+  ).toBe(true);
 });

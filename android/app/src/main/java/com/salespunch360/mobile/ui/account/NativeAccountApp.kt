@@ -1,9 +1,11 @@
 package com.salespunch360.mobile.ui.account
 
+import kotlinx.serialization.json.*
+import kotlinx.coroutines.launch
+import com.salespunch360.mobile.account.prepareDocumentShare
+import com.salespunch360.mobile.account.launchDocumentShare
 import android.content.Intent
 import android.net.Uri
-import java.io.File
-import androidx.core.content.FileProvider
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
@@ -31,6 +33,9 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -111,6 +116,7 @@ fun NativeAccountAuthenticatedApp(
     BackHandler(enabled=state.selectedPath!=ACCOUNT_HOME){vm.back()}
     val rootChrome=bottom.any{it.path==state.selectedPath}
 
+    androidx.compose.runtime.CompositionLocalProvider(LocalAccountDisplayPreferences provides AccountDisplayPreferences.from(account?.displayPreferences)){
     Scaffold(
         containerColor=Color(0xFFF7F8FC),
         topBar={if(rootChrome){
@@ -148,55 +154,65 @@ fun NativeAccountAuthenticatedApp(
             )
         }},
         bottomBar={if(rootChrome)AccountBottomBar(bottom,state.selectedPath,vm::select)},
-        snackbarHost={state.error?.let{Snackbar{Row{Text(it,Modifier.weight(1f));TextButton(onClick={vm.load(true)}){Text("Retry")}}}}}
+        snackbarHost={state.error?.let{Snackbar{Row{Text(it,Modifier.weight(1f));TextButton(onClick=vm::retry){Text("Retry")}}}}}
     ){padding->
         val sales=salesType(state.selectedPath)
         val purchase=purchaseType(state.selectedPath)
         when{
-            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf)
+            state.selectedPath==ACCOUNT_HOME->AccountHomeScreen(navigation,state.home,state.homeQuery,state.homeTypes,padding,vm::select,vm::searchHome,vm::downloadDocumentPdf,initialPartyMode=state.homePartyMode,onPartyMode=vm::setHomePartyMode,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath==ACCOUNT_DASHBOARD->AccountDashboardScreen(state.dashboard,account?.branch?.branchName,state.refreshing,{vm.load(true)},padding,vm::select)
-            state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding){href->openAccountPath(context,href,vm::select)}
-            state.selectedPath=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding)
-            state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding)
+            state.selectedPath==ACCOUNT_MENU->AccountMenuScreen(navigation,padding,account,state.refreshing,{id,all->vm.selectBranch(id,all)}){href->openAccountPath(context,href,vm::select)}
+            state.selectedPath.substringBefore("?")=="/workspace/account/expenses/categories"->ExpenseCategoryScreen(padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
+            state.selectedPath.startsWith("/workspace/account/sales/")->AccountSalesScreen(null,padding,vm::select,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment)
+            state.selectedPath.startsWith("/workspace/account/purchases/")->PurchaseScreen(null,padding,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment,navigate=vm::select)
+            state.selectedPath.startsWith("/workspace/account/settlements/")->com.salespunch360.mobile.ui.account.sales.InvoicePdfPreview(android.net.Uri.parse(state.selectedPath).lastPathSegment.orEmpty(),documentType=queryValue(state.selectedPath,"type")?:"CUSTOMER_RECEIPT",onClose=vm::back)
+            state.selectedPath.substringBefore("?")=="/workspace/account/expenses"&&queryValue(state.selectedPath,"view")!="transactions"->com.salespunch360.mobile.ui.account.expense.ExpenseOverviewScreen(padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"),onNavigate=vm::select)
+            state.selectedPath.startsWith("/workspace/account/expenses")->ExpenseScreen(padding,initialCreate=state.selectedPath.substringBefore("?")=="/workspace/account/expenses/new",initialExpenseId=android.net.Uri.parse(state.selectedPath).lastPathSegment?.takeIf{it!="expenses"&&it!="new"},initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/account/projects/actions"->com.salespunch360.mobile.ui.account.project.ProjectActionsScreen(padding,vm::select,vm::back)
             state.selectedPath.startsWith("/workspace/account/projects/material")->com.salespunch360.mobile.ui.account.project.ProjectMaterialScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"))
             state.selectedPath.startsWith("/workspace/account/projects")->ProjectScreen(padding,vm::select,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId")?:android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(3)?.takeIf{it!="new"},initialCreate=android.net.Uri.parse(state.selectedPath).path?.endsWith("/projects/new")==true)
-            moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding)
+            state.selectedPath.substringBefore("?")=="/workspace/account/money/party-transfers"->com.salespunch360.mobile.ui.account.money.PartyTransferScreen(padding,vm::select,vm::back)
+            state.selectedPath.startsWith("/workspace/account/money/party-transfers/")->com.salespunch360.mobile.ui.account.money.PartyTransferDetailScreen(android.net.Uri.parse(state.selectedPath).lastPathSegment.orEmpty(),padding,vm::back,canReverse=data.user.accountRole==com.salespunch360.mobile.data.AccountRole.ACCOUNT_ADMIN&&"ACCOUNT_MONEY_ENTRY" in account?.effectivePermissions.orEmpty()&&"ACCOUNT_JOURNAL_POST" in account?.effectivePermissions.orEmpty())
+            state.selectedPath.startsWith("/workspace/account/money/cheques")->com.salespunch360.mobile.ui.account.money.ChequeScreen(padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"),onNavigate=vm::select)
+            state.selectedPath.substringBefore("?")=="/workspace/account/money/capital/funding"->com.salespunch360.mobile.ui.account.money.AssetFundingScreen(padding,com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"),vm::back)
+            moneyMode(state.selectedPath)!=null->MoneyScreen(moneyMode(state.selectedPath)!!,padding,initialOwnerId=android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(4),initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"),onFunding={val scope=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY");vm.select("/workspace/account/money/capital/funding"+if(scope.isBlank())""else"?$scope")})
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
             state.selectedPath.startsWith("/workspace/account/accounting/cost-centres")->ChartOfAccountsScreen(padding,true)
             state.selectedPath.startsWith("/workspace/account/accounting/new")->JournalScreen(padding=padding)
             state.selectedPath.startsWith("/workspace/account/accounting/journals")->JournalScreen(padding=padding)
             state.selectedPath.startsWith("/workspace/account/accounting/opening")->JournalScreen(padding=padding,opening=true)
-            state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding,onNavigate=vm::select)
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
-            state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
+            state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
             utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding)
-            adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select)
+            adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
-            state.selectedPath=="/workspace/account/settings/multi-currency"->Box(Modifier.fillMaxSize().padding(padding),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Multi-Currency",style=MaterialTheme.typography.headlineSmall);Text("Coming Soon",style=MaterialTheme.typography.titleLarge);Text("Exchange rates and multi-currency accounting are not available yet.")}}
-            state.selectedPath=="/workspace/branches"->Box(Modifier.padding(padding)){BranchesScreen()}
+            state.selectedPath=="/workspace/branches"||state.selectedPath=="/workspace/account/settings/multi-branch"->Box(Modifier.padding(padding)){if(data.user.salesRole==com.salespunch360.mobile.data.MobileRole.PRIMARY_ADMIN)BranchesScreen() else Column(Modifier.padding(16.dp)){Text("Multi-Branch Settings",style=MaterialTheme.typography.headlineSmall);Text("Branch creation and changes require the Primary Admin.")}}
             state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
-            state.selectedPath.substringBefore("?")=="/workspace/account/inventory"->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
-            state.selectedPath=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select)
+            state.selectedPath.substringBefore("?") in setOf("/workspace/account/inventory","/workspace/account/inventory/catalog")->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),quantityDecimals=account?.itemSettings?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2,catalogMode=state.selectedPath.substringBefore("?").endsWith("/catalog"))
+            state.selectedPath.substringBefore("?")=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select,initialService=queryValue(state.selectedPath,"kind")=="services")
             state.selectedPath=="/workspace/account/inventory/online-store"->com.salespunch360.mobile.ui.account.inventory.OnlineStoreScreen(padding){vm.back()}
             state.selectedPath=="/workspace/account/inventory/item-settings"&&canSettings->AccountAdministrationScreen("item-settings",padding)
             state.selectedPath=="/workspace/account/inventory/categories"->com.salespunch360.mobile.ui.account.inventory.CategoriesManagementScreen(vm::back,vm::select)
             state.selectedPath=="/workspace/account/inventory/units"->com.salespunch360.mobile.ui.account.inventory.UnitsManagementScreen(vm::back,vm::select)
             state.selectedPath.startsWith("/workspace/account/inventory/active")->com.salespunch360.mobile.ui.account.inventory.ActiveItemsManagementScreen(queryValue(state.selectedPath,"mode")=="activate",vm::back)
+            state.selectedPath.substringBefore("?").endsWith("/inventory/stock-summary")->com.salespunch360.mobile.ui.account.inventory.StockSummaryScreen(padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
             inventoryMode(state.selectedPath)!=null->InventoryScreen(inventoryMode(state.selectedPath)!!,padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty())
-            state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding)
+            state.selectedPath.startsWith("/workspace/account/quotations")->QuotationScreen(padding,navigate=vm::select,initialDocumentId=android.net.Uri.parse(state.selectedPath).lastPathSegment?.takeIf{it!="quotations"&&it!="new"})
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=VENDOR_PAYMENT")->VendorPaymentScreen(padding)
-            purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"))
+            purchase!=null->PurchaseScreen(purchase,padding,queryValue(state.selectedPath,"projectId"),initialOrderId=queryValue(state.selectedPath,"orderId"),navigate=vm::select)
             state.selectedPath.startsWith("/workspace/account/transactions/money?type=CUSTOMER_")->CustomerReceiptScreen(padding,initialProjectId=android.net.Uri.parse(state.selectedPath).getQueryParameter("projectId"),requestedType=android.net.Uri.parse(state.selectedPath).getQueryParameter("type"))
-            sales!=null->AccountSalesScreen(sales,padding,vm::select,initialProjectId=queryValue(state.selectedPath,"projectId"),projectMode=queryValue(state.selectedPath,"project")!=null||queryValue(state.selectedPath,"projectId")!=null)
-            masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding)
+            sales!=null->AccountSalesScreen(sales,padding,vm::select,initialOrderId=queryValue(state.selectedPath,"orderId"),initialQuotationId=queryValue(state.selectedPath,"quotationId"),initialQuotationRevisionId=queryValue(state.selectedPath,"quotationRevisionId"),initialDuplicateId=queryValue(state.selectedPath,"duplicateId"),initialProjectId=queryValue(state.selectedPath,"projectId"),projectMode=queryValue(state.selectedPath,"project")!=null||queryValue(state.selectedPath,"projectId")!=null)
+            masterKind(state.selectedPath)!=null->AccountMasterScreen(masterKind(state.selectedPath)!!,padding,initialCreate=state.selectedPath.substringBefore("?")=="/workspace/account/customers/new",canCreate=masterKind(state.selectedPath)!="customers"||"ACCOUNT_ACCOUNTS" in account?.effectivePermissions.orEmpty(),initialBranchId=android.net.Uri.parse(state.selectedPath).getQueryParameter("branchId")?:account?.branch?.branchId,onCreated={branch->vm.setHomePartyMode(true);if(branch!=null&&account?.branch?.mode!="COMPANY"&&branch!=account?.branch?.branchId)vm.selectBranch(branch,false)else{vm.searchHome("");vm.select(ACCOUNT_HOME)}},onCancel={vm.back()})
             else->NativeDestinationNotice(Modifier.padding(padding),titleFor(state.selectedPath,navigation))
         }
     }
+}
+
 }
 
 @Composable
@@ -215,7 +231,7 @@ private fun AccountBottomBar(items:List<AccountBottomDestination>,current:String
                 selected=selected,
                 onClick={navigate(item.path)},
                 icon={Icon(item.icon,item.label)},
-                label={Text(item.label,maxLines=1)}
+                label={Text(accountLabel(item.label),maxLines=1)}
             )
         }
     }
@@ -231,11 +247,35 @@ private fun AccountHomeScreen(
     padding:PaddingValues,
     navigate:(String)->Unit,
     search:(String,Set<String>)->Unit,
-    pdf:(String,String,(ByteArray)->Unit)->Unit
+    pdf:(String,String,(ByteArray)->Unit,(String)->Unit)->Unit,
+    initialPartyMode:Boolean=false,onPartyMode:(Boolean)->Unit={},initialQuery:String=""
 ){
     val context=LocalContext.current
     val all=groups.flatMap{it.items+it.children.flatMap{child->child.items}}
-    var partyMode by rememberSaveable{mutableStateOf(false)}
+    val shareScope=rememberCoroutineScope()
+    var transactionMenu by remember{mutableStateOf<com.salespunch360.mobile.data.AccountHomeTransaction?>(null)}
+    var sharePending by remember{mutableStateOf(false)}
+    var shareError by remember{mutableStateOf<String?>(null)}
+    var shareChoice by remember{mutableStateOf<com.salespunch360.mobile.data.AccountHomeTransaction?>(null)}
+    fun export(tx:com.salespunch360.mobile.data.AccountHomeTransaction,images:Boolean){
+        if(sharePending||(tx.sourceKind!="COMMERCIAL"&&tx.printType==null))return
+        sharePending=true;shareError=null;shareChoice=null
+        pdf(tx.printType?:tx.type,tx.id,{bytes->shareScope.launch{try{val files=prepareDocumentShare(context,tx.documentNumber,bytes,images);launchDocumentShare(context,files,images)}catch(error:kotlinx.coroutines.CancellationException){throw error}catch(error:Exception){shareError=error.message?:"Sharing failed. Please try again."}finally{sharePending=false}}},{error->sharePending=false;shareError=error})
+    }
+    if(shareChoice!=null)ModalBottomSheet(onDismissRequest={shareChoice=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){Text("Share transaction",style=MaterialTheme.typography.titleLarge);TextButton(onClick={shareChoice?.let{export(it,true)}}){Text("Share as Image")};TextButton(onClick={shareChoice?.let{export(it,false)}}){Text("Share as PDF")}}}
+    transactionMenu?.let{tx->ModalBottomSheet(onDismissRequest={transactionMenu=null}){Column(Modifier.fillMaxWidth().padding(16.dp)){
+        Text("${tx.documentNumber} · More",style=MaterialTheme.typography.titleLarge)
+        if(tx.type=="SALES_INVOICE"&&all.any{it.href=="/workspace/account/transactions/new?type=SALES_INVOICE"})TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${tx.id}")}){Text("Duplicate")}
+        if(tx.type=="SALES_INVOICE"&&tx.status=="POSTED"){
+            TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=CREDIT_NOTE&sourceDocumentId=${tx.id}")}){Text("Return")}
+            TextButton(onClick={transactionMenu=null;navigate("/workspace/account/transactions/new?type=DELIVERY_CHALLAN&sourceDocumentId=${tx.id}")}){Text("Delivery Challan")}
+        }
+        TextButton(onClick={transactionMenu=null;navigate(tx.detailHref?.let{if(tx.sourceKind=="SETTLEMENT")"$it?type=${tx.printType?:tx.type}" else it}?:if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")}){Text(if(tx.sourceKind=="COMMERCIAL")"Payment History" else "View details")}
+        TextButton(enabled=!sharePending&&(tx.sourceKind=="COMMERCIAL"||tx.printType!=null),onClick={transactionMenu=null;export(tx,false)}){Text("Share as PDF")}
+        TextButton(enabled=false,onClick={}){Text("Generate e-Invoice · Coming later")}
+    }}}
+    if(shareError!=null)AlertDialog(onDismissRequest={shareError=null},title={Text("Could not share document")},text={Text(shareError.orEmpty())},confirmButton={TextButton(onClick={shareError=null}){Text("OK")}})
+    var partyMode by rememberSaveable(initialPartyMode){mutableStateOf(initialPartyMode)}
     var query by rememberSaveable(homeQuery){mutableStateOf(homeQuery)}
     var filterOpen by rememberSaveable{mutableStateOf(false)}
     var addLauncherOpen by rememberSaveable{mutableStateOf(false)}
@@ -250,7 +290,7 @@ private fun AccountHomeScreen(
         "P2P_RECEIVED" to "Party To Party [Rcvd]","P2P_PAID" to "Party To Party [Paid]","SALE_FA" to "Sale FA","PURCHASE_FA" to "Purchase FA",
         "SALE_CANCELLED" to "Sale [Cancelled]","JOB_WORK_OUT" to "Job work out (Challan)","SUBCONTRACT_PURCHASE" to "Purchase (Job work)","SALE_REPEATING" to "Sale [Repeating]"
     )
-    val transactionMore=listOf("Bank Accounts" to "/workspace/account/money/accounts","Day Book" to "/workspace/account/reports/general-ledger","All Txns Report" to "/workspace/account/transactions","Profit & Loss" to "/workspace/account/reports/profit-loss","Balance Sheet" to "/workspace/account/reports/balance-sheet","Billwise PnL" to "/workspace/account/reports/invoices","Print Settings" to "/workspace/account/settings/print-templates","Txn SMS Settings" to "")
+    val transactionMore=listOf("Bank Accounts" to "/workspace/account/money/bank-accounts","Day Book" to "/workspace/account/reports/general-ledger","All Txns Report" to "/workspace/account/transactions","Profit & Loss" to "/workspace/account/reports/profit-loss","Balance Sheet" to "/workspace/account/reports/balance-sheet","Billwise PnL" to "/workspace/account/reports/invoices","Print Settings" to "/workspace/account/settings/print-templates","Txn SMS Settings" to "")
     val partyMore=listOf("All Parties Report" to "/workspace/account/reports/customers","Import Party" to "/workspace/account/utilities/import","Partywise P&L" to "/workspace/account/reports/customers")
     val transactionActions=listOf("Add Txn" to (all.firstOrNull{it.href.contains("transactions/new")||it.label.contains("invoice",true)}?.href?:"/workspace/account/transactions/new?type=SALES_INVOICE"),"Sale Report" to "/workspace/account/reports/invoices","Txn Settings" to "/workspace/account/settings/transactions","Show All" to "")
     val partyActions=listOf("Network" to "","Party Statement" to "/workspace/account/reports/customer-ledger","Party Settings" to "/workspace/account/settings/custom-fields","Show All" to "")
@@ -258,7 +298,7 @@ private fun AccountHomeScreen(
 
     Box(Modifier.fillMaxSize().padding(padding)){
         LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,top=16.dp,end=16.dp,bottom=92.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-            item{AccountSegmentedTabs(partyMode){next->partyMode=next;query="";search("",emptySet())}}
+            item{AccountSegmentedTabs(partyMode){next->partyMode=next;onPartyMode(next);query="";search("",emptySet())}}
             item{
                 ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=Color.White)){
                     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -283,22 +323,44 @@ private fun AccountHomeScreen(
                 }
             }
             if(!partyMode){
-                items(home?.transactions.orEmpty(),key={it.id}){tx->
+                items(home?.unavailableFilters.orEmpty(),key={"unavailable:${it.key}"}){entry->Text(entry.message,color=MaterialTheme.colorScheme.onSurface)}
+                items(home?.transactions.orEmpty(),key={"${it.sourceKind}:${it.id}"}){tx->
                     ElevatedCard(Modifier.fillMaxWidth()){
-                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(tx.partyName,fontWeight=FontWeight.SemiBold);AssistChip(onClick={},label={Text(tx.status.replace('_',' '))})}
-                            Text("${tx.type.replace('_',' ')} · ${tx.documentNumber}",color=Color(0xFF64748B));Text(tx.issueDate.take(10),style=MaterialTheme.typography.bodySmall)
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Total ${formatMetric(tx.grandTotal,"MONEY")}");Text("Balance ${formatMetric(tx.balanceDue,"MONEY")}")}
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"View / print PDF")}}){Text("Print")};TextButton(onClick={pdf(tx.type,tx.id){bytes->sharePdf(context,tx.documentNumber,bytes,"Share transaction")}}){Text("Share")};TextButton(onClick={navigate("/workspace/account/transactions/${tx.id}")}){Text("More")}}
+                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+                            Row(Modifier.fillMaxWidth().clickable{navigate(tx.detailHref?.let{if(tx.sourceKind=="SETTLEMENT")"$it?type=${tx.printType?:tx.type}" else it}?:if(tx.type=="SALES_INVOICE")"/workspace/account/sales/${tx.id}" else "/workspace/account/transactions/${tx.id}")},horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                                    Text(tx.partyName,fontWeight=FontWeight.SemiBold)
+                                    val paid=tx.type=="SALES_INVOICE"&&tx.paymentStatus=="PAID"
+                                    Surface(shape=RoundedCornerShape(4.dp),color=if(paid)Color(0xFFDCFCE7)else Color(0xFFFFEDD5)){Text(com.salespunch360.mobile.account.homePaymentLabel(tx.type,tx.status,tx.paymentStatus),Modifier.padding(horizontal=6.dp,vertical=3.dp),color=if(paid)Color(0xFF166534)else Color(0xFF9A3412),style=MaterialTheme.typography.labelSmall)}
+                                }
+                                Column(Modifier.weight(1f),horizontalAlignment=Alignment.End){Text("#${tx.documentNumber}",fontWeight=FontWeight.SemiBold);Text(accountDate(tx.issueDate),style=MaterialTheme.typography.bodySmall)}
+                            }
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Column{Text("Amount",style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.grandTotal,"MONEY"))};if(tx.showBalance)Column(horizontalAlignment=Alignment.End){Text(tx.balanceLabel,style=MaterialTheme.typography.labelSmall);Text(formatMetric(tx.balanceDue,"MONEY"))}}
+                            HorizontalDivider()
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly){IconButton(enabled=!sharePending&&(tx.sourceKind=="COMMERCIAL"||tx.printType!=null),onClick={export(tx,false)}){Icon(Icons.Default.Print,"Print ${tx.documentNumber}")};IconButton(enabled=!sharePending&&(tx.sourceKind=="COMMERCIAL"||tx.printType!=null),onClick={if(home?.shareAs=="PDF")export(tx,false)else shareChoice=tx}){Icon(Icons.Default.Share,"Share ${tx.documentNumber}")};IconButton(onClick={transactionMenu=tx}){Icon(Icons.Default.MoreVert,"More ${tx.documentNumber}")}}
                         }
                     }
                 }
             }else{
-                items(home?.parties.orEmpty(),key={it.id}){party->ElevatedCard(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}){Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column{Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${party.lastActivity.take(10)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF64748B))};Text(formatMetric(party.balance,"MONEY"),fontWeight=FontWeight.Bold)}}}
+                item{
+                    val parties=home?.parties.orEmpty()
+                    Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp),color=Color.White,border=androidx.compose.foundation.BorderStroke(1.dp,Color(0xFFD8DDE5))){
+                        Column{
+                            if(parties.isEmpty())Text("No parties found",Modifier.padding(20.dp))
+                            parties.forEachIndexed{index,party->
+                                Row(Modifier.fillMaxWidth().clickable{navigate("/workspace/account/customers?q=${Uri.encode(party.name)}")}.padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically){
+                                    Column(Modifier.weight(1f)){Text(party.name,fontWeight=FontWeight.SemiBold);Text("Last activity ${accountDate(party.lastActivity)}",style=MaterialTheme.typography.bodySmall,color=Color(0xFF596579))}
+                                    Text(formatMetric(party.balance,"MONEY"),Modifier.weight(.7f),fontWeight=FontWeight.Bold,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+                                }
+                                if(index<parties.lastIndex)HorizontalDivider(color=Color(0xFFE2E8F0))
+                            }
+                        }
+                    }
+                }
             }
         }
-        AnimatedVisibility(visible=floatingVisible,modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
-            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"New Party" else "New Sale")})
+        AnimatedVisibility(visible=floatingVisible&&(if(partyMode)all.any{it.href=="/workspace/account/customers"}else all.any{it.href=="/workspace/account/transactions/new?type=SALES_INVOICE"}),modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp),enter=fadeIn()+slideInVertically{it/2},exit=fadeOut()+slideOutVertically{it/2}){
+            ExtendedFloatingActionButton(onClick={navigate(if(partyMode)"/workspace/account/customers/new?${com.salespunch360.mobile.account.moneyContextQuery(initialQuery)}" else "/workspace/account/transactions/new?type=SALES_INVOICE")},icon={Icon(Icons.Default.Add,null)},text={Text(if(partyMode)"Add New Party" else "New Sale")})
         }
     }
     if(filterOpen)ModalBottomSheet(onDismissRequest={filterOpen=false},dragHandle=null){
@@ -316,7 +378,7 @@ private data class LauncherItem(val label:String,val path:String?=null)
 private val launcherGroups=listOf(
     "Sale transactions" to listOf(LauncherItem("Payment-In","/workspace/account/transactions/money?type=CUSTOMER_RECEIPT"),LauncherItem("Sale Return","/workspace/account/transactions/new?type=CREDIT_NOTE"),LauncherItem("Delivery Challan","/workspace/account/transactions/new?type=DELIVERY_CHALLAN"),LauncherItem("Estimate / Quotation","/workspace/account/quotations/new"),LauncherItem("Proforma Invoice","/workspace/account/transactions/new?type=PROFORMA_INVOICE"),LauncherItem("Sale Order","/workspace/account/transactions/new?type=SALES_ORDER"),LauncherItem("Sale Invoice","/workspace/account/transactions/new?type=SALES_INVOICE"),LauncherItem("Mobile POS")),
     "Purchase transactions" to listOf(LauncherItem("Purchase","/workspace/account/transactions/new?type=PURCHASE_BILL"),LauncherItem("Payment-Out","/workspace/account/transactions/money?type=VENDOR_PAYMENT"),LauncherItem("Purchase Return","/workspace/account/transactions/new?type=DEBIT_NOTE"),LauncherItem("Purchase Order","/workspace/account/transactions/new?type=PURCHASE_ORDER")),
-    "Other transactions" to listOf(LauncherItem("Expenses","/workspace/account/expenses/new"),LauncherItem("P2P Transfer","/workspace/account/money/transfers"))
+    "Other transactions" to listOf(LauncherItem("Expenses","/workspace/account/expenses/new"),LauncherItem("P2P Transfer","/workspace/account/money/party-transfers"))
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -325,11 +387,6 @@ private val launcherGroups=listOf(
         item{Row(Modifier.fillMaxWidth().padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Add Transaction",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);IconButton(onClick=onDismiss){Icon(Icons.Default.Close,"Close")}}}
         launcherGroups.forEach{group->item{Text(group.first.uppercase(),Modifier.padding(horizontal=16.dp,vertical=10.dp),style=MaterialTheme.typography.labelMedium,color=Color(0xFF64748B),fontWeight=FontWeight.Bold)};items(group.second.chunked(3)){row->Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){row.forEach{entry->Surface(Modifier.weight(1f).heightIn(min=96.dp).clickable(enabled=entry.path!=null){entry.path?.let(navigate)},shape=RoundedCornerShape(12.dp),border=androidx.compose.foundation.BorderStroke(1.dp,Color(0xFFE2E8F0)),color=Color.White){Column(Modifier.fillMaxSize().padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Surface(shape=RoundedCornerShape(10.dp),color=Color(0xFFEFF6FF)){Icon(Icons.Default.Add,null,Modifier.padding(9.dp),tint=Color(0xFF2563EB))};Spacer(Modifier.height(5.dp));Text(entry.label,style=MaterialTheme.typography.labelMedium,maxLines=2);if(entry.path==null)Text("Coming Soon",style=MaterialTheme.typography.labelSmall,color=Color(0xFF64748B))}}};repeat(3-row.size){Spacer(Modifier.weight(1f))}}}}
     }}
-}
-private fun sharePdf(context:android.content.Context,number:String,bytes:ByteArray,title:String){
-    val file = File(context.cacheDir, "$number.pdf").also { it.writeBytes(bytes) }
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),title))
 }
 
 @Composable
@@ -347,7 +404,7 @@ private fun AccountSegmentedTabs(partyMode:Boolean,onChange:(Boolean)->Unit){
 }
 
 @Composable
-private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:PaddingValues,open:(String)->Unit){
+private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:PaddingValues,account:com.salespunch360.mobile.data.AccountBootstrap?,switching:Boolean,onBranch:(String?,Boolean)->Unit,open:(String)->Unit){
     var reportsOpen by rememberSaveable{mutableStateOf(false)}
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -358,6 +415,11 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
             Text("Menu",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
             Text("All Account modules available to your role.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if(account!=null&&account.availableBranches.size>1){
+            item(key="account-branch-header"){Text("Branch",style=MaterialTheme.typography.titleMedium);if(switching)LinearProgressIndicator(Modifier.fillMaxWidth())}
+            items(account.availableBranches,key={"branch-${it.id}"}){branch->FilterChip(selected=account.branch.mode=="BRANCH"&&account.branch.branchId==branch.id,onClick={onBranch(branch.id,false)},label={Text(branch.name)},enabled=!switching,modifier=Modifier.fillMaxWidth())}
+            if(account.canConsolidate)item(key="account-all-branches"){FilterChip(selected=account.branch.mode=="COMPANY",onClick={onBranch(null,true)},label={Text("All Branches")},enabled=!switching,modifier=Modifier.fillMaxWidth())}
+        }
         groups.forEachIndexed{groupIndex,group->
             val rows=group.items+group.children.flatMap{it.items}
             val reports=group.label.equals("Reports",ignoreCase=true)
@@ -365,7 +427,7 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
                 item(key="account-group-$groupIndex-${group.label}"){
                     OutlinedButton(onClick={reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-                            Text(group.label,fontWeight=FontWeight.Bold)
+                            Text(accountLabel(group.label),fontWeight=FontWeight.Bold)
                             Text(if(reportsOpen)"⌃" else "⌄")
                         }
                     }
@@ -374,18 +436,18 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
                     items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
                         val nav=rows[rowIndex]
                         OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text("›")}
                         }
                     }
                 }
             }else{
                 item(key="account-group-$groupIndex-${group.label}"){
-                    Text(group.label,style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(top=10.dp,bottom=2.dp))
+                    Text(accountLabel(group.label),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.Bold,color=MaterialTheme.colorScheme.primary,modifier=Modifier.padding(top=10.dp,bottom=2.dp))
                 }
                 items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
                     val nav=rows[rowIndex]
                     OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(nav.label);Text("›")}
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text("›")}
                     }
                 }
             }
@@ -470,7 +532,7 @@ private fun titleFor(path:String,groups:List<AccountNavigationGroup>)=
     if(path==ACCOUNT_HOME)"Home" else if(path==ACCOUNT_DASHBOARD)"Dashboard" else groups.flatMap{it.items+it.children.flatMap{child->child.items}}.firstOrNull{path.startsWith(it.href.substringBefore('?'))}?.label?:"Account"
 
 private fun masterKind(path:String)=when{
-    path=="/workspace/account/customers"->"customers"
+    path.substringBefore("?") in setOf("/workspace/account/customers","/workspace/account/customers/new")->"customers"
     path=="/workspace/account/vendors"->"vendors"
     path=="/workspace/account/inventory/items"->"items"
     path=="/workspace/account/inventory/warehouses"->"warehouses"
@@ -478,7 +540,7 @@ private fun masterKind(path:String)=when{
 }
 
 private fun salesType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("SALES_INVOICE","PROFORMA_INVOICE","SALES_ORDER","DELIVERY_CHALLAN","CREDIT_NOTE")} else null
-private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else runCatching{NumberFormat.getCurrencyInstance(Locale("en","IN")).format(BigDecimal(raw))}.getOrDefault(raw)
+@Composable private fun formatMetric(raw:String,kind:String)=if(kind!="MONEY")raw else accountMoney(raw)
 private fun purchaseType(path:String)=if(path.startsWith("/workspace/account/transactions/new"))Regex("(?:\\?|&)type=([A-Z_]+)").find(path)?.groupValues?.get(1)?.takeIf{it in setOf("PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE")} else null
 private fun queryValue(path:String,key:String)=Regex("(?:\\?|&)${Regex.escape(key)}=([^&#]+)").find(path)?.groupValues?.get(1)
 
@@ -494,8 +556,7 @@ private fun inventoryMode(path:String)=when{
     else->null
 }
 
-private fun moneyMode(path:String)=when{
-    path.startsWith("/workspace/account/money/accounts")->"accounts"
+private fun moneyMode(path:String)=com.salespunch360.mobile.account.moneyAccountListMode(path)?:when{
     path.startsWith("/workspace/account/money/transfers")->"transfers"
     path.startsWith("/workspace/account/money/capital")->"owners"
     path.startsWith("/workspace/account/money/loans")->"loans"
@@ -506,6 +567,9 @@ private fun reportName(path:String)=path.substringBefore("?").removePrefix("/wor
 
 private fun adminMode(path:String)=when{
     path=="/workspace/account/notifications"->"notifications"
+    path.endsWith("/settings/backup")->"backup-settings"
+    path.endsWith("/settings/transactions/defaults")->"transaction-defaults"
+    path.endsWith("/settings/multi-currency")->"business-currency"
     path.endsWith("/settings/general")->"general"
     path.endsWith("/settings/party")->"party-settings"
     path.endsWith("/settings/party/additional-fields")->"party-additional-fields"

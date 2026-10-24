@@ -44,6 +44,8 @@ data class ReceiptState(
     val projectId: String = "",
     val invoiceId: String = "",
     val amount: String = "",
+    val discountAmount:String="",
+    val discountEnabled:Boolean=false,
     val date: String = java.time.LocalDate.now().toString(),
     val mode: String = "BANK",
     val moneyAccountId: String = "",
@@ -92,6 +94,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
             }
             _state.value = _state.value.copy(
                 loading = false,
+                discountEnabled=context["discountDuringPayment"]?.jsonPrimitive?.booleanOrNull==true,
                 branches = branches,
                 customers = customers,
                 moneyAccounts = accounts,
@@ -126,7 +129,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 api.createCustomerReceipt(receiptPayload(current))
-                _state.value = current.copy(saving=false,amount="",invoiceId="",advanceId="",requestKey=UUID.randomUUID().toString(),message=if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
+                _state.value = current.copy(saving=false,amount="",discountAmount="",invoiceId="",advanceId="",requestKey=UUID.randomUUID().toString(),message=if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
                 refresh()
             } catch(e:Exception){_state.value=current.copy(saving=false,error=errorText(e))}
         }
@@ -146,9 +149,11 @@ internal fun receiptValidation(s:ReceiptState):String? {
  if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.amount)||amount==null||amount.signum()<=0)return "Enter a positive amount with up to two decimal places."
  if(runCatching{java.time.LocalDate.parse(s.date)}.isFailure)return "Enter a valid date in YYYY-MM-DD format."
  if(s.branchId.isBlank()||s.customerId.isBlank())return "Select a branch and customer."
+ val discount=if(s.type=="CUSTOMER_RECEIPT"&&s.discountEnabled)s.discountAmount.ifBlank{"0"}.toBigDecimalOrNull() else java.math.BigDecimal.ZERO
+ if(discount==null||discount.signum()<0||discount.scale()>2||(s.type=="CUSTOMER_RECEIPT"&&s.discountEnabled&&!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.discountAmount.ifBlank{"0"})))return "Enter a payment discount with up to two decimal places."
  if(s.type!="CUSTOMER_ADVANCE"){
   val invoice=s.invoices.find{it.id==s.invoiceId&&it.branchId==s.branchId&&it.customerId==s.customerId&&it.projectId==s.projectId}?:return "Select an invoice for this customer, branch and Project."
-  if(amount>(invoice.outstanding.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO))return "Amount exceeds the invoice balance."
+  if(amount+discount>(invoice.outstanding.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO))return "Cash plus discount exceeds the invoice balance."
  }
  if(s.type=="APPLY_ADVANCE"){
   val advance=s.advances.find{it.id==s.advanceId&&it.branchId==s.branchId&&it.customerId==s.customerId&&it.projectId==s.projectId}?:return "Select an advance for this invoice's customer and Project."
@@ -159,5 +164,5 @@ internal fun receiptValidation(s:ReceiptState):String? {
 internal fun receiptPayload(s:ReceiptState)=if(s.type=="APPLY_ADVANCE")buildJsonObject{
  put("action","APPLY_ADVANCE");putJsonObject("payload"){put("advanceId",s.advanceId);put("documentId",s.invoiceId);put("amount",s.amount);put("applicationDate",s.date);put("idempotencyKey",s.requestKey)}
 }else buildJsonObject{
- put("idempotencyKey",s.requestKey);put("type",s.type);put("branchId",s.branchId);put("partyId",s.customerId);s.projectId.takeIf{it.isNotBlank()}?.let{put("projectId",it)};put("paymentMode",s.mode);s.moneyAccountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",s.amount);put("transactionDate",s.date);put("reference",s.reference);put("notes",s.notes);putJsonArray("allocations"){if(s.type=="CUSTOMER_RECEIPT")add(buildJsonObject{put("documentId",s.invoiceId);put("amount",s.amount)})}
+ put("idempotencyKey",s.requestKey);put("type",s.type);put("branchId",s.branchId);put("partyId",s.customerId);s.projectId.takeIf{it.isNotBlank()}?.let{put("projectId",it)};put("paymentMode",s.mode);s.moneyAccountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",s.amount);put("transactionDate",s.date);put("reference",s.reference);put("notes",s.notes);putJsonArray("allocations"){if(s.type=="CUSTOMER_RECEIPT")add(buildJsonObject{put("documentId",s.invoiceId);val discount=if(s.discountEnabled)s.discountAmount.ifBlank{"0"}.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO else java.math.BigDecimal.ZERO;put("amount",((s.amount.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO)+discount).toPlainString());put("discountAmount",discount.toPlainString())})}
 }

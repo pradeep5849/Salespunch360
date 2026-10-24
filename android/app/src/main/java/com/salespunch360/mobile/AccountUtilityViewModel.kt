@@ -63,8 +63,8 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
         download("$type.$format") { api.accountMasterExport(type, format) }
     }
 
-    fun backup() {
-        download("salespunch360-account-backup.json") { api.accountBackup() }
+    fun backup(includePrivateFiles:Boolean=false) {
+        download("salespunch360-account-backup.json") { api.accountBackup(includePrivateFiles) }
     }
 
     private fun download(name: String, block: suspend () -> ByteArray) {

@@ -1,0 +1,8 @@
+"use client";
+import {useState} from "react";
+import {useRouter} from "next/navigation";
+export function PartyTransferReversalForm({id,requestKey,today}:{id:string;requestKey:string;today:string}){
+ const router=useRouter(),[date,setDate]=useState(today),[reason,setReason]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ async function submit(){if(busy)return;setBusy(true);setError("");try{const response=await fetch(`/api/account/party-transfers/${id}/reverse`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requestKey,entryDate:date,reason})});const result=await response.json();if(!response.ok){if(result.error==="PARTY_TRANSFER_ALREADY_REVERSED"){router.refresh();return}throw new Error(result.message??"The reversal was not confirmed. Retry with the same details.")}router.refresh()}catch(e){setError(e instanceof Error?e.message:"The result was not confirmed. Retry with the same details.")}finally{setBusy(false)}}
+ return <form className="stack" aria-label="Reverse entire party transfer" onSubmit={event=>{event.preventDefault();void submit()}}><fieldset disabled={busy} style={{border:0,padding:0}}><legend>Reverse entire transfer</legend><p style={{color:"#334155"}}>This reverses both cash movements and any commission. The original record remains in history.</p><label>Reversal date<input type="date" value={date} onChange={event=>setDate(event.target.value)} required/></label><label>Reversal reason<textarea value={reason} onChange={event=>setReason(event.target.value)} minLength={3} maxLength={1000} required/></label>{error&&<p role="alert">{error}</p>}<button type="submit" disabled={busy||reason.trim().length<3}>{busy?"Reversing…":"Reverse transfer"}</button></fieldset></form>;
+}

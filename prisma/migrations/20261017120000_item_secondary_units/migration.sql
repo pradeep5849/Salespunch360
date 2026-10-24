@@ -1,0 +1,6 @@
+ALTER TABLE "account_products" ADD COLUMN "secondaryUnitId" UUID, ADD COLUMN "secondaryUnitsPerBase" DECIMAL(18,4);
+ALTER TABLE "account_services" ADD COLUMN "secondaryUnitId" UUID, ADD COLUMN "secondaryUnitsPerBase" DECIMAL(18,4);
+ALTER TABLE "account_products" ADD CONSTRAINT "account_products_secondary_unit_fkey" FOREIGN KEY ("companyId","secondaryUnitId") REFERENCES "account_units"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "account_services" ADD CONSTRAINT "account_services_secondary_unit_fkey" FOREIGN KEY ("companyId","secondaryUnitId") REFERENCES "account_units"("companyId","id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "account_products" ADD CONSTRAINT "account_products_secondary_unit_pair" CHECK (("secondaryUnitId" IS NULL AND "secondaryUnitsPerBase" IS NULL) OR ("secondaryUnitId" IS NOT NULL AND "secondaryUnitsPerBase" > 0 AND "unitId" IS NOT NULL AND "secondaryUnitId" <> "unitId"));
+ALTER TABLE "account_services" ADD CONSTRAINT "account_services_secondary_unit_pair" CHECK (("secondaryUnitId" IS NULL AND "secondaryUnitsPerBase" IS NULL) OR ("secondaryUnitId" IS NOT NULL AND "secondaryUnitsPerBase" > 0 AND "unitId" IS NOT NULL AND "secondaryUnitId" <> "unitId"));

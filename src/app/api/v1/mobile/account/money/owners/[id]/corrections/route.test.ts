@@ -1,0 +1,14 @@
+import {beforeEach,expect,it,vi} from "vitest";
+import {AuthorizationError} from "@/lib/auth/authorization";
+const m=vi.hoisted(()=>({auth:vi.fn(),write:vi.fn()}));
+vi.mock("@/lib/mobile/auth",()=>({authenticateMobileToken:m.auth}));
+vi.mock("@/lib/mobile/account-money",()=>({mobileReverseOwnerTransaction:m.write}));
+import {POST} from "./route";
+beforeEach(()=>{vi.resetAllMocks();m.auth.mockResolvedValue({id:"actor"});m.write.mockResolvedValue({id:"reversal"})});
+const params={params:Promise.resolve({id:"owner"})};
+const payload={transactionId:"source",entryDate:"2026-10-14",reason:"Duplicate entry"};
+const request=()=>new Request("https://app.invalid",{method:"POST",headers:{authorization:"Bearer test"},body:JSON.stringify(payload)});
+it("forwards only the authenticated principal and explicit owner/source correction",async()=>{const response=await POST(request(),params);expect(response.status).toBe(200);expect(response.headers.get("cache-control")).toBe("no-store");expect(m.write).toHaveBeenCalledWith({id:"actor"},"owner",payload)});
+it("denies unauthenticated requests without financial writes",async()=>{m.auth.mockRejectedValue(new Error("MOBILE_UNAUTHORIZED"));expect((await POST(request(),params)).status).toBe(401);expect(m.write).not.toHaveBeenCalled()});
+it("preserves scope denial and controlled conflicting retry errors",async()=>{m.write.mockRejectedValueOnce(new AuthorizationError());expect((await POST(request(),params)).status).toBe(403);m.write.mockRejectedValueOnce(new Error("OWNER_CORRECTION_ALREADY_POSTED"));expect((await POST(request(),params)).status).toBe(409)});
+it("rejects malformed JSON before mutation",async()=>{expect((await POST(new Request("https://app.invalid",{method:"POST",body:"{"}),params)).status).toBe(400);expect(m.write).not.toHaveBeenCalled()});
