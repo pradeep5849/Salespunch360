@@ -18,3 +18,14 @@ An initial harness build failed because a symlink placed dependencies outside Tu
 Required before adoption: sanitized complete failed Hostinger log (stage/signal/stack/resource messages), Node/npm versions, CPU/RAM/process limits and affected release SHA. Then run this candidate in an isolated equivalent hosting build, checking peak RSS/process count, exit status and asset/runtime output. If SIGABRT persists, diagnose native thread allocation/heap/host termination/architecture from evidence; do not disable TypeScript, security checks, font assets or TLS as a workaround. Node26 types do not justify changing production Node22 runtime.
 
 Any eventual deployment of this separate candidate requires its own reviewed head and validation. It is not silently included in the already-merged PR153 migration release.
+
+
+## Owner-supplied Hostinger analysis screenshot
+
+The screenshot reports `Collecting page data using63workers` followed by worker `SIGABRT`. This corroborates the high worker-count scenario but is hosting analysis, not the complete original build log; exact abort origin/module and resource limits remain unverified. Hostinger suggests cpus2. This candidate uses the more conservative cpus1 already verified by a full build.
+
+An additional Next config load with a simulated64CPU default (`CIRCLE_NODE_TOTAL=64`) verified default63 versus candidate1worker, static concurrency1 and memory-based fanout disabled. This checks config behavior, not a63process crash reproduction or a resource-equivalent Hostinger build.
+
+Dependency verification: declared and locked packages already exist and match installed versions: TypeScript5.9.3, React types19.2.18, React DOM types19.2.5, Sharp0.35.5, Argon2 2.2.2. Actual Node22 Sharp PNG encode/decode and Argon2 random-fixture hash/verify/wrong-password rejection all passed. No original Super Admin password/hash was read or changed. An initial version-report harness hit Sharp's intentionally unexported package.json subpath; the corrected harness reads local package metadata and passes. This was not a native Sharp failure.
+
+Do not regenerate the lockfile or upgrade native libraries merely because the panel suggests it. Hostinger must install the committed lock with build dependencies present: `npm ci --include=dev`, then `npm run build`; ensure install settings do not force production-only dependencies or skip native installation scripts. Do not omit optional native platform packages. Verify the actual Hostinger release SHA/install log. Keep Node22. No use of the panel's Fix and redeploy button is authorized.
