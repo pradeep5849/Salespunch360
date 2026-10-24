@@ -9,6 +9,7 @@ on:
         options:
           - connection-test
           - preflight
+          - postflight
           - migrate
         default: connection-test
         required: true
@@ -40,7 +41,7 @@ permissions:
 
 jobs:
   connection-test:
-    if: inputs.operation == 'connection-test' || inputs.operation == 'preflight'
+    if: inputs.operation == 'connection-test' || inputs.operation == 'preflight' || inputs.operation == 'postflight'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -64,6 +65,7 @@ jobs:
             --output "$RUNNER_TEMP/supabase-ca-2021.crt"
           openssl x509 -in "$RUNNER_TEMP/supabase-ca-2021.crt" -noout -checkend 86400
       - name: Read-only connection and production identity check
+        if: inputs.operation != 'postflight'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
@@ -78,6 +80,14 @@ jobs:
           SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
           PRODUCTION_PREFLIGHT_ONLY: "true"
         run: node scripts/production-prep/run-approved-production-stages.mjs
+
+      - name: Read-only post-migration schema and module queries
+        if: inputs.operation == 'postflight'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
+        run: node scripts/production-postflight-readonly.mjs
 
   deploy-migrations:
     if: inputs.operation == 'migrate'
