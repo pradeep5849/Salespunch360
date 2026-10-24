@@ -59436,7 +59436,16 @@
         "src/lib/account/reports/category-trade.ts",
         "src/lib/account/reports/category-trade.test.ts",
         "src/lib/account/reports/all-parties.ts",
-        "src/lib/account/reports/all-parties.test.ts"
+        "src/lib/account/reports/all-parties.test.ts",
+        "src/lib/account/reports/all-transactions.ts",
+        "src/lib/account/reports/all-transactions.test.ts",
+        "src/lib/account/reports/gst-transaction-alias.test.ts",
+        "src/lib/account/reports/item-detail.ts",
+        "src/lib/account/reports/item-detail.test.ts",
+        "src/lib/account/reports/tax-working.ts",
+        "src/lib/account/reports/tax-working.test.ts",
+        "src/lib/account/sale-invoice-identity.ts",
+        "src/lib/account/sale-invoice-identities.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -59531,7 +59540,7 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
       "final_status": null,
       "final_tests": [],
       "shared_fix_links": [
@@ -60840,6 +60849,47 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03 remainsPARTIAL:37of45supplied names mapped,8unavailable;53supported service destinations. Other report calculations/layouts and final-head/device verification pending."
+        },
+        "complete_supplied_reports_2026_10_24": {
+          "date": "2026-10-24",
+          "code_commit": "af48c7d191801c0d5d18c03f8a17a41340588b9c",
+          "preceding_code_commit": "db4f2edb",
+          "scope": "A084-F03 completed supplied report computations and controls; A085-F01/F02 catalogue/native metadata and A086-F06 printed-identity read dependency",
+          "work": "All45supplied report names map to actual computations;60supported service destinations. Added AllTransactions posted-journal register(includes all source types,original/reversing entries,company/branch/date scope,exact double-entry totals),GSTactivity alias,ItemDetail saved billed lines/signed returns/retained printed identity with1000-record batch audit lookup. Android search controls follow authorized server metadata with legacy fallback. Five user-approved tax working reports:GSTR1outward,GSTR2inward,GSTR3Bgrouped,GSTR9monthly,Form27EQrecordedTCS. Saved credit-treatment and reverse-charge fields shown without inferring filing eligibility. Includes effective posted standalone expense/other-income tax;missing party/RCM information explicitly unknown. Signed original credit amounts retained. SharedWeb/native/CSV/XLSX/PDF presentation. No new models,migrations or financial writes.",
+          "approval": "2026-10-24 user selected Option1:PDF/Excel working summaries from saved transactions,not filing-ready statutory returns. No tax offsets,net liability,challan reconciliation or portal filing invented.",
+          "tests": {
+            "focused": "50PASS/7suites2.36s item/detail/identity/report group;49PASS/6suites2.38s tax-working group;38PASS/5suites2.35s preceding AllTransactions/GST group. Overlap,not additive. Initial2tax-test failures assumed row index despite chronological/document-number sorting;assertions now select the actual credit record;production calculation unchanged.",
+            "grouped": "124PASS/14suites7.52s complete related report/identity group.",
+            "database": "59PASS/4suites realPostgreSQL:report favourites/options+date-storage,retained-sale credit/cost/receipt/reminder corrections and commercial primary-unit history;serializedmaxWorkers1.",
+            "browser": "2PASS2.8m actual mobile390x844+desktop1440x1000:HSN/SAC,party/item/category/AllParties,AllTransactions,ItemDetail,GSTactivity and all5taxworking reports;nativeHTTPparity and CSV/XLSX/PDF contents+working disclaimers,savedprices,credit/debit signs,TCS1less0.25=0.75,blockedexpenseTax4.50,role/foreignbranch/itemsOFF guards,search/clear,AxeAA/nooverflow. Only3explicit fixture journals added(expense+TCSsale+credit);report reads add none. Initial browser attempt aborted before execution because resumed localDBcontainerwasstopped;containerrestarted,full2-profile rerun passed. No production access.",
+            "android": "compileDebugKotlin+39JVMtestsPASS40s,0fail/errors/skips:12ReferenceReportCatalogue+27AccountReportData. Prior changed native search controls also compiled in2m7s/38JVMpass. No emulator/device/Compose/TalkBack/OSshare runtime.",
+            "typescript": "FulltscPASS.",
+            "eslint": "FocusedESLintandgitdiff--checkPASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "OriginalA084-F03codecompleteinapprovedworking-report scope;final-headcompletevalidationstillpending. UndefinedCAaction not invented;existing manual exports retained. ProductionA052remediation remainsPARTIAL because productionDB/deployment prohibited. All199IDs retained;198implemented/resolved-not-finally-verified,1PARTIAL;0finalverified. NoA104/merge/deploy.",
+          "files": [
+            "src/lib/account/reports/all-transactions.ts",
+            "src/lib/account/reports/all-transactions.test.ts",
+            "src/lib/account/reports/gst-transaction-alias.test.ts",
+            "src/lib/account/reports/item-detail.ts",
+            "src/lib/account/reports/item-detail.test.ts",
+            "src/lib/account/reports/tax-working.ts",
+            "src/lib/account/reports/tax-working.test.ts",
+            "src/lib/account/sale-invoice-identity.ts",
+            "src/lib/account/sale-invoice-identities.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/service.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       },
       "current_unavailable_reference_reports": [
@@ -64108,7 +64158,25 @@
         "src/app/workspace/account/reports/[report]/page.tsx",
         "src/lib/account/reports/service.ts",
         "src/lib/mobile/account-reports.ts",
-        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt"
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "src/lib/account/reports/all-transactions.ts",
+        "src/lib/account/reports/all-transactions.test.ts",
+        "src/lib/account/reports/gst-transaction-alias.test.ts",
+        "src/lib/account/reports/item-detail.ts",
+        "src/lib/account/reports/item-detail.test.ts",
+        "src/lib/account/reports/tax-working.ts",
+        "src/lib/account/reports/tax-working.test.ts",
+        "src/lib/account/sale-invoice-identity.ts",
+        "src/lib/account/sale-invoice-identities.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/favourites.integration.test.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "e2e/a090-settings.spec.ts",
+        ".github/workflows/targeted-validation.yml"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes"
@@ -64362,6 +64430,47 @@
           "tests": "22 focused report/service/export/backup and real PostgreSQL tests PASS;2 desktop/mobile hub+mobile API scenarios PASS (1.2m),including search/reload/favourites/role denial/AXE/overflow;2 dashboard compatibility cases PASS (51.1s) after related Items OFF crash fix;Android compile/JVM PASS,6 report data/date tests (4+2),0 failures/errors/skips;TypeScript/full ESLint PASS before final pure allowlist deduplication;final slice TypeScript/full ESLint PASS after allowlist deduplication",
           "remaining": "Final exact-head complete validation and physical Android runtime. Full46 reference destination implementations remain A085-F02;this hub advertises only19 supported service destinations.",
           "commit": "77fde9e4fd0a7229e2982f0660cba494d2d4910a"
+        },
+        "complete_supplied_reports_2026_10_24": {
+          "date": "2026-10-24",
+          "code_commit": "af48c7d191801c0d5d18c03f8a17a41340588b9c",
+          "preceding_code_commit": "db4f2edb",
+          "scope": "A084-F03 completed supplied report computations and controls; A085-F01/F02 catalogue/native metadata and A086-F06 printed-identity read dependency",
+          "work": "All45supplied report names map to actual computations;60supported service destinations. Added AllTransactions posted-journal register(includes all source types,original/reversing entries,company/branch/date scope,exact double-entry totals),GSTactivity alias,ItemDetail saved billed lines/signed returns/retained printed identity with1000-record batch audit lookup. Android search controls follow authorized server metadata with legacy fallback. Five user-approved tax working reports:GSTR1outward,GSTR2inward,GSTR3Bgrouped,GSTR9monthly,Form27EQrecordedTCS. Saved credit-treatment and reverse-charge fields shown without inferring filing eligibility. Includes effective posted standalone expense/other-income tax;missing party/RCM information explicitly unknown. Signed original credit amounts retained. SharedWeb/native/CSV/XLSX/PDF presentation. No new models,migrations or financial writes.",
+          "approval": "2026-10-24 user selected Option1:PDF/Excel working summaries from saved transactions,not filing-ready statutory returns. No tax offsets,net liability,challan reconciliation or portal filing invented.",
+          "tests": {
+            "focused": "50PASS/7suites2.36s item/detail/identity/report group;49PASS/6suites2.38s tax-working group;38PASS/5suites2.35s preceding AllTransactions/GST group. Overlap,not additive. Initial2tax-test failures assumed row index despite chronological/document-number sorting;assertions now select the actual credit record;production calculation unchanged.",
+            "grouped": "124PASS/14suites7.52s complete related report/identity group.",
+            "database": "59PASS/4suites realPostgreSQL:report favourites/options+date-storage,retained-sale credit/cost/receipt/reminder corrections and commercial primary-unit history;serializedmaxWorkers1.",
+            "browser": "2PASS2.8m actual mobile390x844+desktop1440x1000:HSN/SAC,party/item/category/AllParties,AllTransactions,ItemDetail,GSTactivity and all5taxworking reports;nativeHTTPparity and CSV/XLSX/PDF contents+working disclaimers,savedprices,credit/debit signs,TCS1less0.25=0.75,blockedexpenseTax4.50,role/foreignbranch/itemsOFF guards,search/clear,AxeAA/nooverflow. Only3explicit fixture journals added(expense+TCSsale+credit);report reads add none. Initial browser attempt aborted before execution because resumed localDBcontainerwasstopped;containerrestarted,full2-profile rerun passed. No production access.",
+            "android": "compileDebugKotlin+39JVMtestsPASS40s,0fail/errors/skips:12ReferenceReportCatalogue+27AccountReportData. Prior changed native search controls also compiled in2m7s/38JVMpass. No emulator/device/Compose/TalkBack/OSshare runtime.",
+            "typescript": "FulltscPASS.",
+            "eslint": "FocusedESLintandgitdiff--checkPASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "OriginalA084-F03codecompleteinapprovedworking-report scope;final-headcompletevalidationstillpending. UndefinedCAaction not invented;existing manual exports retained. ProductionA052remediation remainsPARTIAL because productionDB/deployment prohibited. All199IDs retained;198implemented/resolved-not-finally-verified,1PARTIAL;0finalverified. NoA104/merge/deploy.",
+          "files": [
+            "src/lib/account/reports/all-transactions.ts",
+            "src/lib/account/reports/all-transactions.test.ts",
+            "src/lib/account/reports/gst-transaction-alias.test.ts",
+            "src/lib/account/reports/item-detail.ts",
+            "src/lib/account/reports/item-detail.test.ts",
+            "src/lib/account/reports/tax-working.ts",
+            "src/lib/account/reports/tax-working.test.ts",
+            "src/lib/account/sale-invoice-identity.ts",
+            "src/lib/account/sale-invoice-identities.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/service.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       }
     },
@@ -64468,7 +64577,16 @@
         "src/lib/account/sale-amendments.ts",
         "src/lib/account/sale-duplicate.ts",
         "src/lib/mobile/account-purchases.ts",
-        "src/lib/mobile/account-reports.ts"
+        "src/lib/mobile/account-reports.ts",
+        "src/lib/account/reports/all-transactions.ts",
+        "src/lib/account/reports/all-transactions.test.ts",
+        "src/lib/account/reports/gst-transaction-alias.test.ts",
+        "src/lib/account/reports/item-detail.ts",
+        "src/lib/account/reports/item-detail.test.ts",
+        "src/lib/account/reports/tax-working.ts",
+        "src/lib/account/reports/tax-working.test.ts",
+        "src/lib/account/sale-invoice-identity.ts",
+        "src/lib/account/sale-invoice-identities.test.ts"
       ],
       "affected_services_apis_actions": [
         "Report list/options/read and CSV/XLSX/PDF routes",
@@ -65732,6 +65850,47 @@
             "final_199_head": "NOT RUN"
           },
           "remaining": "A084-F03 remains PARTIAL for10 other unavailable reference calculations/controls and final-head/device validation. Catalogue names45,mapped35,unavailable10;51 supported service destinations. A085 remains implemented but not finally verified."
+        },
+        "complete_supplied_reports_2026_10_24": {
+          "date": "2026-10-24",
+          "code_commit": "af48c7d191801c0d5d18c03f8a17a41340588b9c",
+          "preceding_code_commit": "db4f2edb",
+          "scope": "A084-F03 completed supplied report computations and controls; A085-F01/F02 catalogue/native metadata and A086-F06 printed-identity read dependency",
+          "work": "All45supplied report names map to actual computations;60supported service destinations. Added AllTransactions posted-journal register(includes all source types,original/reversing entries,company/branch/date scope,exact double-entry totals),GSTactivity alias,ItemDetail saved billed lines/signed returns/retained printed identity with1000-record batch audit lookup. Android search controls follow authorized server metadata with legacy fallback. Five user-approved tax working reports:GSTR1outward,GSTR2inward,GSTR3Bgrouped,GSTR9monthly,Form27EQrecordedTCS. Saved credit-treatment and reverse-charge fields shown without inferring filing eligibility. Includes effective posted standalone expense/other-income tax;missing party/RCM information explicitly unknown. Signed original credit amounts retained. SharedWeb/native/CSV/XLSX/PDF presentation. No new models,migrations or financial writes.",
+          "approval": "2026-10-24 user selected Option1:PDF/Excel working summaries from saved transactions,not filing-ready statutory returns. No tax offsets,net liability,challan reconciliation or portal filing invented.",
+          "tests": {
+            "focused": "50PASS/7suites2.36s item/detail/identity/report group;49PASS/6suites2.38s tax-working group;38PASS/5suites2.35s preceding AllTransactions/GST group. Overlap,not additive. Initial2tax-test failures assumed row index despite chronological/document-number sorting;assertions now select the actual credit record;production calculation unchanged.",
+            "grouped": "124PASS/14suites7.52s complete related report/identity group.",
+            "database": "59PASS/4suites realPostgreSQL:report favourites/options+date-storage,retained-sale credit/cost/receipt/reminder corrections and commercial primary-unit history;serializedmaxWorkers1.",
+            "browser": "2PASS2.8m actual mobile390x844+desktop1440x1000:HSN/SAC,party/item/category/AllParties,AllTransactions,ItemDetail,GSTactivity and all5taxworking reports;nativeHTTPparity and CSV/XLSX/PDF contents+working disclaimers,savedprices,credit/debit signs,TCS1less0.25=0.75,blockedexpenseTax4.50,role/foreignbranch/itemsOFF guards,search/clear,AxeAA/nooverflow. Only3explicit fixture journals added(expense+TCSsale+credit);report reads add none. Initial browser attempt aborted before execution because resumed localDBcontainerwasstopped;containerrestarted,full2-profile rerun passed. No production access.",
+            "android": "compileDebugKotlin+39JVMtestsPASS40s,0fail/errors/skips:12ReferenceReportCatalogue+27AccountReportData. Prior changed native search controls also compiled in2m7s/38JVMpass. No emulator/device/Compose/TalkBack/OSshare runtime.",
+            "typescript": "FulltscPASS.",
+            "eslint": "FocusedESLintandgitdiff--checkPASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "OriginalA084-F03codecompleteinapprovedworking-report scope;final-headcompletevalidationstillpending. UndefinedCAaction not invented;existing manual exports retained. ProductionA052remediation remainsPARTIAL because productionDB/deployment prohibited. All199IDs retained;198implemented/resolved-not-finally-verified,1PARTIAL;0finalverified. NoA104/merge/deploy.",
+          "files": [
+            "src/lib/account/reports/all-transactions.ts",
+            "src/lib/account/reports/all-transactions.test.ts",
+            "src/lib/account/reports/gst-transaction-alias.test.ts",
+            "src/lib/account/reports/item-detail.ts",
+            "src/lib/account/reports/item-detail.test.ts",
+            "src/lib/account/reports/tax-working.ts",
+            "src/lib/account/reports/tax-working.test.ts",
+            "src/lib/account/sale-invoice-identity.ts",
+            "src/lib/account/sale-invoice-identities.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/service.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       },
       "current_reference_inventory": {
@@ -67975,7 +68134,25 @@
         "src/lib/account/service-reminders.ts",
         "src/lib/account/service-reminder-lineage.ts",
         "src/lib/account/sale-return-revisions.integration.test.ts",
-        "src/lib/mobile/sale-revision-errors.test.ts"
+        "src/lib/mobile/sale-revision-errors.test.ts",
+        "src/lib/account/reports/all-transactions.ts",
+        "src/lib/account/reports/all-transactions.test.ts",
+        "src/lib/account/reports/gst-transaction-alias.test.ts",
+        "src/lib/account/reports/item-detail.ts",
+        "src/lib/account/reports/item-detail.test.ts",
+        "src/lib/account/reports/tax-working.ts",
+        "src/lib/account/reports/tax-working.test.ts",
+        "src/lib/account/sale-invoice-identity.ts",
+        "src/lib/account/sale-invoice-identities.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/favourites.integration.test.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "src/lib/account/reports/service.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt"
       ],
       "affected_services_apis_actions": "See linked original follow-up; no service/API name invented.",
       "affected_models": "See linked original follow-up; unchanged models are not inferred.",
@@ -68610,6 +68787,47 @@
           "original_scope_mapping": "Original controls individually implemented and independently exercised: saved Cheque/ordinary references and readonly receipt display, separate description, private images/documents and shipping snapshots, editable freight/other charges, retained printed number/revision history. Current shared-form browser cases,paid-file cases and payment-reference cases plus prior own shipping/description/charge/native snapshot tests. No device runtime claim.",
           "prior_implementation_status": "PARTIAL",
           "new_implementation_status": "IMPLEMENTED BUT NOT VERIFIED"
+        },
+        "complete_supplied_reports_2026_10_24": {
+          "date": "2026-10-24",
+          "code_commit": "af48c7d191801c0d5d18c03f8a17a41340588b9c",
+          "preceding_code_commit": "db4f2edb",
+          "scope": "A084-F03 completed supplied report computations and controls; A085-F01/F02 catalogue/native metadata and A086-F06 printed-identity read dependency",
+          "work": "All45supplied report names map to actual computations;60supported service destinations. Added AllTransactions posted-journal register(includes all source types,original/reversing entries,company/branch/date scope,exact double-entry totals),GSTactivity alias,ItemDetail saved billed lines/signed returns/retained printed identity with1000-record batch audit lookup. Android search controls follow authorized server metadata with legacy fallback. Five user-approved tax working reports:GSTR1outward,GSTR2inward,GSTR3Bgrouped,GSTR9monthly,Form27EQrecordedTCS. Saved credit-treatment and reverse-charge fields shown without inferring filing eligibility. Includes effective posted standalone expense/other-income tax;missing party/RCM information explicitly unknown. Signed original credit amounts retained. SharedWeb/native/CSV/XLSX/PDF presentation. No new models,migrations or financial writes.",
+          "approval": "2026-10-24 user selected Option1:PDF/Excel working summaries from saved transactions,not filing-ready statutory returns. No tax offsets,net liability,challan reconciliation or portal filing invented.",
+          "tests": {
+            "focused": "50PASS/7suites2.36s item/detail/identity/report group;49PASS/6suites2.38s tax-working group;38PASS/5suites2.35s preceding AllTransactions/GST group. Overlap,not additive. Initial2tax-test failures assumed row index despite chronological/document-number sorting;assertions now select the actual credit record;production calculation unchanged.",
+            "grouped": "124PASS/14suites7.52s complete related report/identity group.",
+            "database": "59PASS/4suites realPostgreSQL:report favourites/options+date-storage,retained-sale credit/cost/receipt/reminder corrections and commercial primary-unit history;serializedmaxWorkers1.",
+            "browser": "2PASS2.8m actual mobile390x844+desktop1440x1000:HSN/SAC,party/item/category/AllParties,AllTransactions,ItemDetail,GSTactivity and all5taxworking reports;nativeHTTPparity and CSV/XLSX/PDF contents+working disclaimers,savedprices,credit/debit signs,TCS1less0.25=0.75,blockedexpenseTax4.50,role/foreignbranch/itemsOFF guards,search/clear,AxeAA/nooverflow. Only3explicit fixture journals added(expense+TCSsale+credit);report reads add none. Initial browser attempt aborted before execution because resumed localDBcontainerwasstopped;containerrestarted,full2-profile rerun passed. No production access.",
+            "android": "compileDebugKotlin+39JVMtestsPASS40s,0fail/errors/skips:12ReferenceReportCatalogue+27AccountReportData. Prior changed native search controls also compiled in2m7s/38JVMpass. No emulator/device/Compose/TalkBack/OSshare runtime.",
+            "typescript": "FulltscPASS.",
+            "eslint": "FocusedESLintandgitdiff--checkPASS.",
+            "final_199_head": "NOT RUN"
+          },
+          "remaining": "OriginalA084-F03codecompleteinapprovedworking-report scope;final-headcompletevalidationstillpending. UndefinedCAaction not invented;existing manual exports retained. ProductionA052remediation remainsPARTIAL because productionDB/deployment prohibited. All199IDs retained;198implemented/resolved-not-finally-verified,1PARTIAL;0finalverified. NoA104/merge/deploy.",
+          "files": [
+            "src/lib/account/reports/all-transactions.ts",
+            "src/lib/account/reports/all-transactions.test.ts",
+            "src/lib/account/reports/gst-transaction-alias.test.ts",
+            "src/lib/account/reports/item-detail.ts",
+            "src/lib/account/reports/item-detail.test.ts",
+            "src/lib/account/reports/tax-working.ts",
+            "src/lib/account/reports/tax-working.test.ts",
+            "src/lib/account/sale-invoice-identity.ts",
+            "src/lib/account/sale-invoice-identities.test.ts",
+            "src/lib/account/reports/catalogue.ts",
+            "src/lib/account/reports/favourites.ts",
+            "src/lib/account/reports/favourites.integration.test.ts",
+            "src/lib/account/reports/reference-inventory.json",
+            "src/lib/account/reports/reference-inventory.test.ts",
+            "src/lib/account/reports/service.ts",
+            "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+            "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+            "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+            "e2e/a090-settings.spec.ts",
+            ".github/workflows/targeted-validation.yml"
+          ]
         }
       },
       "push_checkpoint_evidence": {
@@ -74504,7 +74722,8 @@
       "decision": "User explicitly deferred Hindi translation;continue English implementation.",
       "scope": "A090-F01 approved English code scope;Hindi translation intentionally deferred,not claimed implemented."
     },
-    "posted_return_valuation_2026_10_23": "RESOLVED by user 23 October 2026: already billed/posted credit notes retain their original billed value; editing a sale to a different rate must not change, reverse or replace that existing credit. Original100credit remains100 when replacement sale price80. Existing history retained. Implementation and financial regression still pending; no completion inferred."
+    "posted_return_valuation_2026_10_23": "RESOLVED by user 23 October 2026: already billed/posted credit notes retain their original billed value; editing a sale to a different rate must not change, reverse or replace that existing credit. Original100credit remains100 when replacement sale price80. Existing history retained. Implementation and financial regression still pending; no completion inferred.",
+    "tax_working_reports_2026_10_24": "2026-10-24 user selected Option1:PDF/Excel working summaries from saved transactions,not filing-ready statutory returns. No tax offsets,net liability,challan reconciliation or portal filing invented."
   },
   "push_checkpoint": {
     "date": "2026-10-14",
@@ -76015,6 +76234,47 @@
       "tests": "Current focused78PASS/7suites1.79s. Initial original-scope browser12cases:9PASS/3FAIL4.9m;one reused-customer fixture produced correct30advance instead of isolated20;two5s development-navigation waits hit webpack memory restart/slow route. Fixed unique customer,isolated report branch and30s route/attachment waits;no financial assertion weakened or product source changed. Desktop targeted rerun3PASS1.4m. ReturnedSale+classification/category/AllParties matrices4PASS2.4m desktop/mobile. Earlier9passes and reruns overlap;not additive. Final tsc/focusedbrowser ESLintPASS.",
       "ci": "40014454354SUCCESS exact5a8aaea4306bae1cc6a9d9dd026d70a96619515e(all3jobs). Test/evidence head does not inherit exact-head CI status.",
       "remaining": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge."
+    },
+    {
+      "date": "2026-10-24",
+      "code_commit": "af48c7d191801c0d5d18c03f8a17a41340588b9c",
+      "preceding_code_commit": "db4f2edb",
+      "scope": "A084-F03 completed supplied report computations and controls; A085-F01/F02 catalogue/native metadata and A086-F06 printed-identity read dependency",
+      "work": "All45supplied report names map to actual computations;60supported service destinations. Added AllTransactions posted-journal register(includes all source types,original/reversing entries,company/branch/date scope,exact double-entry totals),GSTactivity alias,ItemDetail saved billed lines/signed returns/retained printed identity with1000-record batch audit lookup. Android search controls follow authorized server metadata with legacy fallback. Five user-approved tax working reports:GSTR1outward,GSTR2inward,GSTR3Bgrouped,GSTR9monthly,Form27EQrecordedTCS. Saved credit-treatment and reverse-charge fields shown without inferring filing eligibility. Includes effective posted standalone expense/other-income tax;missing party/RCM information explicitly unknown. Signed original credit amounts retained. SharedWeb/native/CSV/XLSX/PDF presentation. No new models,migrations or financial writes.",
+      "approval": "2026-10-24 user selected Option1:PDF/Excel working summaries from saved transactions,not filing-ready statutory returns. No tax offsets,net liability,challan reconciliation or portal filing invented.",
+      "tests": {
+        "focused": "50PASS/7suites2.36s item/detail/identity/report group;49PASS/6suites2.38s tax-working group;38PASS/5suites2.35s preceding AllTransactions/GST group. Overlap,not additive. Initial2tax-test failures assumed row index despite chronological/document-number sorting;assertions now select the actual credit record;production calculation unchanged.",
+        "grouped": "124PASS/14suites7.52s complete related report/identity group.",
+        "database": "59PASS/4suites realPostgreSQL:report favourites/options+date-storage,retained-sale credit/cost/receipt/reminder corrections and commercial primary-unit history;serializedmaxWorkers1.",
+        "browser": "2PASS2.8m actual mobile390x844+desktop1440x1000:HSN/SAC,party/item/category/AllParties,AllTransactions,ItemDetail,GSTactivity and all5taxworking reports;nativeHTTPparity and CSV/XLSX/PDF contents+working disclaimers,savedprices,credit/debit signs,TCS1less0.25=0.75,blockedexpenseTax4.50,role/foreignbranch/itemsOFF guards,search/clear,AxeAA/nooverflow. Only3explicit fixture journals added(expense+TCSsale+credit);report reads add none. Initial browser attempt aborted before execution because resumed localDBcontainerwasstopped;containerrestarted,full2-profile rerun passed. No production access.",
+        "android": "compileDebugKotlin+39JVMtestsPASS40s,0fail/errors/skips:12ReferenceReportCatalogue+27AccountReportData. Prior changed native search controls also compiled in2m7s/38JVMpass. No emulator/device/Compose/TalkBack/OSshare runtime.",
+        "typescript": "FulltscPASS.",
+        "eslint": "FocusedESLintandgitdiff--checkPASS.",
+        "final_199_head": "NOT RUN"
+      },
+      "remaining": "OriginalA084-F03codecompleteinapprovedworking-report scope;final-headcompletevalidationstillpending. UndefinedCAaction not invented;existing manual exports retained. ProductionA052remediation remainsPARTIAL because productionDB/deployment prohibited. All199IDs retained;198implemented/resolved-not-finally-verified,1PARTIAL;0finalverified. NoA104/merge/deploy.",
+      "files": [
+        "src/lib/account/reports/all-transactions.ts",
+        "src/lib/account/reports/all-transactions.test.ts",
+        "src/lib/account/reports/gst-transaction-alias.test.ts",
+        "src/lib/account/reports/item-detail.ts",
+        "src/lib/account/reports/item-detail.test.ts",
+        "src/lib/account/reports/tax-working.ts",
+        "src/lib/account/reports/tax-working.test.ts",
+        "src/lib/account/sale-invoice-identity.ts",
+        "src/lib/account/sale-invoice-identities.test.ts",
+        "src/lib/account/reports/catalogue.ts",
+        "src/lib/account/reports/favourites.ts",
+        "src/lib/account/reports/favourites.integration.test.ts",
+        "src/lib/account/reports/reference-inventory.json",
+        "src/lib/account/reports/reference-inventory.test.ts",
+        "src/lib/account/reports/service.ts",
+        "android/app/src/main/java/com/salespunch360/mobile/account/AccountReportData.kt",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/reports/AccountReportsScreen.kt",
+        "android/app/src/test/java/com/salespunch360/mobile/account/ReferenceReportCatalogueTest.kt",
+        "e2e/a090-settings.spec.ts",
+        ".github/workflows/targeted-validation.yml"
+      ]
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
@@ -76050,15 +76310,18 @@
     "posted_return_valuation": "RESOLVED:original billed100credit remains100 after80Saleedit. Core implementation and17financialcases have intermediate evidence. No unanswered decision here;remaining completion/final-head limitations are in finding checkpoints."
   },
   "current_implementation_counts": {
-    "as_of_date": "2026-10-23",
-    "code_head_commit": "d75ac641159cca95f6a8e1b95fffc7139bcd3e1f",
+    "as_of_date": "2026-10-24",
+    "code_head_commit": "af48c7d191801c0d5d18c03f8a17a41340588b9c",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 2,
-      "IMPLEMENTED BUT NOT VERIFIED": 197
+      "PARTIAL": 1,
+      "IMPLEMENTED BUT NOT VERIFIED": 198
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "No final statuses promoted.197implemented/resolved-but-not-finally-verified;2PARTIAL(A052-F01productionremediation,A084-F03remainingreportcoverage). No final199-head complete suite/build/device certification. No productionDB/deploy/A104/merge."
+    "scope_note": "OriginalA084-F03codecompleteinapprovedworking-report scope;final-headcompletevalidationstillpending. UndefinedCAaction not invented;existing manual exports retained. ProductionA052remediation remainsPARTIAL because productionDB/deployment prohibited. All199IDs retained;198implemented/resolved-not-finally-verified,1PARTIAL;0finalverified. NoA104/merge/deploy."
+  },
+  "checkpoint_pending_questions_2026_10_24": {
+    "tax_report_scope": "RESOLVED:userconfirmedOption1workingPDF/Excelreports;all5implementedwithexplicitno-filingdisclaimer."
   }
 }
