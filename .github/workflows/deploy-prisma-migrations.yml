@@ -8,6 +8,7 @@ on:
         type: choice
         options:
           - connection-test
+          - preflight
           - migrate
         default: connection-test
         required: true
@@ -21,12 +22,25 @@ on:
         default: auto
         required: true
 
+      approved_head:
+        description: "Exact reviewed 40-character workflow commit SHA; required for migrate"
+        type: string
+        default: ""
+      authorization:
+        description: "For migrate only: APPLY_59_REVIEWED_MIGRATIONS_WITHOUT_BACKUP"
+        type: string
+        default: ""
+      writers_paused:
+        description: "All web/API/Android/background writers have actually been paused"
+        type: boolean
+        default: false
+
 permissions:
   contents: read
 
 jobs:
   connection-test:
-    if: inputs.operation == 'connection-test'
+    if: inputs.operation == 'connection-test' || inputs.operation == 'preflight'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -56,52 +70,64 @@ jobs:
           SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
           VERIFY_CONNECTION_SECRET: ${{ inputs.connection_secret }}
         run: node scripts/production-readonly-connection.mjs
+      - name: Read-only production runner gates
+        if: inputs.operation == 'preflight'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
+          PRODUCTION_PREFLIGHT_ONLY: "true"
+        run: node scripts/production-prep/run-approved-production-stages.mjs
 
   deploy-migrations:
-    if: github.ref == 'refs/heads/main' && inputs.operation == 'migrate'
+    if: inputs.operation == 'migrate'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.DIRECT_URL }}
-
+    timeout-minutes: 30
+    concurrency:
+      group: salespunch-production-database-migrations
+      cancel-in-progress: false
     steps:
-      - name: Check out main
+      - name: Require exact head approval and maintenance confirmation
+        env:
+          APPROVED_HEAD: ${{ inputs.approved_head }}
+          MIGRATION_AUTHORIZATION: ${{ inputs.authorization }}
+          WRITERS_PAUSED: ${{ inputs.writers_paused }}
+        run: |
+          test "$APPROVED_HEAD" = "$GITHUB_SHA"
+          test "$MIGRATION_AUTHORIZATION" = "APPLY_59_REVIEWED_MIGRATIONS_WITHOUT_BACKUP"
+          test "$WRITERS_PAUSED" = "true"
+      - name: Check out exact reviewed commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: main
-
+          ref: ${{ github.sha }}
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
-
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Validate production database secrets
-        run: |
-          if [ -z "$DATABASE_URL" ] || [ -z "$DIRECT_URL" ]; then
-            echo "Required DATABASE_URL or DIRECT_URL repository secret is unavailable." >&2
-            exit 1
-          fi
-
-      - name: Generate Prisma Client
+      - name: Install locked dependencies without production credentials
+        run: npm ci --include=dev
+      - name: Generate Prisma Client without connecting
         run: npm run prisma:generate
-
-      - name: Validate Prisma schema
-        run: npm run prisma:validate
-
-      - name: Check migration status before deployment
-        continue-on-error: true
-        run: npx --no-install prisma migrate status
-
-      - name: Deploy pending migrations
-        run: npm run db:migrate:deploy
-
-      - name: Verify migration status after deployment
-        run: npx --no-install prisma migrate status
-
-      - name: Verify generated-client runtime columns
-        run: node scripts/check-runtime-schema.mjs
+      - name: Obtain official public Supabase CA certificate
+        run: |
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+            https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt \
+            --output "$RUNNER_TEMP/supabase-ca-2021.crt"
+          openssl x509 -in "$RUNNER_TEMP/supabase-ca-2021.crt" -noout -checkend 86400
+      - name: Final read-only preflight
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
+          VERIFY_CONNECTION_SECRET: DIRECT_URL
+        run: node scripts/production-readonly-connection.mjs
+      - name: Apply and verify exactly one migration at a time
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
+          APPROVED_HEAD: ${{ inputs.approved_head }}
+          MIGRATION_AUTHORIZATION: ${{ inputs.authorization }}
+          WRITERS_PAUSED: ${{ inputs.writers_paused }}
+        run: node scripts/production-prep/run-approved-production-stages.mjs
