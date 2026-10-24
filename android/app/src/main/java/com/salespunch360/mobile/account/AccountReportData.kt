@@ -29,6 +29,10 @@ fun accountReportSpecificFilters(options:JsonObject,key:String):Set<String>? {
  return filters.mapNotNull{(it as? JsonPrimitive)?.contentOrNull}.toSet()
 }
 
+/** Prefer the authorized server catalogue; retain known search behavior for older servers. */
+fun accountReportAllowsItemSearch(options:JsonObject,report:String):Boolean =
+ accountReportSpecificFilters(options,report)?.contains("itemSearch") ?: (report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","item-discount","party-items","item-party"))
+
 fun accountReportDestination(value:String):String?=value.takeIf{Regex("^/workspace/account/(?:money/capital|sales|purchases|expenses|transactions)/[a-fA-F0-9-]{36}(?:\\?.*)?$").matches(it)}
 
 /** Preserve an explicit money-type scope on the initial request before metadata arrives. */
@@ -49,7 +53,7 @@ fun accountReportRequestFilters(options:JsonObject,report:String,candidates:Map<
   (key!="moneyAccountId"||report=="bank-statement")&&
   (key!="categoryId"||report in setOf("stock-detail","stock-summary","low-stock-summary","item-discount"))&&
   (key!="itemStatus"||report in setOf("stock-detail","stock-summary","low-stock-summary"))&&
-  (key!="itemSearch"||report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","item-discount","party-items","item-party"))&&
+  (key!="itemSearch"||accountReportAllowsItemSearch(options,report))&&
   (key!="accountType"||report=="cash-bank")&&
   (key!="ownerId"||report=="owner-capital"||report=="profit-withdrawal")&&
   (key in setOf("from","to","branchId")||(key=="accountType"&&report=="cash-bank")||supported?.contains(key)!=false)

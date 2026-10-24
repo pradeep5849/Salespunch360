@@ -25,3 +25,19 @@ export async function recordSaleInvoiceIdentity(tx:Reader,actorId:string,source:
  await tx.accountOperationalAudit.create({data:{companyId:source.companyId,actorUserId:actorId,eventType:"SALE_INVOICE_IDENTITY",entityType:"SALES_INVOICE",entityId:replacement.id,metadata:identity}});
  return identity;
 }
+
+/** One scoped read for report pages; preserve the same earliest immutable
+ * identity event used by the single-document reader, without per-line queries. */
+export async function saleInvoiceIdentities(tx:Reader,companyId:string,invoices:Invoice[]){
+ if(invoices.some(invoice=>invoice.companyId!==companyId))throw new Error("SALE_INVOICE_IDENTITY_INVALID");
+ const unique=new Map(invoices.map(invoice=>[invoice.id,invoice]));
+ const result=new Map([...unique.values()].map(invoice=>[invoice.id,{printedNumber:invoice.documentNumber,revision:0,previousInvoiceId:null as string|null}]));
+ const sales=[...unique.values()].filter(invoice=>invoice.type==="SALES_INVOICE");
+ for(let index=0;index<sales.length;index+=1000){
+  const page=sales.slice(index,index+1000),seen=new Set<string>();
+  const events=await tx.accountOperationalAudit.findMany({where:{companyId,entityType:"SALES_INVOICE",eventType:"SALE_INVOICE_IDENTITY",entityId:{in:page.map(invoice=>invoice.id)}},orderBy:[{createdAt:"asc"},{id:"asc"}],select:{entityId:true,metadata:true}});
+  const allowed=new Map(page.map(invoice=>[invoice.id,invoice]));
+  for(const event of events){const invoice=allowed.get(event.entityId);if(!invoice)throw new Error("SALE_INVOICE_IDENTITY_INVALID");if(seen.has(event.entityId))continue;seen.add(event.entityId);result.set(invoice.id,saleInvoiceIdentityFromMetadata(invoice,event.metadata))}
+ }
+ return result;
+}

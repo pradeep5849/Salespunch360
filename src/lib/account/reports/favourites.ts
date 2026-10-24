@@ -29,11 +29,11 @@ export async function availableReportCatalogueForActor(actor: Actor) {
   return reportCatalogueWithFilters(reportsForRole(user.accountRole)).filter(
     (x) =>
       (!["order-transactions","order-items"].includes(x.key)||((modules.includes("SALES")&&modules.includes("SALES_ORDER"))||(modules.includes("PURCHASES")&&modules.includes("PURCHASE_ORDER"))))&&
-      (!["sale-purchase-party","discount-party","party-items","item-party","category-trade","all-parties"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
-      (!["hsn-sales","sac-sales","gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable","tcs-collected"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
+      (!["sale-purchase-party","discount-party","party-items","item-party","category-trade","all-parties","item-detail"].includes(x.key)||(modules.includes("SALES")&&modules.includes("PURCHASES")))&&
+      (!["gstr-1","gstr-2","gstr-3b","gstr-9","form-27eq","tax","hsn-sales","sac-sales","gst-party","gst-rate","tds-receivable","tds-payable","tcs-receivable","tcs-collected"].includes(x.key)||modules.includes("GST_ADVANCED"))&&
       (!["hsn-sales","item-discount"].includes(x.key)||modules.includes("SALES"))&&
       (!["day-book","bank-statement","loan-statement"].includes(x.key)||canUsePermission(user,user.company!.productEdition,"ACCOUNT_MONEY_VIEW"))&&
-      (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","category-trade"].includes(x.key)||canStock)&&
+      (!["stock-category","stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","category-trade","item-detail"].includes(x.key)||canStock)&&
       (!["purchase-register","purchase-report"].includes(x.key)||modules.includes("PURCHASES")) &&
       (!["projects", "budget-vs-actual", "material-consumption", "project-transfer"].includes(x.key) ||
       (modules.includes("PROJECTS") &&

@@ -128,7 +128,7 @@ fun AccountReportsScreen(initial: String?, padding: PaddingValues, vm: AccountRe
             val choose = buildJsonObject { put("id", "");put("name", "Select bank account") }
             Option("Bank account",state.moneyAccountId,listOf(choose)+state.options.array("bankAccounts")){vm.filter("moneyAccountId",it)}
         }
-        if (state.report in setOf("stock-detail","stock-summary","low-stock-summary","item-serial","item-batch","item-discount")) {
+        if (com.salespunch360.mobile.account.accountReportAllowsItemSearch(state.options,state.report.orEmpty())) {
             OutlinedTextField(state.itemSearch,{vm.filter("itemSearch",it.take(240))},label={Text(if(state.report=="item-discount")"Item name" else "Search items")},singleLine=true,trailingIcon={if(state.itemSearch.isNotEmpty())TextButton(onClick={vm.filter("itemSearch","");vm.run()}){Text("Clear")}})
         }
         if(state.report=="item-discount"){

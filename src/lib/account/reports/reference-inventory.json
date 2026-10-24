@@ -122,23 +122,29 @@
     {
       "name": "GSTR-1",
       "group": "GST reports",
-      "destinations": [],
+      "destinations": [
+        "gstr-1"
+      ],
       "requirement": "TAX",
-      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+      "reason": ""
     },
     {
       "name": "GSTR-2",
       "group": "GST reports",
-      "destinations": [],
+      "destinations": [
+        "gstr-2"
+      ],
       "requirement": "TAX",
-      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+      "reason": ""
     },
     {
       "name": "GSTR-3B",
       "group": "GST reports",
-      "destinations": [],
+      "destinations": [
+        "gstr-3b"
+      ],
       "requirement": "TAX",
-      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+      "reason": ""
     },
     {
       "name": "GST Transaction report",
@@ -152,9 +158,11 @@
     {
       "name": "GSTR-9",
       "group": "GST reports",
-      "destinations": [],
+      "destinations": [
+        "gstr-9"
+      ],
       "requirement": "TAX",
-      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+      "reason": ""
     },
     {
       "name": "Sale Summary by HSN",
@@ -213,9 +221,11 @@
     {
       "name": "Item Detail Report",
       "group": "Item/Stock reports",
-      "destinations": [],
+      "destinations": [
+        "item-detail"
+      ],
       "requirement": "STOCK",
-      "reason": "This report\u2019s calculation and output are not available yet."
+      "reason": ""
     },
     {
       "name": "Stock Detail Report",
@@ -310,9 +320,11 @@
     {
       "name": "Form No. 27EQ",
       "group": "Taxes",
-      "destinations": [],
+      "destinations": [
+        "form-27eq"
+      ],
       "requirement": "TAX",
-      "reason": "Statutory filing generation and validation are not available. Activity reports are separate and are not filing documents."
+      "reason": ""
     },
     {
       "name": "TCS Receivable",

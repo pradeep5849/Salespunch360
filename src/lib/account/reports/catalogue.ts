@@ -1,6 +1,12 @@
 import {referenceReportAliases} from "./reference-inventory";
 /** Supported report-service destinations shared by web and native. */
 export const REPORT_CATALOGUE = [
+  ["gstr-1", "GSTR-1 Working Report", "GST working reports"],
+  ["gstr-2", "GSTR-2 Working Report", "GST working reports"],
+  ["gstr-3b", "GSTR-3B Working Report", "GST working reports"],
+  ["gstr-9", "GSTR-9 Working Report", "GST working reports"],
+  ["form-27eq", "Form No. 27EQ Working Report", "GST working reports"],
+  ["item-detail", "Item Detail Report", "Item/Stock reports"],
   ["all-transactions", "All Transactions", "Transaction"],
   ["all-parties", "All Parties Report", "Party reports"],
   ["category-trade", "Sale/Purchase by Item Category", "Item/Stock reports"],
@@ -73,6 +79,7 @@ export function searchReportCatalogue(
 }
 
 const specificFilters: Record<string, string[]> = {
+  "item-detail":["customerId","vendorId","productId","itemSearch"],
   "party-items":["customerId","vendorId","productId","itemSearch"],
   "item-party":["customerId","vendorId","productId","itemSearch"],
   "sac-sales":["classificationSide"],
