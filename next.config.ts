@@ -23,7 +23,14 @@ const securityHeaders = [
 ];
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: { "/*": ["./assets/fonts/*.ttf"] },
-  experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  experimental: {
+    // Shared hosting may expose more CPUs than its process/memory allowance.
+    // Bound Next.js build/export workers without changing runtime requests.
+    cpus: 1,
+    memoryBasedWorkersCount: false,
+    staticGenerationMaxConcurrency: 1,
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   agentRules: false,
   poweredByHeader: false,
   async headers() {
