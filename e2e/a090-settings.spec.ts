@@ -1,3 +1,6 @@
+import * as projectMaterialService from "../src/lib/account/project-material-service";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { pendingExpenseAlertsForActor } from "../src/lib/account/expense-alerts";
 import { mobileNotifications } from "../src/lib/mobile/account-administration";
 import { mobileAccountBootstrap } from "../src/lib/mobile/account";
@@ -92,13 +95,19 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { postJournalInTx } from "../src/lib/accounting/service";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
+// Network-fault scenarios need observable browser requests; normal PWA cases remain enabled.
+const networkTest = test.extend({ serviceWorkers: "block" });
 let settingsCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 async function signInSettings(page: Page) {
   if (settingsCookies.length) {
     await page.context().addCookies(settingsCookies);
     await page.goto("/workspace/account");
-    await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
-    return;
+    if (new URL(page.url()).pathname !== "/sign-in") {
+      await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
+      return;
+    }
+    settingsCookies = [];
+    await page.context().clearCookies();
   }
   await page.goto("/sign-in");
   await page.getByLabel("Email", { exact: true }).fill(email);
@@ -129,17 +138,27 @@ async function openQuotationConversion(page: Page) {
 }
 
 const db = new PrismaClient(),
-  companyId = randomUUID(),
-  branchId = randomUUID(),
-  userId = randomUUID(),
-  assetId = randomUUID(),
-  customerId = randomUUID(),
-  printDocumentId = randomUUID(),
-  productId = randomUUID(),
-  otherCompanyId = randomUUID(),
-  password = "Asset-browser-fixture-934!",
+  password = "Asset-browser-fixture-934!";
+let companyId = "",
+  branchId = "",
+  userId = "",
+  assetId = "",
+  customerId = "",
+  printDocumentId = "",
+  productId = "",
+  otherCompanyId = "",
+  email = "";
+// Each scenario owns its company, settings, sessions, stock and accounting history.
+test.beforeEach(async () => {
+  companyId = randomUUID();
+  branchId = randomUUID();
+  userId = randomUUID();
+  assetId = randomUUID();
+  customerId = randomUUID();
+  printDocumentId = randomUUID();
+  productId = randomUUID();
+  otherCompanyId = randomUUID();
   email = `${userId}@example.test`;
-test.beforeAll(async () => {
   settingsCookies = [];
   const url = new URL(process.env.DATABASE_URL ?? "");
   if (
@@ -249,7 +268,15 @@ test.beforeAll(async () => {
     },
   });
 });
-test.afterAll(async () => {
+test.afterEach(async () => {
+  const cleanupUrl = new URL(
+    process.env.DATABASE_URL ?? "postgresql://invalid/invalid",
+  );
+  if (
+    !["localhost", "127.0.0.1"].includes(cleanupUrl.hostname) ||
+    !cleanupUrl.pathname.endsWith("_ci")
+  )
+    return;
   await db.expenseItem.deleteMany({
     where: { companyId, name: "A088 backup reusable fixture" },
   });
@@ -339,7 +366,6 @@ test.afterAll(async () => {
   await db.user.deleteMany({ where: { companyId } });
   await db.branch.deleteMany({ where: { companyId } });
   await db.company.deleteMany({ where: { id: companyId } });
-  await db.$disconnect();
 });
 
 test("A090 saves company preferences, survives reload, formats data and protects unsaved navigation", async ({
@@ -1180,7 +1206,9 @@ test("A102 public invoice link is scoped, revocable and opens without sign-in", 
     where: { id: printDocumentId },
     data: { status: "POSTED" },
   });
-  const url = invoiceShareUrl(invoice),
+  const signedUrl = new URL(invoiceShareUrl(invoice));
+  // Keep the signed path while exercising this isolated server, never production.
+  const url = new URL(signedUrl.pathname, "http://127.0.0.1:3000").toString(),
     request = await playwright.request.newContext();
   try {
     const response = await request.get(url);
@@ -1223,7 +1251,16 @@ test("A102 public invoice link is scoped, revocable and opens without sign-in", 
       invoice,
       new Date(Date.now() - 31 * 86400000),
     );
-    expect((await request.get(expired)).status()).toBe(404);
+    expect(
+      (
+        await request.get(
+          new URL(
+            new URL(expired).pathname,
+            "http://127.0.0.1:3000",
+          ).toString(),
+        )
+      ).status(),
+    ).toBe(404);
   } finally {
     await request.dispose();
     await db.accountSettings.update({
@@ -1674,6 +1711,9 @@ test("A103 payment discount settles 100 with 90 cash and preserves journal and p
     ).toBe(0);
     await expect(page.getByLabel("Amount", { exact: true })).toHaveValue("90");
     await page.getByLabel("Payment Discount", { exact: true }).fill("10");
+    const postedPaymentRequest = JSON.parse(
+      await page.locator('input[name="payload"]').inputValue(),
+    );
     await page
       .getByRole("button", { name: "Post transaction", exact: true })
       .click();
@@ -1759,20 +1799,7 @@ test("A103 payment discount settles 100 with 90 cash and preserves journal and p
       `/api/account/print/SALES_INVOICE/${invoice.id}`,
     );
     expect(await hiddenMode.text()).not.toContain("Payment mode: CASH");
-    const retry = {
-      idempotencyKey: receipt.idempotencyKey,
-      type: "CUSTOMER_RECEIPT",
-      branchId,
-      partyId: customerId,
-      paymentMode: "CASH",
-      amount: "90",
-      transactionDate: "2026-10-11",
-      reference: receipt.reference ?? undefined,
-      notes: receipt.notes ?? undefined,
-      allocations: [
-        { documentId: invoice.id, amount: "100", discountAmount: "10" },
-      ],
-    };
+    const retry = postedPaymentRequest;
     expect((await createSettlementForActor(actor, retry)).id).toBe(receipt.id);
     await expect(
       createSettlementForActor(actor, {
@@ -1871,7 +1898,7 @@ test("A101 service period switches snapshot sale days and completion removes onl
       page.getByRole("dialog", { name: "Reminder Message", exact: true }),
     ).toContainText("Draft reminder for {Party name}");
     await page.screenshot({
-      path: `/workspace/work/a101-reminder-preview-${test.info().project.name}.png`,
+      path: test.info().outputPath("a101-reminder-preview.png"),
     });
     await page.keyboard.press("Escape");
     await expect(
@@ -2906,16 +2933,20 @@ test("A103 reverse charge excludes seller GST liability and collects only payabl
     expect(
       editedJournal.map((row) => row.ledgerAccount.systemKey).sort(),
     ).toEqual(["ACCOUNTS_RECEIVABLE", "SALES_INCOME"]);
-    await page.goto(`/workspace/account/sales/${rounded.id}/edit`);
+    const beforePaidEdit = await db.journalEntry.count({
+      where: { companyId },
+    });
+    await page.goto(`/workspace/account/sales/${edited.id}/edit`);
     await expect(
-      page.getByText(
-        "This sale has a payment or adjustment and cannot be edited.",
-        { exact: true },
-      ),
+      page.getByRole("button", { name: "Save", exact: true }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "View Sale", exact: true }).click();
+    // Paid invoices may open the approved immutable correction workflow without writes.
+    expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+      beforePaidEdit,
+    );
+    await page.goto(`/workspace/account/sales/${edited.id}`);
     await expect(page).toHaveURL(
-      new RegExp(`/workspace/account/sales/${rounded.id}$`),
+      new RegExp(`/workspace/account/sales/${edited.id}$`),
     );
     await db.accountSettings.update({
       where: { companyId },
@@ -3583,6 +3614,7 @@ test("A103 state defaults and invoice tax discount switches reach GST posting", 
   }
 });
 
+const cameraFile = join(tmpdir(), "salespunch360-a103-camera.y4m");
 test.use({
   permissions: ["camera"],
   launchOptions: {
@@ -3590,13 +3622,16 @@ test.use({
     args: [
       "--use-fake-device-for-media-stream",
       "--use-fake-ui-for-media-stream",
-      "--use-file-for-fake-video-capture=/workspace/work/a103-camera.y4m",
+      `--use-file-for-fake-video-capture=${cameraFile}`,
     ],
   },
 });
 
 test.describe("A103 barcode camera", () => {
-  const cameraFile = "/workspace/work/a103-camera.y4m";
+  test.afterAll(async () => {
+    const { rm } = await import("node:fs/promises");
+    await rm(cameraFile, { force: true });
+  });
 
   test.beforeAll(async () => {
     const { QRCodeWriter, BarcodeFormat } = await import("@zxing/library");
@@ -5472,7 +5507,7 @@ test("A076 material posting retains original cost rejects excess and safely reus
       transferProjectMaterialForActor,
       returnProjectMaterialForActor,
       projectMaterialContextForActor,
-    } = await import("../src/lib/account/project-material-service");
+    } = projectMaterialService;
     const issueInput = {
       projectId: project.id,
       warehouseId: warehouse.id,
@@ -6792,205 +6827,221 @@ test("A061 stock summary retains inactive history and scoped exports with strict
   }
 });
 
-test("A062 units preserve concurrent rules, paginate native choices and show safe save feedback", async ({
-  page,
-}) => {
-  test.setTimeout(150000);
-  const original = await db.accountSettings.findUniqueOrThrow({
-    where: { companyId },
-  });
-  try {
-    await db.accountSettings.update({
+networkTest(
+  "A062 units preserve concurrent rules, paginate native choices and show safe save feedback",
+  async ({ page }) => {
+    test.setTimeout(150000);
+    const original = await db.accountSettings.findUniqueOrThrow({
       where: { companyId },
-      data: {
-        itemSettings: {
-          ...((original.itemSettings as object) ?? {}),
-          enabled: true,
-          itemUnits: true,
-        },
-      },
-    });
-    const ids: string[] = Array.from({ length: 205 }, () => randomUUID());
-    await db.accountUnit.createMany({
-      data: ids.map((id, index) => ({
-        id,
-        companyId,
-        name: `A062 Unit ${String(index).padStart(3, "0")}`,
-        symbol: `AU${index}`,
-      })),
-    });
-    const actor = {
-      ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
-      companyId,
-      branchIds: [],
-    } as ProjectActor;
-    const principal = {
-      ...actor,
-      productEdition: "SALESPUNCH360_ACCOUNT" as const,
-      authorizedWorkspaces: ["ACCOUNT" as const],
-    };
-    const nativeUnits = [];
-    for (let offset = 0; ; offset += 200) {
-      const rows = await listMobileAccountMaster(principal, "units", {
-        active: "true",
-        offset,
-      });
-      nativeUnits.push(...rows);
-      if (rows.length < 200) break;
-    }
-    expect(nativeUnits.map((row) => row.id)).toContain(ids[204]);
-    await Promise.all([
-      saveMobileUnitConversion(principal, {
-        baseUnitId: ids[0],
-        secondaryUnitId: ids[1],
-        rate: "12",
-      }),
-      saveMobileUnitConversion(principal, {
-        baseUnitId: ids[2],
-        secondaryUnitId: ids[3],
-        rate: "24",
-      }),
-    ]);
-    const rules = (
-      (await db.accountSettings.findUniqueOrThrow({ where: { companyId } }))
-        .itemSettings as {
-        unitConversions: Array<{ baseUnitId: string; rate: string }>;
-      }
-    ).unitConversions;
-    expect(
-      rules.filter((row) => [ids[0], ids[2]].includes(row.baseUnitId)),
-    ).toHaveLength(2);
-    await signInSettings(page);
-    await page.goto("/workspace/account/inventory/units");
-    await expect(
-      page.getByRole("navigation", { name: "Items sections" }),
-    ).toContainText("ProductsServicesCategoriesUnits");
-    await page
-      .getByRole("textbox", { name: "Search Unit" })
-      .fill("A062 Unit 204");
-    await expect(
-      page.locator(".unit-list").getByText("A062 UNIT 204", { exact: true }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Add Unit", exact: false }).click();
-    const editor = page.getByRole("dialog", { name: "Add Unit", exact: true });
-    await expect(
-      editor.getByRole("textbox", { name: "Full Unit Name" }),
-    ).toBeFocused();
-    expect(
-      (await new AxeBuilder({ page }).include(".items-manager-page").analyze())
-        .violations,
-    ).toEqual([]);
-    await page.keyboard.press("Escape");
-    await expect(editor).not.toBeVisible();
-    await page.getByRole("button", { name: "Add Unit", exact: false }).click();
-    await editor
-      .getByRole("textbox", { name: "Full Unit Name" })
-      .fill("A062 Unit 000");
-    await editor.getByRole("textbox", { name: "Short Name" }).fill("NEW-A062");
-    await editor.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(editor.getByRole("alert")).toContainText("already exists");
-    await expect(
-      editor.getByRole("textbox", { name: "Short Name" }),
-    ).toHaveValue("NEW-A062");
-    await editor
-      .getByRole("textbox", { name: "Full Unit Name" })
-      .fill("A062 Created Unit");
-    await editor.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(editor).not.toBeVisible();
-    expect(
-      await db.accountUnit.count({
-        where: { companyId, name: "A062 Created Unit", symbol: "NEW-A062" },
-      }),
-    ).toBe(1);
-    await page
-      .getByRole("button", { name: "Set Conversion", exact: true })
-      .click();
-    const conversion = page.getByRole("dialog", {
-      name: "Set Conversion",
-      exact: true,
-    });
-    await conversion
-      .getByLabel("Base unit", { exact: true })
-      .selectOption(ids[0]);
-    await conversion
-      .getByLabel("Secondary unit", { exact: true })
-      .selectOption(ids[204]);
-    await conversion
-      .getByLabel("Conversion Rate", { exact: true })
-      .fill("0.00001");
-    await expect(
-      conversion.getByRole("button", { name: "Save", exact: true }),
-    ).toBeDisabled();
-    await expect(
-      conversion.getByLabel("Conversion Rate", { exact: true }),
-    ).toHaveAttribute("aria-invalid", "true");
-    await conversion
-      .getByLabel("Conversion Rate", { exact: true })
-      .fill("1.25");
-    let releaseSave: () => void = () => {};
-    const heldSave = new Promise<void>((resolve) => {
-      releaseSave = resolve;
-    });
-    await page.route("**/workspace/account/inventory/units", async (route) => {
-      if (route.request().method() === "POST") await heldSave;
-      await route.continue();
     });
     try {
-      await conversion
-        .getByRole("button", { name: "Save", exact: true })
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          itemSettings: {
+            ...((original.itemSettings as object) ?? {}),
+            enabled: true,
+            itemUnits: true,
+          },
+        },
+      });
+      const ids: string[] = Array.from({ length: 205 }, () => randomUUID());
+      await db.accountUnit.createMany({
+        data: ids.map((id, index) => ({
+          id,
+          companyId,
+          name: `A062 Unit ${String(index).padStart(3, "0")}`,
+          symbol: `AU${index}`,
+        })),
+      });
+      const actor = {
+        ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
+        companyId,
+        branchIds: [],
+      } as ProjectActor;
+      const principal = {
+        ...actor,
+        productEdition: "SALESPUNCH360_ACCOUNT" as const,
+        authorizedWorkspaces: ["ACCOUNT" as const],
+      };
+      const nativeUnits = [];
+      for (let offset = 0; ; offset += 200) {
+        const rows = await listMobileAccountMaster(principal, "units", {
+          active: "true",
+          offset,
+        });
+        nativeUnits.push(...rows);
+        if (rows.length < 200) break;
+      }
+      expect(nativeUnits.map((row) => row.id)).toContain(ids[204]);
+      await Promise.all([
+        saveMobileUnitConversion(principal, {
+          baseUnitId: ids[0],
+          secondaryUnitId: ids[1],
+          rate: "12",
+        }),
+        saveMobileUnitConversion(principal, {
+          baseUnitId: ids[2],
+          secondaryUnitId: ids[3],
+          rate: "24",
+        }),
+      ]);
+      const rules = (
+        (await db.accountSettings.findUniqueOrThrow({ where: { companyId } }))
+          .itemSettings as {
+          unitConversions: Array<{ baseUnitId: string; rate: string }>;
+        }
+      ).unitConversions;
+      expect(
+        rules.filter((row) => [ids[0], ids[2]].includes(row.baseUnitId)),
+      ).toHaveLength(2);
+      await signInSettings(page);
+      await page.goto("/workspace/account/inventory/units");
+      await expect(
+        page.getByRole("navigation", { name: "Items sections" }),
+      ).toContainText("ProductsServicesCategoriesUnits");
+      await page
+        .getByRole("textbox", { name: "Search Unit" })
+        .fill("A062 Unit 204");
+      await expect(
+        page.locator(".unit-list").getByText("A062 UNIT 204", { exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Add Unit", exact: false })
         .click();
+      const editor = page.getByRole("dialog", {
+        name: "Add Unit",
+        exact: true,
+      });
       await expect(
-        conversion.getByLabel("Base unit", { exact: true }),
-      ).toBeDisabled();
+        editor.getByRole("textbox", { name: "Full Unit Name" }),
+      ).toBeFocused();
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include(".items-manager-page")
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await page.keyboard.press("Escape");
+      await expect(editor).not.toBeVisible();
+      await page
+        .getByRole("button", { name: "Add Unit", exact: false })
+        .click();
+      await editor
+        .getByRole("textbox", { name: "Full Unit Name" })
+        .fill("A062 Unit 000");
+      await editor
+        .getByRole("textbox", { name: "Short Name" })
+        .fill("NEW-A062");
+      await editor.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(editor.getByRole("alert")).toContainText("already exists");
       await expect(
-        conversion.getByLabel("Secondary unit", { exact: true }),
+        editor.getByRole("textbox", { name: "Short Name" }),
+      ).toHaveValue("NEW-A062");
+      await editor
+        .getByRole("textbox", { name: "Full Unit Name" })
+        .fill("A062 Created Unit");
+      await editor.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(editor).not.toBeVisible();
+      expect(
+        await db.accountUnit.count({
+          where: { companyId, name: "A062 Created Unit", symbol: "NEW-A062" },
+        }),
+      ).toBe(1);
+      await page
+        .getByRole("button", { name: "Set Conversion", exact: true })
+        .click();
+      const conversion = page.getByRole("dialog", {
+        name: "Set Conversion",
+        exact: true,
+      });
+      await conversion
+        .getByLabel("Base unit", { exact: true })
+        .selectOption(ids[0]);
+      await conversion
+        .getByLabel("Secondary unit", { exact: true })
+        .selectOption(ids[204]);
+      await conversion
+        .getByLabel("Conversion Rate", { exact: true })
+        .fill("0.00001");
+      await expect(
+        conversion.getByRole("button", { name: "Save", exact: true }),
       ).toBeDisabled();
       await expect(
         conversion.getByLabel("Conversion Rate", { exact: true }),
-      ).toBeDisabled();
+      ).toHaveAttribute("aria-invalid", "true");
+      await conversion
+        .getByLabel("Conversion Rate", { exact: true })
+        .fill("1.25");
+      let releaseSave: () => void = () => {};
+      const heldSave = new Promise<void>((resolve) => {
+        releaseSave = resolve;
+      });
+      await page.route(
+        "**/workspace/account/inventory/units",
+        async (route) => {
+          if (route.request().method() === "POST") await heldSave;
+          await route.continue();
+        },
+      );
+      try {
+        await conversion
+          .getByRole("button", { name: "Save", exact: true })
+          .click();
+        await expect(
+          conversion.getByLabel("Base unit", { exact: true }),
+        ).toBeDisabled();
+        await expect(
+          conversion.getByLabel("Secondary unit", { exact: true }),
+        ).toBeDisabled();
+        await expect(
+          conversion.getByLabel("Conversion Rate", { exact: true }),
+        ).toBeDisabled();
+        await expect(
+          conversion.getByRole("button", { name: "Cancel", exact: true }),
+        ).toBeDisabled();
+        await page.keyboard.press("Escape");
+        await expect(conversion).toBeVisible();
+      } finally {
+        releaseSave();
+      }
+      await expect(conversion).not.toBeVisible();
+      await page.unroute("**/workspace/account/inventory/units");
+      expect(
+        (
+          (await db.accountSettings.findUniqueOrThrow({ where: { companyId } }))
+            .itemSettings as {
+            unitConversions: Array<{ secondaryUnitId: string; rate: string }>;
+          }
+        ).unitConversions.find((row) => row.secondaryUnitId === ids[204])?.rate,
+      ).toBe("1.25");
+      await db.accountSettings.update({
+        where: { companyId },
+        data: { itemSettings: { enabled: true, itemUnits: false } },
+      });
       await expect(
-        conversion.getByRole("button", { name: "Cancel", exact: true }),
-      ).toBeDisabled();
-      await page.keyboard.press("Escape");
-      await expect(conversion).toBeVisible();
+        listMobileAccountMaster(principal, "units", {}),
+      ).rejects.toThrow();
+      await expect(
+        saveMobileUnitConversion(principal, {
+          baseUnitId: ids[0],
+          secondaryUnitId: ids[1],
+          rate: "2",
+        }),
+      ).rejects.toThrow();
+      await page.reload();
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Units are unavailable" }),
+      ).toBeVisible();
     } finally {
-      releaseSave();
+      await db.accountSettings.update({
+        where: { companyId },
+        data: { itemSettings: original.itemSettings ?? {} },
+      });
     }
-    await expect(conversion).not.toBeVisible();
-    await page.unroute("**/workspace/account/inventory/units");
-    expect(
-      (
-        (await db.accountSettings.findUniqueOrThrow({ where: { companyId } }))
-          .itemSettings as {
-          unitConversions: Array<{ secondaryUnitId: string; rate: string }>;
-        }
-      ).unitConversions.find((row) => row.secondaryUnitId === ids[204])?.rate,
-    ).toBe("1.25");
-    await db.accountSettings.update({
-      where: { companyId },
-      data: { itemSettings: { enabled: true, itemUnits: false } },
-    });
-    await expect(
-      listMobileAccountMaster(principal, "units", {}),
-    ).rejects.toThrow();
-    await expect(
-      saveMobileUnitConversion(principal, {
-        baseUnitId: ids[0],
-        secondaryUnitId: ids[1],
-        rate: "2",
-      }),
-    ).rejects.toThrow();
-    await page.reload();
-    await expect(
-      page.getByRole("alert").filter({ hasText: "Units are unavailable" }),
-    ).toBeVisible();
-  } finally {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: { itemSettings: original.itemSettings ?? {} },
-    });
-  }
-});
+  },
+);
 
 test("A064 money account form labels and company-wide creation provide feedback", async ({
   page,
@@ -8438,440 +8489,463 @@ test("A052 expense list preserves explicit branch filters and safely denies Data
   }
 });
 
-test("A082 quotation creation filters and resets customers when branch changes", async ({
-  page,
-}) => {
-  test.setTimeout(120000);
-  const second = randomUUID(),
-    secondCustomer = randomUUID();
-  await db.branch.create({
-    data: {
-      id: second,
+networkTest(
+  "A082 quotation creation filters and resets customers when branch changes",
+  async ({ page }) => {
+    test.setTimeout(120000);
+    const second = randomUUID(),
+      secondCustomer = randomUUID();
+    await db.branch.create({
+      data: {
+        id: second,
+        companyId,
+        name: "Quotation second branch",
+        code: "A082-SECOND",
+      },
+    });
+    await db.customer.create({
+      data: {
+        id: secondCustomer,
+        companyId,
+        branchId: second,
+        name: "Quotation second customer",
+        isAccountCustomer: true,
+      },
+    });
+    await signInSettings(page);
+    await page.goto("/workspace/account/quotations/new");
+    const identity = page.getByRole("group", { name: "Document", exact: true });
+    const branch = identity.getByRole("combobox", {
+        name: "Branch",
+        exact: true,
+      }),
+      customer = identity.getByRole("combobox", {
+        name: "Customer",
+        exact: true,
+      });
+    await branch.selectOption(branchId);
+    await customer.selectOption(customerId);
+    await branch.selectOption(second);
+    await expect(customer).toHaveValue("");
+    await expect(customer.locator(`option[value="${customerId}"]`)).toHaveCount(
+      0,
+    );
+    await expect(
+      customer.locator(`option[value="${secondCustomer}"]`),
+    ).toHaveCount(1);
+    await customer.selectOption(secondCustomer);
+    await page
+      .getByRole("textbox", { name: "Item name", exact: true })
+      .fill("Branch selection check");
+    await page
+      .getByRole("spinbutton", { name: "Rate", exact: true })
+      .fill("10");
+    const failSave = async (route: import("@playwright/test").Route) => {
+      if (route.request().method() === "POST") await route.abort("failed");
+      else await route.continue();
+    };
+    const retryKey = await page
+      .locator('input[name="creationRequestKey"]')
+      .inputValue();
+    await page.route("**/workspace/account/quotations/new", failSave);
+    await page.getByRole("button", { name: "Save & New", exact: true }).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "No save was confirmed" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "Item name", exact: true }),
+    ).toHaveValue("Branch selection check");
+    expect(
+      await page.locator('input[name="creationRequestKey"]').inputValue(),
+    ).toBe(retryKey);
+    await expect(branch).toHaveValue(second);
+    await expect(customer).toHaveValue(secondCustomer);
+    expect(
+      await db.quotationDocument.count({
+        where: { companyId, creationRequestKey: retryKey },
+      }),
+    ).toBe(0);
+    await page.unroute("**/workspace/account/quotations/new", failSave);
+    const originalKey = await page
+      .locator('input[name="creationRequestKey"]')
+      .inputValue();
+    await page.getByRole("button", { name: "Save & New", exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "New quotation ready" }),
+    ).toBeVisible();
+    await expect(customer).toHaveValue("");
+    await expect(branch).toHaveValue(second);
+    await expect(
+      page.getByRole("textbox", { name: "Item name", exact: true }),
+    ).toHaveValue("");
+    expect(
+      await page.locator('input[name="creationRequestKey"]').inputValue(),
+    ).not.toBe(originalKey);
+    const first = await db.quotationDocument.findFirstOrThrow({
+      where: { companyId, creationRequestKey: originalKey },
+    });
+    await customer.selectOption(secondCustomer);
+    await page
+      .getByRole("textbox", { name: "Item name", exact: true })
+      .fill("Second saved quotation");
+    await page
+      .getByRole("spinbutton", { name: "Rate", exact: true })
+      .fill("20");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/, {
+      timeout: 20000,
+    });
+    await expect(
+      page.getByRole("region", { name: "Saved document preview" }),
+    ).toContainText("Second saved quotation");
+    const savedId = page.url().split("/").at(-2)!;
+    const created = await db.quotationDocument.findUniqueOrThrow({
+      where: { id: savedId },
+    });
+    expect(created.documentNumber).not.toBe(first.documentNumber);
+    await page
+      .getByRole("link", { name: "Close preview", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/quotations$/);
+    expect(
+      (await db.quotationDocument.findUniqueOrThrow({ where: { id: savedId } }))
+        .status,
+    ).toBe("DRAFT");
+    expect(created.status).toBe("DRAFT");
+    const actor = {
+      ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
       companyId,
-      name: "Quotation second branch",
-      code: "A082-SECOND",
-    },
-  });
-  await db.customer.create({
-    data: {
-      id: secondCustomer,
+      branchIds: [],
+    } as ProjectActor;
+    await expect(
+      createQuotationForActor(actor, {
+        branchId: second,
+        customerId,
+        documentType: "QUOTATION",
+        issueDate: "2026-10-13",
+        lines: [
+          {
+            lineType: "CUSTOM",
+            itemName: "Wrong branch",
+            quantity: "1",
+            rate: "1",
+          },
+        ],
+      }),
+    ).rejects.toThrow("INVALID_CUSTOMER");
+  },
+);
+
+networkTest(
+  "A067 loan identity creation opens scoped detail and ledger statement",
+  async ({ page }) => {
+    test.setTimeout(90000);
+    const { createMoneyAccountForActor } =
+      await import("../src/lib/account/money");
+    const actor = {
+      id: userId,
+      name: "Admin",
+      email,
       companyId,
-      branchId: second,
-      name: "Quotation second customer",
-      isAccountCustomer: true,
-    },
-  });
-  await signInSettings(page);
-  await page.goto("/workspace/account/quotations/new");
-  const identity = page.getByRole("group", { name: "Document", exact: true });
-  const branch = identity.getByRole("combobox", {
-      name: "Branch",
-      exact: true,
-    }),
-    customer = identity.getByRole("combobox", {
-      name: "Customer",
+      role: "COMPANY_ADMIN",
+      accountRole: "ACCOUNT_ADMIN",
+      salesRole: "PRIMARY_ADMIN",
+      isActive: true,
+      accountAccessActive: true,
+      salesAccessActive: true,
+      managerType: null,
+      branchAccessScope: "ALL_BRANCHES",
+      branchIds: [],
+    } as ProjectActor;
+    await db.financialYear.create({
+      data: {
+        companyId,
+        name: "Loan browser year",
+        startDate: new Date("2032-01-01"),
+        endDate: new Date("2032-12-31"),
+      },
+    });
+    await db.ledgerAccount.create({
+      data: {
+        companyId,
+        code: "A067-EXP",
+        name: "Loan expenses",
+        accountClass: "EXPENSE",
+        normalBalance: "DEBIT",
+        systemKey: "GENERAL_EXPENSES",
+      },
+    });
+    const account = await createMoneyAccountForActor(actor, {
+      branchId,
+      type: "BANK",
+      name: "A067 Loan Bank",
+      creationRequestKey: randomUUID(),
+    });
+    await signInSettings(page);
+    await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
+    const empty = page.getByRole("region", {
+      name: "Loan empty state",
       exact: true,
     });
-  await branch.selectOption(branchId);
-  await customer.selectOption(customerId);
-  await branch.selectOption(second);
-  await expect(customer).toHaveValue("");
-  await expect(customer.locator(`option[value="${customerId}"]`)).toHaveCount(
-    0,
-  );
-  await expect(
-    customer.locator(`option[value="${secondCustomer}"]`),
-  ).toHaveCount(1);
-  await customer.selectOption(secondCustomer);
-  await page
-    .getByRole("textbox", { name: "Item name", exact: true })
-    .fill("Branch selection check");
-  await page.getByRole("spinbutton", { name: "Rate", exact: true }).fill("10");
-  const failSave = async (route: import("@playwright/test").Route) => {
-    if (route.request().method() === "POST") await route.abort("failed");
-    else await route.continue();
-  };
-  const retryKey = await page
-    .locator('input[name="creationRequestKey"]')
-    .inputValue();
-  await page.route("**/workspace/account/quotations/new", failSave);
-  await page.getByRole("button", { name: "Save & New", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "No save was confirmed" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("textbox", { name: "Item name", exact: true }),
-  ).toHaveValue("Branch selection check");
-  expect(
-    await page.locator('input[name="creationRequestKey"]').inputValue(),
-  ).toBe(retryKey);
-  await expect(branch).toHaveValue(second);
-  await expect(customer).toHaveValue(secondCustomer);
-  expect(
-    await db.quotationDocument.count({
-      where: { companyId, creationRequestKey: retryKey },
-    }),
-  ).toBe(0);
-  await page.unroute("**/workspace/account/quotations/new", failSave);
-  const originalKey = await page
-    .locator('input[name="creationRequestKey"]')
-    .inputValue();
-  await page.getByRole("button", { name: "Save & New", exact: true }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "New quotation ready" }),
-  ).toBeVisible();
-  await expect(customer).toHaveValue("");
-  await expect(branch).toHaveValue(second);
-  await expect(
-    page.getByRole("textbox", { name: "Item name", exact: true }),
-  ).toHaveValue("");
-  expect(
-    await page.locator('input[name="creationRequestKey"]').inputValue(),
-  ).not.toBe(originalKey);
-  const first = await db.quotationDocument.findFirstOrThrow({
-    where: { companyId, creationRequestKey: originalKey },
-  });
-  await customer.selectOption(secondCustomer);
-  await page
-    .getByRole("textbox", { name: "Item name", exact: true })
-    .fill("Second saved quotation");
-  await page.getByRole("spinbutton", { name: "Rate", exact: true }).fill("20");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/, {
-    timeout: 20000,
-  });
-  await expect(
-    page.getByRole("region", { name: "Saved document preview" }),
-  ).toContainText("Second saved quotation");
-  const savedId = page.url().split("/").at(-2)!;
-  const created = await db.quotationDocument.findUniqueOrThrow({
-    where: { id: savedId },
-  });
-  expect(created.documentNumber).not.toBe(first.documentNumber);
-  await page.getByRole("link", { name: "Close preview", exact: true }).click();
-  await expect(page).toHaveURL(/\/quotations$/);
-  expect(
-    (await db.quotationDocument.findUniqueOrThrow({ where: { id: savedId } }))
-      .status,
-  ).toBe("DRAFT");
-  expect(created.status).toBe("DRAFT");
-  const actor = {
-    ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
-    companyId,
-    branchIds: [],
-  } as ProjectActor;
-  await expect(
-    createQuotationForActor(actor, {
-      branchId: second,
-      customerId,
-      documentType: "QUOTATION",
-      issueDate: "2026-10-13",
-      lines: [
-        {
-          lineType: "CUSTOM",
-          itemName: "Wrong branch",
-          quantity: "1",
-          rate: "1",
-        },
-      ],
-    }),
-  ).rejects.toThrow("INVALID_CUSTOMER");
-});
+    await expect(empty).toContainText("No loans yet");
+    await empty.getByRole("link", { name: "Add Loan", exact: true }).click();
+    await expect(page).toHaveURL(/#loan-entry$/);
+    expect(
+      (await new AxeBuilder({ page }).include(".employees-content").analyze())
+        .violations,
+    ).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    const form = page.locator("form").filter({
+      has: page.getByRole("button", {
+        name: "Create and receive loan",
+        exact: true,
+      }),
+    });
+    await form
+      .getByLabel("Loan name", { exact: true })
+      .fill("A067 Project loan");
+    await form
+      .getByLabel("Loan account number", { exact: true })
+      .fill("A067-ACCOUNT");
+    await form
+      .getByLabel("Description", { exact: true })
+      .fill("Working capital");
+    await form.getByLabel("Duration (months)", { exact: true }).fill("60");
+    await form.getByLabel("Lender", { exact: true }).fill("A067 Lender");
+    await form.locator("select[name=branchId]").selectOption(branchId);
+    await form.locator("select[name=moneyAccountId]").selectOption(account.id);
+    await form.locator("input[name=loanType]").fill("TERM");
+    await form.locator("input[name=principal]").fill("100000");
+    await form.locator("input[name=startDate]").fill("2032-01-01");
+    await form.getByRole("button", { name: "Create and receive loan" }).click();
+    await expect
+      .poll(
+        () =>
+          db.loan.count({
+            where: { companyId, loanAccountNumber: "A067-ACCOUNT" },
+          }),
+        { timeout: 20000 },
+      )
+      .toBe(1);
+    await page.getByLabel("Search loans").fill("no-matching-loan-reference");
+    await page
+      .getByRole("button", { name: "Apply loan filters", exact: true })
+      .click();
+    await expect(empty).toContainText("No loans match these filters");
+    await empty
+      .getByRole("link", { name: "Clear loan filters", exact: true })
+      .click();
+    await expect(
+      page.getByRole("link", { name: "A067 Project loan · TERM" }),
+    ).toBeVisible();
+    await page.getByLabel("Search loans").fill("A067-ACCOUNT");
+    await page.getByRole("button", { name: "Apply loan filters" }).click();
+    await page.getByRole("link", { name: "A067 Project loan · TERM" }).click();
+    await expect(page.locator("dl")).toContainText("Working capital", {
+      timeout: 20000,
+    });
+    await expect(page.locator("dl")).toContainText("A067-ACCOUNT");
+    await expect(page.locator("dl")).toContainText("60");
+    await expect(
+      page.getByRole("region", { name: "Loan statement" }),
+    ).toContainText("LOAN RECEIPT");
+    await expect(
+      page.getByRole("region", { name: "Loan statement" }),
+    ).toContainText("1,00,000.00");
+    expect(
+      (await new AxeBuilder({ page }).include(".employees-content").analyze())
+        .violations,
+    ).toEqual([]);
+    await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
+    const paymentForm = page.locator("form").filter({
+      has: page.getByRole("button", { name: "Post EMI/payment", exact: true }),
+    });
+    const loan = await db.loan.findFirstOrThrow({
+      where: { companyId, loanAccountNumber: "A067-ACCOUNT" },
+    });
+    await paymentForm
+      .getByLabel("Loan to repay", { exact: true })
+      .selectOption(loan.id);
+    await paymentForm
+      .getByLabel("Payment account", { exact: true })
+      .selectOption(account.id);
+    await paymentForm
+      .getByLabel("Payment date", { exact: true })
+      .fill("2032-01-02");
+    await paymentForm
+      .getByLabel("Principal paid", { exact: true })
+      .fill("100001");
+    await paymentForm.getByLabel("Interest paid", { exact: true }).fill("550");
+    await paymentForm
+      .getByLabel("Payment description", { exact: true })
+      .fill("October EMI");
+    await paymentForm.getByRole("button", { name: "Post EMI/payment" }).click();
+    await expect(paymentForm.getByRole("alert")).toContainText(
+      "cannot exceed",
+      {
+        timeout: 20000,
+      },
+    );
+    await expect(
+      paymentForm.getByLabel("Payment description", { exact: true }),
+    ).toHaveValue("October EMI");
+    const repaymentKey = await paymentForm
+      .locator('input[name="idempotencyKey"]')
+      .inputValue();
+    const abortRepayment = async (route: import("@playwright/test").Route) => {
+      if (route.request().method() === "POST") await route.abort("failed");
+      else await route.continue();
+    };
+    await page.route("**/workspace/account/money/loans?*", abortRepayment);
+    await paymentForm
+      .getByLabel("Principal paid", { exact: true })
+      .fill("2000");
+    await paymentForm.getByRole("button", { name: "Post EMI/payment" }).click();
+    await expect(paymentForm.getByRole("alert")).toContainText(
+      "Connection interrupted",
+    );
+    await expect(
+      paymentForm.getByLabel("Payment description", { exact: true }),
+    ).toHaveValue("October EMI");
+    await expect(
+      paymentForm.getByLabel("Principal paid", { exact: true }),
+    ).toHaveValue("2000");
+    await expect(
+      paymentForm.getByLabel("Loan to repay", { exact: true }),
+    ).toHaveValue(loan.id);
+    await expect(
+      paymentForm.locator('input[name="idempotencyKey"]'),
+    ).toHaveValue(repaymentKey);
+    await page.unroute("**/workspace/account/money/loans?*", abortRepayment);
+    await paymentForm
+      .getByLabel("Principal paid", { exact: true })
+      .fill("2000");
+    await expect(
+      paymentForm.getByRole("status").filter({ hasText: "Payment total" }),
+    ).toContainText("2,550.00");
+    await paymentForm.getByRole("button", { name: "Post EMI/payment" }).click();
+    await expect(
+      paymentForm
+        .getByRole("status")
+        .filter({ hasText: "Loan payment posted" }),
+    ).toBeVisible({ timeout: 20000 });
+    await expect(
+      paymentForm.getByLabel("Principal paid", { exact: true }),
+    ).toHaveValue("0");
+    await expect(
+      paymentForm.getByLabel("Interest paid", { exact: true }),
+    ).toHaveValue("0");
+    await expect(
+      paymentForm.getByLabel("Payment description", { exact: true }),
+    ).toHaveValue("");
+    await expect(
+      paymentForm.getByLabel("Loan to repay", { exact: true }),
+    ).toHaveValue("");
+    await expect(
+      paymentForm.locator('input[name="idempotencyKey"]'),
+    ).not.toHaveValue(repaymentKey);
+    await expect(
+      paymentForm.getByRole("status").filter({ hasText: "Payment total" }),
+    ).toContainText("0.00");
+    expect(
+      (await new AxeBuilder({ page }).include(".employees-content").analyze())
+        .violations,
+    ).toEqual([]);
+    await page.getByRole("link", { name: "A067 Project loan · TERM" }).click();
+    await expect(page.locator("dl")).toContainText("98,000.00", {
+      timeout: 20000,
+    });
+    await expect(
+      page.getByRole("region", { name: "Loan statement" }),
+    ).toContainText("October EMI");
+    await expect(
+      page.getByRole("region", { name: "Loan statement" }),
+    ).toContainText("2,550.00");
 
-test("A067 loan identity creation opens scoped detail and ledger statement", async ({
-  page,
-}) => {
-  test.setTimeout(90000);
-  const { createMoneyAccountForActor } =
-    await import("../src/lib/account/money");
-  const actor = {
-    id: userId,
-    name: "Admin",
-    email,
-    companyId,
-    role: "COMPANY_ADMIN",
-    accountRole: "ACCOUNT_ADMIN",
-    salesRole: "PRIMARY_ADMIN",
-    isActive: true,
-    accountAccessActive: true,
-    salesAccessActive: true,
-    managerType: null,
-    branchAccessScope: "ALL_BRANCHES",
-    branchIds: [],
-  } as ProjectActor;
-  await db.financialYear.create({
-    data: {
-      companyId,
-      name: "Loan browser year",
-      startDate: new Date("2032-01-01"),
-      endDate: new Date("2032-12-31"),
-    },
-  });
-  await db.ledgerAccount.create({
-    data: {
-      companyId,
-      code: "A067-EXP",
-      name: "Loan expenses",
-      accountClass: "EXPENSE",
-      normalBalance: "DEBIT",
-      systemKey: "GENERAL_EXPENSES",
-    },
-  });
-  const account = await createMoneyAccountForActor(actor, {
-    branchId,
-    type: "BANK",
-    name: "A067 Loan Bank",
-    creationRequestKey: randomUUID(),
-  });
-  await signInSettings(page);
-  await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
-  const empty = page.getByRole("region", {
-    name: "Loan empty state",
-    exact: true,
-  });
-  await expect(empty).toContainText("No loans yet");
-  await empty.getByRole("link", { name: "Add Loan", exact: true }).click();
-  await expect(page).toHaveURL(/#loan-entry$/);
-  expect(
-    (await new AxeBuilder({ page }).include(".employees-content").analyze())
-      .violations,
-  ).toEqual([]);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  const form = page.locator("form").filter({
-    has: page.getByRole("button", {
-      name: "Create and receive loan",
-      exact: true,
-    }),
-  });
-  await form.getByLabel("Loan name", { exact: true }).fill("A067 Project loan");
-  await form
-    .getByLabel("Loan account number", { exact: true })
-    .fill("A067-ACCOUNT");
-  await form.getByLabel("Description", { exact: true }).fill("Working capital");
-  await form.getByLabel("Duration (months)", { exact: true }).fill("60");
-  await form.getByLabel("Lender", { exact: true }).fill("A067 Lender");
-  await form.locator("select[name=branchId]").selectOption(branchId);
-  await form.locator("select[name=moneyAccountId]").selectOption(account.id);
-  await form.locator("input[name=loanType]").fill("TERM");
-  await form.locator("input[name=principal]").fill("100000");
-  await form.locator("input[name=startDate]").fill("2032-01-01");
-  await form.getByRole("button", { name: "Create and receive loan" }).click();
-  await expect
-    .poll(
-      () =>
-        db.loan.count({
-          where: { companyId, loanAccountNumber: "A067-ACCOUNT" },
-        }),
+    const journalsBefore = await db.journalEntry.count({
+      where: { companyId },
+    });
+    const metadata = page.locator("section[aria-label='Edit loan details']");
+    await metadata
+      .getByLabel("Loan name", { exact: true })
+      .fill("A067 Edited loan");
+    await metadata
+      .getByLabel("Description", { exact: true })
+      .fill("Updated loan details");
+    await metadata.getByRole("button", { name: "Save loan details" }).click();
+    await expect(metadata.getByRole("status")).toContainText(
+      "Loan details saved",
       { timeout: 20000 },
-    )
-    .toBe(1);
-  await page.getByLabel("Search loans").fill("no-matching-loan-reference");
-  await page
-    .getByRole("button", { name: "Apply loan filters", exact: true })
-    .click();
-  await expect(empty).toContainText("No loans match these filters");
-  await empty
-    .getByRole("link", { name: "Clear loan filters", exact: true })
-    .click();
-  await expect(
-    page.getByRole("link", { name: "A067 Project loan · TERM" }),
-  ).toBeVisible();
-  await page.getByLabel("Search loans").fill("A067-ACCOUNT");
-  await page.getByRole("button", { name: "Apply loan filters" }).click();
-  await page.getByRole("link", { name: "A067 Project loan · TERM" }).click();
-  await expect(page.locator("dl")).toContainText("Working capital", {
-    timeout: 20000,
-  });
-  await expect(page.locator("dl")).toContainText("A067-ACCOUNT");
-  await expect(page.locator("dl")).toContainText("60");
-  await expect(
-    page.getByRole("region", { name: "Loan statement" }),
-  ).toContainText("LOAN RECEIPT");
-  await expect(
-    page.getByRole("region", { name: "Loan statement" }),
-  ).toContainText("1,00,000.00");
-  expect(
-    (await new AxeBuilder({ page }).include(".employees-content").analyze())
-      .violations,
-  ).toEqual([]);
-  await page.goto(`/workspace/account/money/loans?branchId=${branchId}`);
-  const paymentForm = page.locator("form").filter({
-    has: page.getByRole("button", { name: "Post EMI/payment", exact: true }),
-  });
-  const loan = await db.loan.findFirstOrThrow({
-    where: { companyId, loanAccountNumber: "A067-ACCOUNT" },
-  });
-  await paymentForm
-    .getByLabel("Loan to repay", { exact: true })
-    .selectOption(loan.id);
-  await paymentForm
-    .getByLabel("Payment account", { exact: true })
-    .selectOption(account.id);
-  await paymentForm
-    .getByLabel("Payment date", { exact: true })
-    .fill("2032-01-02");
-  await paymentForm
-    .getByLabel("Principal paid", { exact: true })
-    .fill("100001");
-  await paymentForm.getByLabel("Interest paid", { exact: true }).fill("550");
-  await paymentForm
-    .getByLabel("Payment description", { exact: true })
-    .fill("October EMI");
-  await paymentForm.getByRole("button", { name: "Post EMI/payment" }).click();
-  await expect(paymentForm.getByRole("alert")).toContainText("cannot exceed", {
-    timeout: 20000,
-  });
-  await expect(
-    paymentForm.getByLabel("Payment description", { exact: true }),
-  ).toHaveValue("October EMI");
-  const repaymentKey = await paymentForm
-    .locator('input[name="idempotencyKey"]')
-    .inputValue();
-  const abortRepayment = async (route: import("@playwright/test").Route) => {
-    if (route.request().method() === "POST") await route.abort("failed");
-    else await route.continue();
-  };
-  await page.route("**/workspace/account/money/loans?*", abortRepayment);
-  await paymentForm.getByLabel("Principal paid", { exact: true }).fill("2000");
-  await paymentForm.getByRole("button", { name: "Post EMI/payment" }).click();
-  await expect(paymentForm.getByRole("alert")).toContainText(
-    "Connection interrupted",
-  );
-  await expect(
-    paymentForm.getByLabel("Payment description", { exact: true }),
-  ).toHaveValue("October EMI");
-  await expect(
-    paymentForm.getByLabel("Principal paid", { exact: true }),
-  ).toHaveValue("2000");
-  await expect(
-    paymentForm.getByLabel("Loan to repay", { exact: true }),
-  ).toHaveValue(loan.id);
-  await expect(paymentForm.locator('input[name="idempotencyKey"]')).toHaveValue(
-    repaymentKey,
-  );
-  await page.unroute("**/workspace/account/money/loans?*", abortRepayment);
-  await paymentForm.getByLabel("Principal paid", { exact: true }).fill("2000");
-  await expect(
-    paymentForm.getByRole("status").filter({ hasText: "Payment total" }),
-  ).toContainText("2,550.00");
-  await paymentForm.getByRole("button", { name: "Post EMI/payment" }).click();
-  await expect(
-    paymentForm.getByRole("status").filter({ hasText: "Loan payment posted" }),
-  ).toBeVisible({ timeout: 20000 });
-  await expect(
-    paymentForm.getByLabel("Principal paid", { exact: true }),
-  ).toHaveValue("0");
-  await expect(
-    paymentForm.getByLabel("Interest paid", { exact: true }),
-  ).toHaveValue("0");
-  await expect(
-    paymentForm.getByLabel("Payment description", { exact: true }),
-  ).toHaveValue("");
-  await expect(
-    paymentForm.getByLabel("Loan to repay", { exact: true }),
-  ).toHaveValue("");
-  await expect(
-    paymentForm.locator('input[name="idempotencyKey"]'),
-  ).not.toHaveValue(repaymentKey);
-  await expect(
-    paymentForm.getByRole("status").filter({ hasText: "Payment total" }),
-  ).toContainText("0.00");
-  expect(
-    (await new AxeBuilder({ page }).include(".employees-content").analyze())
-      .violations,
-  ).toEqual([]);
-  await page.getByRole("link", { name: "A067 Project loan · TERM" }).click();
-  await expect(page.locator("dl")).toContainText("98,000.00", {
-    timeout: 20000,
-  });
-  await expect(
-    page.getByRole("region", { name: "Loan statement" }),
-  ).toContainText("October EMI");
-  await expect(
-    page.getByRole("region", { name: "Loan statement" }),
-  ).toContainText("2,550.00");
-
-  const journalsBefore = await db.journalEntry.count({ where: { companyId } });
-  const metadata = page.locator("section[aria-label='Edit loan details']");
-  await metadata
-    .getByLabel("Loan name", { exact: true })
-    .fill("A067 Edited loan");
-  await metadata
-    .getByLabel("Description", { exact: true })
-    .fill("Updated loan details");
-  await metadata.getByRole("button", { name: "Save loan details" }).click();
-  await expect(metadata.getByRole("status")).toContainText(
-    "Loan details saved",
-    { timeout: 20000 },
-  );
-  await expect(
-    page.getByRole("heading", { name: "A067 Edited loan", exact: true }),
-  ).toBeVisible({ timeout: 20000 });
-  expect(await db.journalEntry.count({ where: { companyId } })).toBe(
-    journalsBefore,
-  );
-  expect(
-    await db.loanOperation.count({
-      where: { companyId, loanId: loan.id, action: "EDIT_METADATA" },
-    }),
-  ).toBe(1);
-  await expect(page.locator("dl")).toContainText("98,000.00");
-  const topup = page.locator("section[aria-label='Receive loan top-up']");
-  await topup.getByLabel("Top-up amount", { exact: true }).fill("1000");
-  await topup.getByLabel("Top-up date", { exact: true }).fill("2032-01-03");
-  await topup
-    .getByLabel("Receive top-up into account", { exact: true })
-    .selectOption(account.id);
-  await topup
-    .getByRole("button", { name: "Receive top-up", exact: true })
-    .click();
-  await expect(topup.getByRole("status")).toContainText(
-    "Loan top-up received",
-    { timeout: 20000 },
-  );
-  await expect(page.locator("dl")).toContainText("99,000.00", {
-    timeout: 20000,
-  });
-  expect(
-    await db.loanOperation.count({
-      where: { companyId, loanId: loan.id, action: "TOP_UP" },
-    }),
-  ).toBe(1);
-  await expect(topup.getByLabel("Top-up amount", { exact: true })).toHaveValue(
-    "",
-  );
-  await expect(
-    topup.getByLabel("Receive top-up into account", { exact: true }),
-  ).toHaveValue("");
-  const lifecycle = page.locator("section[aria-label='Loan lifecycle']");
-  await lifecycle
-    .getByLabel("Loan action", { exact: true })
-    .selectOption("CANCEL");
-  await lifecycle
-    .getByLabel("Correction date", { exact: true })
-    .fill("2032-01-04");
-  await lifecycle
-    .getByLabel("Reason", { exact: true })
-    .fill("Receipt entered in error");
-  await lifecycle
-    .getByRole("button", { name: "Update loan history", exact: true })
-    .click();
-  await expect(lifecycle.getByRole("alert")).toContainText(
-    "payments, top-ups",
-    { timeout: 20000 },
-  );
-  await expect(lifecycle.getByLabel("Reason", { exact: true })).toHaveValue(
-    "Receipt entered in error",
-  );
-  expect(
-    (await new AxeBuilder({ page }).include(".employees-content").analyze())
-      .violations,
-  ).toEqual([]);
-});
+    );
+    await expect(
+      page.getByRole("heading", { name: "A067 Edited loan", exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+    expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+      journalsBefore,
+    );
+    expect(
+      await db.loanOperation.count({
+        where: { companyId, loanId: loan.id, action: "EDIT_METADATA" },
+      }),
+    ).toBe(1);
+    await expect(page.locator("dl")).toContainText("98,000.00");
+    const topup = page.locator("section[aria-label='Receive loan top-up']");
+    await topup.getByLabel("Top-up amount", { exact: true }).fill("1000");
+    await topup.getByLabel("Top-up date", { exact: true }).fill("2032-01-03");
+    await topup
+      .getByLabel("Receive top-up into account", { exact: true })
+      .selectOption(account.id);
+    await topup
+      .getByRole("button", { name: "Receive top-up", exact: true })
+      .click();
+    await expect(topup.getByRole("status")).toContainText(
+      "Loan top-up received",
+      { timeout: 20000 },
+    );
+    await expect(page.locator("dl")).toContainText("99,000.00", {
+      timeout: 20000,
+    });
+    expect(
+      await db.loanOperation.count({
+        where: { companyId, loanId: loan.id, action: "TOP_UP" },
+      }),
+    ).toBe(1);
+    await expect(
+      topup.getByLabel("Top-up amount", { exact: true }),
+    ).toHaveValue("");
+    await expect(
+      topup.getByLabel("Receive top-up into account", { exact: true }),
+    ).toHaveValue("");
+    const lifecycle = page.locator("section[aria-label='Loan lifecycle']");
+    await lifecycle
+      .getByLabel("Loan action", { exact: true })
+      .selectOption("CANCEL");
+    await lifecycle
+      .getByLabel("Correction date", { exact: true })
+      .fill("2032-01-04");
+    await lifecycle
+      .getByLabel("Reason", { exact: true })
+      .fill("Receipt entered in error");
+    await lifecycle
+      .getByRole("button", { name: "Update loan history", exact: true })
+      .click();
+    await expect(lifecycle.getByRole("alert")).toContainText(
+      "payments, opening fees, top-ups",
+      { timeout: 20000 },
+    );
+    await expect(lifecycle.getByLabel("Reason", { exact: true })).toHaveValue(
+      "Receipt entered in error",
+    );
+    expect(
+      (await new AxeBuilder({ page }).include(".employees-content").analyze())
+        .violations,
+    ).toEqual([]);
+  },
+);
 
 test("A067 loan readers see balances without receipt or EMI mutation controls", async ({
   page,
@@ -9410,161 +9484,177 @@ test("A062 Unit to Items assigns inline units and retains inputs on historical-u
   await expect(assignment).not.toBeVisible();
 });
 
-test("A071 Home shares the selected PDF, honors saved default and reports failure", async ({
-  page,
-}) => {
-  test.setTimeout(120_000);
-  const id = randomUUID();
-  await db.commercialDocument.create({
-    data: {
-      id,
-      companyId,
-      branchId,
-      type: "SALES_ORDER",
-      status: "DRAFT",
-      documentNumber: "HOME-SHARE-71",
-      customerId,
-      partyId: customerId,
-      partyName: "Home share fixture",
-      issueDate: new Date("2026-10-11"),
-      subtotal: "100",
-      taxableTotal: "100",
-      taxTotal: "0",
-      grandTotal: "100",
-      balanceDue: "100",
-      createdById: userId,
-    },
-  });
-  const setDefault = async (shareAs: string) => {
-    const row = await db.accountSettings.findUniqueOrThrow({
-      where: { companyId },
-    });
-    const defaults = row.transactionDefaults as Record<string, unknown> | null;
-    await db.accountSettings.update({
-      where: { companyId },
+networkTest(
+  "A071 Home shares the selected PDF, honors saved default and reports failure",
+  async ({ page, isMobile }) => {
+    test.setTimeout(120_000);
+    const choosePdf = async () => {
+      const button = page.getByRole("button", {
+        name: "Share as PDF",
+        exact: true,
+      });
+      if (isMobile) await button.tap();
+      else await button.click();
+    };
+    const id = randomUUID();
+    await db.commercialDocument.create({
       data: {
-        transactionDefaults: {
-          ...defaults,
-          transactionPreferences: { shareAs },
-        },
+        id,
+        companyId,
+        branchId,
+        type: "SALES_ORDER",
+        status: "DRAFT",
+        documentNumber: "HOME-SHARE-71",
+        customerId,
+        partyId: customerId,
+        partyName: "Home share fixture",
+        issueDate: new Date("2026-10-11"),
+        subtotal: "100",
+        taxableTotal: "100",
+        taxTotal: "0",
+        grandTotal: "100",
+        balanceDue: "100",
+        createdById: userId,
       },
     });
-  };
-  await setDefault("PDF");
-  await signInSettings(page);
-  const mobileToken = createSessionToken(),
-    mobileUser = await db.user.findUniqueOrThrow({ where: { id: userId } });
-  await db.mobileSession.create({
-    data: {
-      userId,
-      tokenHash: hashSessionToken(mobileToken),
-      expiresAt: new Date(Date.now() + 3600000),
-      lastUsedAt: new Date(),
-      sessionVersion: mobileUser.sessionVersion,
-    },
-  });
-  const mobileHeaders = { authorization: `Bearer ${mobileToken}` };
-  const pdfDefault = await page.request.get("/api/v1/mobile/account/home", {
-    headers: mobileHeaders,
-  });
-  expect(pdfDefault.status()).toBe(200);
-  expect((await pdfDefault.json()).shareAs).toBe("PDF");
-  await page.goto("/workspace/account?q=Home%20share%20fixture");
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, "share", {
-      configurable: true,
-      value: undefined,
-    });
-  });
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Share", exact: true }).click();
-  expect((await download).suggestedFilename()).toBe("HOME-SHARE-71.pdf");
-  await setDefault("ASK");
-  const askDefault = await page.request.get("/api/v1/mobile/account/home", {
-    headers: mobileHeaders,
-  });
-  expect(askDefault.status()).toBe(200);
-  expect((await askDefault.json()).shareAs).toBe("ASK");
-  await page.reload();
-  let requests = 0;
-  await page.route(
-    `**/api/account/print/SALES_ORDER/${id}?format=pdf`,
-    async (route) => {
-      requests++;
-      await route.fulfill({
-        status: 403,
-        contentType: "text/plain",
-        body: "Forbidden",
+    const setDefault = async (shareAs: string) => {
+      const row = await db.accountSettings.findUniqueOrThrow({
+        where: { companyId },
       });
-    },
-  );
-  await page.getByRole("button", { name: "Share", exact: true }).click();
-  expect(requests).toBe(0);
-  await page.getByRole("button", { name: "Share as PDF", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "permission",
-  );
-  expect(requests).toBe(1);
-  await expect(
-    page.getByRole("button", { name: "Share as PDF", exact: true }),
-  ).toBeEnabled();
-  await page.unroute(`**/api/account/print/SALES_ORDER/${id}?format=pdf`);
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, "canShare", {
-      configurable: true,
-      value: () => true,
+      const defaults = row.transactionDefaults as Record<
+        string,
+        unknown
+      > | null;
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          transactionDefaults: {
+            ...defaults,
+            transactionPreferences: { shareAs },
+          },
+        },
+      });
+    };
+    await setDefault("PDF");
+    await signInSettings(page);
+    const mobileToken = createSessionToken(),
+      mobileUser = await db.user.findUniqueOrThrow({ where: { id: userId } });
+    await db.mobileSession.create({
+      data: {
+        userId,
+        tokenHash: hashSessionToken(mobileToken),
+        expiresAt: new Date(Date.now() + 3600000),
+        lastUsedAt: new Date(),
+        sessionVersion: mobileUser.sessionVersion,
+      },
     });
-    Object.defineProperty(navigator, "share", {
-      configurable: true,
-      value: () => Promise.reject(new DOMException("Cancelled", "AbortError")),
+    const mobileHeaders = { authorization: `Bearer ${mobileToken}` };
+    const pdfDefault = await page.request.get("/api/v1/mobile/account/home", {
+      headers: mobileHeaders,
     });
-  });
-  await page.getByRole("button", { name: "Share as PDF", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Share as PDF", exact: true }),
-  ).toBeEnabled();
-  await expect(page.getByRole("dialog").getByRole("alert")).toHaveCount(0);
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, "share", {
-      configurable: true,
-      value: undefined,
+    expect(pdfDefault.status()).toBe(200);
+    expect((await pdfDefault.json()).shareAs).toBe("PDF");
+    await page.goto("/workspace/account?q=Home%20share%20fixture");
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: undefined,
+      });
     });
-  });
-  const imageDownload = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Share as Image", exact: true })
-    .click();
-  const image = await imageDownload;
-  expect(image.suggestedFilename()).toBe("HOME-SHARE-71.png");
-  const path = await image.path();
-  expect(path).toBeTruthy();
-  const { readFile } = await import("node:fs/promises");
-  const bytes = await readFile(path!);
-  expect(bytes.subarray(1, 4).toString()).toBe("PNG");
-  expect(bytes.length).toBeGreaterThan(1000);
-  const multi = await PDFDocument.create();
-  multi.addPage([300, 400]).drawText("Image page one");
-  multi.addPage([300, 400]).drawText("Image page two");
-  const multiBytes = Buffer.from(await multi.save());
-  await page.route(
-    `**/api/account/print/SALES_ORDER/${id}?format=pdf`,
-    (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/pdf",
-        body: multiBytes,
-      }),
-  );
-  await page
-    .getByRole("button", { name: "Share as Image", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Download page 1", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Download page 2", exact: true }),
-  ).toBeVisible();
-});
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Share", exact: true }).click();
+    const downloadedPdf = await download;
+    expect(downloadedPdf.suggestedFilename()).toBe("HOME-SHARE-71.pdf");
+    expect(await downloadedPdf.failure()).toBeNull();
+    expect(await downloadedPdf.path()).not.toBeNull();
+    await setDefault("ASK");
+    const askDefault = await page.request.get("/api/v1/mobile/account/home", {
+      headers: mobileHeaders,
+    });
+    expect(askDefault.status()).toBe(200);
+    expect((await askDefault.json()).shareAs).toBe("ASK");
+    await page.reload();
+    let requests = 0;
+    await page.route(
+      `**/api/account/print/SALES_ORDER/${id}?format=pdf`,
+      async (route) => {
+        requests++;
+        await route.fulfill({
+          status: 403,
+          contentType: "text/plain",
+          body: "Forbidden",
+        });
+      },
+    );
+    await page.getByRole("button", { name: "Share", exact: true }).click();
+    expect(requests).toBe(0);
+    await choosePdf();
+    await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
+      "permission",
+    );
+    expect(requests).toBe(1);
+    await expect(
+      page.getByRole("button", { name: "Share as PDF", exact: true }),
+    ).toBeEnabled();
+    await page.unroute(`**/api/account/print/SALES_ORDER/${id}?format=pdf`);
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: () => true,
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: () =>
+          Promise.reject(new DOMException("Cancelled", "AbortError")),
+      });
+    });
+    await choosePdf();
+    await expect(
+      page.getByRole("button", { name: "Share as PDF", exact: true }),
+    ).toBeEnabled();
+    await expect(page.getByRole("dialog").getByRole("alert")).toHaveCount(0);
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: undefined,
+      });
+    });
+    const imageDownload = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Share as Image", exact: true })
+      .click();
+    const image = await imageDownload;
+    expect(image.suggestedFilename()).toBe("HOME-SHARE-71.png");
+    const path = await image.path();
+    expect(path).toBeTruthy();
+    const { readFile } = await import("node:fs/promises");
+    const bytes = await readFile(path!);
+    expect(bytes.subarray(1, 4).toString()).toBe("PNG");
+    expect(bytes.length).toBeGreaterThan(1000);
+    const multi = await PDFDocument.create();
+    multi.addPage([300, 400]).drawText("Image page one");
+    multi.addPage([300, 400]).drawText("Image page two");
+    const multiBytes = Buffer.from(await multi.save());
+    await page.route(
+      `**/api/account/print/SALES_ORDER/${id}?format=pdf`,
+      (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/pdf",
+          body: multiBytes,
+        }),
+    );
+    await page
+      .getByRole("button", { name: "Share as Image", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Download page 1", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Download page 2", exact: true }),
+    ).toBeVisible();
+  },
+);
 
 test("A071 Duplicate opens an independent new Sale without copying its payment or posting on open", async ({
   page,
@@ -9641,7 +9731,15 @@ test("A071 Duplicate opens an independent new Sale without copying its payment o
   const before = await counts();
   await signInSettings(page);
   await page.goto("/workspace/account?q=Print%20fixture%20customer");
-  await page.getByRole("button", { name: "More", exact: true }).click();
+  await page
+    .getByRole("article")
+    .filter({
+      has: page.getByRole("link", {
+        name: new RegExp(`#${source.documentNumber} `),
+      }),
+    })
+    .getByRole("button", { name: "More", exact: true })
+    .click();
   await page.getByRole("link", { name: "Duplicate", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`duplicateId=${source.id}`), {
     timeout: 20000,
@@ -14476,421 +14574,452 @@ test("A082 estimate stock metadata follows the selected branch and never reserve
   }
 });
 
-test("A082 party balance is exact scoped recoverable and ignores stale selections", async ({
-  page,
-}) => {
-  test.setTimeout(150000);
-  const before = await db.accountSettings.findUniqueOrThrow({
-      where: { companyId },
-    }),
-    other = randomUUID(),
-    foreign = randomUUID(),
-    foreignBranch = randomUUID();
-  await db.customer.create({
-    data: {
-      id: other,
-      companyId,
-      branchId,
-      name: `Zero balance ${randomUUID().slice(0, 8)}`,
-      isAccountCustomer: true,
-    },
-  });
-  await db.branch.create({
-    data: {
-      id: foreignBranch,
-      companyId: otherCompanyId,
-      name: "Foreign balance branch",
-      code: `QBAL-${randomUUID().slice(0, 8)}`,
-    },
-  });
-  await db.customer.create({
-    data: {
-      id: foreign,
-      companyId: otherCompanyId,
-      branchId: foreignBranch,
-      name: "Foreign balance party",
-      isAccountCustomer: true,
-    },
-  });
-  let release: () => void = () => {},
-    held = false,
-    delay = false,
-    failOnce = true;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  try {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: { enabledModules: ["SALES", "QUOTATIONS_BOQ"] },
-    });
-    if (!(await db.financialYear.findFirst({ where: { companyId } })))
-      await db.financialYear.create({
-        data: {
-          companyId,
-          name: "Party balance verification year",
-          startDate: new Date("2026-01-01"),
-          endDate: new Date("2026-12-31"),
-        },
-      });
-    for (const row of DEFAULT_LEDGER_ACCOUNTS)
-      await db.ledgerAccount.upsert({
-        where: { companyId_code: { companyId, code: row.code } },
-        create: {
-          companyId,
-          code: row.code,
-          name: row.name,
-          accountClass: row.accountClass,
-          normalBalance: row.normalBalance,
-          systemKey: row.systemKey,
-          isSystem: row.isSystem,
-        },
-        update: { systemKey: row.systemKey },
-      });
-    const actor = {
-      ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
-      companyId,
-      branchAccessScope: "ALL_BRANCHES" as const,
-      branchIds: [],
-    };
-    const base = await currentPartyBalanceForActor(actor, customerId),
-      sale = await createCommercialDocumentForActor(actor, {
-        type: "SALES_INVOICE",
+networkTest(
+  "A082 party balance is exact scoped recoverable and ignores stale selections",
+  async ({ page }) => {
+    test.setTimeout(150000);
+    const before = await db.accountSettings.findUniqueOrThrow({
+        where: { companyId },
+      }),
+      other = randomUUID(),
+      foreign = randomUUID(),
+      foreignBranch = randomUUID();
+    await db.customer.create({
+      data: {
+        id: other,
+        companyId,
         branchId,
+        name: `Zero balance ${randomUUID().slice(0, 8)}`,
+        isAccountCustomer: true,
+      },
+    });
+    await db.branch.create({
+      data: {
+        id: foreignBranch,
+        companyId: otherCompanyId,
+        name: "Foreign balance branch",
+        code: `QBAL-${randomUUID().slice(0, 8)}`,
+      },
+    });
+    await db.customer.create({
+      data: {
+        id: foreign,
+        companyId: otherCompanyId,
+        branchId: foreignBranch,
+        name: "Foreign balance party",
+        isAccountCustomer: true,
+      },
+    });
+    let release: () => void = () => {},
+      held = false,
+      delay = false,
+      failOnce = true;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      await db.accountSettings.update({
+        where: { companyId },
+        data: { enabledModules: ["SALES", "QUOTATIONS_BOQ"] },
+      });
+      if (!(await db.financialYear.findFirst({ where: { companyId } })))
+        await db.financialYear.create({
+          data: {
+            companyId,
+            name: "Party balance verification year",
+            startDate: new Date("2026-01-01"),
+            endDate: new Date("2026-12-31"),
+          },
+        });
+      for (const row of DEFAULT_LEDGER_ACCOUNTS)
+        await db.ledgerAccount.upsert({
+          where: { companyId_code: { companyId, code: row.code } },
+          create: {
+            companyId,
+            code: row.code,
+            name: row.name,
+            accountClass: row.accountClass,
+            normalBalance: row.normalBalance,
+            systemKey: row.systemKey,
+            isSystem: row.isSystem,
+          },
+          update: { systemKey: row.systemKey },
+        });
+      const actor = {
+        ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
+        companyId,
+        branchAccessScope: "ALL_BRANCHES" as const,
+        branchIds: [],
+      };
+      const base = await currentPartyBalanceForActor(actor, customerId),
+        sale = await createCommercialDocumentForActor(actor, {
+          type: "SALES_INVOICE",
+          branchId,
+          partyId: customerId,
+          issueDate: "2026-10-17",
+          lines: [
+            {
+              lineType: "CUSTOM",
+              itemName: "Party balance fixture",
+              quantity: "1",
+              rate: "25",
+              taxRate: "0",
+            },
+          ],
+        });
+      await postCommercialDocumentForActor(actor, { documentId: sale.id });
+      const expectedBalance = new (
+          await import("@prisma/client")
+        ).Prisma.Decimal(base)
+          .add("25")
+          .toFixed(2),
+        preferences = resolveDisplayPreferences(before),
+        expectedText = formatMoney(expectedBalance, preferences),
+        zeroText = formatMoney("0", preferences),
+        journals = await db.journalEntry.count({ where: { companyId } });
+      await signInSettings(page);
+      await page.route(
+        "**/workspace/account/quotations/new**",
+        async (route) => {
+          const req = route.request();
+          if (
+            req.method() === "POST" &&
+            req.headers()["next-action"] &&
+            req.postData()?.includes(customerId)
+          ) {
+            if (failOnce) {
+              await route.abort("failed");
+              return;
+            }
+            if (delay) {
+              delay = false;
+              const response = await route.fetch();
+              held = true;
+              await gate;
+              await route.fulfill({ response });
+              return;
+            }
+          }
+          await route.continue();
+        },
+      );
+      await page.goto(
+        "/workspace/account/quotations/new?documentType=ESTIMATE",
+      );
+      await page.getByLabel("Branch", { exact: true }).selectOption(branchId);
+      await page
+        .getByLabel("Customer", { exact: true })
+        .selectOption(customerId);
+      const balance = page.locator("p").filter({ hasText: /^Party balance:/ });
+      await expect(balance).toContainText("Unavailable");
+      await expect(balance).not.toContainText(zeroText);
+      failOnce = false;
+      await page
+        .getByRole("button", { name: "Retry party balance", exact: true })
+        .click();
+      await expect(balance).toContainText(expectedText, { timeout: 20000 });
+      await page.getByLabel("Customer", { exact: true }).selectOption(other);
+      await expect(balance).toContainText(zeroText, { timeout: 20000 });
+      delay = true;
+      await page
+        .getByLabel("Customer", { exact: true })
+        .selectOption(customerId);
+      await expect.poll(() => held).toBe(true);
+      await page.getByLabel("Customer", { exact: true }).selectOption(other);
+      await expect(balance).not.toContainText(expectedText);
+      release();
+      await expect(balance).toContainText(zeroText, { timeout: 20000 });
+      const token = createSessionToken(),
+        user = await db.user.findUniqueOrThrow({ where: { id: userId } });
+      await db.mobileSession.create({
+        data: {
+          userId,
+          tokenHash: hashSessionToken(token),
+          expiresAt: new Date(Date.now() + 3600000),
+          lastUsedAt: new Date(),
+          sessionVersion: user.sessionVersion,
+        },
+      });
+      const headers = { authorization: `Bearer ${token}` },
+        url = `/api/v1/mobile/account/quotations/party-balance?partyId=${customerId}&branchId=${branchId}`;
+      const response = await page.request.get(url, { headers });
+      expect(response.status()).toBe(200);
+      expect(response.headers()["cache-control"]).toContain("no-store");
+      expect(await response.json()).toEqual({
         partyId: customerId,
-        issueDate: "2026-10-17",
-        lines: [
+        branchId,
+        balance: expectedBalance,
+      });
+      expect((await page.request.get(url)).status()).toBe(401);
+      expect(
+        (
+          await page.request.get(
+            `/api/v1/mobile/account/quotations/party-balance?partyId=${foreign}&branchId=${branchId}`,
+            { headers },
+          )
+        ).status(),
+      ).toBe(403);
+      expect(
+        (
+          await page.request.get(
+            `/api/v1/mobile/account/quotations/party-balance?partyId=${customerId}&branchId=${foreignBranch}`,
+            { headers },
+          )
+        ).status(),
+      ).toBe(403);
+      expect(
+        (
+          await page.request.get(
+            `/api/v1/mobile/account/quotations/party-balance?partyId=bad&branchId=${branchId}`,
+            { headers },
+          )
+        ).status(),
+      ).toBe(400);
+      await db.user.update({
+        where: { id: userId },
+        data: { accountRole: "DATA_ENTRY" },
+      });
+      expect((await page.request.get(url, { headers })).status()).toBe(200);
+      await db.user.update({
+        where: { id: userId },
+        data: { accountRole: "PROJECT_MANAGER" },
+      });
+      expect((await page.request.get(url, { headers })).status()).toBe(403);
+      await page.goto(
+        "/workspace/account/quotations/new?documentType=ESTIMATE",
+      );
+      await page
+        .getByLabel("Customer", { exact: true })
+        .selectOption(customerId);
+      await expect(
+        page.locator("p").filter({ hasText: /^Party balance:/ }),
+      ).toHaveCount(0);
+      expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+        journals,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+      ).toBe(false);
+    } finally {
+      release();
+      await db.customer.deleteMany({
+        where: { id: foreign, companyId: otherCompanyId },
+      });
+      await db.branch.deleteMany({
+        where: { id: foreignBranch, companyId: otherCompanyId },
+      });
+      await db.user.update({
+        where: { id: userId },
+        data: { accountRole: "ACCOUNT_ADMIN" },
+      });
+      await db.accountSettings.update({
+        where: { companyId },
+        data: { enabledModules: before.enabledModules },
+      });
+    }
+  },
+);
+
+networkTest(
+  "A082 full item creation returns to the retained quotation without saving it",
+  async ({ page }) => {
+    test.setTimeout(150000);
+    const before = await db.accountSettings.findUniqueOrThrow({
+        where: { companyId },
+      }),
+      name = `Inline quotation item ${randomUUID().slice(0, 8)}`;
+    try {
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: ["SALES", "QUOTATIONS_BOQ", "INVENTORY"],
+          itemSettings: {
+            enabled: true,
+            itemType: "BOTH",
+            stockMaintenance: true,
+            itemUnits: true,
+          },
+        },
+      });
+      await db.customFieldDefinition.createMany({
+        data: [
           {
-            lineType: "CUSTOM",
-            itemName: "Party balance fixture",
-            quantity: "1",
-            rate: "25",
-            taxRate: "0",
+            companyId,
+            entityType: "PRODUCT",
+            fieldKey: "inline_detail",
+            label: "Item inline detail",
+            dataType: "TEXT",
+            isRequired: true,
+          },
+          {
+            companyId,
+            entityType: "QUOTATION",
+            fieldKey: "inline_detail",
+            label: "Quotation inline detail",
+            dataType: "TEXT",
+            isRequired: true,
           },
         ],
       });
-    await postCommercialDocumentForActor(actor, { documentId: sale.id });
-    const expectedBalance = new (await import("@prisma/client")).Prisma.Decimal(
-        base,
-      )
-        .add("25")
-        .toFixed(2),
-      preferences = resolveDisplayPreferences(before),
-      expectedText = formatMoney(expectedBalance, preferences),
-      zeroText = formatMoney("0", preferences),
-      journals = await db.journalEntry.count({ where: { companyId } });
-    await signInSettings(page);
-    await page.route("**/workspace/account/quotations/new**", async (route) => {
-      const req = route.request();
-      if (
-        req.method() === "POST" &&
-        req.headers()["next-action"] &&
-        req.postData()?.includes(customerId)
-      ) {
-        if (failOnce) {
-          await route.abort("failed");
-          return;
-        }
-        if (delay) {
-          delay = false;
-          const response = await route.fetch();
-          held = true;
-          await gate;
-          await route.fulfill({ response });
-          return;
-        }
-      }
-      await route.continue();
-    });
-    await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");
-    await page.getByLabel("Branch", { exact: true }).selectOption(branchId);
-    await page.getByLabel("Customer", { exact: true }).selectOption(customerId);
-    const balance = page.locator("p").filter({ hasText: /^Party balance:/ });
-    await expect(balance).toContainText("Unavailable");
-    await expect(balance).not.toContainText(zeroText);
-    failOnce = false;
-    await page
-      .getByRole("button", { name: "Retry party balance", exact: true })
-      .click();
-    await expect(balance).toContainText(expectedText, { timeout: 20000 });
-    await page.getByLabel("Customer", { exact: true }).selectOption(other);
-    await expect(balance).toContainText(zeroText, { timeout: 20000 });
-    delay = true;
-    await page.getByLabel("Customer", { exact: true }).selectOption(customerId);
-    await expect.poll(() => held).toBe(true);
-    await page.getByLabel("Customer", { exact: true }).selectOption(other);
-    await expect(balance).not.toContainText(expectedText);
-    release();
-    await expect(balance).toContainText(zeroText, { timeout: 20000 });
-    const token = createSessionToken(),
-      user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-    await db.mobileSession.create({
-      data: {
-        userId,
-        tokenHash: hashSessionToken(token),
-        expiresAt: new Date(Date.now() + 3600000),
-        lastUsedAt: new Date(),
-        sessionVersion: user.sessionVersion,
-      },
-    });
-    const headers = { authorization: `Bearer ${token}` },
-      url = `/api/v1/mobile/account/quotations/party-balance?partyId=${customerId}&branchId=${branchId}`;
-    const response = await page.request.get(url, { headers });
-    expect(response.status()).toBe(200);
-    expect(response.headers()["cache-control"]).toContain("no-store");
-    expect(await response.json()).toEqual({
-      partyId: customerId,
-      branchId,
-      balance: expectedBalance,
-    });
-    expect((await page.request.get(url)).status()).toBe(401);
-    expect(
-      (
-        await page.request.get(
-          `/api/v1/mobile/account/quotations/party-balance?partyId=${foreign}&branchId=${branchId}`,
-          { headers },
-        )
-      ).status(),
-    ).toBe(403);
-    expect(
-      (
-        await page.request.get(
-          `/api/v1/mobile/account/quotations/party-balance?partyId=${customerId}&branchId=${foreignBranch}`,
-          { headers },
-        )
-      ).status(),
-    ).toBe(403);
-    expect(
-      (
-        await page.request.get(
-          `/api/v1/mobile/account/quotations/party-balance?partyId=bad&branchId=${branchId}`,
-          { headers },
-        )
-      ).status(),
-    ).toBe(400);
-    await db.user.update({
-      where: { id: userId },
-      data: { accountRole: "DATA_ENTRY" },
-    });
-    expect((await page.request.get(url, { headers })).status()).toBe(200);
-    await db.user.update({
-      where: { id: userId },
-      data: { accountRole: "PROJECT_MANAGER" },
-    });
-    expect((await page.request.get(url, { headers })).status()).toBe(403);
-    await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");
-    await page.getByLabel("Customer", { exact: true }).selectOption(customerId);
-    await expect(
-      page.locator("p").filter({ hasText: /^Party balance:/ }),
-    ).toHaveCount(0);
-    expect(await db.journalEntry.count({ where: { companyId } })).toBe(
-      journals,
-    );
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      ),
-    ).toBe(false);
-  } finally {
-    release();
-    await db.customer.deleteMany({
-      where: { id: foreign, companyId: otherCompanyId },
-    });
-    await db.branch.deleteMany({
-      where: { id: foreignBranch, companyId: otherCompanyId },
-    });
-    await db.user.update({
-      where: { id: userId },
-      data: { accountRole: "ACCOUNT_ADMIN" },
-    });
-    await db.accountSettings.update({
-      where: { companyId },
-      data: { enabledModules: before.enabledModules },
-    });
-  }
-});
-
-test("A082 full item creation returns to the retained quotation without saving it", async ({
-  page,
-}) => {
-  test.setTimeout(150000);
-  const before = await db.accountSettings.findUniqueOrThrow({
-      where: { companyId },
-    }),
-    name = `Inline quotation item ${randomUUID().slice(0, 8)}`;
-  try {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: ["SALES", "QUOTATIONS_BOQ", "INVENTORY"],
-        itemSettings: {
-          enabled: true,
-          itemType: "BOTH",
-          stockMaintenance: true,
-          itemUnits: true,
+      const documents = await db.quotationDocument.count({
+          where: { companyId },
+        }),
+        journals = await db.journalEntry.count({ where: { companyId } });
+      await signInSettings(page);
+      await page.goto(
+        "/workspace/account/quotations/new?documentType=ESTIMATE",
+      );
+      await page
+        .getByLabel("Customer", { exact: true })
+        .selectOption(customerId);
+      await page
+        .getByLabel("Notes", { exact: true })
+        .fill("Retain while adding item");
+      await page
+        .getByLabel("Quotation inline detail", { exact: true })
+        .fill("Retain quote custom value");
+      await page
+        .getByLabel("Line type", { exact: true })
+        .selectOption("PRODUCT");
+      await page.getByLabel("Quantity", { exact: true }).fill("3");
+      const add = page.getByRole("button", {
+        name: "Add new item",
+        exact: true,
+      });
+      await add.click();
+      let dialog = page.getByRole("dialog", {
+        name: "Add quotation item",
+        exact: true,
+      });
+      await dialog
+        .getByLabel("Item Name *", { exact: true })
+        .fill("Cancel draft item");
+      await dialog
+        .getByRole("button", { name: "Cancel adding item", exact: true })
+        .click();
+      await expect(add).toBeFocused();
+      await expect(page.getByLabel("Notes", { exact: true })).toHaveValue(
+        "Retain while adding item",
+      );
+      expect(
+        await db.accountProduct.count({
+          where: { companyId, name: "Cancel draft item" },
+        }),
+      ).toBe(0);
+      let failReturn = true;
+      await page.route(
+        "**/workspace/account/quotations/new**",
+        async (route) => {
+          const request = route.request();
+          if (
+            failReturn &&
+            request.method() === "POST" &&
+            request.headers()["next-action"] &&
+            request.postData()?.trim() === "[]" &&
+            (await db.accountProduct.count({ where: { companyId, name } })) > 0
+          ) {
+            await route.abort("failed");
+            return;
+          }
+          await route.continue();
         },
-      },
-    });
-    await db.customFieldDefinition.createMany({
-      data: [
-        {
-          companyId,
-          entityType: "PRODUCT",
-          fieldKey: "inline_detail",
-          label: "Item inline detail",
-          dataType: "TEXT",
-          isRequired: true,
-        },
-        {
-          companyId,
-          entityType: "QUOTATION",
-          fieldKey: "inline_detail",
-          label: "Quotation inline detail",
-          dataType: "TEXT",
-          isRequired: true,
-        },
-      ],
-    });
-    const documents = await db.quotationDocument.count({
+      );
+      await add.click();
+      dialog = page.getByRole("dialog", {
+        name: "Add quotation item",
+        exact: true,
+      });
+      await dialog.getByLabel("Item Name *", { exact: true }).fill(name);
+      await dialog
+        .getByLabel("Item inline detail", { exact: true })
+        .fill("Reusable item metadata");
+      expect(
+        await page.evaluate(() => {
+          const ids = [...document.querySelectorAll("[id]")].map(
+            (node) => node.id,
+          );
+          return ids.filter((id, index) => ids.indexOf(id) !== index);
+        }),
+      ).toEqual([]);
+      await dialog.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(dialog).toContainText("Returning to the quotation failed", {
+        timeout: 25000,
+      });
+      expect(
+        await db.accountProduct.count({ where: { companyId, name } }),
+      ).toBe(1);
+      failReturn = false;
+      await dialog
+        .getByRole("button", { name: "Return to quotation", exact: true })
+        .click();
+      await expect(dialog).toHaveCount(0, { timeout: 25000 });
+      const created = await db.accountProduct.findFirstOrThrow({
+        where: { companyId, name },
+      });
+      expect(
+        await db.customFieldValue.count({
+          where: {
+            companyId,
+            entityId: created.id,
+            value: { equals: "Reusable item metadata" },
+          },
+        }),
+      ).toBe(1);
+      await expect(
+        page.getByLabel("Quotation inline detail", { exact: true }),
+      ).toHaveValue("Retain quote custom value");
+      await expect(page.getByLabel("Master item", { exact: true })).toHaveValue(
+        created.id,
+      );
+      await expect(page.getByLabel("Quantity", { exact: true })).toHaveValue(
+        "3",
+      );
+      await expect(page.getByLabel("Notes", { exact: true })).toHaveValue(
+        "Retain while adding item",
+      );
+      await expect(add).toBeFocused();
+      expect(
+        await db.accountProduct.count({ where: { companyId, name } }),
+      ).toBe(1);
+      expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
+        documents,
+      );
+      expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+        journals,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+      ).toBe(false);
+      await db.user.update({
+        where: { id: userId },
+        data: { accountRole: "DATA_ENTRY" },
+      });
+      await page.reload();
+      await page
+        .getByLabel("Line type", { exact: true })
+        .selectOption("PRODUCT");
+      await expect(
+        page.getByRole("button", { name: "Add new item", exact: true }),
+      ).toHaveCount(0);
+    } finally {
+      await db.user.update({
+        where: { id: userId },
+        data: { accountRole: "ACCOUNT_ADMIN" },
+      });
+      await db.accountSettings.update({
         where: { companyId },
-      }),
-      journals = await db.journalEntry.count({ where: { companyId } });
-    await signInSettings(page);
-    await page.goto("/workspace/account/quotations/new?documentType=ESTIMATE");
-    await page.getByLabel("Customer", { exact: true }).selectOption(customerId);
-    await page
-      .getByLabel("Notes", { exact: true })
-      .fill("Retain while adding item");
-    await page
-      .getByLabel("Quotation inline detail", { exact: true })
-      .fill("Retain quote custom value");
-    await page.getByLabel("Line type", { exact: true }).selectOption("PRODUCT");
-    await page.getByLabel("Quantity", { exact: true }).fill("3");
-    const add = page.getByRole("button", { name: "Add new item", exact: true });
-    await add.click();
-    let dialog = page.getByRole("dialog", {
-      name: "Add quotation item",
-      exact: true,
-    });
-    await dialog
-      .getByLabel("Item Name *", { exact: true })
-      .fill("Cancel draft item");
-    await dialog
-      .getByRole("button", { name: "Cancel adding item", exact: true })
-      .click();
-    await expect(add).toBeFocused();
-    await expect(page.getByLabel("Notes", { exact: true })).toHaveValue(
-      "Retain while adding item",
-    );
-    expect(
-      await db.accountProduct.count({
-        where: { companyId, name: "Cancel draft item" },
-      }),
-    ).toBe(0);
-    let failReturn = true;
-    await page.route("**/workspace/account/quotations/new**", async (route) => {
-      const request = route.request();
-      if (
-        failReturn &&
-        request.method() === "POST" &&
-        request.headers()["next-action"] &&
-        request.postData()?.trim() === "[]" &&
-        (await db.accountProduct.count({ where: { companyId, name } })) > 0
-      ) {
-        await route.abort("failed");
-        return;
-      }
-      await route.continue();
-    });
-    await add.click();
-    dialog = page.getByRole("dialog", {
-      name: "Add quotation item",
-      exact: true,
-    });
-    await dialog.getByLabel("Item Name *", { exact: true }).fill(name);
-    await dialog
-      .getByLabel("Item inline detail", { exact: true })
-      .fill("Reusable item metadata");
-    expect(
-      await page.evaluate(() => {
-        const ids = [...document.querySelectorAll("[id]")].map(
-          (node) => node.id,
-        );
-        return ids.filter((id, index) => ids.indexOf(id) !== index);
-      }),
-    ).toEqual([]);
-    await dialog.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(dialog).toContainText("Returning to the quotation failed", {
-      timeout: 25000,
-    });
-    expect(await db.accountProduct.count({ where: { companyId, name } })).toBe(
-      1,
-    );
-    failReturn = false;
-    await dialog
-      .getByRole("button", { name: "Return to quotation", exact: true })
-      .click();
-    await expect(dialog).toHaveCount(0, { timeout: 25000 });
-    const created = await db.accountProduct.findFirstOrThrow({
-      where: { companyId, name },
-    });
-    expect(
-      await db.customFieldValue.count({
-        where: {
-          companyId,
-          entityId: created.id,
-          value: { equals: "Reusable item metadata" },
+        data: {
+          enabledModules: before.enabledModules,
+          itemSettings: before.itemSettings ?? {},
         },
-      }),
-    ).toBe(1);
-    await expect(
-      page.getByLabel("Quotation inline detail", { exact: true }),
-    ).toHaveValue("Retain quote custom value");
-    await expect(page.getByLabel("Master item", { exact: true })).toHaveValue(
-      created.id,
-    );
-    await expect(page.getByLabel("Quantity", { exact: true })).toHaveValue("3");
-    await expect(page.getByLabel("Notes", { exact: true })).toHaveValue(
-      "Retain while adding item",
-    );
-    await expect(add).toBeFocused();
-    expect(await db.accountProduct.count({ where: { companyId, name } })).toBe(
-      1,
-    );
-    expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
-      documents,
-    );
-    expect(await db.journalEntry.count({ where: { companyId } })).toBe(
-      journals,
-    );
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      ),
-    ).toBe(false);
-    await db.user.update({
-      where: { id: userId },
-      data: { accountRole: "DATA_ENTRY" },
-    });
-    await page.reload();
-    await page.getByLabel("Line type", { exact: true }).selectOption("PRODUCT");
-    await expect(
-      page.getByRole("button", { name: "Add new item", exact: true }),
-    ).toHaveCount(0);
-  } finally {
-    await db.user.update({
-      where: { id: userId },
-      data: { accountRole: "ACCOUNT_ADMIN" },
-    });
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: before.enabledModules,
-        itemSettings: before.itemSettings ?? {},
-      },
-    });
-  }
-});
+      });
+    }
+  },
+);
 
 test("A082 native item creation returns canonical scoped quotation options without posting", async ({
   request,
@@ -18439,480 +18568,500 @@ test("A090 project audit timestamps honor date preference without changing the c
   }
 });
 
-test("A082 private quotation attachments survive retry edit revision and authorized web native downloads", async ({
-  page,
-}) => {
-  test.setTimeout(180000);
-  const user = await db.user.findUniqueOrThrow({ where: { id: userId } }),
-    actor = {
-      ...user,
-      companyId,
-      branchAccessScope: "ALL_BRANCHES" as const,
-      branchIds: [],
+networkTest(
+  "A082 private quotation attachments survive retry edit revision and authorized web native downloads",
+  async ({ page }) => {
+    test.setTimeout(180000);
+    const user = await db.user.findUniqueOrThrow({ where: { id: userId } }),
+      actor = {
+        ...user,
+        companyId,
+        branchAccessScope: "ALL_BRANCHES" as const,
+        branchIds: [],
+      };
+    const input = {
+      branchId,
+      customerId,
+      documentType: "QUOTATION",
+      issueDate: "2026-10-19",
+      lines: [
+        {
+          lineType: "CUSTOM",
+          itemName: "Private plan work",
+          quantity: "1",
+          rate: "10",
+        },
+      ],
     };
-  const input = {
-    branchId,
-    customerId,
-    documentType: "QUOTATION",
-    issueDate: "2026-10-19",
-    lines: [
-      {
-        lineType: "CUSTOM",
-        itemName: "Private plan work",
-        quantity: "1",
-        rate: "10",
-      },
-    ],
-  };
-  const quotation = await createQuotationForActor(actor, input),
-    id = quotation.id,
-    bytes = Buffer.from("%PDF-1.7\nPrivate quotation plan fixture");
-  const keys = new Set<string>();
-  let sessionHash: string | null = null;
-  try {
-    await signInSettings(page);
-    await page.goto(`/workspace/account/quotations/${id}`);
-    const section = page.getByRole("region", {
-      name: "Quotation attachments",
-      exact: true,
-    });
-    await expect(
-      section.getByText("No attachments.", { exact: true }),
-    ).toBeVisible();
-    let drop = true;
-    await page.route(
-      `**/api/account/quotations/${id}/attachments*`,
-      async (route) => {
-        if (route.request().method() === "POST" && drop) {
-          drop = false;
-          const committed = await route.fetch();
-          expect(committed.status()).toBe(201);
-          await route.abort();
-        } else await route.continue();
-      },
-    );
-    await section
-      .getByLabel("Image or document", { exact: true })
-      .setInputFiles({
-        name: "plan.pdf",
+    const quotation = await createQuotationForActor(actor, input),
+      id = quotation.id,
+      bytes = Buffer.from("%PDF-1.7\nPrivate quotation plan fixture");
+    const keys = new Set<string>();
+    let sessionHash: string | null = null;
+    try {
+      await signInSettings(page);
+      await page.goto(`/workspace/account/quotations/${id}`);
+      const section = page.getByRole("region", {
+        name: "Quotation attachments",
+        exact: true,
+      });
+      await expect(
+        section.getByText("No attachments.", { exact: true }),
+      ).toBeVisible();
+      let drop = true;
+      await page.route(
+        `**/api/account/quotations/${id}/attachments*`,
+        async (route) => {
+          if (route.request().method() === "POST" && drop) {
+            drop = false;
+            const committed = await route.fetch();
+            expect(committed.status()).toBe(201);
+            await route.abort();
+          } else await route.continue();
+        },
+      );
+      await section
+        .getByLabel("Image or document", { exact: true })
+        .setInputFiles({
+          name: "plan.pdf",
+          mimeType: "application/pdf",
+          buffer: bytes,
+        });
+      await section
+        .getByRole("button", { name: "Add attachment", exact: true })
+        .click();
+      await expect(section.getByRole("alert")).toBeVisible();
+      await section
+        .getByRole("button", { name: "Add attachment", exact: true })
+        .click();
+      await expect(
+        section.getByRole("status").filter({ hasText: /^Attachment added\.$/ }),
+      ).toHaveText("Attachment added.");
+      let attachments = await db.quotationAttachment.findMany({
+        where: { companyId, revision: { documentId: id } },
+      });
+      expect(attachments).toHaveLength(1);
+      const first = attachments[0];
+      keys.add(first.storageKey);
+      await expect(
+        section.getByRole("link", { name: "plan.pdf", exact: true }),
+      ).toBeVisible();
+      const web = await page.request.get(
+        `/api/account/quotation-attachments/${first.id}`,
+      );
+      expect(web.status()).toBe(200);
+      expect(await web.body()).toEqual(bytes);
+      expect(web.headers()["x-content-type-options"]).toBe("nosniff");
+      expect(web.headers()["cache-control"]).toContain("private");
+      await expect(
+        new AxeBuilder({ page })
+          .include('section[aria-label="Quotation attachments"]')
+          .withTags(["wcag2a", "wcag2aa"])
+          .analyze(),
+      ).resolves.toMatchObject({ violations: [] });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      const current = await db.user.findUniqueOrThrow({
+          where: { id: userId },
+        }),
+        token = createSessionToken();
+      sessionHash = hashSessionToken(token);
+      await db.mobileSession.create({
+        data: {
+          userId,
+          tokenHash: sessionHash,
+          expiresAt: new Date(Date.now() + 3600000),
+          lastUsedAt: new Date(),
+          sessionVersion: current.sessionVersion,
+        },
+      });
+      const headers = { authorization: `Bearer ${token}` };
+      const endpoint = `/api/v1/mobile/account/quotations/${id}/attachments`;
+      const replay = await page.request.post(endpoint, {
+        headers,
+        multipart: {
+          file: {
+            name: "plan.pdf",
+            mimeType: "application/pdf",
+            buffer: bytes,
+          },
+          revisionNumber: "0",
+          requestKey: first.requestKey,
+        },
+      });
+      expect(replay.status()).toBe(201);
+      expect((await replay.json()).id).toBe(first.id);
+      const listed = await page.request.get(`${endpoint}?revisionNumber=0`, {
+        headers,
+      });
+      expect(listed.status()).toBe(200);
+      expect(await listed.json()).toEqual([
+        expect.objectContaining({ id: first.id, displayName: "plan.pdf" }),
+      ]);
+      expect(await listed.text()).not.toMatch(
+        /storageKey|requestHash|contentHash|companyId/,
+      );
+      const native = await page.request.get(
+        `/api/v1/mobile/account/quotation-attachments/${first.id}`,
+        { headers },
+      );
+      expect(native.status()).toBe(200);
+      expect(await native.body()).toEqual(bytes);
+      expect(
+        (
+          await page.request.get(
+            `/api/v1/mobile/account/quotation-attachments/${first.id}`,
+          )
+        ).status(),
+      ).toBe(401);
+      expect(
+        (
+          await page.request.get(
+            `/api/v1/mobile/account/quotation-attachments/${randomUUID()}`,
+            { headers },
+          )
+        ).status(),
+      ).toBe(403);
+      expect(
+        (
+          await page.request.post(endpoint, {
+            headers,
+            multipart: {
+              file: {
+                name: "bad.pdf",
+                mimeType: "application/pdf",
+                buffer: Buffer.from("invalid"),
+              },
+              revisionNumber: "0",
+              requestKey: randomUUID(),
+            },
+          })
+        ).status(),
+      ).toBe(400);
+      const backup = JSON.parse(
+        Buffer.from(
+          (
+            await createAccountBackupForActor({
+              id: userId,
+              companyId,
+              accountRole: "ACCOUNT_ADMIN",
+            })
+          ).bytes,
+        ).toString(),
+      );
+      expect(backup.data.quotationAttachment).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: first.id,
+            storageKey: first.storageKey,
+          }),
+        ]),
+      );
+      await page.getByRole("link", { name: "Edit draft", exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/quotations/${id}/edit$`), {
+        timeout: 30000,
+      });
+      await page
+        .getByRole("textbox", { name: "Notes", exact: true })
+        .fill("Retain attachments on draft replacement");
+      await page
+        .getByRole("button", { name: "Save draft", exact: true })
+        .click();
+      await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`), {
+        timeout: 30000,
+      });
+      await expect(
+        section.getByRole("link", { name: "plan.pdf", exact: true }),
+      ).toBeVisible();
+      expect(
+        (
+          await db.quotationAttachment.findFirstOrThrow({
+            where: { companyId, revision: { documentId: id } },
+          })
+        ).id,
+      ).toBe(first.id);
+      await transitionQuotationForActor(actor, id, "PENDING_APPROVAL");
+      await transitionQuotationForActor(actor, id, "APPROVED");
+      await page.reload();
+      await expect(
+        section.getByRole("button", { name: "Remove plan.pdf", exact: true }),
+      ).toHaveCount(0);
+      expect(
+        (
+          await page.request.delete(
+            `/api/v1/mobile/account/quotation-attachments/${first.id}?documentId=${id}&revisionNumber=0`,
+            { headers },
+          )
+        ).status(),
+      ).toBe(409);
+      await createQuotationRevisionForActor(actor, id, input);
+      await page.reload();
+      await expect(
+        section.getByRole("button", { name: "Remove plan.pdf", exact: true }),
+      ).toBeVisible();
+      attachments = await db.quotationAttachment.findMany({
+        where: { companyId, revision: { documentId: id } },
+      });
+      expect(attachments).toHaveLength(2);
+      for (const row of attachments) keys.add(row.storageKey);
+      await section
+        .getByRole("button", { name: "Remove plan.pdf", exact: true })
+        .click();
+      await expect(
+        section
+          .getByRole("status")
+          .filter({ hasText: /^Attachment removed\.$/ }),
+      ).toHaveText("Attachment removed.");
+      await expect(
+        section.getByText("No attachments.", { exact: true }),
+      ).toBeVisible();
+      const historical = await page.request.get(
+        `/api/v1/mobile/account/quotation-attachments/${first.id}`,
+        { headers },
+      );
+      expect(historical.status()).toBe(200);
+      expect(await historical.body()).toEqual(bytes);
+      expect(
+        await db.journalEntry.count({ where: { companyId, sourceId: id } }),
+      ).toBe(0);
+    } finally {
+      if (sessionHash)
+        await db.mobileSession.deleteMany({
+          where: { userId, tokenHash: sessionHash },
+        });
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+        const revisions = await tx.quotationRevision.findMany({
+            where: { companyId, documentId: id },
+            select: { id: true },
+          }),
+          ids = revisions.map((r) => r.id);
+        const stored = await tx.quotationAttachment.findMany({
+          where: { companyId, revisionId: { in: ids } },
+          select: { storageKey: true },
+        });
+        for (const row of stored) keys.add(row.storageKey);
+        await tx.quotationAttachment.deleteMany({
+          where: { companyId, revisionId: { in: ids } },
+        });
+        await tx.quotationAuditEvent.deleteMany({
+          where: { companyId, documentId: id },
+        });
+        await tx.quotationPaymentSchedule.deleteMany({
+          where: { companyId, revisionId: { in: ids } },
+        });
+        await tx.quotationAdjustment.deleteMany({
+          where: { companyId, revisionId: { in: ids } },
+        });
+        await tx.quotationLine.deleteMany({
+          where: { companyId, revisionId: { in: ids } },
+        });
+        await tx.quotationRevision.deleteMany({
+          where: { companyId, documentId: id },
+        });
+        await tx.quotationDocument.deleteMany({ where: { companyId, id } });
+      });
+      for (const key of keys) await privateStorage().delete(key);
+    }
+  },
+);
+
+networkTest(
+  "A082 first Save keeps selected quotation files atomic and retry-safe",
+  async ({ page }) => {
+    test.setTimeout(180000);
+    const bytes = Buffer.concat([
+        Buffer.from("%PDF-1.7\n"),
+        Buffer.alloc(6 * 1024 * 1024, 32),
+      ]),
+      keys = new Set<string>();
+    let sessionHash: string | null = null;
+    const before = await db.quotationDocument.count({ where: { companyId } });
+    try {
+      await signInSettings(page);
+      await page.goto("/workspace/account/quotations/new");
+      const identity = page.getByRole("group", {
+        name: "Document",
+        exact: true,
+      });
+      await identity
+        .getByRole("combobox", { name: "Branch", exact: true })
+        .selectOption(branchId);
+      await identity
+        .getByRole("combobox", { name: "Customer", exact: true })
+        .selectOption(customerId);
+      await page
+        .getByRole("textbox", { name: "Item name", exact: true })
+        .fill("First save with files");
+      await page
+        .getByRole("spinbutton", { name: "Rate", exact: true })
+        .fill("10");
+      const files = page.getByLabel("Add quotation files", { exact: true });
+      await files.setInputFiles({
+        name: "discard.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.7"),
+      });
+      await page
+        .getByRole("button", {
+          name: "Remove selected attachment discard.pdf",
+          exact: true,
+        })
+        .click();
+      await files.setInputFiles({
+        name: "large-plan.pdf",
         mimeType: "application/pdf",
         buffer: bytes,
       });
-    await section
-      .getByRole("button", { name: "Add attachment", exact: true })
-      .click();
-    await expect(section.getByRole("alert")).toBeVisible();
-    await section
-      .getByRole("button", { name: "Add attachment", exact: true })
-      .click();
-    await expect(
-      section.getByRole("status").filter({ hasText: /^Attachment added\.$/ }),
-    ).toHaveText("Attachment added.");
-    let attachments = await db.quotationAttachment.findMany({
-      where: { companyId, revision: { documentId: id } },
-    });
-    expect(attachments).toHaveLength(1);
-    const first = attachments[0];
-    keys.add(first.storageKey);
-    await expect(
-      section.getByRole("link", { name: "plan.pdf", exact: true }),
-    ).toBeVisible();
-    const web = await page.request.get(
-      `/api/account/quotation-attachments/${first.id}`,
-    );
-    expect(web.status()).toBe(200);
-    expect(await web.body()).toEqual(bytes);
-    expect(web.headers()["x-content-type-options"]).toBe("nosniff");
-    expect(web.headers()["cache-control"]).toContain("private");
-    await expect(
-      new AxeBuilder({ page })
-        .include('section[aria-label="Quotation attachments"]')
-        .withTags(["wcag2a", "wcag2aa"])
-        .analyze(),
-    ).resolves.toMatchObject({ violations: [] });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    const current = await db.user.findUniqueOrThrow({ where: { id: userId } }),
-      token = createSessionToken();
-    sessionHash = hashSessionToken(token);
-    await db.mobileSession.create({
-      data: {
-        userId,
-        tokenHash: sessionHash,
-        expiresAt: new Date(Date.now() + 3600000),
-        lastUsedAt: new Date(),
-        sessionVersion: current.sessionVersion,
-      },
-    });
-    const headers = { authorization: `Bearer ${token}` };
-    const endpoint = `/api/v1/mobile/account/quotations/${id}/attachments`;
-    const replay = await page.request.post(endpoint, {
-      headers,
-      multipart: {
-        file: { name: "plan.pdf", mimeType: "application/pdf", buffer: bytes },
-        revisionNumber: "0",
-        requestKey: first.requestKey,
-      },
-    });
-    expect(replay.status()).toBe(201);
-    expect((await replay.json()).id).toBe(first.id);
-    const listed = await page.request.get(`${endpoint}?revisionNumber=0`, {
-      headers,
-    });
-    expect(listed.status()).toBe(200);
-    expect(await listed.json()).toEqual([
-      expect.objectContaining({ id: first.id, displayName: "plan.pdf" }),
-    ]);
-    expect(await listed.text()).not.toMatch(
-      /storageKey|requestHash|contentHash|companyId/,
-    );
-    const native = await page.request.get(
-      `/api/v1/mobile/account/quotation-attachments/${first.id}`,
-      { headers },
-    );
-    expect(native.status()).toBe(200);
-    expect(await native.body()).toEqual(bytes);
-    expect(
-      (
-        await page.request.get(
-          `/api/v1/mobile/account/quotation-attachments/${first.id}`,
-        )
-      ).status(),
-    ).toBe(401);
-    expect(
-      (
-        await page.request.get(
-          `/api/v1/mobile/account/quotation-attachments/${randomUUID()}`,
-          { headers },
-        )
-      ).status(),
-    ).toBe(403);
-    expect(
-      (
-        await page.request.post(endpoint, {
-          headers,
-          multipart: {
-            file: {
-              name: "bad.pdf",
-              mimeType: "application/pdf",
-              buffer: Buffer.from("invalid"),
-            },
-            revisionNumber: "0",
-            requestKey: randomUUID(),
-          },
-        })
-      ).status(),
-    ).toBe(400);
-    const backup = JSON.parse(
-      Buffer.from(
+      expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
+        before,
+      );
+      expect(
         (
-          await createAccountBackupForActor({
-            id: userId,
-            companyId,
-            accountRole: "ACCOUNT_ADMIN",
-          })
-        ).bytes,
-      ).toString(),
-    );
-    expect(backup.data.quotationAttachment).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: first.id, storageKey: first.storageKey }),
-      ]),
-    );
-    await page.getByRole("link", { name: "Edit draft", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/quotations/${id}/edit$`), {
-      timeout: 30000,
-    });
-    await page
-      .getByRole("textbox", { name: "Notes", exact: true })
-      .fill("Retain attachments on draft replacement");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/quotations/${id}\\?saved=1`), {
-      timeout: 30000,
-    });
-    await expect(
-      section.getByRole("link", { name: "plan.pdf", exact: true }),
-    ).toBeVisible();
-    expect(
-      (
-        await db.quotationAttachment.findFirstOrThrow({
-          where: { companyId, revision: { documentId: id } },
-        })
-      ).id,
-    ).toBe(first.id);
-    await transitionQuotationForActor(actor, id, "PENDING_APPROVAL");
-    await transitionQuotationForActor(actor, id, "APPROVED");
-    await page.reload();
-    await expect(
-      section.getByRole("button", { name: "Remove plan.pdf", exact: true }),
-    ).toHaveCount(0);
-    expect(
-      (
-        await page.request.delete(
-          `/api/v1/mobile/account/quotation-attachments/${first.id}?documentId=${id}&revisionNumber=0`,
-          { headers },
-        )
-      ).status(),
-    ).toBe(409);
-    await createQuotationRevisionForActor(actor, id, input);
-    await page.reload();
-    await expect(
-      section.getByRole("button", { name: "Remove plan.pdf", exact: true }),
-    ).toBeVisible();
-    attachments = await db.quotationAttachment.findMany({
-      where: { companyId, revision: { documentId: id } },
-    });
-    expect(attachments).toHaveLength(2);
-    for (const row of attachments) keys.add(row.storageKey);
-    await section
-      .getByRole("button", { name: "Remove plan.pdf", exact: true })
-      .click();
-    await expect(
-      section.getByRole("status").filter({ hasText: /^Attachment removed\.$/ }),
-    ).toHaveText("Attachment removed.");
-    await expect(
-      section.getByText("No attachments.", { exact: true }),
-    ).toBeVisible();
-    const historical = await page.request.get(
-      `/api/v1/mobile/account/quotation-attachments/${first.id}`,
-      { headers },
-    );
-    expect(historical.status()).toBe(200);
-    expect(await historical.body()).toEqual(bytes);
-    expect(
-      await db.journalEntry.count({ where: { companyId, sourceId: id } }),
-    ).toBe(0);
-  } finally {
-    if (sessionHash)
-      await db.mobileSession.deleteMany({
-        where: { userId, tokenHash: sessionHash },
-      });
-    await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
-      const revisions = await tx.quotationRevision.findMany({
-          where: { companyId, documentId: id },
-          select: { id: true },
-        }),
-        ids = revisions.map((r) => r.id);
-      const stored = await tx.quotationAttachment.findMany({
-        where: { companyId, revisionId: { in: ids } },
-        select: { storageKey: true },
-      });
-      for (const row of stored) keys.add(row.storageKey);
-      await tx.quotationAttachment.deleteMany({
-        where: { companyId, revisionId: { in: ids } },
-      });
-      await tx.quotationAuditEvent.deleteMany({
-        where: { companyId, documentId: id },
-      });
-      await tx.quotationPaymentSchedule.deleteMany({
-        where: { companyId, revisionId: { in: ids } },
-      });
-      await tx.quotationAdjustment.deleteMany({
-        where: { companyId, revisionId: { in: ids } },
-      });
-      await tx.quotationLine.deleteMany({
-        where: { companyId, revisionId: { in: ids } },
-      });
-      await tx.quotationRevision.deleteMany({
-        where: { companyId, documentId: id },
-      });
-      await tx.quotationDocument.deleteMany({ where: { companyId, id } });
-    });
-    for (const key of keys) await privateStorage().delete(key);
-  }
-});
-
-test("A082 first Save keeps selected quotation files atomic and retry-safe", async ({
-  page,
-}) => {
-  test.setTimeout(180000);
-  const bytes = Buffer.concat([
-      Buffer.from("%PDF-1.7\n"),
-      Buffer.alloc(6 * 1024 * 1024, 32),
-    ]),
-    keys = new Set<string>();
-  let sessionHash: string | null = null;
-  const before = await db.quotationDocument.count({ where: { companyId } });
-  try {
-    await signInSettings(page);
-    await page.goto("/workspace/account/quotations/new");
-    const identity = page.getByRole("group", { name: "Document", exact: true });
-    await identity
-      .getByRole("combobox", { name: "Branch", exact: true })
-      .selectOption(branchId);
-    await identity
-      .getByRole("combobox", { name: "Customer", exact: true })
-      .selectOption(customerId);
-    await page
-      .getByRole("textbox", { name: "Item name", exact: true })
-      .fill("First save with files");
-    await page
-      .getByRole("spinbutton", { name: "Rate", exact: true })
-      .fill("10");
-    const files = page.getByLabel("Add quotation files", { exact: true });
-    await files.setInputFiles({
-      name: "discard.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from("%PDF-1.7"),
-    });
-    await page
-      .getByRole("button", {
-        name: "Remove selected attachment discard.pdf",
-        exact: true,
-      })
-      .click();
-    await files.setInputFiles({
-      name: "large-plan.pdf",
-      mimeType: "application/pdf",
-      buffer: bytes,
-    });
-    expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
-      before,
-    );
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .include('fieldset:has(input[aria-label="Add quotation files"])')
-          .withTags(["wcag2a", "wcag2aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    let drop = true;
-    await page.route(
-      "**/api/account/quotations/with-attachments",
-      async (route) => {
-        if (drop) {
-          drop = false;
-          const response = await route.fetch({ timeout: 60000 });
-          expect(response.status()).toBe(201);
-          await route.abort();
-        } else await route.continue();
-      },
-    );
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(
-      page.getByRole("alert").filter({ hasText: "No save was confirmed" }),
-    ).toBeVisible({ timeout: 60000 });
-    expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
-      before + 1,
-    );
-    await expect(
-      page.getByRole("button", {
-        name: "Remove selected attachment large-plan.pdf",
-        exact: true,
-      }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/, {
-      timeout: 30000,
-    });
-    const id = page.url().split("/").at(-2)!,
-      stored = await db.quotationAttachment.findMany({
-        where: { companyId, revision: { documentId: id } },
-      });
-    expect(stored).toHaveLength(1);
-    keys.add(stored[0].storageKey);
-    expect(stored[0].sizeBytes).toBe(bytes.length);
-    expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
-      before + 1,
-    );
-    await page
-      .getByRole("link", { name: "Document details", exact: true })
-      .click();
-    const download = await page.request.get(
-      `/api/account/quotation-attachments/${stored[0].id}`,
-    );
-    expect(download.status()).toBe(200);
-    expect(await download.body()).toEqual(bytes);
-    const current = await db.user.findUniqueOrThrow({ where: { id: userId } }),
-      token = createSessionToken();
-    sessionHash = hashSessionToken(token);
-    await db.mobileSession.create({
-      data: {
-        userId,
-        tokenHash: sessionHash,
-        expiresAt: new Date(Date.now() + 3600000),
-        lastUsedAt: new Date(),
-        sessionVersion: current.sessionVersion,
-      },
-    });
-    const path = "/api/v1/mobile/account/quotations/with-attachments",
-      headers = { authorization: `Bearer ${token}` },
-      raw = {
-        branchId,
-        customerId,
-        documentType: "QUOTATION",
-        issueDate: "2026-10-19",
-        lines: [
-          {
-            lineType: "CUSTOM",
-            itemName: "Native first save",
-            quantity: "1",
-            rate: "10",
-          },
-        ],
-      },
-      requestKey = randomUUID(),
-      multipart = {
-        document: JSON.stringify(raw),
-        creationRequestKey: requestKey,
-        attachments: {
-          name: "native.pdf",
-          mimeType: "application/pdf",
-          buffer: Buffer.from("%PDF-1.7\nnative"),
+          await new AxeBuilder({ page })
+            .include('fieldset:has(input[aria-label="Add quotation files"])')
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      let drop = true;
+      await page.route(
+        "**/api/account/quotations/with-attachments",
+        async (route) => {
+          if (drop) {
+            drop = false;
+            const response = await route.fetch({ timeout: 60000 });
+            expect(response.status()).toBe(201);
+            await route.abort();
+          } else await route.continue();
         },
-      };
-    expect((await page.request.post(path, { multipart })).status()).toBe(401);
-    const native = await page.request.post(path, { headers, multipart });
-    expect(native.status()).toBe(201);
-    const saved = await native.json(),
-      nativeRows = await db.quotationAttachment.findMany({
-        where: { companyId, revision: { documentId: saved.id } },
+      );
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(
+        page.getByRole("alert").filter({ hasText: "No save was confirmed" }),
+      ).toBeVisible({ timeout: 60000 });
+      expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
+        before + 1,
+      );
+      await expect(
+        page.getByRole("button", {
+          name: "Remove selected attachment large-plan.pdf",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+\/preview$/, {
+        timeout: 30000,
       });
-    expect(nativeRows).toHaveLength(1);
-    keys.add(nativeRows[0].storageKey);
-    const replay = await page.request.post(path, { headers, multipart });
-    expect(replay.status()).toBe(201);
-    expect((await replay.json()).id).toBe(saved.id);
-    expect(
-      (
-        await page.request.post(path, {
-          headers,
-          multipart: {
-            ...multipart,
-            attachments: { ...multipart.attachments, name: "changed.pdf" },
+      const id = page.url().split("/").at(-2)!,
+        stored = await db.quotationAttachment.findMany({
+          where: { companyId, revision: { documentId: id } },
+        });
+      expect(stored).toHaveLength(1);
+      keys.add(stored[0].storageKey);
+      expect(stored[0].sizeBytes).toBe(bytes.length);
+      expect(await db.quotationDocument.count({ where: { companyId } })).toBe(
+        before + 1,
+      );
+      await page
+        .getByRole("link", { name: "Document details", exact: true })
+        .click();
+      const download = await page.request.get(
+        `/api/account/quotation-attachments/${stored[0].id}`,
+      );
+      expect(download.status()).toBe(200);
+      expect(await download.body()).toEqual(bytes);
+      const current = await db.user.findUniqueOrThrow({
+          where: { id: userId },
+        }),
+        token = createSessionToken();
+      sessionHash = hashSessionToken(token);
+      await db.mobileSession.create({
+        data: {
+          userId,
+          tokenHash: sessionHash,
+          expiresAt: new Date(Date.now() + 3600000),
+          lastUsedAt: new Date(),
+          sessionVersion: current.sessionVersion,
+        },
+      });
+      const path = "/api/v1/mobile/account/quotations/with-attachments",
+        headers = { authorization: `Bearer ${token}` },
+        raw = {
+          branchId,
+          customerId,
+          documentType: "QUOTATION",
+          issueDate: "2026-10-19",
+          lines: [
+            {
+              lineType: "CUSTOM",
+              itemName: "Native first save",
+              quantity: "1",
+              rate: "10",
+            },
+          ],
+        },
+        requestKey = randomUUID(),
+        multipart = {
+          document: JSON.stringify(raw),
+          creationRequestKey: requestKey,
+          attachments: {
+            name: "native.pdf",
+            mimeType: "application/pdf",
+            buffer: Buffer.from("%PDF-1.7\nnative"),
           },
-        })
-      ).status(),
-    ).toBe(409);
-    expect(
-      await db.journalEntry.count({
-        where: { companyId, sourceId: { in: [id, saved.id] } },
-      }),
-    ).toBe(0);
-  } finally {
-    await page.unrouteAll({ behavior: "wait" });
-    if (sessionHash)
-      await db.mobileSession.deleteMany({
-        where: { userId, tokenHash: sessionHash },
-      });
-    for (const row of await db.quotationAttachment.findMany({
-      where: { companyId },
-      select: { storageKey: true },
-    }))
-      keys.add(row.storageKey);
-    for (const key of keys) await privateStorage().delete(key);
-  }
-});
+        };
+      expect((await page.request.post(path, { multipart })).status()).toBe(401);
+      const native = await page.request.post(path, { headers, multipart });
+      expect(native.status()).toBe(201);
+      const saved = await native.json(),
+        nativeRows = await db.quotationAttachment.findMany({
+          where: { companyId, revision: { documentId: saved.id } },
+        });
+      expect(nativeRows).toHaveLength(1);
+      keys.add(nativeRows[0].storageKey);
+      const replay = await page.request.post(path, { headers, multipart });
+      expect(replay.status()).toBe(201);
+      expect((await replay.json()).id).toBe(saved.id);
+      expect(
+        (
+          await page.request.post(path, {
+            headers,
+            multipart: {
+              ...multipart,
+              attachments: { ...multipart.attachments, name: "changed.pdf" },
+            },
+          })
+        ).status(),
+      ).toBe(409);
+      expect(
+        await db.journalEntry.count({
+          where: { companyId, sourceId: { in: [id, saved.id] } },
+        }),
+      ).toBe(0);
+    } finally {
+      await page.unrouteAll({ behavior: "wait" });
+      if (sessionHash)
+        await db.mobileSession.deleteMany({
+          where: { userId, tokenHash: sessionHash },
+        });
+      for (const row of await db.quotationAttachment.findMany({
+        where: { companyId },
+        select: { storageKey: true },
+      }))
+        keys.add(row.storageKey);
+      for (const key of keys) await privateStorage().delete(key);
+    }
+  },
+);
 
 test("A082 expandable quotation terms retain hidden values through save new and edit", async ({
   page,
@@ -21098,562 +21247,577 @@ test("A082 reference header back and authorized settings preserve unsaved quotat
   ).toEqual(counts);
 });
 
-test("A086 A087 private Sale files save once after lost response and remain available on Web and native APIs", async ({
-  page,
-  request,
-}) => {
-  test.setTimeout(240000);
-  const original = await db.accountSettings.findUniqueOrThrow({
-      where: { companyId },
-    }),
-    defaults = (original.transactionDefaults ?? {}) as Prisma.JsonObject;
-  let sessionHash: string | null = null;
-  const bytes = Buffer.from("%PDF-1.7\nPrivate Sale file fixture"),
-    file = {
-      name: "sale-plan.pdf",
-      mimeType: "application/pdf",
-      buffer: bytes,
-    };
-  try {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: ["SALES"],
-        transactionDefaults: {
-          ...defaults,
-          transactionPreferences: {
-            invoicePreview: false,
-            termsEnabled: true,
-            linkPayments: false,
-          },
-        },
-      },
-    });
-    if (!(await db.financialYear.findFirst({ where: { companyId } })))
-      await db.financialYear.create({
-        data: {
-          companyId,
-          name: "Sale files year",
-          startDate: new Date("2026-01-01"),
-          endDate: new Date("2026-12-31"),
-        },
-      });
-    for (const row of DEFAULT_LEDGER_ACCOUNTS)
-      await db.ledgerAccount.upsert({
-        where: { companyId_code: { companyId, code: row.code } },
-        create: {
-          companyId,
-          code: row.code,
-          name: row.name,
-          accountClass: row.accountClass,
-          normalBalance: row.normalBalance,
-          systemKey: row.systemKey,
-          isSystem: row.isSystem,
-        },
-        update: { systemKey: row.systemKey },
-      });
-    const actor = {
-      ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
-      companyId,
-      branchIds: [],
-    } as ProjectActor;
-    const input = {
-      type: "SALES_INVOICE",
-      branchId,
-      partyId: customerId,
-      issueDate: "2026-10-21",
-      lines: [
-        {
-          lineType: "CUSTOM",
-          itemName: "Private Sale work",
-          quantity: "1",
-          rate: "100",
-          taxRate: "0",
-        },
-      ],
-    };
-    const source = await createCommercialDocumentForActor(actor, input);
-    await postCommercialDocumentForActor(actor, { documentId: source.id });
-    await signInSettings(page);
-    const url = `/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${source.id}`;
-    await page.goto(url);
-    const selection = page.getByRole("region", {
-      name: "Sale attachments",
-      exact: true,
-    });
-    const before = await db.commercialDocument.count({ where: { companyId } }),
-      beforeDrafts = await db.commercialDocument.count({
-        where: { companyId, status: "DRAFT" },
-      });
-    await selection
-      .getByLabel("Add image or document", { exact: true })
-      .setInputFiles(file);
-    await expect(
-      selection.getByRole("button", {
-        name: "Remove attachment sale-plan.pdf",
-        exact: true,
+networkTest(
+  "A086 A087 private Sale files save once after lost response and remain available on Web and native APIs",
+  async ({ page, request }) => {
+    test.setTimeout(240000);
+    const original = await db.accountSettings.findUniqueOrThrow({
+        where: { companyId },
       }),
-    ).toBeVisible();
-    await page.getByRole("link", { name: "Back", exact: true }).last().click();
-    await expect(page).toHaveURL(/\/account\/transactions$/, {
-      timeout: 30000,
-    });
-    expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
-      before,
-    );
-    expect(await db.commercialAttachment.count({ where: { companyId } })).toBe(
-      0,
-    );
-    await page.goto(url);
-    await selection
-      .getByLabel("Add image or document", { exact: true })
-      .setInputFiles(file);
-    await selection
-      .getByLabel("Add image or document", { exact: true })
-      .setInputFiles({
-        name: "remove.pdf",
+      defaults = (original.transactionDefaults ?? {}) as Prisma.JsonObject;
+    let sessionHash: string | null = null;
+    const bytes = Buffer.from("%PDF-1.7\nPrivate Sale file fixture"),
+      file = {
+        name: "sale-plan.pdf",
         mimeType: "application/pdf",
         buffer: bytes,
-      });
-    await selection
-      .getByRole("button", {
-        name: "Remove attachment remove.pdf",
-        exact: true,
-      })
-      .click();
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .include('section[aria-label="Sale attachments"]')
-          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    let drop = true,
-      savedId = "";
-    await page.route("**/api/account/sales/with-attachments", async (route) => {
-      if (drop) {
-        drop = false;
-        const committed = await route.fetch();
-        expect(committed.status()).toBe(201);
-        savedId = (await committed.json()).id;
-        await route.abort();
-      } else await route.continue();
-    });
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.locator("main").last().getByRole("alert")).toBeVisible({
-      timeout: 30000,
-    });
-    await expect(
-      selection.getByRole("button", {
-        name: "Remove attachment sale-plan.pdf",
-        exact: true,
-      }),
-    ).toBeVisible();
-    expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
-      before + 1,
-    );
-    expect(
-      await db.commercialDocument.count({
-        where: { companyId, status: "DRAFT" },
-      }),
-    ).toBe(beforeDrafts);
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/sales/${savedId}$`), {
-      timeout: 30000,
-    });
-    expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
-      before + 1,
-    );
-    expect(
-      await db.journalEntry.count({
-        where: { companyId, sourceId: savedId, status: "POSTED" },
-      }),
-    ).toBe(1);
-    const attachments = page.getByRole("region", {
-      name: "Sale attachments",
-      exact: true,
-    });
-    await expect(
-      attachments.getByRole("link", { name: "sale-plan.pdf", exact: true }),
-    ).toBeVisible();
-    const [stored] = await db.commercialAttachment.findMany({
-      where: { companyId, documentId: savedId },
-    });
-    expect(stored.displayName).toBe("sale-plan.pdf");
-    const web = await page.request.get(
-      `/api/account/sale-attachments/${stored.id}`,
-    );
-    expect(web.status()).toBe(200);
-    expect(await web.body()).toEqual(bytes);
-    expect(web.headers()["cache-control"]).toContain("private");
-    expect(web.headers()["x-content-type-options"]).toBe("nosniff");
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .include('section[aria-label="Sale attachments"]')
-          .withTags(["wcag2a", "wcag2aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    const current = await db.user.findUniqueOrThrow({ where: { id: userId } }),
-      token = createSessionToken();
-    sessionHash = hashSessionToken(token);
-    await db.mobileSession.create({
-      data: {
-        userId,
-        tokenHash: sessionHash,
-        expiresAt: new Date(Date.now() + 3600000),
-        lastUsedAt: new Date(),
-        sessionVersion: current.sessionVersion,
-      },
-    });
-    const headers = { authorization: `Bearer ${token}` };
-    const list = await page.request.get(
-      `/api/v1/mobile/account/sales/${savedId}/attachments`,
-      { headers },
-    );
-    expect(list.status()).toBe(200);
-    const metadata = await list.json();
-    expect(metadata).toHaveLength(1);
-    expect(JSON.stringify(metadata)).not.toMatch(
-      /storageKey|contentHash|uploadedById/,
-    );
-    const native = await page.request.get(
-      `/api/v1/mobile/account/sale-attachments/${stored.id}`,
-      { headers },
-    );
-    expect(native.status()).toBe(200);
-    expect(await native.body()).toEqual(bytes);
-    expect(
-      (
-        await request.get(
-          `/api/v1/mobile/account/sale-attachments/${stored.id}`,
-        )
-      ).status(),
-    ).toBe(401);
-    const nativeInput = { ...input, idempotencyKey: randomUUID() },
-      multipart = {
-        document: JSON.stringify(nativeInput),
-        payment: "{}",
-        attachments: file,
       };
-    const created = await page.request.post(
-      "/api/v1/mobile/account/sales/with-attachments",
-      { headers, multipart },
-    );
-    expect(created.status()).toBe(201);
-    const nativeSale = await created.json();
-    expect(nativeSale.status).toBe("POSTED");
-    const replay = await page.request.post(
-      "/api/v1/mobile/account/sales/with-attachments",
-      { headers, multipart },
-    );
-    expect(replay.status()).toBe(201);
-    expect((await replay.json()).id).toBe(nativeSale.id);
-    expect(
-      await db.commercialAttachment.count({
-        where: { companyId, documentId: nativeSale.id },
-      }),
-    ).toBe(1);
-  } finally {
-    if (sessionHash)
-      await db.mobileSession.deleteMany({ where: { tokenHash: sessionHash } });
-    const rows = await db.commercialAttachment.findMany({
-      where: { companyId },
-      select: { storageKey: true },
-    });
-    await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
-      await tx.commercialAttachment.deleteMany({ where: { companyId } });
-    });
-    for (const row of rows) await privateStorage().delete(row.storageKey);
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: original.enabledModules,
-        transactionDefaults:
-          original.transactionDefaults as Prisma.InputJsonValue,
-      },
-    });
-  }
-});
-
-test("A086 A087 Edit Sale support files preserve paid accounting and retry once", async ({
-  page,
-}) => {
-  test.setTimeout(240000);
-  const settings = await db.accountSettings.findUniqueOrThrow({
-    where: { companyId },
-  });
-  const bytes = Buffer.from("%PDF-1.7\nEdit Sale support fixture"),
-    pdf = (name: string) => ({
-      name,
-      mimeType: "application/pdf",
-      buffer: bytes,
-    });
-  try {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: ["SALES", "CUSTOMER_RECEIPTS", "CUSTOMER_ADVANCES"],
-        transactionDefaults: {
-          transactionPreferences: {
-            invoicePreview: false,
-            linkPayments: false,
-            discountDuringPayment: true,
+    try {
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: ["SALES"],
+          transactionDefaults: {
+            ...defaults,
+            transactionPreferences: {
+              invoicePreview: false,
+              termsEnabled: true,
+              linkPayments: false,
+            },
           },
         },
-      },
-    });
-    if (!(await db.financialYear.findFirst({ where: { companyId } })))
-      await db.financialYear.create({
-        data: {
-          companyId,
-          name: "Edit files year",
-          startDate: new Date("2026-01-01"),
-          endDate: new Date("2026-12-31"),
-        },
       });
-    for (const row of DEFAULT_LEDGER_ACCOUNTS)
-      await db.ledgerAccount.upsert({
-        where: { companyId_code: { companyId, code: row.code } },
-        create: {
-          companyId,
-          code: row.code,
-          name: row.name,
-          accountClass: row.accountClass,
-          normalBalance: row.normalBalance,
-          systemKey: row.systemKey,
-          isSystem: row.isSystem,
-        },
-        update: { systemKey: row.systemKey },
-      });
-    const actor = {
-      ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
-      companyId,
-      branchIds: [],
-    } as ProjectActor;
-    const service = await db.accountService.create({
-      data: {
+      if (!(await db.financialYear.findFirst({ where: { companyId } })))
+        await db.financialYear.create({
+          data: {
+            companyId,
+            name: "Sale files year",
+            startDate: new Date("2026-01-01"),
+            endDate: new Date("2026-12-31"),
+          },
+        });
+      for (const row of DEFAULT_LEDGER_ACCOUNTS)
+        await db.ledgerAccount.upsert({
+          where: { companyId_code: { companyId, code: row.code } },
+          create: {
+            companyId,
+            code: row.code,
+            name: row.name,
+            accountClass: row.accountClass,
+            normalBalance: row.normalBalance,
+            systemKey: row.systemKey,
+            isSystem: row.isSystem,
+          },
+          update: { systemKey: row.systemKey },
+        });
+      const actor = {
+        ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
         companyId,
-        name: "Edit support service",
-        sellingRate: "100",
-        taxRate: "0",
-      },
-    });
-    const source = await submitSaleForActor(
-      actor,
-      {
+        branchIds: [],
+      } as ProjectActor;
+      const input = {
         type: "SALES_INVOICE",
-        idempotencyKey: randomUUID(),
         branchId,
         partyId: customerId,
         issueDate: "2026-10-21",
         lines: [
           {
-            lineType: "SERVICE",
-            sourceId: service.id,
+            lineType: "CUSTOM",
+            itemName: "Private Sale work",
             quantity: "1",
             rate: "100",
             taxRate: "0",
           },
         ],
-      },
-      {},
-      "sale-save-receipt",
-      [new File([bytes], "original.pdf", { type: "application/pdf" })],
-    );
-    const receipt = await createSettlementForActor(actor, {
-      idempotencyKey: randomUUID(),
-      type: "CUSTOMER_RECEIPT",
-      branchId,
-      partyId: customerId,
-      paymentMode: "CASH",
-      amount: "90",
-      transactionDate: "2026-10-21",
-      allocations: [
-        { documentId: source.id, amount: "100", discountAmount: "10" },
-      ],
-    });
-    const snapshot = async () =>
-      JSON.stringify({
-        doc: await db.commercialDocument.findUniqueOrThrow({
-          where: { id: source.id },
-          include: { lines: true },
-        }),
-        receipt: await db.accountSettlement.findUniqueOrThrow({
-          where: { id: receipt.id },
-          include: { allocations: true },
-        }),
-        journals: await db.journalEntry.findMany({
-          where: { companyId },
-          orderBy: { id: "asc" },
-        }),
-        documents: await db.commercialDocument.count({ where: { companyId } }),
-      });
-    const before = await snapshot();
-    await signInSettings(page);
-    await page.goto(`/workspace/account/sales/${source.id}`);
-    await page.getByRole("link", { name: "Edit", exact: true }).click();
-    const region = page.getByRole("region", {
-      name: "Sale attachments",
-      exact: true,
-    });
-    await expect(
-      region.getByRole("link", { name: "original.pdf", exact: true }),
-    ).toBeVisible();
-    await region
-      .getByLabel("Add image or document", { exact: true })
-      .setInputFiles(pdf("support.pdf"));
-    let lost = true;
-    await page.route(
-      `**/api/account/sales/${source.id}/attachments`,
-      async (route) => {
-        if (lost) {
-          lost = false;
-          expect((await route.fetch()).status()).toBe(201);
-          await route.abort();
-        } else await route.continue();
-      },
-    );
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.locator("main").last().getByRole("alert")).toBeVisible({
-      timeout: 30000,
-    });
-    expect(await snapshot()).toBe(before);
-    expect(
-      await db.commercialAttachment.count({
-        where: { companyId, documentId: source.id },
-      }),
-    ).toBe(2);
-    await expect(
-      region.getByRole("button", {
-        name: "Remove attachment support.pdf",
+      };
+      const source = await createCommercialDocumentForActor(actor, input);
+      await postCommercialDocumentForActor(actor, { documentId: source.id });
+      await signInSettings(page);
+      const url = `/workspace/account/transactions/new?type=SALES_INVOICE&duplicateId=${source.id}`;
+      await page.goto(url);
+      const selection = page.getByRole("region", {
+        name: "Sale attachments",
         exact: true,
-      }),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/sales/${source.id}$`), {
-      timeout: 30000,
-    });
-    await expect(
-      page
-        .getByRole("region", { name: "Sale attachments", exact: true })
-        .getByRole("link", { name: "support.pdf", exact: true }),
-    ).toBeVisible();
-    expect(await snapshot()).toBe(before);
-    expect(
-      await db.commercialAttachment.count({
-        where: { companyId, documentId: source.id },
-      }),
-    ).toBe(2);
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .include('section[aria-label="Sale attachments"]')
-          .withTags(["wcag2a", "wcag2aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    await page.getByRole("link", { name: "Edit", exact: true }).click();
-    await region
-      .getByLabel("Add image or document", { exact: true })
-      .setInputFiles(pdf("correction.pdf"));
-    await page
-      .getByRole("button", { name: `Edit item ${service.name}`, exact: true })
-      .click();
-    await page.getByLabel("Rate (Price/Unit)", { exact: true }).fill("80");
-    await page
-      .locator("section")
-      .filter({
-        has: page.getByRole("heading", {
-          name: "Add Items to Sale",
+      });
+      const before = await db.commercialDocument.count({
+          where: { companyId },
+        }),
+        beforeDrafts = await db.commercialDocument.count({
+          where: { companyId, status: "DRAFT" },
+        });
+      await selection
+        .getByLabel("Add image or document", { exact: true })
+        .setInputFiles(file);
+      await expect(
+        selection.getByRole("button", {
+          name: "Remove attachment sale-plan.pdf",
           exact: true,
         }),
-      })
-      .getByRole("button", { name: "Save", exact: true })
-      .click();
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/, {
-      timeout: 30000,
-    });
-    const correctedId = page.url().split("/").at(-1)!;
-    expect(correctedId).not.toBe(source.id);
-    const corrected = await db.commercialDocument.findUniqueOrThrow({
-      where: { id: correctedId },
-    });
-    expect(corrected.grandTotal.toString()).toBe("80");
-    expect(
-      await db.commercialAttachment.count({
-        where: { companyId, documentId: source.id },
-      }),
-    ).toBe(2);
-    expect(
-      await db.commercialAttachment.count({
-        where: { companyId, documentId: correctedId },
-      }),
-    ).toBe(3);
-    await expect(
-      page
-        .getByRole("region", { name: "Sale attachments", exact: true })
-        .getByRole("link", { name: "correction.pdf", exact: true }),
-    ).toBeVisible({ timeout: 30000 });
-    await expect(
-      page.getByText(`${source.documentNumber}⌄`, { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "View previous revision", exact: true }),
-    ).toHaveAttribute("href", `/workspace/account/sales/${source.id}`);
-    const printed = await page.request.get(
-      `/api/account/print/SALES_INVOICE/${correctedId}?format=pdf`,
-    );
-    expect(printed.status()).toBe(200);
-    const printedText = (await extractPdfText(await printed.body())).text;
-    expect(printedText).toContain(source.documentNumber);
-    expect(printedText).toMatch(/Revision\s+1/);
-    expect(
-      (
-        await db.accountSettlement.findUniqueOrThrow({
-          where: { id: receipt.id },
+      ).toBeVisible();
+      await page
+        .getByRole("link", { name: "Back", exact: true })
+        .last()
+        .click();
+      await expect(page).toHaveURL(/\/account\/transactions$/, {
+        timeout: 30000,
+      });
+      expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
+        before,
+      );
+      expect(
+        await db.commercialAttachment.count({ where: { companyId } }),
+      ).toBe(0);
+      await page.goto(url);
+      await selection
+        .getByLabel("Add image or document", { exact: true })
+        .setInputFiles(file);
+      await selection
+        .getByLabel("Add image or document", { exact: true })
+        .setInputFiles({
+          name: "remove.pdf",
+          mimeType: "application/pdf",
+          buffer: bytes,
+        });
+      await selection
+        .getByRole("button", {
+          name: "Remove attachment remove.pdf",
+          exact: true,
         })
-      ).amount.toString(),
-    ).toBe("90");
-  } finally {
-    const files = await db.commercialAttachment.findMany({
+        .click();
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include('section[aria-label="Sale attachments"]')
+            .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      let drop = true,
+        savedId = "";
+      await page.route(
+        "**/api/account/sales/with-attachments",
+        async (route) => {
+          if (drop) {
+            drop = false;
+            const committed = await route.fetch();
+            expect(committed.status()).toBe(201);
+            savedId = (await committed.json()).id;
+            await route.abort();
+          } else await route.continue();
+        },
+      );
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page.locator("main").last().getByRole("alert")).toBeVisible({
+        timeout: 30000,
+      });
+      await expect(
+        selection.getByRole("button", {
+          name: "Remove attachment sale-plan.pdf",
+          exact: true,
+        }),
+      ).toBeVisible();
+      expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
+        before + 1,
+      );
+      expect(
+        await db.commercialDocument.count({
+          where: { companyId, status: "DRAFT" },
+        }),
+      ).toBe(beforeDrafts);
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/sales/${savedId}$`), {
+        timeout: 30000,
+      });
+      expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
+        before + 1,
+      );
+      expect(
+        await db.journalEntry.count({
+          where: { companyId, sourceId: savedId, status: "POSTED" },
+        }),
+      ).toBe(1);
+      const attachments = page.getByRole("region", {
+        name: "Sale attachments",
+        exact: true,
+      });
+      await expect(
+        attachments.getByRole("link", { name: "sale-plan.pdf", exact: true }),
+      ).toBeVisible();
+      const [stored] = await db.commercialAttachment.findMany({
+        where: { companyId, documentId: savedId },
+      });
+      expect(stored.displayName).toBe("sale-plan.pdf");
+      const web = await page.request.get(
+        `/api/account/sale-attachments/${stored.id}`,
+      );
+      expect(web.status()).toBe(200);
+      expect(await web.body()).toEqual(bytes);
+      expect(web.headers()["cache-control"]).toContain("private");
+      expect(web.headers()["x-content-type-options"]).toBe("nosniff");
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include('section[aria-label="Sale attachments"]')
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      const current = await db.user.findUniqueOrThrow({
+          where: { id: userId },
+        }),
+        token = createSessionToken();
+      sessionHash = hashSessionToken(token);
+      await db.mobileSession.create({
+        data: {
+          userId,
+          tokenHash: sessionHash,
+          expiresAt: new Date(Date.now() + 3600000),
+          lastUsedAt: new Date(),
+          sessionVersion: current.sessionVersion,
+        },
+      });
+      const headers = { authorization: `Bearer ${token}` };
+      const list = await page.request.get(
+        `/api/v1/mobile/account/sales/${savedId}/attachments`,
+        { headers },
+      );
+      expect(list.status()).toBe(200);
+      const metadata = await list.json();
+      expect(metadata).toHaveLength(1);
+      expect(JSON.stringify(metadata)).not.toMatch(
+        /storageKey|contentHash|uploadedById/,
+      );
+      const native = await page.request.get(
+        `/api/v1/mobile/account/sale-attachments/${stored.id}`,
+        { headers },
+      );
+      expect(native.status()).toBe(200);
+      expect(await native.body()).toEqual(bytes);
+      expect(
+        (
+          await request.get(
+            `/api/v1/mobile/account/sale-attachments/${stored.id}`,
+          )
+        ).status(),
+      ).toBe(401);
+      const nativeInput = { ...input, idempotencyKey: randomUUID() },
+        multipart = {
+          document: JSON.stringify(nativeInput),
+          payment: "{}",
+          attachments: file,
+        };
+      const created = await page.request.post(
+        "/api/v1/mobile/account/sales/with-attachments",
+        { headers, multipart },
+      );
+      expect(created.status()).toBe(201);
+      const nativeSale = await created.json();
+      expect(nativeSale.status).toBe("POSTED");
+      const replay = await page.request.post(
+        "/api/v1/mobile/account/sales/with-attachments",
+        { headers, multipart },
+      );
+      expect(replay.status()).toBe(201);
+      expect((await replay.json()).id).toBe(nativeSale.id);
+      expect(
+        await db.commercialAttachment.count({
+          where: { companyId, documentId: nativeSale.id },
+        }),
+      ).toBe(1);
+    } finally {
+      if (sessionHash)
+        await db.mobileSession.deleteMany({
+          where: { tokenHash: sessionHash },
+        });
+      const rows = await db.commercialAttachment.findMany({
+        where: { companyId },
+        select: { storageKey: true },
+      });
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+        await tx.commercialAttachment.deleteMany({ where: { companyId } });
+      });
+      for (const row of rows) await privateStorage().delete(row.storageKey);
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: original.enabledModules,
+          transactionDefaults:
+            original.transactionDefaults as Prisma.InputJsonValue,
+        },
+      });
+    }
+  },
+);
+
+networkTest(
+  "A086 A087 Edit Sale support files preserve paid accounting and retry once",
+  async ({ page }) => {
+    test.setTimeout(240000);
+    const settings = await db.accountSettings.findUniqueOrThrow({
       where: { companyId },
-      select: { storageKey: true },
     });
-    await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
-      await tx.commercialAttachment.deleteMany({ where: { companyId } });
-    });
-    for (const file of files) await privateStorage().delete(file.storageKey);
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: settings.enabledModules,
-        transactionDefaults:
-          settings.transactionDefaults as Prisma.InputJsonValue,
-      },
-    });
-  }
-});
+    const bytes = Buffer.from("%PDF-1.7\nEdit Sale support fixture"),
+      pdf = (name: string) => ({
+        name,
+        mimeType: "application/pdf",
+        buffer: bytes,
+      });
+    try {
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: ["SALES", "CUSTOMER_RECEIPTS", "CUSTOMER_ADVANCES"],
+          transactionDefaults: {
+            transactionPreferences: {
+              invoicePreview: false,
+              linkPayments: false,
+              discountDuringPayment: true,
+            },
+          },
+        },
+      });
+      if (!(await db.financialYear.findFirst({ where: { companyId } })))
+        await db.financialYear.create({
+          data: {
+            companyId,
+            name: "Edit files year",
+            startDate: new Date("2026-01-01"),
+            endDate: new Date("2026-12-31"),
+          },
+        });
+      for (const row of DEFAULT_LEDGER_ACCOUNTS)
+        await db.ledgerAccount.upsert({
+          where: { companyId_code: { companyId, code: row.code } },
+          create: {
+            companyId,
+            code: row.code,
+            name: row.name,
+            accountClass: row.accountClass,
+            normalBalance: row.normalBalance,
+            systemKey: row.systemKey,
+            isSystem: row.isSystem,
+          },
+          update: { systemKey: row.systemKey },
+        });
+      const actor = {
+        ...(await db.user.findUniqueOrThrow({ where: { id: userId } })),
+        companyId,
+        branchIds: [],
+      } as ProjectActor;
+      const service = await db.accountService.create({
+        data: {
+          companyId,
+          name: "Edit support service",
+          sellingRate: "100",
+          taxRate: "0",
+        },
+      });
+      const source = await submitSaleForActor(
+        actor,
+        {
+          type: "SALES_INVOICE",
+          idempotencyKey: randomUUID(),
+          branchId,
+          partyId: customerId,
+          issueDate: "2026-10-21",
+          lines: [
+            {
+              lineType: "SERVICE",
+              sourceId: service.id,
+              quantity: "1",
+              rate: "100",
+              taxRate: "0",
+            },
+          ],
+        },
+        {},
+        "sale-save-receipt",
+        [new File([bytes], "original.pdf", { type: "application/pdf" })],
+      );
+      const receipt = await createSettlementForActor(actor, {
+        idempotencyKey: randomUUID(),
+        type: "CUSTOMER_RECEIPT",
+        branchId,
+        partyId: customerId,
+        paymentMode: "CASH",
+        amount: "90",
+        transactionDate: "2026-10-21",
+        allocations: [
+          { documentId: source.id, amount: "100", discountAmount: "10" },
+        ],
+      });
+      const snapshot = async () =>
+        JSON.stringify({
+          doc: await db.commercialDocument.findUniqueOrThrow({
+            where: { id: source.id },
+            include: { lines: true },
+          }),
+          receipt: await db.accountSettlement.findUniqueOrThrow({
+            where: { id: receipt.id },
+            include: { allocations: true },
+          }),
+          journals: await db.journalEntry.findMany({
+            where: { companyId },
+            orderBy: { id: "asc" },
+          }),
+          documents: await db.commercialDocument.count({
+            where: { companyId },
+          }),
+        });
+      const before = await snapshot();
+      await signInSettings(page);
+      await page.goto(`/workspace/account/sales/${source.id}`);
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      const region = page.getByRole("region", {
+        name: "Sale attachments",
+        exact: true,
+      });
+      await expect(
+        region.getByRole("link", { name: "original.pdf", exact: true }),
+      ).toBeVisible();
+      await region
+        .getByLabel("Add image or document", { exact: true })
+        .setInputFiles(pdf("support.pdf"));
+      let lost = true;
+      await page.route(
+        `**/api/account/sales/${source.id}/attachments`,
+        async (route) => {
+          if (lost) {
+            lost = false;
+            expect((await route.fetch()).status()).toBe(201);
+            await route.abort();
+          } else await route.continue();
+        },
+      );
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page.locator("main").last().getByRole("alert")).toBeVisible({
+        timeout: 30000,
+      });
+      expect(await snapshot()).toBe(before);
+      expect(
+        await db.commercialAttachment.count({
+          where: { companyId, documentId: source.id },
+        }),
+      ).toBe(2);
+      await expect(
+        region.getByRole("button", {
+          name: "Remove attachment support.pdf",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/sales/${source.id}$`), {
+        timeout: 30000,
+      });
+      await expect(
+        page
+          .getByRole("region", { name: "Sale attachments", exact: true })
+          .getByRole("link", { name: "support.pdf", exact: true }),
+      ).toBeVisible();
+      expect(await snapshot()).toBe(before);
+      expect(
+        await db.commercialAttachment.count({
+          where: { companyId, documentId: source.id },
+        }),
+      ).toBe(2);
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include('section[aria-label="Sale attachments"]')
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await region
+        .getByLabel("Add image or document", { exact: true })
+        .setInputFiles(pdf("correction.pdf"));
+      await page
+        .getByRole("button", { name: `Edit item ${service.name}`, exact: true })
+        .click();
+      await page.getByLabel("Rate (Price/Unit)", { exact: true }).fill("80");
+      await page
+        .locator("section")
+        .filter({
+          has: page.getByRole("heading", {
+            name: "Add Items to Sale",
+            exact: true,
+          }),
+        })
+        .getByRole("button", { name: "Save", exact: true })
+        .click();
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/, {
+        timeout: 30000,
+      });
+      const correctedId = page.url().split("/").at(-1)!;
+      expect(correctedId).not.toBe(source.id);
+      const corrected = await db.commercialDocument.findUniqueOrThrow({
+        where: { id: correctedId },
+      });
+      expect(corrected.grandTotal.toString()).toBe("80");
+      expect(
+        await db.commercialAttachment.count({
+          where: { companyId, documentId: source.id },
+        }),
+      ).toBe(2);
+      expect(
+        await db.commercialAttachment.count({
+          where: { companyId, documentId: correctedId },
+        }),
+      ).toBe(3);
+      await expect(
+        page
+          .getByRole("region", { name: "Sale attachments", exact: true })
+          .getByRole("link", { name: "correction.pdf", exact: true }),
+      ).toBeVisible({ timeout: 30000 });
+      await expect(
+        page.getByText(`${source.documentNumber}⌄`, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "View previous revision", exact: true }),
+      ).toHaveAttribute("href", `/workspace/account/sales/${source.id}`);
+      const printed = await page.request.get(
+        `/api/account/print/SALES_INVOICE/${correctedId}?format=pdf`,
+      );
+      expect(printed.status()).toBe(200);
+      const printedText = (await extractPdfText(await printed.body())).text;
+      expect(printedText).toContain(source.documentNumber);
+      expect(printedText).toMatch(/Revision\s+1/);
+      expect(
+        (
+          await db.accountSettlement.findUniqueOrThrow({
+            where: { id: receipt.id },
+          })
+        ).amount.toString(),
+      ).toBe("90");
+    } finally {
+      const files = await db.commercialAttachment.findMany({
+        where: { companyId },
+        select: { storageKey: true },
+      });
+      await db.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
+        await tx.commercialAttachment.deleteMany({ where: { companyId } });
+      });
+      for (const file of files) await privateStorage().delete(file.storageKey);
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: settings.enabledModules,
+          transactionDefaults:
+            settings.transactionDefaults as Prisma.InputJsonValue,
+        },
+      });
+    }
+  },
+);
 
 test("A086 native HTTP Edit Sale files append and correct with stable retry keys", async ({
   request,
@@ -26633,297 +26797,303 @@ test("A090 remaining asset inventory accounting and backup displays honor zero a
   }
 });
 
-test("A086 A087 payment references survive Cash Sale save detail edit and native retries", async ({
-  page,
-}) => {
-  test.setTimeout(240000);
-  const before = await db.accountSettings.findUniqueOrThrow({
-      where: { companyId },
-    }),
-    suffix = randomUUID().slice(0, 8);
-  try {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: ["SALES", "CUSTOMER_RECEIPTS"],
-        transactionDefaults: {
-          invoicePreview: false,
-          transactionPreferences: {
+networkTest(
+  "A086 A087 payment references survive Cash Sale save detail edit and native retries",
+  async ({ page }) => {
+    test.setTimeout(240000);
+    const before = await db.accountSettings.findUniqueOrThrow({
+        where: { companyId },
+      }),
+      suffix = randomUUID().slice(0, 8);
+    try {
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: ["SALES", "CUSTOMER_RECEIPTS"],
+          transactionDefaults: {
             invoicePreview: false,
-            linkPayments: false,
+            transactionPreferences: {
+              invoicePreview: false,
+              linkPayments: false,
+            },
           },
         },
-      },
-    });
-    if (!(await db.financialYear.findFirst({ where: { companyId } })))
-      await db.financialYear.create({
-        data: {
-          companyId,
-          name: "Reference year",
-          startDate: new Date("2026-01-01"),
-          endDate: new Date("2026-12-31"),
-        },
       });
-    for (const row of DEFAULT_LEDGER_ACCOUNTS)
-      await db.ledgerAccount.upsert({
-        where: { companyId_code: { companyId, code: row.code } },
-        create: {
-          companyId,
-          code: row.code,
-          name: row.name,
-          accountClass: row.accountClass,
-          normalBalance: row.normalBalance,
-          systemKey: row.systemKey,
-          isSystem: row.isSystem,
-        },
-        update: { systemKey: row.systemKey },
-      });
-    const party = await db.customer.create({
-        data: {
-          companyId,
-          branchId,
-          name: `Payment ref customer ${suffix}`,
-          isAccountCustomer: true,
-        },
-      }),
-      service = await db.accountService.create({
-        data: {
-          companyId,
-          name: `Payment ref service ${suffix}`,
-          sellingRate: "100",
-          taxRate: "0",
-        },
-      });
-    await signInSettings(page);
-    await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
-    await page
-      .getByPlaceholder("Search customer name or phone")
-      .fill(party.name);
-    await page.getByRole("button", { name: new RegExp(party.name) }).click();
-    await page.getByRole("button", { name: /Add Items/ }).click();
-    await page.getByText(service.name, { exact: true }).click();
-    const picker = page.locator("section").filter({
-      has: page.getByRole("heading", {
-        name: "Add Items to Sale",
-        exact: true,
-      }),
-    });
-    await picker.getByRole("button", { name: "Save", exact: true }).click();
-    const reference = page.getByLabel("Payment Ref No.", { exact: true });
-    await expect(reference).toBeDisabled();
-    await page.getByRole("button", { name: "Cash", exact: true }).click();
-    await expect(reference).toBeEnabled();
-    await reference.fill(`Cash reference ${suffix}`);
-    expect(
-      (
-        await new AxeBuilder({ page })
-          .include('label:has(>input[aria-label="Payment Ref No."])')
-          .withTags(["wcag2a", "wcag2aa"])
-          .analyze()
-      ).violations,
-    ).toEqual([]);
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/, {
-      timeout: 30000,
-    });
-    const id = page.url().split("/").at(-1)!;
-    const allocation = await db.settlementAllocation.findFirstOrThrow({
-      where: { companyId, documentId: id },
-      include: { settlement: true },
-    });
-    expect(allocation.settlement.reference).toBe(`Cash reference ${suffix}`);
-    expect(allocation.settlement.amount.toString()).toBe("100");
-    expect(
-      (
-        await db.$transaction((tx) =>
-          documentOutstandingInTx(tx, companyId, id),
-        )
-      ).outstanding.toString(),
-    ).toBe("0");
-    await expect(page.locator("main").last()).toContainText(
-      `Cash reference ${suffix}`,
-    );
-    await page.getByLabel("More invoice actions", { exact: true }).click();
-    await expect(
-      page
-        .getByRole("navigation", { name: "Invoice actions", exact: true })
-        .getByRole("link", { name: "Full transaction details", exact: true }),
-    ).toHaveAttribute("href", `/workspace/account/transactions/${id}`);
-    await expect(
-      page.getByRole("link", { name: "Edit saved Sale", exact: true }),
-    ).toHaveAttribute("href", `/workspace/account/sales/${id}/edit`);
-    await page.getByLabel("More invoice actions", { exact: true }).click();
-    await page
-      .getByRole("button", { name: "Share invoice", exact: true })
-      .click();
-    const shareDialog = page.getByRole("dialog", {
-      name: "Share invoice",
-      exact: true,
-    });
-    await expect(shareDialog).toBeVisible();
-    expect(
-      (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
-        .violations,
-    ).toEqual([]);
-    await page.keyboard.press("Escape");
-    await expect(shareDialog).not.toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Share invoice", exact: true }),
-    ).toBeFocused();
-    await page
-      .getByRole("button", { name: "Share invoice", exact: true })
-      .click();
-    const downloaded = page.waitForEvent("download");
-    await shareDialog
-      .getByRole("button", { name: "Share as PDF", exact: true })
-      .click();
-    const pdfDownload = await downloaded;
-    expect(pdfDownload.suggestedFilename()).toMatch(/\.pdf$/);
-    const { readFile } = await import("node:fs/promises");
-    expect(
-      (await readFile((await pdfDownload.path())!)).subarray(0, 4).toString(),
-    ).toBe("%PDF");
-    await expect(shareDialog).not.toBeVisible();
-    const printRoute = `**/api/account/print/SALES_INVOICE/${id}?format=pdf`;
-    await page.route(printRoute, (route) =>
-      route.fulfill({
-        status: 403,
-        contentType: "text/html",
-        body: "Forbidden",
-      }),
-    );
-    await page
-      .getByRole("button", { name: "Share invoice", exact: true })
-      .click();
-    await shareDialog
-      .getByRole("button", { name: "Share as PDF", exact: true })
-      .click();
-    await expect(shareDialog.getByRole("alert")).toContainText("permission");
-    await expect(shareDialog).toBeVisible();
-    await page.unroute(printRoute);
-    const imageDownload = page.waitForEvent("download");
-    await shareDialog
-      .getByRole("button", { name: "Share as images", exact: true })
-      .click();
-    const imageFile = await imageDownload;
-    expect(imageFile.suggestedFilename()).toMatch(/\.png$/);
-    expect(
-      (await readFile((await imageFile.path())!)).subarray(1, 4).toString(),
-    ).toBe("PNG");
-    await expect(shareDialog).not.toBeVisible();
-    expect(
-      await db.settlementAllocation.count({
-        where: { companyId, documentId: id },
-      }),
-    ).toBe(1);
-    await page.getByRole("link", { name: "Edit", exact: true }).click();
-    await expect(page).toHaveURL(`/workspace/account/sales/${id}/edit`, {
-      timeout: 30000,
-    });
-    await expect(
-      page.getByRole("region", { name: "Recorded payments", exact: true }),
-    ).toContainText(`Cash reference ${suffix}`);
-    await expect(
-      page.getByLabel("Payment Ref No.", { exact: true }),
-    ).toHaveCount(0);
-    const user = await db.user.findUniqueOrThrow({ where: { id: userId } }),
-      token = createSessionToken();
-    await db.mobileSession.create({
-      data: {
-        userId,
-        tokenHash: hashSessionToken(token),
-        expiresAt: new Date(Date.now() + 3600000),
-        lastUsedAt: new Date(),
-        sessionVersion: user.sessionVersion,
-      },
-    });
-    const headers = { authorization: `Bearer ${token}` },
-      payload = {
-        type: "SALES_INVOICE",
-        branchId,
-        partyId: party.id,
-        issueDate: "2026-10-23",
-        idempotencyKey: randomUUID(),
-        receivedInFull: true,
-        paymentType: "BANK",
-        paymentReference: `Native reference ${suffix}`,
-        lines: [
-          {
-            lineType: "SERVICE",
-            sourceId: service.id,
-            quantity: "1",
-            rate: "100",
+      if (!(await db.financialYear.findFirst({ where: { companyId } })))
+        await db.financialYear.create({
+          data: {
+            companyId,
+            name: "Reference year",
+            startDate: new Date("2026-01-01"),
+            endDate: new Date("2026-12-31"),
+          },
+        });
+      for (const row of DEFAULT_LEDGER_ACCOUNTS)
+        await db.ledgerAccount.upsert({
+          where: { companyId_code: { companyId, code: row.code } },
+          create: {
+            companyId,
+            code: row.code,
+            name: row.name,
+            accountClass: row.accountClass,
+            normalBalance: row.normalBalance,
+            systemKey: row.systemKey,
+            isSystem: row.isSystem,
+          },
+          update: { systemKey: row.systemKey },
+        });
+      const party = await db.customer.create({
+          data: {
+            companyId,
+            branchId,
+            name: `Payment ref customer ${suffix}`,
+            isAccountCustomer: true,
+          },
+        }),
+        service = await db.accountService.create({
+          data: {
+            companyId,
+            name: `Payment ref service ${suffix}`,
+            sellingRate: "100",
             taxRate: "0",
           },
-        ],
-      };
-    const saved = await page.request.post(
-      "/api/v1/mobile/account/transactions",
-      { headers, data: payload },
-    );
-    expect(saved.status()).toBe(201);
-    const nativeId = (await saved.json()).id,
-      retry = await page.request.post("/api/v1/mobile/account/transactions", {
-        headers,
-        data: payload,
+        });
+      await signInSettings(page);
+      await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
+      await page
+        .getByPlaceholder("Search customer name or phone")
+        .fill(party.name);
+      await page.getByRole("button", { name: new RegExp(party.name) }).click();
+      await page.getByRole("button", { name: /Add Items/ }).click();
+      await page.getByText(service.name, { exact: true }).click();
+      const picker = page.locator("section").filter({
+        has: page.getByRole("heading", {
+          name: "Add Items to Sale",
+          exact: true,
+        }),
       });
-    expect(retry.status()).toBe(201);
-    expect((await retry.json()).id).toBe(nativeId);
-    const nativeAllocation = await db.settlementAllocation.findFirstOrThrow({
-      where: { companyId, documentId: nativeId },
-      include: { settlement: true },
-    });
-    expect(nativeAllocation.settlement.reference).toBe(
-      payload.paymentReference,
-    );
-    const count = await db.commercialDocument.count({ where: { companyId } }),
-      journals = await db.journalEntry.count({ where: { companyId } }),
-      settlements = await db.accountSettlement.count({ where: { companyId } });
-    expect(
-      (
-        await page.request.post("/api/v1/mobile/account/transactions", {
+      await picker.getByRole("button", { name: "Save", exact: true }).click();
+      const reference = page.getByLabel("Payment Ref No.", { exact: true });
+      await expect(reference).toBeDisabled();
+      await page.getByRole("button", { name: "Cash", exact: true }).click();
+      await expect(reference).toBeEnabled();
+      await reference.fill(`Cash reference ${suffix}`);
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .include('label:has(>input[aria-label="Payment Ref No."])')
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page).toHaveURL(/\/workspace\/account\/sales\/[a-f0-9-]+$/, {
+        timeout: 30000,
+      });
+      const id = page.url().split("/").at(-1)!;
+      const allocation = await db.settlementAllocation.findFirstOrThrow({
+        where: { companyId, documentId: id },
+        include: { settlement: true },
+      });
+      expect(allocation.settlement.reference).toBe(`Cash reference ${suffix}`);
+      expect(allocation.settlement.amount.toString()).toBe("100");
+      expect(
+        (
+          await db.$transaction((tx) =>
+            documentOutstandingInTx(tx, companyId, id),
+          )
+        ).outstanding.toString(),
+      ).toBe("0");
+      await expect(page.locator("main").last()).toContainText(
+        `Cash reference ${suffix}`,
+      );
+      await page.getByLabel("More invoice actions", { exact: true }).click();
+      await expect(
+        page
+          .getByRole("navigation", { name: "Invoice actions", exact: true })
+          .getByRole("link", { name: "Full transaction details", exact: true }),
+      ).toHaveAttribute("href", `/workspace/account/transactions/${id}`);
+      await expect(
+        page.getByRole("link", { name: "Edit saved Sale", exact: true }),
+      ).toHaveAttribute("href", `/workspace/account/sales/${id}/edit`);
+      await page.getByLabel("More invoice actions", { exact: true }).click();
+      await page
+        .getByRole("button", { name: "Share invoice", exact: true })
+        .click();
+      const shareDialog = page.getByRole("dialog", {
+        name: "Share invoice",
+        exact: true,
+      });
+      await expect(shareDialog).toBeVisible();
+      expect(
+        (
+          await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa"])
+            .analyze()
+        ).violations,
+      ).toEqual([]);
+      await page.keyboard.press("Escape");
+      await expect(shareDialog).not.toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Share invoice", exact: true }),
+      ).toBeFocused();
+      await page
+        .getByRole("button", { name: "Share invoice", exact: true })
+        .click();
+      const downloaded = page.waitForEvent("download");
+      await shareDialog
+        .getByRole("button", { name: "Share as PDF", exact: true })
+        .click();
+      const pdfDownload = await downloaded;
+      expect(pdfDownload.suggestedFilename()).toMatch(/\.pdf$/);
+      const { readFile } = await import("node:fs/promises");
+      expect(
+        (await readFile((await pdfDownload.path())!)).subarray(0, 4).toString(),
+      ).toBe("%PDF");
+      await expect(shareDialog).not.toBeVisible();
+      const printRoute = `**/api/account/print/SALES_INVOICE/${id}?format=pdf`;
+      await page.route(printRoute, (route) =>
+        route.fulfill({
+          status: 403,
+          contentType: "text/html",
+          body: "Forbidden",
+        }),
+      );
+      await page
+        .getByRole("button", { name: "Share invoice", exact: true })
+        .click();
+      await shareDialog
+        .getByRole("button", { name: "Share as PDF", exact: true })
+        .click();
+      await expect(shareDialog.getByRole("alert")).toContainText("permission");
+      await expect(shareDialog).toBeVisible();
+      await page.unroute(printRoute);
+      const imageDownload = page.waitForEvent("download");
+      await shareDialog
+        .getByRole("button", { name: "Share as images", exact: true })
+        .click();
+      const imageFile = await imageDownload;
+      expect(imageFile.suggestedFilename()).toMatch(/\.png$/);
+      expect(
+        (await readFile((await imageFile.path())!)).subarray(1, 4).toString(),
+      ).toBe("PNG");
+      await expect(shareDialog).not.toBeVisible();
+      expect(
+        await db.settlementAllocation.count({
+          where: { companyId, documentId: id },
+        }),
+      ).toBe(1);
+      await page.getByRole("link", { name: "Edit", exact: true }).click();
+      await expect(page).toHaveURL(`/workspace/account/sales/${id}/edit`, {
+        timeout: 30000,
+      });
+      await expect(
+        page.getByRole("region", { name: "Recorded payments", exact: true }),
+      ).toContainText(`Cash reference ${suffix}`);
+      await expect(
+        page.getByLabel("Payment Ref No.", { exact: true }),
+      ).toHaveCount(0);
+      const user = await db.user.findUniqueOrThrow({ where: { id: userId } }),
+        token = createSessionToken();
+      await db.mobileSession.create({
+        data: {
+          userId,
+          tokenHash: hashSessionToken(token),
+          expiresAt: new Date(Date.now() + 3600000),
+          lastUsedAt: new Date(),
+          sessionVersion: user.sessionVersion,
+        },
+      });
+      const headers = { authorization: `Bearer ${token}` },
+        payload = {
+          type: "SALES_INVOICE",
+          branchId,
+          partyId: party.id,
+          issueDate: "2026-10-23",
+          idempotencyKey: randomUUID(),
+          receivedInFull: true,
+          paymentType: "BANK",
+          paymentReference: `Native reference ${suffix}`,
+          lines: [
+            {
+              lineType: "SERVICE",
+              sourceId: service.id,
+              quantity: "1",
+              rate: "100",
+              taxRate: "0",
+            },
+          ],
+        };
+      const saved = await page.request.post(
+        "/api/v1/mobile/account/transactions",
+        { headers, data: payload },
+      );
+      expect(saved.status()).toBe(201);
+      const nativeId = (await saved.json()).id,
+        retry = await page.request.post("/api/v1/mobile/account/transactions", {
           headers,
-          data: { ...payload, paymentReference: "Changed reference" },
-        })
-      ).status(),
-    ).toBe(409);
-    expect(
-      (
-        await page.request.post("/api/v1/mobile/account/transactions", {
-          headers,
-          data: {
-            ...payload,
-            idempotencyKey: randomUUID(),
-            paymentReference: "x".repeat(161),
-          },
-        })
-      ).status(),
-    ).toBe(400);
-    expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
-      count,
-    );
-    expect(await db.journalEntry.count({ where: { companyId } })).toBe(
-      journals,
-    );
-    expect(await db.accountSettlement.count({ where: { companyId } })).toBe(
-      settlements,
-    );
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-  } finally {
-    await db.accountSettings.update({
-      where: { companyId },
-      data: {
-        enabledModules: before.enabledModules,
-        transactionDefaults:
-          before.transactionDefaults as Prisma.InputJsonValue,
-      },
-    });
-  }
-});
+          data: payload,
+        });
+      expect(retry.status()).toBe(201);
+      expect((await retry.json()).id).toBe(nativeId);
+      const nativeAllocation = await db.settlementAllocation.findFirstOrThrow({
+        where: { companyId, documentId: nativeId },
+        include: { settlement: true },
+      });
+      expect(nativeAllocation.settlement.reference).toBe(
+        payload.paymentReference,
+      );
+      const count = await db.commercialDocument.count({ where: { companyId } }),
+        journals = await db.journalEntry.count({ where: { companyId } }),
+        settlements = await db.accountSettlement.count({
+          where: { companyId },
+        });
+      expect(
+        (
+          await page.request.post("/api/v1/mobile/account/transactions", {
+            headers,
+            data: { ...payload, paymentReference: "Changed reference" },
+          })
+        ).status(),
+      ).toBe(409);
+      expect(
+        (
+          await page.request.post("/api/v1/mobile/account/transactions", {
+            headers,
+            data: {
+              ...payload,
+              idempotencyKey: randomUUID(),
+              paymentReference: "x".repeat(161),
+            },
+          })
+        ).status(),
+      ).toBe(400);
+      expect(await db.commercialDocument.count({ where: { companyId } })).toBe(
+        count,
+      );
+      expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+        journals,
+      );
+      expect(await db.accountSettlement.count({ where: { companyId } })).toBe(
+        settlements,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    } finally {
+      await db.accountSettings.update({
+        where: { companyId },
+        data: {
+          enabledModules: before.enabledModules,
+          transactionDefaults:
+            before.transactionDefaults as Prisma.InputJsonValue,
+        },
+      });
+    }
+  },
+);
 
 test("A084 Day Book reconciles one day across Web native exports and scoped historical cash", async ({
   page,
@@ -27796,4 +27966,8 @@ test("A086 retained billed returns preserve original credit through shared Web e
       },
     });
   }
+});
+
+test.afterAll(async () => {
+  await db.$disconnect();
 });

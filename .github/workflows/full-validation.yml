@@ -27,6 +27,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
       DIRECT_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
+      ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_ci
       ACCOUNT_INTEGRATION_DATABASE_URL: postgresql://salespunch360_ci:salespunch360_ci@127.0.0.1:5432/salespunch360_test
       AUTH_SECRET: "ci-only-auth-secret-not-used-outside-github-actions"
       APP_URL: "https://www.salespunch360.com"

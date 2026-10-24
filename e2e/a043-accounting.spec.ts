@@ -118,7 +118,7 @@ test("three-line journal validation is recoverable and history confirms the post
     .getByLabel("Reference", { exact: true })
     .fill("Browser balanced journal");
   await page.getByRole("button", { name: "Add line", exact: true }).click();
-  const lines = page.locator("fieldset");
+  const lines = page.getByRole("group", { name: /^Line \d+$/ });
   await expect(lines).toHaveCount(3);
   await lines.nth(0).getByLabel("Ledger account").selectOption(cashId);
   await lines.nth(0).getByLabel("Debit", { exact: true }).fill("100");

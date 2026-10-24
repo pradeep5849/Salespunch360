@@ -1,3 +1,7 @@
+import {
+  createRecurringTemplateForActor,
+  generateRecurringExpenseForActor,
+} from "../src/lib/account/expenses";
 import { extractPdfText } from "../tests/helpers/pdf-text";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
@@ -15,19 +19,32 @@ import { hash } from "@node-rs/argon2";
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
 import AxeBuilder from "@axe-core/playwright";
+// Network-fault scenarios need observable browser requests; normal PWA cases remain enabled.
+const networkTest = test.extend({ serviceWorkers: "block" });
 const db = new PrismaClient(),
-  companyId = randomUUID(),
-  branchId = randomUUID(),
-  userId = randomUUID(),
-  cashLedger = randomUUID(),
-  expenseLedger = randomUUID(),
-  incomeLedger = randomUUID(),
-  moneyId = randomUUID(),
-  expenseCategory = randomUUID(),
-  incomeCategory = randomUUID(),
-  password = "Expense-browser-173!",
+  password = "Expense-browser-173!";
+let companyId = "",
+  branchId = "",
+  userId = "",
+  cashLedger = "",
+  expenseLedger = "",
+  incomeLedger = "",
+  moneyId = "",
+  expenseCategory = "",
+  incomeCategory = "",
+  email = "";
+// Each scenario owns its company, settings, sessions, stock and accounting history.
+test.beforeEach(async () => {
+  companyId = randomUUID();
+  branchId = randomUUID();
+  userId = randomUUID();
+  cashLedger = randomUUID();
+  expenseLedger = randomUUID();
+  incomeLedger = randomUUID();
+  moneyId = randomUUID();
+  expenseCategory = randomUUID();
+  incomeCategory = randomUUID();
   email = `${userId}@example.test`;
-test.beforeAll(async () => {
   const url = new URL(process.env.DATABASE_URL ?? "");
   if (
     !["localhost", "127.0.0.1"].includes(url.hostname) ||
@@ -140,7 +157,15 @@ test.beforeAll(async () => {
     ],
   });
 });
-test.afterAll(async () => {
+test.afterEach(async () => {
+  const cleanupUrl = new URL(
+    process.env.DATABASE_URL ?? "postgresql://invalid/invalid",
+  );
+  if (
+    !["localhost", "127.0.0.1"].includes(cleanupUrl.hostname) ||
+    !cleanupUrl.pathname.endsWith("_ci")
+  )
+    return;
   await db.mobileSession.deleteMany({ where: { userId } });
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${companyId},true)`;
@@ -190,7 +215,6 @@ test.afterAll(async () => {
   await db.user.deleteMany({ where: { companyId } });
   await db.branch.deleteMany({ where: { companyId } });
   await db.company.deleteMany({ where: { id: companyId } });
-  await db.$disconnect();
 });
 test("expense inline category, paid Save & New, review rejection and detail work at this viewport", async ({
   page,
@@ -569,8 +593,6 @@ test("A053 recurring schedules retain inputs, reject premature bills and replay 
   page,
   request,
 }) => {
-  const { createRecurringTemplateForActor, generateRecurringExpenseForActor } =
-    await import("../src/lib/account/expenses");
   const user = await db.user.findUniqueOrThrow({ where: { id: userId } }),
     actor = {
       ...user,
@@ -3631,288 +3653,301 @@ test("A053 web payment control posts a late bill while retaining its original du
   ).toEqual([]);
 });
 
-test("cheque entry and confirmed cash closure/reopening work at this viewport", async ({
-  page,
-}) => {
-  test.setTimeout(120000);
-  await db.ledgerAccount.createMany({
-    data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
-    skipDuplicates: true,
-  });
-  const bankLedger = await db.ledgerAccount.findFirstOrThrow({
-    where: { companyId, systemKey: "BANK" },
-  });
-  const bank = await db.moneyAccount.create({
-    data: {
-      companyId,
-      branchId,
-      type: "BANK",
-      name: "Cheque test bank",
-      ledgerAccountId: bankLedger.id,
-    },
-  });
-  const party = await db.customer.create({
-    data: {
-      companyId,
-      branchId,
-      name: "Cheque test customer",
-      isAccountCustomer: true,
-    },
-  });
-  await page.goto("/sign-in");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
-  await page.goto("/workspace/account/money/cheques");
-  for (const [tab, heading] of [
-    ["Open", "No open cheques"],
-    ["Closed", "No closed cheques"],
-    ["All", "No cheques"],
-  ]) {
+networkTest(
+  "cheque entry and confirmed cash closure/reopening work at this viewport",
+  async ({ page }) => {
+    test.setTimeout(120000);
+    await db.ledgerAccount.createMany({
+      data: DEFAULT_LEDGER_ACCOUNTS.map((row) => ({ ...row, companyId })),
+      skipDuplicates: true,
+    });
+    const bankLedger = await db.ledgerAccount.findFirstOrThrow({
+      where: { companyId, systemKey: "BANK" },
+    });
+    const bank = await db.moneyAccount.create({
+      data: {
+        companyId,
+        branchId,
+        type: "BANK",
+        name: "Cheque test bank",
+        ledgerAccountId: bankLedger.id,
+      },
+    });
+    const party = await db.customer.create({
+      data: {
+        companyId,
+        branchId,
+        name: "Cheque test customer",
+        isAccountCustomer: true,
+      },
+    });
+    await page.goto("/sign-in");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
+    await page.goto("/workspace/account/money/cheques");
+    for (const [tab, heading] of [
+      ["Open", "No open cheques"],
+      ["Closed", "No closed cheques"],
+      ["All", "No cheques"],
+    ]) {
+      await page
+        .getByRole("navigation", { name: "Cheque status tabs" })
+        .getByRole("link", { name: tab, exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: heading, exact: true }),
+      ).toBeVisible();
+    }
+    await page.getByRole("link", { name: "Open", exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Cheque status tabs" })
-      .getByRole("link", { name: tab, exact: true })
+      .getByRole("link", { name: "Date order: newest first", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", { name: heading, exact: true }),
+      page.getByRole("link", { name: "Date order: oldest first", exact: true }),
     ).toBeVisible();
-  }
-  await page.getByRole("link", { name: "Open", exact: true }).click();
-  await page
-    .getByRole("link", { name: "Date order: newest first", exact: true })
-    .click();
-  await expect(
-    page.getByRole("link", { name: "Date order: oldest first", exact: true }),
-  ).toBeVisible();
 
-  await page.getByText("Record cheque", { exact: true }).first().click();
-  await page.getByLabel("Bank account", { exact: true }).selectOption(bank.id);
-  const number = randomUUID().slice(0, 8);
-  await page.getByLabel("Cheque number", { exact: true }).fill(number);
-  await page.getByLabel("Cheque date", { exact: true }).fill("2026-10-10");
-  await page.getByLabel("Search party", { exact: true }).fill(party.name);
-  await page.getByRole("button", { name: "Find parties", exact: true }).click();
-  await expect(
-    page
-      .getByLabel("Party", { exact: true })
-      .locator("option", { hasText: party.name }),
-  ).toBeAttached({ timeout: 15000 });
-  await page.getByLabel("Party", { exact: true }).selectOption(party.id);
-  await page.getByLabel("Amount", { exact: true }).fill("1593.00");
-  const recordForm = page.locator("form").filter({
-    has: page.getByRole("button", { name: "Record cheque", exact: true }),
-  });
-  const originalKey = await recordForm
-    .locator('input[name="requestKey"]')
-    .inputValue();
-  await page
-    .getByRole("button", { name: "Record cheque", exact: true })
-    .click();
-  const card = page.getByRole("article", { name: `Cheque ${number}` });
-  await expect(card).toBeVisible({ timeout: 15000 });
-  await expect(
-    recordForm.getByLabel("Cheque number", { exact: true }),
-  ).toHaveValue("");
-  await expect(recordForm.getByLabel("Amount", { exact: true })).toHaveValue(
-    "",
-  );
-  await expect(recordForm.locator('input[name="requestKey"]')).not.toHaveValue(
-    originalKey,
-  );
+    await page.getByText("Record cheque", { exact: true }).first().click();
+    await page
+      .getByLabel("Bank account", { exact: true })
+      .selectOption(bank.id);
+    const number = randomUUID().slice(0, 8);
+    await page.getByLabel("Cheque number", { exact: true }).fill(number);
+    await page.getByLabel("Cheque date", { exact: true }).fill("2026-10-10");
+    await page.getByLabel("Search party", { exact: true }).fill(party.name);
+    await page
+      .getByRole("button", { name: "Find parties", exact: true })
+      .click();
+    await expect(
+      page
+        .getByLabel("Party", { exact: true })
+        .locator("option", { hasText: party.name }),
+    ).toBeAttached({ timeout: 15000 });
+    await page.getByLabel("Party", { exact: true }).selectOption(party.id);
+    await page.getByLabel("Amount", { exact: true }).fill("1593.00");
+    const recordForm = page.locator("form").filter({
+      has: page.getByRole("button", { name: "Record cheque", exact: true }),
+    });
+    const originalKey = await recordForm
+      .locator('input[name="requestKey"]')
+      .inputValue();
+    await page
+      .getByRole("button", { name: "Record cheque", exact: true })
+      .click();
+    const card = page.getByRole("article", { name: `Cheque ${number}` });
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await expect(
+      recordForm.getByLabel("Cheque number", { exact: true }),
+    ).toHaveValue("");
+    await expect(recordForm.getByLabel("Amount", { exact: true })).toHaveValue(
+      "",
+    );
+    await expect(
+      recordForm.locator('input[name="requestKey"]'),
+    ).not.toHaveValue(originalKey);
 
-  await page.getByRole("link", { name: "All", exact: true }).click();
-  await expect(card).toBeVisible();
-  await page
-    .getByLabel("Search cheques", { exact: true })
-    .fill("unmatched-cheque-reference");
-  await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(
-    page.getByRole("heading", {
-      name: "No cheques match this search",
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page.getByLabel("Search cheques", { exact: true }).fill(number);
-  await page.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(card).toBeVisible();
-  await page.getByRole("link", { name: "Open", exact: true }).click();
-  const recorded = await db.cheque.findFirstOrThrow({
-    where: { companyId, chequeNumber: number },
-  });
-  expect(
-    (
-      await db.accountSettlement.findUniqueOrThrow({
-        where: { id: recorded.settlementId! },
-      })
-    ).status,
-  ).toBe("PENDING_CHEQUE");
-  await card.getByLabel("Action date", { exact: true }).fill("2026-10-12");
-  await card
-    .getByLabel("Description", { exact: true })
-    .fill("Cash closure reference");
-  await card
-    .getByLabel("Payment account", { exact: true })
-    .selectOption(moneyId);
-  await card
-    .getByRole("button", { name: "Confirm cheque action", exact: true })
-    .click();
-  await expect(card).not.toBeAttached({ timeout: 15000 });
-  await expect(
-    page.getByRole("status", { name: "Cheque notification", exact: true }),
-  ).toContainText("Cheque updated");
-  await page.getByRole("link", { name: "Closed", exact: true }).click();
-  await expect(card).toContainText("CLEARED");
-  await expect(card).toContainText("Cash closure reference");
-  await expect(card).toContainText("Cash account:");
-  await expect(card.getByText("Bank:", { exact: false })).toHaveCount(0);
-  await card
-    .getByLabel("Cheque action", { exact: true })
-    .selectOption("REOPEN");
-  const reopen = card.getByRole("button", {
-    name: "Re-open cheque",
-    exact: true,
-  });
-  const closedBefore = await db.cheque.findUniqueOrThrow({
-    where: { id: recorded.id },
-  });
-  await reopen.click();
-  const confirmation = page.getByRole("dialog", {
-    name: "Re-open cheque?",
-    exact: true,
-  });
-  await expect(confirmation).toBeVisible();
-  await confirmation
-    .getByLabel("Action date", { exact: true })
-    .fill("2026-10-13");
-  await confirmation.getByLabel("Reason", { exact: true }).fill("Undo closure");
-  const journalsBeforeInvalid = await db.journalEntry.count({
-    where: { companyId },
-  });
-  await confirmation
-    .getByLabel("Action date", { exact: true })
-    .fill("2026-10-11");
-  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
-  const correctionError = confirmation.getByRole("alert");
-  await expect(correctionError).toHaveText(
-    "The correction date cannot be before the original payment date.",
-  );
-  await expect(correctionError).toBeFocused();
-  await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
-    "Undo closure",
-  );
-  await expect(
-    confirmation.getByLabel("Action date", { exact: true }),
-  ).toHaveValue("2026-10-11");
-  expect(
-    (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
-      .actionVersion,
-  ).toBe(closedBefore.actionVersion);
-  expect(await db.journalEntry.count({ where: { companyId } })).toBe(
-    journalsBeforeInvalid,
-  );
-  for (let tab = 0; tab < 8; tab++) {
-    await page.keyboard.press("Tab");
+    await page.getByRole("link", { name: "All", exact: true }).click();
+    await expect(card).toBeVisible();
+    await page
+      .getByLabel("Search cheques", { exact: true })
+      .fill("unmatched-cheque-reference");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "No cheques match this search",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.getByLabel("Search cheques", { exact: true }).fill(number);
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(card).toBeVisible();
+    await page.getByRole("link", { name: "Open", exact: true }).click();
+    const recorded = await db.cheque.findFirstOrThrow({
+      where: { companyId, chequeNumber: number },
+    });
     expect(
-      await confirmation.evaluate((node) =>
-        node.contains(document.activeElement),
-      ),
-    ).toBe(true);
-  }
-  await confirmation
-    .getByLabel("Action date", { exact: true })
-    .fill("2026-10-13");
-  expect(
-    (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
-  ).toEqual([]);
-  await confirmation
-    .getByRole("button", { name: "Cancel", exact: true })
-    .click();
-  await expect(confirmation).not.toBeVisible();
-  await expect(reopen).toBeFocused();
-  await reopen.click();
-  await confirmation
-    .getByRole("button", { name: "Close", exact: true })
-    .click();
-  await expect(confirmation).not.toBeVisible();
-  await reopen.click();
-  await page.keyboard.press("Escape");
-  await expect(confirmation).not.toBeVisible();
-  expect(
-    (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
-      .actionVersion,
-  ).toBe(closedBefore.actionVersion);
-  await reopen.click();
-  await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
-    "Undo closure",
-  );
-  let releaseFailure: () => void = () => {};
-  const failureGate = new Promise<void>((resolve) => {
-    releaseFailure = resolve;
-  });
-  const holdAction = async (route: import("@playwright/test").Route) => {
-    if (
-      route.request().method() === "POST" &&
-      route.request().headers()["next-action"]
-    ) {
-      await failureGate;
-      await route.abort("failed");
-    } else await route.continue();
-  };
-  await page.route("**/workspace/account/money/cheques**", holdAction);
-  const seen = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" && !!request.headers()["next-action"],
-  );
-  try {
+      (
+        await db.accountSettlement.findUniqueOrThrow({
+          where: { id: recorded.settlementId! },
+        })
+      ).status,
+    ).toBe("PENDING_CHEQUE");
+    await card.getByLabel("Action date", { exact: true }).fill("2026-10-12");
+    await card
+      .getByLabel("Description", { exact: true })
+      .fill("Cash closure reference");
+    await card
+      .getByLabel("Payment account", { exact: true })
+      .selectOption(moneyId);
+    await card
+      .getByRole("button", { name: "Confirm cheque action", exact: true })
+      .click();
+    await expect(card).not.toBeAttached({ timeout: 15000 });
+    await expect(
+      page.getByRole("status", { name: "Cheque notification", exact: true }),
+    ).toContainText("Cheque updated");
+    await page.getByRole("link", { name: "Closed", exact: true }).click();
+    await expect(card).toContainText("CLEARED");
+    await expect(card).toContainText("Cash closure reference");
+    await expect(card).toContainText("Cash account:");
+    await expect(card.getByText("Bank:", { exact: false })).toHaveCount(0);
+    await card
+      .getByLabel("Cheque action", { exact: true })
+      .selectOption("REOPEN");
+    const reopen = card.getByRole("button", {
+      name: "Re-open cheque",
+      exact: true,
+    });
+    const closedBefore = await db.cheque.findUniqueOrThrow({
+      where: { id: recorded.id },
+    });
+    await reopen.click();
+    const confirmation = page.getByRole("dialog", {
+      name: "Re-open cheque?",
+      exact: true,
+    });
+    await expect(confirmation).toBeVisible();
+    await confirmation
+      .getByLabel("Action date", { exact: true })
+      .fill("2026-10-13");
+    await confirmation
+      .getByLabel("Reason", { exact: true })
+      .fill("Undo closure");
+    const journalsBeforeInvalid = await db.journalEntry.count({
+      where: { companyId },
+    });
+    await confirmation
+      .getByLabel("Action date", { exact: true })
+      .fill("2026-10-11");
     await confirmation
       .getByRole("button", { name: "Yes", exact: true })
       .click();
-    await seen;
+    const correctionError = confirmation.getByRole("alert");
+    await expect(correctionError).toHaveText(
+      "The correction date cannot be before the original payment date.",
+    );
+    await expect(correctionError).toBeFocused();
     await expect(
       confirmation.getByLabel("Reason", { exact: true }),
-    ).toBeDisabled();
+    ).toHaveValue("Undo closure");
     await expect(
-      card.getByLabel("Cheque action", { exact: true }),
-    ).toBeDisabled();
-    await expect(confirmation.locator('button[type="submit"]')).toBeDisabled();
-  } finally {
-    releaseFailure();
-  }
-  await expect(confirmation.getByRole("alert")).toHaveText(
-    "Connection interrupted. Your inputs were kept; try again when online.",
-  );
-  await expect(confirmation.getByRole("alert")).toBeFocused();
-  await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
-    "Undo closure",
-  );
-  expect(
-    (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
-      .actionVersion,
-  ).toBe(closedBefore.actionVersion);
-  await page.unroute("**/workspace/account/money/cheques**", holdAction);
-  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
-  await expect(card).not.toBeAttached({ timeout: 15000 });
-  await expect(
-    page.getByRole("status", { name: "Cheque notification", exact: true }),
-  ).toContainText("Cheque updated");
-  await page.getByRole("link", { name: "Open", exact: true }).click();
-  await expect(card).toContainText("RECEIVED");
-  expect(
-    (
-      await db.accountSettlement.findUniqueOrThrow({
-        where: { id: recorded.settlementId! },
-      })
-    ).status,
-  ).toBe("REVERSED");
-  const axe = await new AxeBuilder({ page }).include("article").analyze();
-  expect(axe.violations).toEqual([]);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-});
+      confirmation.getByLabel("Action date", { exact: true }),
+    ).toHaveValue("2026-10-11");
+    expect(
+      (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
+        .actionVersion,
+    ).toBe(closedBefore.actionVersion);
+    expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+      journalsBeforeInvalid,
+    );
+    for (let tab = 0; tab < 8; tab++) {
+      await page.keyboard.press("Tab");
+      expect(
+        await confirmation.evaluate((node) =>
+          node.contains(document.activeElement),
+        ),
+      ).toBe(true);
+    }
+    await confirmation
+      .getByLabel("Action date", { exact: true })
+      .fill("2026-10-13");
+    expect(
+      (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+    ).toEqual([]);
+    await confirmation
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    await expect(confirmation).not.toBeVisible();
+    await expect(reopen).toBeFocused();
+    await reopen.click();
+    await confirmation
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
+    await expect(confirmation).not.toBeVisible();
+    await reopen.click();
+    await page.keyboard.press("Escape");
+    await expect(confirmation).not.toBeVisible();
+    expect(
+      (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
+        .actionVersion,
+    ).toBe(closedBefore.actionVersion);
+    await reopen.click();
+    await expect(
+      confirmation.getByLabel("Reason", { exact: true }),
+    ).toHaveValue("Undo closure");
+    let releaseFailure: () => void = () => {};
+    const failureGate = new Promise<void>((resolve) => {
+      releaseFailure = resolve;
+    });
+    const holdAction = async (route: import("@playwright/test").Route) => {
+      if (
+        route.request().method() === "POST" &&
+        route.request().headers()["next-action"]
+      ) {
+        await failureGate;
+        await route.abort("failed");
+      } else await route.continue();
+    };
+    await page.route("**/workspace/account/money/cheques**", holdAction);
+    const seen = page.waitForRequest(
+      (request) =>
+        request.method() === "POST" && !!request.headers()["next-action"],
+    );
+    try {
+      await confirmation
+        .getByRole("button", { name: "Yes", exact: true })
+        .click();
+      await seen;
+      await expect(
+        confirmation.getByLabel("Reason", { exact: true }),
+      ).toBeDisabled();
+      await expect(
+        card.getByLabel("Cheque action", { exact: true }),
+      ).toBeDisabled();
+      await expect(
+        confirmation.locator('button[type="submit"]'),
+      ).toBeDisabled();
+    } finally {
+      releaseFailure();
+    }
+    await expect(confirmation.getByRole("alert")).toHaveText(
+      "Connection interrupted. Your inputs were kept; try again when online.",
+    );
+    await expect(confirmation.getByRole("alert")).toBeFocused();
+    await expect(
+      confirmation.getByLabel("Reason", { exact: true }),
+    ).toHaveValue("Undo closure");
+    expect(
+      (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
+        .actionVersion,
+    ).toBe(closedBefore.actionVersion);
+    await page.unroute("**/workspace/account/money/cheques**", holdAction);
+    await confirmation
+      .getByRole("button", { name: "Yes", exact: true })
+      .click();
+    await expect(card).not.toBeAttached({ timeout: 15000 });
+    await expect(
+      page.getByRole("status", { name: "Cheque notification", exact: true }),
+    ).toContainText("Cheque updated");
+    await page.getByRole("link", { name: "Open", exact: true }).click();
+    await expect(card).toContainText("RECEIVED");
+    expect(
+      (
+        await db.accountSettlement.findUniqueOrThrow({
+          where: { id: recorded.settlementId! },
+        })
+      ).status,
+    ).toBe("REVERSED");
+    const axe = await new AxeBuilder({ page }).include("article").analyze();
+    expect(axe.violations).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  },
+);
 
 test("legacy cheque source completion saves explicit details without posting at this viewport", async ({
   page,
@@ -4787,4 +4822,8 @@ test("A066 View Txn opens multi-invoice payments and advances without recognizin
       data: { enabledModules: oldSettings.enabledModules },
     });
   }
+});
+
+test.afterAll(async () => {
+  await db.$disconnect();
 });

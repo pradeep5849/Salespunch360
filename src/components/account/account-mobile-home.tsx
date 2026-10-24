@@ -4,7 +4,7 @@ import Link from "next/link";
 import {printPdfPageImages} from "./print-page-images";
 import {preparePrintPdf,isShareCancellation} from "./share-print-file";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccountDate } from "./display-preferences";
 import { Money } from "./account-ui";
 import { AccountIcon, type AccountIconName } from "./account-icons";
@@ -194,6 +194,26 @@ export function AccountMobileHome({
   const [active, setActive] = useState<Transaction | null>(null);
   const [draftTypes, setDraftTypes] = useState(selectedTypes);
   const [floatingVisible, setFloatingVisible] = useState(true);
+  const searchInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Browser history restores edited form values after popstate/pageshow.
+    // Reconcile the search box with the URL after that restoration completes.
+    const restoreSearch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (searchInput.current) searchInput.current.value = (new URL(window.location.href).searchParams.get("q") ?? "").trim().slice(0, 100);
+      }, 0);
+    };
+    window.addEventListener("pageshow", restoreSearch);
+    window.addEventListener("popstate", restoreSearch);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("pageshow", restoreSearch);
+      window.removeEventListener("popstate", restoreSearch);
+    };
+  }, []);
+
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const onScroll = () => {
@@ -330,13 +350,21 @@ export function AccountMobileHome({
           )}
         </div>
       </section>
-      <form className="account-home-search">
+      <form className="account-home-search" onSubmit={event => {
+        event.preventDefault();
+        const next = new URLSearchParams();
+        for (const [name, value] of new FormData(event.currentTarget)) {
+          if (typeof value === "string") next.append(name, value);
+        }
+        router.push(`${pathname}?${next.toString()}`);
+      }}>
         <label>
           <span aria-hidden>
             <AccountIcon name="search" />
           </span>
           <input
             type="search"
+            ref={searchInput}
             name="q"
             key={`${tab}:${q}`}
             defaultValue={q}
