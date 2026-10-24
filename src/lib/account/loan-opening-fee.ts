@@ -5,7 +5,7 @@ const optional=(value:unknown)=>value===""||value==null?undefined:value;
 export const openingFeeInputShape={
  openingFeeAmount:z.preprocess(optional,amount.optional()),
  openingFeeMode:z.preprocess(optional,z.enum(["DEDUCTED","SEPARATE"]).optional()),
- openingFeeAccountId:z.preprocess(optional,z.string().uuid().optional()),
+ openingFeeAccountId:z.preprocess(optional,z.string().guid().optional()),
 };
 export type LoanOpeningFeeInput={principal:string|Prisma.Decimal;openingFeeAmount?:string;openingFeeMode?:"DEDUCTED"|"SEPARATE";openingFeeAccountId?:string};
 /** Principal is always gross borrowing; a fee never increases the liability. */

@@ -9,7 +9,7 @@ import {chequePaymentDetails} from "./cheque-payment-input";
 import {prepareSaleAttachments,saleAttachmentManifest,storeSaleAttachmentsInTx,cleanSaleAttachmentAttempts} from "./sale-attachments";
 import {commercialCreationHash} from "./commercial-request-identity";
 type Actor=Parameters<typeof createCommercialDocumentForActor>[0];
-const paymentInput=z.object({receivedAmount:z.union([z.number(),z.string()]).default("0").refine(value=>/^-?\d+(?:\.\d+)?$/.test(String(value)),"Invalid received amount"),receivedInFull:z.boolean().default(false),paymentType:z.enum(["CASH","BANK","CHEQUE","UPI","CARD"]).default("CASH"),chequeNumber:z.string().optional(),chequeDate:z.string().optional(),moneyAccountId:z.string().uuid().optional(),reference:z.string().max(160).optional().transform(value=>value===""?undefined:value)});
+const paymentInput=z.object({receivedAmount:z.union([z.number(),z.string()]).prefault("0").refine(value=>/^-?\d+(?:\.\d+)?$/.test(String(value)),"Invalid received amount"),receivedInFull:z.boolean().prefault(false),paymentType:z.enum(["CASH","BANK","CHEQUE","UPI","CARD"]).prefault("CASH"),chequeNumber:z.string().optional(),chequeDate:z.string().optional(),moneyAccountId:z.string().guid().optional(),reference:z.string().max(160).optional().transform(value=>value===""?undefined:value)});
 /** Sale Save is one commit: invoice, posting and any receipt. No independent draft survives failure. */
 export async function submitSaleForActor(actor:Actor,raw:unknown,payment:unknown={},receiptPrefix:"sale-save-receipt"|"mobile-sale-receipt"="sale-save-receipt",files:File[]=[]){
  if(!raw||typeof raw!=="object"||Array.isArray(raw)||(raw as {type?:unknown}).type!=="SALES_INVOICE")throw new Error("INVALID_INPUT");
@@ -20,7 +20,7 @@ export async function submitSaleForActor(actor:Actor,raw:unknown,payment:unknown
  if(hasPayment&&!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTLEMENT_ENTRY"))throw new AuthorizationError();
  if(hasPayment&&p.paymentType==="CHEQUE")chequePaymentDetails.parse(p);
  const prepared=await prepareSaleAttachments(actor,files),attemptedKeys=new Set<string>();
- if(prepared.length&&!z.string().uuid().safeParse((raw as {idempotencyKey?:unknown}).idempotencyKey).success)throw new Error("SALE_ATTACHMENT_REQUEST_KEY_REQUIRED");
+ if(prepared.length&&!z.string().guid().safeParse((raw as {idempotencyKey?:unknown}).idempotencyKey).success)throw new Error("SALE_ATTACHMENT_REQUEST_KEY_REQUIRED");
  const attachmentSaveIntent=prepared.length?commercialCreationHash({files:saleAttachmentManifest(prepared),payment:{...p,receivedAmount:received.toString()}}):undefined;
  try{return await inAccountTransaction(undefined,async tx=>{
   const row=prepared.length?await createCommercialDocumentForActor(actor,raw,tx,undefined,attachmentSaveIntent):await createCommercialDocumentForActor(actor,raw,tx);

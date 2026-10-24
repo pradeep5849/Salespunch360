@@ -5,7 +5,7 @@ import { resolveAccountBranchContext } from "./branch-context";
 import type { ProjectActor } from "./projects";
 export const moneyReadQuery = z
   .object({
-    branchId: z.string().uuid().optional(),
+    branchId: z.string().guid().optional(),
     scope: z.literal("all").optional(),
   })
   .strict()

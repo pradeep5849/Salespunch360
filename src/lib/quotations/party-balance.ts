@@ -6,7 +6,7 @@ import {canUsePermission} from "@/lib/auth/permissions";
 import {requireAccountModules} from "@/lib/account/modules";
 import {currentPartyBalanceForActor} from "@/lib/account/party-balance";
 import type {ProjectActor} from "@/lib/account/projects";
-export const quotationPartyBalanceInput=z.object({partyId:z.string().uuid(),branchId:z.string().uuid()}).strict();
+export const quotationPartyBalanceInput=z.object({partyId:z.string().guid(),branchId:z.string().guid()}).strict();
 /** Same posted/opening/receipt/advance definition as Sale Details, within authorized branches. */
 export async function quotationPartyBalanceForActor(actor:ProjectActor,raw:unknown){
  if(!actor.companyId||!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_QUOTATION_VIEW")||!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LEDGER_VIEW")||!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS"))throw new AuthorizationError();

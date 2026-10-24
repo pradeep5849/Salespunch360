@@ -4,12 +4,12 @@ import {db} from "@/lib/db";
 import {AuthorizationError} from "@/lib/auth/authorization";
 import {moneyReadContext} from "./money-context";
 import type {ProjectActor} from "./projects";
-const query=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional(),offset:z.coerce.number().int().min(0).max(1000000).default(0),limit:z.coerce.number().int().min(1).max(100).default(50)}).strict();
+const query=z.object({branchId:z.string().guid().optional(),scope:z.literal("all").optional(),offset:z.coerce.number().int().min(0).max(1000000).prefault(0),limit:z.coerce.number().int().min(1).max(100).prefault(50)}).strict();
 type Row={id:string;entryDate:Date;journalNumber:string;sourceType:string;status:string;narration:string|null;debit:Prisma.Decimal;credit:Prisma.Decimal;balance:Prisma.Decimal;payment:Prisma.Decimal|null};
 /** Include fee-only payments and correcting reversal journals, with balances
  * computed over the full history before pagination. */
 export async function loanHistoryForActor(actor:ProjectActor,id:string,raw:unknown={}){
- z.string().uuid().parse(id);const f=query.parse(raw);const resolved=await moneyReadContext(actor,{...(f.branchId?{branchId:f.branchId}:{}),...(f.scope?{scope:f.scope}:{})});
+ z.string().guid().parse(id);const f=query.parse(raw);const resolved=await moneyReadContext(actor,{...(f.branchId?{branchId:f.branchId}:{}),...(f.scope?{scope:f.scope}:{})});
  return db.$transaction(async tx=>{
   const loan=await tx.loan.findFirst({where:{id,companyId:actor.companyId,...(resolved.context.mode==="BRANCH"?{branchId:resolved.context.branchId}:{})}});
   if(!loan)throw new AuthorizationError();

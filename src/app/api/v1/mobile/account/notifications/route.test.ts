@@ -38,7 +38,7 @@ describe("mobile notification scope and privacy", () => {
     mocks.money.mockRejectedValueOnce(new AuthorizationError());
     expect((await GET(request)).status).toBe(403);
     mocks.money.mockRejectedValueOnce(
-      z.string().uuid().safeParse("invalid").error,
+      z.string().guid().safeParse("invalid").error,
     );
     expect((await GET(request)).status).toBe(400);
   });

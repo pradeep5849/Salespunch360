@@ -15,13 +15,13 @@ const date = z
     );
   }, "Enter a valid opening date");
 export const itemCreationExtras = z.object({
-  creationRequestKey: z.string().uuid().optional(),
+  creationRequestKey: z.string().guid().optional(),
   itemLocation: z.string().trim().max(240).optional(),
   openingStock: z
     .object({
       warehouseId: z.preprocess(
         (value) => (value === "" ? undefined : value),
-        z.string().uuid().optional(),
+        z.string().guid().optional(),
       ),
       quantity: decimal,
       unitCost: decimal,

@@ -16,7 +16,7 @@ export function homeSettlementRow(row:Header):HomeSourceRow{
  * performed by opening this view. Amounts distinguish cash from discounts. */
 export async function homeSettlementForActor(actor:AccountBranchActor,id:string){
  if(!actor.accountRole||!ACCOUNT_ROLE_PERMISSIONS[actor.accountRole].includes("ACCOUNT_LEDGER_VIEW"))throw new AuthorizationError();
- if(!z.string().uuid().safeParse(id).success)return null;
+ if(!z.string().guid().safeParse(id).success)return null;
  const project=await homeSettlementProjectScope(actor);
  const row=await db.accountSettlement.findFirst({where:{id,companyId:actor.companyId,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:[...(actor.branchIds??[])]}}:{}),...project},include:{customer:{select:{name:true}},vendor:{select:{name:true}},branch:{select:{name:true}},journalEntry:{select:{status:true}},allocations:{include:{document:{select:{documentNumber:true,type:true,status:true}}}},openingAllocations:{include:{openingBalance:{select:{effectiveDate:true}}}}}});
  if(!row)return null;

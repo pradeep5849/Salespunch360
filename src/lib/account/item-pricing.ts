@@ -5,10 +5,10 @@ import type { ItemSettings } from "./item-settings-policy";
 const amount = z.string().regex(/^\d{1,14}(\.\d{1,4})?$/);
 export const itemPricingInput = z
   .object({
-    saleTaxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
-    purchaseTaxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
-    discountType: z.enum(["PERCENTAGE", "FIXED"]).default("PERCENTAGE"),
-    discountValue: amount.default("0"),
+    saleTaxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).prefault("EXCLUSIVE"),
+    purchaseTaxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).prefault("EXCLUSIVE"),
+    discountType: z.enum(["PERCENTAGE", "FIXED"]).prefault("PERCENTAGE"),
+    discountValue: amount.prefault("0"),
     wholesalePrice: amount.optional(),
     mrp: amount.optional(),
   })

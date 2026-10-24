@@ -686,7 +686,7 @@ export async function loadProjectCosting(projectId: string) {
 const signedMoney = z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/);
 const changeInput = z
   .object({
-    projectId: z.string().uuid(),
+    projectId: z.string().guid(),
     title: z.string().trim().min(1).max(240),
     description: z.string().trim().max(5000).optional(),
     valueDelta: signedMoney,
@@ -782,7 +782,7 @@ export async function createChangeOrder(raw: unknown) {
 export async function updateChangeOrderForActor(actor: Actor, raw: unknown) {
   const data = changeInput
     .omit({ idempotencyKey: true })
-    .extend({ changeOrderId: z.string().uuid() })
+    .extend({ changeOrderId: z.string().guid() })
     .parse(raw);
   const project = await editableCostProject(actor, data.projectId);
   return retrySerializable(() =>
@@ -858,8 +858,8 @@ export async function transitionChangeOrderForActor(
   to: ProjectChangeOrderStatus,
 ) {
   z.object({
-    projectId: z.string().uuid(),
-    changeOrderId: z.string().uuid(),
+    projectId: z.string().guid(),
+    changeOrderId: z.string().guid(),
     to: z.nativeEnum(ProjectChangeOrderStatus),
   }).parse({ projectId, changeOrderId, to });
   const project = await editableCostProject(actor, projectId);

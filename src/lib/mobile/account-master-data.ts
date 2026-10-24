@@ -43,11 +43,11 @@ type MasterKind =
   | "units"
   | "categories";
 const warehouseSchema = z.object({
-  branchId: z.string().uuid(),
+  branchId: z.string().guid(),
   name: z.string().trim().min(1).max(160),
   code: z.string().trim().min(1).max(60),
   address: z.string().trim().max(2000).optional(),
-  isDefault: z.boolean().default(false),
+  isDefault: z.boolean().prefault(false),
   isActive: z.boolean().optional(),
 });
 function publicItem<T extends object>(row: T) {
@@ -59,9 +59,9 @@ function publicItem<T extends object>(row: T) {
 }
 const itemMobileSchema = itemSchema.extend({
   barcode: z.string().trim().max(120).optional(),
-  trackInventory: z.boolean().default(false),
-  trackingMode: z.enum(["NONE", "BATCH", "SERIAL"]).default("NONE"),
-  lowStockThreshold: z.coerce.number().min(0).max(99999999999999).default(0),
+  trackInventory: z.boolean().prefault(false),
+  trackingMode: z.enum(["NONE", "BATCH", "SERIAL"]).prefault("NONE"),
+  lowStockThreshold: z.coerce.number().min(0).max(99999999999999).prefault(0),
   isActive: z.boolean().optional(),
 });
 
@@ -316,7 +316,7 @@ export async function getMobileAccountMaster(
   id: string,
 ) {
   actor(user, kind);
-  if (!z.string().uuid().safeParse(id).success)
+  if (!z.string().guid().safeParse(id).success)
     throw new Error("INVALID_INPUT");
   const rows = await listMobileAccountMaster(user, kind, { active: "all", id });
   const record = (rows as Array<{ id: string }>).find((row) => row.id === id);
@@ -419,12 +419,12 @@ export async function saveMobileAccountMaster(
 ) {
   actor(user, kind, true);
   await assertOperationalWrite(user.companyId);
-  if (id && !z.string().uuid().safeParse(id).success)
+  if (id && !z.string().guid().safeParse(id).success)
     throw new Error("INVALID_INPUT");
   if (kind === "customers" || kind === "vendors") {
     const parsed = partySchema
         .extend({
-          branchId: z.string().uuid().optional(),
+          branchId: z.string().guid().optional(),
           isActive: z.boolean().optional(),
           customFields: z.record(z.string(), z.string()).optional(),
         })
@@ -545,7 +545,7 @@ export async function saveMobileAccountMaster(
     const input = itemSchema
         .extend({
           isActive: z.boolean().optional(),
-          customFields: z.record(z.string(), z.string()).default({}),
+          customFields: z.record(z.string(), z.string()).prefault({}),
         })
         .parse(raw),
       data = {
@@ -598,7 +598,7 @@ export async function saveMobileAccountMaster(
   }
   if (kind === "items") {
     const input = itemMobileSchema
-      .extend({ customFields: z.record(z.string(), z.string()).default({}) })
+      .extend({ customFields: z.record(z.string(), z.string()).prefault({}) })
       .parse(raw);
     const extras = itemCreationExtras.parse(raw);
     if (id && (extras.openingStock || extras.creationRequestKey))

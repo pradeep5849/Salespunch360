@@ -210,8 +210,8 @@ const categoryInput = z
   .object({
     name: z.string().trim().min(1).max(160),
     scope: z.nativeEnum(ExpenseCategoryScope),
-    defaultLedgerAccountId: z.string().uuid(),
-    incomeLedgerAccountId: z.string().uuid().nullable().optional(),
+    defaultLedgerAccountId: z.string().guid(),
+    incomeLedgerAccountId: z.string().guid().nullable().optional(),
   })
   .strict();
 export function categoryPostingLedger(
@@ -351,27 +351,27 @@ export async function deactivateExpenseCategory(id: string) {
 }
 const optionalUuid = z.preprocess(
   (v) => (v === "" ? undefined : v),
-  z.string().uuid().optional(),
+  z.string().guid().optional(),
 );
 const expenseInput = z
   .object({
-    branchId: z.string().uuid(),
+    branchId: z.string().guid(),
     projectId: optionalUuid,
-    categoryId: z.string().uuid(),
+    categoryId: z.string().guid(),
     type: z.nativeEnum(ExpenseTransactionType),
     transactionDate: z.coerce.date(),
     taxableAmount: money,
-    requestKey: z.string().uuid().optional(),
+    requestKey: z.string().guid().optional(),
     billedItems: z.array(billedItemSchema).max(200).optional(),
-    additionalCharges: money.default("0"),
-    roundOffEnabled: z.boolean().default(false),
+    additionalCharges: money.prefault("0"),
+    roundOffEnabled: z.boolean().prefault(false),
     taxRate: money
       .refine((v) => new D(v).lte(100), "Rate cannot exceed 100%")
-      .default("0"),
+      .prefault("0"),
     cessRate: money
       .refine((v) => new D(v).lte(100), "Rate cannot exceed 100%")
-      .default("0"),
-    taxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
+      .prefault("0"),
+    taxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).prefault("EXCLUSIVE"),
     stateOfSupplyCode: z.preprocess(
       (v) => (v === "" ? undefined : v),
       z
@@ -381,12 +381,12 @@ const expenseInput = z
     ),
     taxCreditTreatment: z
       .enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"])
-      .default("ELIGIBLE"),
+      .prefault("ELIGIBLE"),
     moneyAccountId: optionalUuid,
     employeeReimbursementId: optionalUuid,
     reference: z.string().max(160).optional(),
     notes: z.string().max(5000).optional(),
-    recordAsPaid: z.boolean().default(false),
+    recordAsPaid: z.boolean().prefault(false),
   })
   .strict();
 async function validateExpenseRelations(
@@ -1045,8 +1045,8 @@ export async function reverseExpenseForActor(
 }
 export const recurringPaymentInput = z
   .object({
-    requestKey: z.string().uuid(),
-    moneyAccountId: z.string().uuid(),
+    requestKey: z.string().guid(),
+    moneyAccountId: z.string().guid(),
     paymentDate: z.string().date(),
   })
   .strict();
@@ -1136,11 +1136,11 @@ export const expenseListQuerySchema = z
     q: z.string().trim().max(160).optional(),
     status: z.nativeEnum(ExpenseTransactionStatus).optional(),
     type: z.nativeEnum(ExpenseTransactionType).optional(),
-    categoryId: z.string().uuid().optional(),
-    templateId: z.string().uuid().optional(),
-    branchId: z.string().uuid().optional(),
-    offset: z.coerce.number().int().min(0).max(10000000).default(0),
-    limit: z.coerce.number().int().min(1).max(200).default(50),
+    categoryId: z.string().guid().optional(),
+    templateId: z.string().guid().optional(),
+    branchId: z.string().guid().optional(),
+    offset: z.coerce.number().int().min(0).max(10000000).prefault(0),
+    limit: z.coerce.number().int().min(1).max(200).prefault(50),
   })
   .strict();
 function expenseAggregateScope(
@@ -1427,11 +1427,11 @@ async function projectOptions(
 }
 const templateInput = z
   .object({
-    branchId: z.string().uuid(),
+    branchId: z.string().guid(),
     projectId: optionalUuid,
-    categoryId: z.string().uuid(),
+    categoryId: z.string().guid(),
     frequency: z.nativeEnum(RecurringFrequency),
-    creationRequestKey: z.string().uuid(),
+    creationRequestKey: z.string().guid(),
     nextDueDate: z.string().transform((value) => parseIndiaBusinessDate(value)),
     amount: money.refine((v) => new D(v).gt(0), "Amount must be positive"),
   })

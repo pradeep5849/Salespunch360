@@ -21,12 +21,12 @@ const calendarDate = z.union([
 ]);
 const filters = z
   .object({
-    branchId:z.string().uuid().optional(),
+    branchId:z.string().guid().optional(),
     scope:z.literal("all").optional(),
     from: z.preprocess(blank, calendarDate.optional()),
     to: z.preprocess(blank, calendarDate.optional()),
-    offset: z.coerce.number().int().min(0).default(0),
-    limit: z.coerce.number().int().min(1).max(100).default(50),
+    offset: z.coerce.number().int().min(0).prefault(0),
+    limit: z.coerce.number().int().min(1).max(100).prefault(50),
   })
   .strict().refine(value=>!(value.branchId&&value.scope),"Choose a branch or all authorized branches");
 export async function ownerHistoryForActor(
@@ -40,7 +40,7 @@ export async function ownerHistoryForActor(
     !["ACCOUNT_ADMIN", "ACCOUNTANT"].includes(actor.accountRole ?? "")
   )
     throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   const f = filters.parse(raw);
   if (f.from && f.to && f.from > f.to) throw new Error("INVALID_DATE_RANGE");
   if(f.branchId&&(actor.branchAccessScope==="SELECTED_BRANCHES"&&!actor.branchIds?.includes(f.branchId)||!await db.branch.findFirst({where:{id:f.branchId,companyId:actor.companyId,isActive:true},select:{id:true}})))throw new AuthorizationError();

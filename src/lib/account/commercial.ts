@@ -284,7 +284,7 @@ const decimal = z.union([z.string(), z.number()]).transform(String);
 const lineSchema = z.object({
   servicePeriodDays:z.number().int().min(1).max(3650).optional(),
   lineType: z.nativeEnum(CommercialLineType),
-  sourceId: z.string().uuid().optional(),
+  sourceId: z.string().guid().optional(),
   itemName: z.string().trim().min(1).max(240).optional(),
   itemCode: z.string().max(80).optional(),
   description: z.string().max(10_000).optional(),
@@ -298,13 +298,13 @@ const lineSchema = z.object({
   discountValue: decimal.nullable().optional(),
   taxRate: decimal.optional(),
   cessRate: decimal.optional(),
-  warehouseId: z.string().uuid().optional(),
-  batchId: z.string().uuid().optional(),
-  serialNumberId: z.string().uuid().optional(),
+  warehouseId: z.string().guid().optional(),
+  batchId: z.string().guid().optional(),
+  serialNumberId: z.string().guid().optional(),
   stockReturnQuantity: decimal.optional(),
-  sourceCommercialLineId: z.string().uuid().optional(),
-  sourceOrderLineId: z.string().uuid().optional(),
-  copiedFromSaleLineId: z.string().uuid().optional(),
+  sourceCommercialLineId: z.string().guid().optional(),
+  sourceOrderLineId: z.string().guid().optional(),
+  copiedFromSaleLineId: z.string().guid().optional(),
   purchaseAllocations: z
     .array(
       z
@@ -316,9 +316,9 @@ const lineSchema = z.object({
             "FIXED_ASSET",
           ]),
           quantity: decimal,
-          projectId: z.string().uuid().optional(),
-          projectBudgetLineId: z.string().uuid().optional(),
-          warehouseId: z.string().uuid().optional(),
+          projectId: z.string().guid().optional(),
+          projectBudgetLineId: z.string().guid().optional(),
+          warehouseId: z.string().guid().optional(),
           materialTreatment: z
             .enum(["DIRECT_TO_PROJECT", "RECEIVE_IN_INVENTORY"])
             .optional(),
@@ -333,8 +333,8 @@ export const commercialDocumentInput = z
     idempotencyKey: z.string().trim().min(1).max(120).optional(),
     customFields:z.record(z.string(),z.string().max(10000)).optional(),
     type: z.nativeEnum(CommercialDocumentType),
-    branchId: z.string().uuid(),
-    partyId: z.string().uuid(),
+    branchId: z.string().guid(),
+    partyId: z.string().guid(),
     documentNumber: z
       .string()
       .trim()
@@ -342,16 +342,16 @@ export const commercialDocumentInput = z
       .max(100)
       .regex(/^[A-Za-z0-9][A-Za-z0-9 ./_-]*$/)
       .optional(),
-    sourceDocumentId: z.string().uuid().optional(),
-    sourceQuotationRevisionId:z.string().uuid().optional(),
-    copiedFromSaleId: z.string().uuid().optional(),
-    sourcePurchaseOrderId: z.string().uuid().optional(),
-    sourceSalesOrderId: z.string().uuid().optional(),
+    sourceDocumentId: z.string().guid().optional(),
+    sourceQuotationRevisionId:z.string().guid().optional(),
+    copiedFromSaleId: z.string().guid().optional(),
+    sourcePurchaseOrderId: z.string().guid().optional(),
+    sourceSalesOrderId: z.string().guid().optional(),
     purchasePurpose: z.nativeEnum(PurchasePurpose).optional(),
     purchaseClassification: z.nativeEnum(PurchaseClassification).optional(),
     projectReference: z.string().trim().max(240).optional(),
-    projectId: z.string().uuid().optional(),
-    projectBudgetLineId: z.string().uuid().optional(),
+    projectId: z.string().guid().optional(),
+    projectBudgetLineId: z.string().guid().optional(),
     materialTreatment: z.nativeEnum(MaterialTreatment).optional(),
     vendorInvoiceNumber: z.string().trim().min(1).max(120).optional(),
     vendorInvoiceDate: z.coerce.date().optional(),
@@ -368,15 +368,15 @@ export const commercialDocumentInput = z
     issueDate: z.coerce.date(),
     dueDate: z.coerce.date().optional(),
     notes: z.string().max(5000).optional(),
-    taxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
+    taxMode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).prefault("EXCLUSIVE"),
     stateOfSupplyCode: z
       .string()
       .regex(/^\d{2}$/)
       .optional(),
-    reverseCharge: z.boolean().default(false),
+    reverseCharge: z.boolean().prefault(false),
     taxCreditTreatment: z
       .enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"])
-      .default("ELIGIBLE"),
+      .prefault("ELIGIBLE"),
     tdsRate: decimal.optional(),
     tcsRate: decimal.optional(),
     lines: z.array(lineSchema).min(1).max(500),
@@ -1511,7 +1511,7 @@ export async function createCommercialDocumentForActor(
   );
 }
 export async function finalizeNonFinancialDocumentForActor(actor:Actor,raw: unknown) {
-  const { documentId } = z.object({ documentId: z.string().uuid() }).strict().parse(raw);
+  const { documentId } = z.object({ documentId: z.string().guid() }).strict().parse(raw);
   if(!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_PURCHASE_ENTRY"))throw new AuthorizationError();
   return inAccountTransaction(undefined,
     async (tx) => {
@@ -1554,7 +1554,7 @@ export async function finalizeNonFinancialDocumentForActor(actor:Actor,raw: unkn
 }
 export async function finalizeNonFinancialDocument(raw:unknown){return finalizeNonFinancialDocumentForActor((await requirePermissionForMutation("ACCOUNT_PURCHASE_ENTRY")) as Actor,raw)}
 export async function confirmSalesOrderForActor(actor:Actor,raw:unknown,transaction?:Prisma.TransactionClient){
- const {documentId}=z.object({documentId:z.string().uuid()}).strict().parse(raw);
+ const {documentId}=z.object({documentId:z.string().guid()}).strict().parse(raw);
  return inAccountTransaction(transaction,async tx=>{
   await tx.$queryRaw`SELECT id FROM commercial_documents WHERE id=${documentId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
   const doc=await tx.commercialDocument.findFirst({where:{id:documentId,companyId:actor.companyId,type:"SALES_ORDER"}});
@@ -2045,7 +2045,7 @@ export async function postCommercialDocumentForActor(
   correction?:{sourceInvoiceId:string;postingDate:Date;stockCosts:ReadonlyMap<string,Prisma.Decimal>},
 ) {
   const { documentId } = z
-    .object({ documentId: z.string().uuid() })
+    .object({ documentId: z.string().guid() })
     .strict()
     .parse(raw);
   financialRole(actor);
@@ -2568,11 +2568,11 @@ const settlementInput = z
   .object({
     idempotencyKey: z.string().trim().min(8).max(120),
     type: z.nativeEnum(SettlementType),
-    branchId: z.string().uuid(),
-    partyId: z.string().uuid(),
-    projectId: z.string().uuid().optional(),
+    branchId: z.string().guid(),
+    partyId: z.string().guid(),
+    projectId: z.string().guid().optional(),
     paymentMode: z.nativeEnum(PaymentMode),
-    moneyAccountId: z.string().uuid().optional(),
+    moneyAccountId: z.string().guid().optional(),
     amount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)),
     transactionDate: z.coerce.date(),
     reference: z.string().max(160).optional(),
@@ -2583,17 +2583,17 @@ const settlementInput = z
       .array(
         z
           .object({
-            documentId: z.string().uuid().optional(),
-            openingBalanceId: z.string().uuid().optional(),
+            documentId: z.string().guid().optional(),
+            openingBalanceId: z.string().guid().optional(),
             amount: decimal,
-            discountAmount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)).default("0"),
+            discountAmount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)).prefault("0"),
           })
           .refine(
             (x) => Boolean(x.documentId) !== Boolean(x.openingBalanceId),
             "Exactly one allocation target is required",
           ),
       )
-      .default([]),
+      .prefault([]),
   })
   .strict();
 const settlementPolicy: Record<
@@ -3004,8 +3004,8 @@ export async function createSettlementForActor(actor: Actor, raw: unknown, trans
 export async function applyAdvanceForActor(actor: Actor, raw: unknown, transaction?: Prisma.TransactionClient) {
   const d = z
     .object({
-      advanceId: z.string().uuid(),
-      documentId: z.string().uuid(),
+      advanceId: z.string().guid(),
+      documentId: z.string().guid(),
       amount: decimal,
       applicationDate: z.coerce.date(),
       idempotencyKey: z.string().trim().min(8).max(120),
@@ -3153,7 +3153,7 @@ export async function applyAdvance(raw: unknown) {
 export async function schedulePaymentReminder(raw: unknown) {
   const d = z
       .object({
-        documentId: z.string().uuid(),
+        documentId: z.string().guid(),
         remindAt: z.coerce.date(),
         message: z.string().trim().min(1).max(1000),
       })
@@ -3197,7 +3197,7 @@ export async function schedulePaymentReminder(raw: unknown) {
 }
 export async function setPaymentReminderStatus(raw: unknown) {
   const d = z
-      .object({ id: z.string().uuid(), status: z.enum(["SENT", "DISMISSED"]) })
+      .object({ id: z.string().guid(), status: z.enum(["SENT", "DISMISSED"]) })
       .strict()
       .parse(raw),
     actor = (await requirePermissionForMutation(

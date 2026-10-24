@@ -25,7 +25,7 @@ const date = z
   .transform((v) => new Date(v));
 const exactSum=(values:ReadonlyArray<Prisma.Decimal>)=>new D(sumPersistedMoney(values));
 export const fundingReturnsSchema = z
-  .array(z.object({ fundingId: z.string().uuid(), amount }).strict())
+  .array(z.object({ fundingId: z.string().guid(), amount }).strict())
   .max(100)
   .superRefine((rows, ctx) => {
     if (new Set(rows.map((r) => r.fundingId)).size !== rows.length)
@@ -319,12 +319,12 @@ export async function confirmAssetFundingForActor(
   await requireAccountModules(a, "ASSETS");
   const input = z
     .object({
-      assetId: z.string().uuid(),
-      branchId: z.string().uuid(),
+      assetId: z.string().guid(),
+      branchId: z.string().guid(),
       expectedPurchaseValue: z.string().regex(/^\d{1,16}(\.\d{1,2})?$/),
       confirmed: z.boolean(),
       reason: z.string().trim().min(3).max(1000),
-      requestKey: z.string().uuid(),
+      requestKey: z.string().guid(),
     })
     .strict()
     .parse(raw);
@@ -339,13 +339,13 @@ export async function confirmAssetFundingForActor(
 }
 const createInput = z
   .object({
-    branchId: z.string().uuid(),
-    assetId: z.string().uuid(),
-    ownerFinancialAccountId: z.string().uuid(),
-    contributionTransactionId: z.string().uuid(),
+    branchId: z.string().guid(),
+    assetId: z.string().guid(),
+    ownerFinancialAccountId: z.string().guid(),
+    contributionTransactionId: z.string().guid(),
     amount,
     allocationDate: date,
-    requestKey: z.string().uuid(),
+    requestKey: z.string().guid(),
     expectedPurchaseValue: z.string().regex(/^\d{1,16}(\.\d{1,2})?$/),
     confirmCompanyRemainder: z.literal(true),
   })
@@ -488,9 +488,9 @@ export async function cancelOwnerAssetFundingForActor(
   await requireAccountModules(a, "ASSETS");
   const d = z
     .object({
-      fundingId: z.string().uuid(),
+      fundingId: z.string().guid(),
       reason: z.string().trim().min(3).max(1000),
-      requestKey: z.string().uuid(),
+      requestKey: z.string().guid(),
       expectedPurchaseValue: z.string().regex(/^\d{1,16}(\.\d{1,2})?$/),
       confirmCompanyRemainder: z.literal(true),
     })

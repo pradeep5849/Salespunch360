@@ -11,20 +11,20 @@ import { retrySerializable } from "./transaction-retry";
 import type { ProjectActor } from "./projects";
 
 const actionFields = {
-  requestKey: z.string().uuid(),
+  requestKey: z.string().guid(),
   expectedVersion: z.number().int().min(0).max(2147483646),
   actionDate: z.string().date(),
 };
 const legacySourceInput = z
   .object({
-    requestKey: z.string().uuid(),
+    requestKey: z.string().guid(),
     expectedVersion: z.number().int().min(0).max(2147483646),
-    partyId: z.string().uuid(),
+    partyId: z.string().guid(),
     amount: z
       .string()
       .regex(/^\d{1,16}(\.\d{1,2})?$/)
       .refine((value) => new Prisma.Decimal(value).gt(0)),
-    sourceDocumentId: z.string().uuid().optional(),
+    sourceDocumentId: z.string().guid().optional(),
   })
   .strict();
 
@@ -36,7 +36,7 @@ export async function completeLegacyChequeSourceForActor(
 ) {
   if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
     throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   const input = legacySourceInput.parse(raw);
   const hash = createHash("sha256")
     .update(
@@ -168,8 +168,8 @@ export const chequeFinancialActionInput = z.discriminatedUnion("action", [
     .object({
       ...actionFields,
       action: z.literal("CLOSE"),
-      moneyAccountId: z.string().uuid().optional(),
-      description: z.string().trim().max(500).default(""),
+      moneyAccountId: z.string().guid().optional(),
+      description: z.string().trim().max(500).prefault(""),
     })
     .strict(),
   z
@@ -292,7 +292,7 @@ export async function chequeFinancialActionForActor(
 ) {
   if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
     throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   const input = chequeFinancialActionInput.parse(raw);
   if (
     input.action !== "CLOSE" &&

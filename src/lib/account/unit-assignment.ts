@@ -6,7 +6,7 @@ import {assertUnitAccess} from "./units";
 import {unitSchema} from "./validation";
 import {retrySerializable} from "./transaction-retry";
 import type {ProjectActor} from "./projects";
-export const unitAssignmentInput=z.object({kind:z.enum(["PRODUCT","SERVICE"]),itemIds:z.array(z.string().uuid()).min(1).max(200),unitId:z.string().uuid().optional(),newUnit:unitSchema.strict().optional()}).strict().refine(x=>Boolean(x.unitId)!==Boolean(x.newUnit),"Select an existing unit or create one");
+export const unitAssignmentInput=z.object({kind:z.enum(["PRODUCT","SERVICE"]),itemIds:z.array(z.string().guid()).min(1).max(200),unitId:z.string().guid().optional(),newUnit:unitSchema.strict().optional()}).strict().refine(x=>Boolean(x.unitId)!==Boolean(x.newUnit),"Select an existing unit or create one");
 /** A base-unit change cannot reinterpret quantities already recorded against an item. */
 async function assertItemsHaveNoUnitHistory(tx:Prisma.TransactionClient,companyId:string,kind:"PRODUCT"|"SERVICE",ids:string[]){
  if(!ids.length)return;
@@ -49,7 +49,7 @@ export async function assignUnitToItemsForActor(actor:ProjectActor,raw:unknown){
   return {count:items.length,changedCount:changed.length,units:counters.map(row=>({id:row.id,name:row.name,symbol:row.symbol,itemCount:row._count.products+row._count.services}))};
  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable}),3,["companyId","name"]);
 }
-const query=z.object({kind:z.enum(["PRODUCT","SERVICE"]),q:z.string().trim().max(160).default(""),offset:z.coerce.number().int().min(0).max(1000000).default(0),limit:z.coerce.number().int().min(1).max(100).default(50)}).strict();
+const query=z.object({kind:z.enum(["PRODUCT","SERVICE"]),q:z.string().trim().max(160).prefault(""),offset:z.coerce.number().int().min(0).max(1000000).prefault(0),limit:z.coerce.number().int().min(1).max(100).prefault(50)}).strict();
 export async function unitAssignmentOptionsForActor(actor:ProjectActor,raw:unknown){
  await assertUnitAccess(actor);const f=query.parse(raw);const where={companyId:actor.companyId,isActive:true,...(f.q?{OR:[{name:{contains:f.q,mode:"insensitive" as const}},{code:{contains:f.q,mode:"insensitive" as const}}]}:{})};
  const args={where,orderBy:[{name:"asc" as const},{id:"asc" as const}],skip:f.offset,take:f.limit+1,select:{id:true,name:true,code:true,unitId:true}};

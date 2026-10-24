@@ -9,7 +9,7 @@ import {attachmentDisplayName} from "@/lib/account/attachment-name";
 import {preparePrivateDocumentFiles,validPrivateDocumentFile} from "@/lib/account/private-document-files";
 import {privateStorage} from "@/lib/storage";
 import type {QuotationActor} from "./service";
-const request=z.object({documentId:z.string().uuid(),revisionNumber:z.number().int().min(0),requestKey:z.string().uuid()}).strict();
+const request=z.object({documentId:z.string().guid(),revisionNumber:z.number().int().min(0),requestKey:z.string().guid()}).strict();
 const MAX_BYTES=10*1024*1024,MAX_ATTACHMENTS=50;
 export class QuotationAttachmentError extends Error {}
 const scope=(actor:QuotationActor)=>actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:actor.branchIds??[]}}:{};
@@ -63,7 +63,7 @@ export async function cleanQuotationCreationAttachmentAttempts(companyId:string,
  for(const key of keys)await discardUnreferenced(companyId,key).catch(()=>undefined);
 }
 export async function listQuotationAttachmentsForActor(actor:QuotationActor,documentId:string,revisionNumber:number){
- await authorize(actor);z.string().uuid().parse(documentId);z.number().int().min(0).parse(revisionNumber);
+ await authorize(actor);z.string().guid().parse(documentId);z.number().int().min(0).parse(revisionNumber);
  return db.$transaction(async tx=>{
   const revision=await current(tx,actor,documentId,revisionNumber);
   return (await tx.quotationAttachment.findMany({where:{companyId:actor.companyId!,revisionId:revision.id},orderBy:[{createdAt:"asc"},{id:"asc"}],take:MAX_ATTACHMENTS})).map(safe);
@@ -95,7 +95,7 @@ export async function uploadQuotationAttachmentForActor(actor:QuotationActor,raw
  }
 }
 export async function downloadQuotationAttachmentForActor(actor:QuotationActor,id:string){
- await authorize(actor);z.string().uuid().parse(id);
+ await authorize(actor);z.string().guid().parse(id);
  const row=await db.quotationAttachment.findFirst({where:{id,companyId:actor.companyId!,revision:{document:{companyId:actor.companyId!,...scope(actor)}}}});
  if(!row)throw new AuthorizationError();
  const bytes=await privateStorage().get(row.storageKey);
@@ -103,7 +103,7 @@ export async function downloadQuotationAttachmentForActor(actor:QuotationActor,i
  return {data:bytes,name:row.displayName,mimeType:row.mimeType};
 }
 export async function removeQuotationAttachmentForActor(actor:QuotationActor,documentId:string,revisionNumber:number,id:string){
- await authorize(actor,true);z.string().uuid().parse(id);z.string().uuid().parse(documentId);z.number().int().min(0).parse(revisionNumber);
+ await authorize(actor,true);z.string().guid().parse(id);z.string().guid().parse(documentId);z.number().int().min(0).parse(revisionNumber);
  const key=await db.$transaction(async tx=>{
   await lock(tx,actor,documentId);const revision=await current(tx,actor,documentId,revisionNumber,true);
   const row=await tx.quotationAttachment.findFirst({where:{id,companyId:actor.companyId!,revisionId:revision.id}});

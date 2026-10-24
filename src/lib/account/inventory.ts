@@ -99,17 +99,17 @@ async function balance(
 }
 const movement = z
   .object({
-    warehouseId: z.string().uuid(),
-    productId: z.string().uuid(),
+    warehouseId: z.string().guid(),
+    productId: z.string().guid(),
     quantity: qty,
-    unitCost: money.default("0"),
+    unitCost: money.prefault("0"),
     movementDate: z.coerce.date(),
-    batchId: z.string().uuid().optional(),
-    serialNumberId: z.string().uuid().optional(),
+    batchId: z.string().guid().optional(),
+    serialNumberId: z.string().guid().optional(),
     reason: z.string().trim().min(1).max(1000).optional(),
     sourceType: z.string().max(80),
     sourceId: z.string().max(160),
-    sourceLineId: z.string().uuid().optional(),
+    sourceLineId: z.string().guid().optional(),
   })
   .strict();
 export async function createStockMovementForActor(
@@ -209,13 +209,13 @@ export const adjustStock = (direction: "IN" | "OUT", raw: unknown) =>
   );
 export const transferInput = z
   .object({
-    sourceWarehouseId: z.string().uuid(),
-    destinationWarehouseId: z.string().uuid(),
-    productId: z.string().uuid(),
+    sourceWarehouseId: z.string().guid(),
+    destinationWarehouseId: z.string().guid(),
+    productId: z.string().guid(),
     quantity: qty,
     movementDate: z.coerce.date(),
-    batchId: z.string().uuid().optional(),
-    serialNumberId: z.string().uuid().optional(),
+    batchId: z.string().guid().optional(),
+    serialNumberId: z.string().guid().optional(),
     reason: z.string().trim().min(1),
   })
   .strict();
@@ -386,11 +386,11 @@ export async function inventorySnapshotForActor(a: ProjectActor, asOf?: Date) {
 }
 const warehouseInput = z
   .object({
-    branchId: z.string().uuid(),
+    branchId: z.string().guid(),
     name: z.string().trim().min(1).max(160),
     code: z.string().trim().min(1).max(60),
     address: z.string().max(2000).optional(),
-    isDefault: z.coerce.boolean().default(false),
+    isDefault: z.coerce.boolean().prefault(false),
   })
   .strict();
 export async function inventorySnapshot(asOf?: Date) {
@@ -491,7 +491,7 @@ const itemInventoryInput = z
     trackingMode: z.enum(["NONE", "BATCH", "SERIAL"]),
     barcode: z.string().trim().max(120).optional(),
     hsnCode: z.string().trim().max(12).optional(),
-    lowStockThreshold: qty.default("0"),
+    lowStockThreshold: qty.prefault("0"),
     costPrice: money.optional(),
     salePrice: money.optional(),
   })
@@ -609,9 +609,9 @@ export async function listSerialNumbers(productId?: string) {
 }
 const priceInput = z
   .object({
-    productId: z.string().uuid(),
+    productId: z.string().guid(),
     priceType: z.enum(["RETAIL", "WHOLESALE", "CUSTOMER"]),
-    customerId: z.string().uuid().optional(),
+    customerId: z.string().guid().optional(),
     rate: money,
     effectiveFrom: z.preprocess(
       (value) => (value === "" ? undefined : value),
@@ -1013,13 +1013,13 @@ export async function lowStockSnapshot() {
 export async function recordOpeningStock(raw: unknown) {
   const d = z
     .object({
-      warehouseId: z.string().uuid(),
-      productId: z.string().uuid(),
+      warehouseId: z.string().guid(),
+      productId: z.string().guid(),
       quantity: qty,
       unitCost: money,
       movementDate: z.coerce.date(),
-      batchId: z.string().uuid().optional(),
-      serialNumberId: z.string().uuid().optional(),
+      batchId: z.string().guid().optional(),
+      serialNumberId: z.string().guid().optional(),
     })
     .strict()
     .parse(raw);
@@ -1033,13 +1033,13 @@ export async function recordAdjustment(raw: unknown) {
   const d = z
     .object({
       direction: z.enum(["IN", "OUT"]),
-      warehouseId: z.string().uuid(),
-      productId: z.string().uuid(),
+      warehouseId: z.string().guid(),
+      productId: z.string().guid(),
       quantity: qty,
-      unitCost: money.default("0"),
+      unitCost: money.prefault("0"),
       movementDate: z.coerce.date(),
-      batchId: z.string().uuid().optional(),
-      serialNumberId: z.string().uuid().optional(),
+      batchId: z.string().guid().optional(),
+      serialNumberId: z.string().guid().optional(),
       reason: z.string().trim().min(1).max(1000),
     })
     .strict()

@@ -16,12 +16,12 @@ const date = z
   );
 const query = z
   .object({
-    branchId: z.string().uuid().optional(),
+    branchId: z.string().guid().optional(),
     scope: z.literal("all").optional(),
     from: z.preprocess(blank, date.optional()),
     to: z.preprocess(blank, date.optional()),
-    offset: z.coerce.number().int().min(0).max(1000000).default(0),
-    limit: z.coerce.number().int().min(1).max(100).default(50),
+    offset: z.coerce.number().int().min(0).max(1000000).prefault(0),
+    limit: z.coerce.number().int().min(1).max(100).prefault(50),
   })
   .strict()
   .refine((v) => !v.from || !v.to || v.from <= v.to, "Invalid date range");
@@ -43,7 +43,7 @@ export async function moneyAccountHistoryForActor(
   id: string,
   raw: unknown = {},
 ) {
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   const f = query.parse(raw);
   const resolved = await moneyReadContext(actor, {
     ...(f.branchId ? { branchId: f.branchId } : {}),

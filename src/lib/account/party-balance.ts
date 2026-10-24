@@ -14,7 +14,7 @@ export async function currentPartyBalanceForActor(
 ) {
   if (!canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_LEDGER_VIEW"))
     throw new AuthorizationError();
-  z.string().uuid().parse(partyId);
+  z.string().guid().parse(partyId);
   return scopedPartyBalance(
     actor.companyId,
     partyId,

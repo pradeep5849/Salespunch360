@@ -12,7 +12,7 @@ import { retrySerializable } from "./transaction-retry";
 import type { ProjectActor } from "./projects";
 const PriceExact=Prisma.Decimal.clone({precision:48});
 export type SalePriceProposal={lineId:string;sourceKey:string;name:string;oldPrice:string;newPrice:string;expectedUpdatedAt:string};
-const input=z.object({documentId:z.string().uuid(),lineId:z.string().uuid(),expectedUpdatedAt:z.string().datetime(),requestKey:z.string().uuid(),confirmed:z.literal(true)}).strict();
+const input=z.object({documentId:z.string().guid(),lineId:z.string().guid(),expectedUpdatedAt:z.string().datetime(),requestKey:z.string().guid(),confirmed:z.literal(true)}).strict();
 async function access(actor:ProjectActor){
  if(!actor.companyId||actor.accountRole==="PROJECT_MANAGER"||!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_STOCK")||!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SALES_ENTRY"))throw new AuthorizationError();
  await requireAccountModules(actor,"SALES","INVENTORY");
@@ -43,7 +43,7 @@ async function proposal(tx:Prisma.TransactionClient,actor:ProjectActor,doc:Await
  return {master,product,service,rate,view:{lineId:line.id,sourceKey:`${line.lineType}:${master.id}`,name:line.itemName,oldPrice:oldRate.toString(),newPrice:rate.toString(),expectedUpdatedAt:master.updatedAt.toISOString()} satisfies SalePriceProposal};
 }
 export async function salePriceProposalsForActor(actor:ProjectActor,documentId:string):Promise<SalePriceProposal[]>{
- await access(actor);z.string().uuid().parse(documentId);
+ await access(actor);z.string().guid().parse(documentId);
  return db.$transaction(async tx=>{
   const doc=await document(tx,actor,documentId),settings=await policy(tx,actor.companyId!);
   if(!settings.enabled||!settings.updateSalePrice||doc.status!=="POSTED"||doc.journalEntry?.status!=="POSTED")return [];

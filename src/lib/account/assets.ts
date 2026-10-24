@@ -40,9 +40,9 @@ const D = Prisma.Decimal,
       effectiveDate: z.coerce.date().nullable().optional(),
       purchaseDate: z.coerce.date(),
       purchaseValue: money,
-      vendorId: z.string().uuid().nullable().optional(),
-      purchaseDocumentId: z.string().uuid().nullable().optional(),
-      purchaseDocumentLineId: z.string().uuid().nullable().optional(),
+      vendorId: z.string().guid().nullable().optional(),
+      purchaseDocumentId: z.string().guid().nullable().optional(),
+      purchaseDocumentLineId: z.string().guid().nullable().optional(),
       description: z.string().max(5000).nullable().optional(),
       serialNumber: z.string().max(160).nullable().optional(),
       registrationNumber: z.string().max(80).nullable().optional(),
@@ -55,23 +55,23 @@ const D = Prisma.Decimal,
         .nullable()
         .optional(),
       location: z.string().max(240).nullable().optional(),
-      depreciationMethod: z.nativeEnum(DepreciationMethod).default("NONE"),
+      depreciationMethod: z.nativeEnum(DepreciationMethod).prefault("NONE"),
       usefulLifeMonths: z.coerce
         .number()
         .int()
         .positive()
         .nullable()
         .optional(),
-      salvageValue: money.default("0"),
+      salvageValue: money.prefault("0"),
       depreciationStartDate: z.coerce.date().nullable().optional(),
-      assetLedgerId: z.string().uuid().nullable().optional(),
-      accumulatedDepreciationLedgerId: z.string().uuid().nullable().optional(),
-      depreciationExpenseLedgerId: z.string().uuid().nullable().optional(),
+      assetLedgerId: z.string().guid().nullable().optional(),
+      accumulatedDepreciationLedgerId: z.string().guid().nullable().optional(),
+      depreciationExpenseLedgerId: z.string().guid().nullable().optional(),
     })
     .strict(),
   createInput = base.extend({
-    branchId: z.string().uuid(),
-    requestKey: z.string().uuid().optional(),
+    branchId: z.string().guid(),
+    requestKey: z.string().guid().optional(),
   });
 export async function assertAssetAccess(a: ProjectActor) {
   if (
@@ -184,10 +184,10 @@ export async function listAssetsForActor(a: ProjectActor, raw: unknown = {}) {
   await assertAssetAccess(a);
   const input = z
     .object({
-      q: z.string().trim().max(240).default(""),
+      q: z.string().trim().max(240).prefault(""),
       status: z.nativeEnum(AssetStatus).optional(),
-      offset: z.coerce.number().int().min(0).default(0),
-      limit: z.coerce.number().int().min(1).max(100).default(50),
+      offset: z.coerce.number().int().min(0).prefault(0),
+      limit: z.coerce.number().int().min(1).max(100).prefault(50),
     })
     .strict()
     .parse(raw);

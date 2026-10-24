@@ -220,7 +220,7 @@ export async function mobileOwnerHistory(
   const a = mobileAccountActor(u);
   if (!canUsePermission(a, u.productEdition, "ACCOUNT_MONEY_VIEW"))
     throw new Error("MOBILE_FORBIDDEN");
-  const query=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional()}).passthrough().parse(filters);
+  const query=z.object({branchId:z.string().guid().optional(),scope:z.literal("all").optional()}).passthrough().parse(filters);
   const selected=await moneyReadContext(a,{branchId:query.branchId,scope:query.scope});
   const dates=Object.fromEntries(Object.entries(query).filter(([key])=>key!=="branchId"&&key!=="scope"));
   return ownerHistoryForActor(selected.actor,id,{...dates,...(selected.context.mode==="BRANCH"?{branchId:selected.context.branchId}:{scope:"all"})});
@@ -324,7 +324,7 @@ export async function mobileChangeLoanLifecycle(u:MobileAppPrincipal,id:string,r
 export async function mobileMoneyTransferImage(u:MobileAppPrincipal,id:string){return transferImageForActor(permit(u,"ACCOUNT_MONEY_VIEW"),id);}
 
 export async function mobileAssetFundingOptions(u: MobileAppPrincipal, raw: unknown = {}) {
-  const {q,...scope}=z.object({q:z.string().max(100).optional(),branchId:z.string().uuid().optional(),scope:z.literal("all").optional()}).strict().parse(raw);
+  const {q,...scope}=z.object({q:z.string().max(100).optional(),branchId:z.string().guid().optional(),scope:z.literal("all").optional()}).strict().parse(raw);
   const read=await moneyReadContext(permit(u,"ACCOUNT_MONEY_VIEW"),scope);
   return { ...await ownerAssetFundingOptionsForActor(read.actor,q),branchContext:read.context };
 }
@@ -340,5 +340,5 @@ export async function mobileAssetFundingMutation(u: MobileAppPrincipal, raw: unk
 export async function mobileReverseOwnerTransaction(u:MobileAppPrincipal,ownerId:string,raw:unknown){
  await write(u);const actor=permit(u,"ACCOUNT_MONEY_ENTRY");permit(u,"ACCOUNT_JOURNAL_REVERSE");
  const {reverseOwnerTransactionForActor}=await import("@/lib/account/owner-corrections");
- return reverseOwnerTransactionForActor(actor,{...z.object({branchId:z.string().uuid().optional(),transactionId:z.string().uuid(),entryDate:z.string(),reason:z.string()}).strict().parse(raw),ownerId});
+ return reverseOwnerTransactionForActor(actor,{...z.object({branchId:z.string().guid().optional(),transactionId:z.string().guid(),entryDate:z.string(),reason:z.string()}).strict().parse(raw),ownerId});
 }

@@ -11,10 +11,10 @@ export async function searchChequePartiesForActor(
     throw new AuthorizationError();
   const input = z
     .object({
-      branchId: z.string().uuid(),
+      branchId: z.string().guid(),
       direction: z.enum(["RECEIVED", "ISSUED"]),
-      q: z.string().trim().max(160).default(""),
-      offset: z.coerce.number().int().min(0).max(1000000).default(0),
+      q: z.string().trim().max(160).prefault(""),
+      offset: z.coerce.number().int().min(0).max(1000000).prefault(0),
     })
     .strict()
     .parse(rawInput);

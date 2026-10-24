@@ -4,7 +4,7 @@ import type {MobilePrincipal} from "./auth";
 
 const CALL_MARKER="[[SP360_CLIENT_TYPE:CALL]]";
 const requestSchema=z.object({
- leadId:z.string().uuid(),
+ leadId:z.string().guid(),
  followUpAt:z.string().min(10),
  notes:z.unknown().optional(),
  type:z.enum(["VISIT","CALL"]).optional(),

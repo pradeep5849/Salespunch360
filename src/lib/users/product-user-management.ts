@@ -43,10 +43,10 @@ const salesRole = optional(z.enum(["ADMIN", "MANAGER", "SALES"])),
     z.enum(["ACCOUNT_ADMIN", "ACCOUNTANT", "PROJECT_MANAGER", "DATA_ENTRY"]),
   ),
   managerType = optional(z.enum(["FIELD_MANAGER", "MANAGER_ONLY"])),
-  managerId = optional(z.string().uuid());
+  managerId = optional(z.string().guid());
 const branchFields = {
     branchAccessScope: z.enum(["ALL_BRANCHES", "SELECTED_BRANCHES"]),
-    branchIds: z.array(z.string().uuid()).default([]),
+    branchIds: z.array(z.string().guid()).prefault([]),
   },
   roleFields = { salesRole, accountRole, managerType, managerId };
 export const createProductUserSchema = z
@@ -69,7 +69,7 @@ export const createProductUserSchema = z
   });
 export const editProductUserSchema = z
   .object({
-    userId: z.string().uuid(),
+    userId: z.string().guid(),
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().toLowerCase().email().max(320),
     ...roleFields,
@@ -99,7 +99,7 @@ export const createAccountUserSchema = z
   });
 export const editAccountUserSchema = z
   .object({
-    userId: z.string().uuid(),
+    userId: z.string().guid(),
     accountRole,
     accountAccessActive: z.boolean(),
     ...branchFields,

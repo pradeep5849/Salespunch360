@@ -24,11 +24,12 @@ export async function saveOwnerIdentityAction(id: string | null, raw: unknown) {
       id: row.id,
     };
   } catch (error) {
+    const fieldErrors: Record<string, string[] | undefined> =
+      error instanceof z.ZodError ? error.flatten().fieldErrors : {};
     return {
       kind: "error" as const,
       message: accountErrorMessage(error),
-      fieldErrors:
-        error instanceof z.ZodError ? error.flatten().fieldErrors : {},
+      fieldErrors,
     };
   }
 }
@@ -46,11 +47,12 @@ export async function postOwnerEntryAction(raw: unknown) {
       id: row.id,
     };
   } catch (error) {
+    const fieldErrors: Record<string, string[] | undefined> =
+      error instanceof z.ZodError ? error.flatten().fieldErrors : {};
     return {
       kind: "error" as const,
       message: accountErrorMessage(error),
-      fieldErrors:
-        error instanceof z.ZodError ? error.flatten().fieldErrors : {},
+      fieldErrors,
     };
   }
 }

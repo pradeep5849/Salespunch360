@@ -8,7 +8,7 @@ import {expenseItemPhoto} from "./expense-items";
 import {assertInventoryAvailable} from "./inventory";
 import {retrySerializable} from "./transaction-retry";
 import type {ProjectActor} from "./projects";
-const identity=z.object({kind:z.enum(["products","services"]),id:z.string().uuid()}).strict();
+const identity=z.object({kind:z.enum(["products","services"]),id:z.string().guid()}).strict();
 async function access(actor:ProjectActor){
  if(!actor.companyId||!actor.accountRole||!ACCOUNT_ROLE_PERMISSIONS[actor.accountRole]?.includes("ACCOUNT_STOCK"))throw new AuthorizationError();
  await assertInventoryAvailable(actor);

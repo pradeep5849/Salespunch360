@@ -4,7 +4,7 @@ import {z} from "zod";
 import {db} from "@/lib/db";
 import {moneyReadContext} from "./money-context";
 import type {ProjectActor} from "./projects";
-const input=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional(),q:z.string().trim().max(160).optional(),archived:z.enum(["","active","archived"]).optional(),status:z.preprocess(v=>v===""?undefined:v,z.nativeEnum(LoanStatus).optional()),offset:z.coerce.number().int().min(0).max(1000000).default(0),limit:z.coerce.number().int().min(1).max(100).default(50)}).strict();
+const input=z.object({branchId:z.string().guid().optional(),scope:z.literal("all").optional(),q:z.string().trim().max(160).optional(),archived:z.enum(["","active","archived"]).optional(),status:z.preprocess(v=>v===""?undefined:v,z.nativeEnum(LoanStatus).optional()),offset:z.coerce.number().int().min(0).max(1000000).prefault(0),limit:z.coerce.number().int().min(1).max(100).prefault(50)}).strict();
 /** Debt balances come from effective posted liability lines, never the latest
  * payment page. A legacy record without any posted liability remains unknown. */
 export async function loanOverviewForActor(actor:ProjectActor,raw:unknown={}) {

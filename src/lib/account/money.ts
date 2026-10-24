@@ -108,7 +108,7 @@ const accountInput = z.object({
   name: z.string().trim().min(1).max(160),
   branchId: z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.string().uuid().optional(),
+    z.string().guid().optional(),
   ),
   bankName: z.string().max(160).optional(),
   accountNumberMasked: z.string().max(40).optional(),
@@ -156,13 +156,13 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
     ...d
   } = accountInput
     .extend({
-      creationRequestKey: z.string().uuid().optional(),
+      creationRequestKey: z.string().guid().optional(),
       openingBalance: z
         .preprocess(
           (v) => (v === "" || v == null ? "0" : v),
           z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/),
         )
-        .default("0"),
+        .prefault("0"),
       openingDate: z.preprocess(
         (v) => (v === "" ? undefined : v),
         z
@@ -178,7 +178,7 @@ export async function createMoneyAccountForActor(a: Actor, raw: unknown) {
       ),
       openingBranchId: z.preprocess(
         (v) => (v === "" ? undefined : v),
-        z.string().uuid().optional(),
+        z.string().guid().optional(),
       ),
     })
     .superRefine((v, c) => {
@@ -392,7 +392,7 @@ async function mutateMoneyAccountForActor(
   data: Prisma.MoneyAccountUpdateInput,
   eventType: string,
 ) {
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
     throw new AuthorizationError();
   return retrySerializable(() =>
@@ -531,9 +531,9 @@ export async function moneyDashboardForActor(a: Actor) {
   };
 }
 const transferInput = z.object({
-  sourceAccountId: z.string().uuid(),
-  destinationAccountId: z.string().uuid(),
-  branchId: z.string().uuid(),
+  sourceAccountId: z.string().guid(),
+  destinationAccountId: z.string().guid(),
+  branchId: z.string().guid(),
   amount: money,
   transferDate: z.coerce.date(),
   reference: z.string().max(160).optional(),
@@ -623,15 +623,15 @@ export async function createMoneyTransferForActor(a: Actor, raw: unknown) {
 }
 const chequeInput = z
   .object({
-    branchId: z.string().uuid(),
-    moneyAccountId: z.string().uuid(),
-    partyId: z.string().uuid(),
-    sourceDocumentId: z.string().uuid().optional(),
+    branchId: z.string().guid(),
+    moneyAccountId: z.string().guid(),
+    partyId: z.string().guid(),
+    sourceDocumentId: z.string().guid().optional(),
     amount: money.refine(
       (value) => new D(value).gt(0),
       "Amount must be positive",
     ),
-    requestKey: z.string().uuid(),
+    requestKey: z.string().guid(),
     chequeNumber: z.string().trim().min(1).max(80),
     chequeDate: z.coerce.date(),
     status: z.nativeEnum(ChequeStatus),
@@ -685,7 +685,7 @@ export async function transitionChequeForActor(
 ) {
   if (!canUsePermission(a, "SALESPUNCH360_ACCOUNT", "ACCOUNT_MONEY_ENTRY"))
     throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   z.nativeEnum(ChequeStatus).parse(to);
   const entryDate =
     clearedDate === undefined ? new Date() : z.coerce.date().parse(clearedDate);
@@ -803,19 +803,19 @@ async function createLedger(
 const ownerIdentityInput = z
   .object({
     name: z.string().trim().min(1).max(160),
-    partyType: z.enum(["OWNER", "PARTNER"]).default("OWNER"),
+    partyType: z.enum(["OWNER", "PARTNER"]).prefault("OWNER"),
     userId: z.preprocess(
       (v) => (v === "" || v == null ? undefined : v),
-      z.string().uuid().optional(),
+      z.string().guid().optional(),
     ),
-    branchId: z.string().uuid(),
+    branchId: z.string().guid(),
     phone: z.string().trim().max(40).optional(),
     email: z.preprocess(
       (v) => (v === "" || v == null ? undefined : v),
       z.string().trim().email().max(320).optional(),
     ),
     address: z.string().trim().max(2000).optional(),
-    creationRequestKey: z.string().uuid(),
+    creationRequestKey: z.string().guid(),
   })
   .strict();
 export async function createOwnerFinancialAccountForActor(
@@ -938,7 +938,7 @@ export async function updateOwnerFinancialAccountForActor(
   raw: unknown,
 ) {
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   const d = z
     .object({
       name: z.string().trim().min(1).max(160),
@@ -985,8 +985,8 @@ export async function setupOwnerFinancialAccountForActor(
   branchId: string,
 ) {
   if (a.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
-  z.string().uuid().parse(userId);
-  z.string().uuid().parse(branchId);
+  z.string().guid().parse(userId);
+  z.string().guid().parse(branchId);
   branchOk(a, branchId);
   if (
     !(await db.branch.findFirst({
@@ -1011,15 +1011,15 @@ export async function setupOwnerFinancialAccountForActor(
 }
 
 const ownerInput = z.object({
-  ownerFinancialAccountId: z.string().uuid(),
-  moneyAccountId: z.string().uuid(),
-  branchId: z.string().uuid(),
+  ownerFinancialAccountId: z.string().guid(),
+  moneyAccountId: z.string().guid(),
+  branchId: z.string().guid(),
   type: z.nativeEnum(OwnerTransactionType),
   amount: money,
   transactionDate: z.coerce.date(),
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
-  fundingReturns:fundingReturnsSchema.default([]),
+  fundingReturns:fundingReturnsSchema.prefault([]),
 });
 export async function postOwnerTransactionForActor(a: Actor, raw: unknown) {
   const d = ownerInput.parse(raw);
@@ -1179,7 +1179,7 @@ export const loanInput = z.object({
   loanAccountNumber: z.string().trim().max(160).transform(v=>v||undefined).optional(),
   description: z.string().trim().max(2000).transform(v=>v||undefined).optional(),
   durationMonths: z.preprocess(v=>v===""||v==null?undefined:v,z.coerce.number().int().min(1).max(1200).optional()),
-  branchId: z.string().uuid(),
+  branchId: z.string().guid(),
   lender: z.string().trim().min(1).max(240),
   loanType: z.string().trim().min(1).max(80),
   principal: money,
@@ -1192,7 +1192,7 @@ export const loanInput = z.object({
     (value) => (value === "" ? undefined : value),
     z.coerce.date().optional(),
   ),
-  moneyAccountId: z.string().uuid(),
+  moneyAccountId: z.string().guid(),
   reference: z.string().max(160).optional(),
   idempotencyKey: z.string().min(8).max(160),
 });
@@ -1313,13 +1313,13 @@ export async function createAndReceiveLoanForActor(a: Actor, raw: unknown) {
 }
 export const paymentInput = z.object({
   description:z.string().trim().max(2000).transform(v=>v||undefined).optional(),
-  loanId: z.string().uuid(),
-  moneyAccountId: z.string().uuid(),
+  loanId: z.string().guid(),
+  moneyAccountId: z.string().guid(),
   paymentDate: z.coerce.date(),
   principal: money,
   tax: z.never().optional(),
   interest: money,
-  charges: money.default("0"),
+  charges: money.prefault("0"),
   idempotencyKey: z.string().min(8).max(160),
 });
 export async function postLoanPaymentForActor(a: Actor, raw: unknown) {

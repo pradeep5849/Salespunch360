@@ -13,7 +13,7 @@ const allowedStatuses=['TODAY','OVERDUE','PENDING','COMPLETED','CANCELLED','ALL'
 type MobileFollowUpStatus=(typeof allowedStatuses)[number];
 
 export async function mobileFollowUps(user:MobilePrincipal,rawStatus:string|null,rawEmployeeId:string|null=null,raw:{leadId?:string;page?:string;pageSize?:string;q?:string}={}){
- const paging=pageWindow(raw),leadId=raw.leadId?z.string().uuid().parse(raw.leadId):undefined;
+ const paging=pageWindow(raw),leadId=raw.leadId?z.string().guid().parse(raw.leadId):undefined;
  if(user.salesRole==='SALES'? !mobileCan(user,'SALES_FOLLOW_UPS'):!mobileCan(user,'SALES_REPORTS'))throw new Error('FORBIDDEN');
  const branches=await operationalBranchContext(user),today=parseIndiaBusinessDate(indiaDateText()),tomorrow=new Date(today.getTime()+86_400_000);
  const actor=mobileReportActor(user),employees=user.salesRole==='SALES'?[]:await reportEmployeeOptions(actor),employeeId=user.salesRole==='SALES'?user.id:rawEmployeeId??undefined,userIds=await resolveEmployeeScope(actor,employeeId);

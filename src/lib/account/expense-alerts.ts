@@ -9,10 +9,10 @@ import { expenseRecordScope } from "./expenses";
 import type { ProjectActor } from "./projects";
 export const expenseAlertQuery = z
   .object({
-    branchId: z.string().uuid().optional(),
+    branchId: z.string().guid().optional(),
     scope: z.literal("all").optional(),
-    offset: z.coerce.number().int().min(0).max(1000000).default(0),
-    limit: z.coerce.number().int().min(1).max(100).default(50),
+    offset: z.coerce.number().int().min(0).max(1000000).prefault(0),
+    limit: z.coerce.number().int().min(1).max(100).prefault(50),
   })
   .strict()
   .refine((v) => !(v.branchId && v.scope), "Choose branch or company scope");

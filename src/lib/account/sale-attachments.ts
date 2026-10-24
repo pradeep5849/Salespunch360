@@ -90,7 +90,7 @@ export async function cleanSaleAttachmentAttempts(companyId: string, keys: Set<s
  * discount, journal or numbering row is updated by this operation. */
 export async function appendSaleAttachmentsForActor(actor:ProjectActor,documentId:string,requestKey:string,files:File[]){
   await authorize(actor,true);
-  const id=z.string().uuid().parse(documentId).toLowerCase(),key=z.string().uuid().parse(requestKey).toLowerCase();
+  const id=z.string().guid().parse(documentId).toLowerCase(),key=z.string().guid().parse(requestKey).toLowerCase();
   const prepared=await prepareSaleAttachments(actor,files);
   if(!prepared.length)throw new SaleAttachmentError("INVALID_SALE_ATTACHMENT");
   const requestHash=commercialCreationHash({documentId:id,files:saleAttachmentManifest(prepared)}),attemptedKeys=new Set<string>();
@@ -102,7 +102,7 @@ export async function appendSaleAttachmentsForActor(actor:ProjectActor,documentI
     if(document.status!=="POSTED")throw new SaleAttachmentError("SALE_ATTACHMENT_SAVE_REQUIRED");
     const prior=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,eventType:"SALE_ATTACHMENTS_ADDED",metadata:{path:["requestKey"],equals:key}}});
     if(prior){
-      const parsed=z.object({requestHash:z.string(),files:z.array(z.object({id:z.string().uuid()})).min(1)}).safeParse(prior.metadata);
+      const parsed=z.object({requestHash:z.string(),files:z.array(z.object({id:z.string().guid()})).min(1)}).safeParse(prior.metadata);
       if(!parsed.success)throw new SaleAttachmentError("SALE_ATTACHMENT_HISTORY_INVALID");
       const metadata=parsed.data;
       if(prior.entityId!==id||metadata.requestHash!==requestHash)throw new SaleAttachmentError("IDEMPOTENCY_KEY_REUSED");
@@ -121,14 +121,14 @@ export async function appendSaleAttachmentsForActor(actor:ProjectActor,documentI
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:30000}));}finally{if(attemptedKeys.size)await cleanSaleAttachmentAttempts(actor.companyId,attemptedKeys)}
 }
 export async function listSaleAttachmentsForActor(actor: ProjectActor, documentId: string) {
-  await authorize(actor); z.string().uuid().parse(documentId);
+  await authorize(actor); z.string().guid().parse(documentId);
   return db.$transaction(async tx => {
     if (!await tx.commercialDocument.findFirst({ where: { id: documentId, companyId: actor.companyId, type: "SALES_INVOICE", ...scope(actor) }, select: { id: true } })) throw new AuthorizationError();
     return tx.commercialAttachment.findMany({ where: { companyId: actor.companyId, documentId }, orderBy: { position: "asc" }, take: 50, select: metadataSelect });
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 export async function downloadSaleAttachmentForActor(actor: ProjectActor, id: string) {
-  await authorize(actor); z.string().uuid().parse(id);
+  await authorize(actor); z.string().guid().parse(id);
   const row = await db.commercialAttachment.findFirst({ where: { id, companyId: actor.companyId, document: { type: "SALES_INVOICE", ...scope(actor) } } });
   if (!row) throw new AuthorizationError();
   const data = await privateStorage().get(row.storageKey);

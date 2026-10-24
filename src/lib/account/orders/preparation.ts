@@ -10,7 +10,7 @@ import {retainedLineDiscountValue} from "../retained-line-discount";
 import {authorizedOrder,orderStateInTx} from "./lifecycle";
 /** Read-only form preparation. Save performs fresh source authorization and quantity checks. */
 async function orderPreparationForActor(actor:ProjectActor,id:string,sales:boolean):Promise<SaleDraftInitial>{
- z.string().uuid().parse(id);
+ z.string().guid().parse(id);
  if(!canUsePermission(actor,"SALESPUNCH360_ACCOUNT",sales?"ACCOUNT_SALES_ENTRY":"ACCOUNT_PURCHASE_ENTRY")||(sales&&!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST")))throw new AuthorizationError();
  return db.$transaction(async tx=>{
   const order=await authorizedOrder(tx,actor,id),state=await orderStateInTx(tx,actor,id);

@@ -6,7 +6,7 @@ export const invoicePrintSettingsSchema = z.object({
   ...Object.fromEntries(PRINT_STRINGS.map(key=>[key,z.string().max(key==="termsText"?10000:500).optional()])),
   theme:z.string().trim().regex(/^(REGULAR|MODERN|CLASSIC|MINIMAL|#[0-9a-f]{6})$/i,"Choose Regular, Modern, Classic, Minimal, or a six-digit hex color.").optional(),
   itemTableColumns:z.string().trim().max(500).refine(value=>value.split(",").every(column=>["ITEM","QTY","RATE","TAXABLE","TAX","AMOUNT"].includes(column.trim().toUpperCase())),"Use comma-separated ITEM, QTY, RATE, TAXABLE, TAX, AMOUNT columns.").optional(),
-  bankAccountId:z.union([z.literal(""),z.string().uuid()]).optional(),
+  bankAccountId:z.union([z.literal(""),z.string().guid()]).optional(),
   printer:z.enum(["REGULAR","THERMAL"]).optional(),
   pageSize:z.enum(["A4","A5","THERMAL_80MM"]).optional(),
   orientation:z.enum(["PORTRAIT","LANDSCAPE"]).optional(),

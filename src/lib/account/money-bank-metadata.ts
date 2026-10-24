@@ -1,6 +1,6 @@
 import {z} from "zod";
 const blank=(v:unknown)=>v===""?undefined:v;
-const flag=z.preprocess(v=>v==="on"||v==="true"?true:v==="false"?false:v,z.boolean().default(false));
+const flag=z.preprocess(v=>v==="on"||v==="true"?true:v==="false"?false:v,z.boolean().prefault(false));
 export const moneyBankMetadata=z.object({
  accountHolderName:z.preprocess(blank,z.string().trim().max(160).optional()),
  bankBranchName:z.preprocess(blank,z.string().trim().max(160).optional()),

@@ -9,7 +9,7 @@ import { retrySerializable } from "./transaction-retry";
 export function canCorrectOwnerTransaction(actor: ProjectActor) {
  return canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_MONEY_ENTRY") && canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_REVERSE");
 }
-const input=z.object({branchId:z.string().uuid().optional(),ownerId:z.string().uuid(),transactionId:z.string().uuid(),entryDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>!Number.isNaN(new Date(value).getTime())&&new Date(value).toISOString().slice(0,10)===value,"Enter a valid date"),reason:z.string().trim().min(3).max(1000)}).strict();
+const input=z.object({branchId:z.string().guid().optional(),ownerId:z.string().guid(),transactionId:z.string().guid(),entryDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>!Number.isNaN(new Date(value).getTime())&&new Date(value).toISOString().slice(0,10)===value,"Enter a valid date"),reason:z.string().trim().min(3).max(1000)}).strict();
 /** One retained source transaction has one dated, balanced correction. Replays cannot post twice. */
 export async function reverseOwnerTransactionForActor(actor:ProjectActor,raw:unknown){
  if(!canCorrectOwnerTransaction(actor))throw new AuthorizationError();

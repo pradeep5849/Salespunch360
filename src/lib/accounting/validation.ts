@@ -1,7 +1,7 @@
 import { z } from "zod";
 const optionalValue = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (v === null ? undefined : v), schema.optional());
-const uuid = z.string().uuid(),
+const uuid = z.string().guid(),
   amount = z
     .union([z.string(), z.number()])
     .transform(String)
@@ -14,8 +14,8 @@ export const journalLineSchema = z
   .object({
     ledgerAccountId: uuid,
     costCentreId: optionalValue(uuid),
-    debit: amount.default("0"),
-    credit: amount.default("0"),
+    debit: amount.prefault("0"),
+    credit: amount.prefault("0"),
     description: optionalValue(z.string().trim().max(1000)),
   })
   .superRefine((v, c) => {
@@ -44,7 +44,7 @@ export const postingSchema = z.object({
     .trim()
     .toUpperCase()
     .regex(/^[A-Z][A-Z0-9_]{1,59}$/)
-    .default("PRIMARY"),
+    .prefault("PRIMARY"),
   lines: z.array(journalLineSchema).min(2).max(500),
 });
 export const ledgerAccountSchema = z.object({
@@ -53,7 +53,7 @@ export const ledgerAccountSchema = z.object({
   accountClass: z.enum(["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"]),
   normalBalance: z.enum(["DEBIT", "CREDIT"]),
   parentId: uuid.optional(),
-  allowPosting: z.coerce.boolean().default(true),
+  allowPosting: z.coerce.boolean().prefault(true),
 });
 export const costCentreSchema = z.object({
   code: z.string().trim().toUpperCase().min(1).max(30),

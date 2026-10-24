@@ -238,7 +238,7 @@ export async function saveNewAccountPartyAction(form: FormData) {
   const { z } = await import("zod");
   let createdParty: {id:string;name:string;contactPerson:string|null;phone:string|null;branchId:string}|undefined;
   const result=await accountAction(async () => {
-    const branchId = z.string().uuid().parse(form.get("branchId"));
+    const branchId = z.string().guid().parse(form.get("branchId"));
     const customValues = Object.fromEntries(
       [...form.entries()]
         .filter(([key]) => key.startsWith("custom_"))

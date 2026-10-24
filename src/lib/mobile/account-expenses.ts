@@ -226,7 +226,7 @@ const recurringActionSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("GENERATE"),
-      moneyAccountId: z.string().uuid(),
+      moneyAccountId: z.string().guid(),
       expectedDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     })
     .strict(),

@@ -527,8 +527,8 @@ export async function postOpeningBalances(raw: unknown) {
 
 const journalHistoryQuery = z.object({
   q: z.string().trim().max(160).optional(),
-  page: z.coerce.number().int().min(1).max(1000000).default(1),
-  branchId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).max(1000000).prefault(1),
+  branchId: z.string().guid().optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
 });

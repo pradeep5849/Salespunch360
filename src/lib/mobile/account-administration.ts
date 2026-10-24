@@ -119,7 +119,7 @@ export async function mobileSaveSettings(
   if (section === "sales-invoice-prefix") {
     const v = z
       .object({
-        branchId: z.string().uuid(),
+        branchId: z.string().guid(),
         prefix: z.string().trim().max(30),
       })
       .strict()
@@ -212,7 +212,7 @@ export async function mobileSaveSettings(
           showSignature: z.boolean(),
           footer: z.string().max(500),
         }),
-        branchId: z.string().uuid().nullable().optional(),
+        branchId: z.string().guid().nullable().optional(),
       })
       .parse(raw);
     if (
@@ -529,8 +529,8 @@ export async function mobileCompleteServiceReminder(
   await assertOperationalWrite(a.companyId);
   const input = z
     .object({
-      lineId: z.string().uuid(),
-      branchId: z.string().uuid().optional(),
+      lineId: z.string().guid(),
+      branchId: z.string().guid().optional(),
       scope: z.literal("all").optional(),
     })
     .strict()

@@ -10,10 +10,10 @@ import { retrySerializable } from "./transaction-retry";
 import type { ProjectActor } from "./projects";
 const input = z
   .object({
-    moneyAccountId: z.string().uuid(),
-    branchId: z.string().uuid(),
+    moneyAccountId: z.string().guid(),
+    branchId: z.string().guid(),
     direction: z.enum(["ADD", "REDUCE"]),
-    offsetLedgerId: z.string().uuid(),
+    offsetLedgerId: z.string().guid(),
     amount: z
       .string()
       .regex(/^\d{1,16}(\.\d{1,2})?$/)
@@ -28,7 +28,7 @@ const input = z
         "Valid calendar date required",
       ),
     reason: z.string().trim().min(3).max(1000),
-    idempotencyKey: z.string().uuid(),
+    idempotencyKey: z.string().guid(),
   })
   .strict();
 export async function postMoneyAdjustmentForActor(

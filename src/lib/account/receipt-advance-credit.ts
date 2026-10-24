@@ -51,10 +51,10 @@ async function correctionCreditInTx(tx:Prisma.TransactionClient,actor:ProjectAct
 }
 /** Internal primitives: release and correction/reapplication must share a transaction. */
 export async function receiptAdvanceCreditInTx(tx:Prisma.TransactionClient,actor:ProjectActor,raw:unknown){
- const input=z.object({allocationId:z.string().uuid(),entryDate:z.coerce.date()}).strict().parse(raw);
+ const input=z.object({allocationId:z.string().guid(),entryDate:z.coerce.date()}).strict().parse(raw);
  return correctionCreditInTx(tx,actor,"RECEIPT",input.allocationId,input.entryDate);
 }
 export async function advanceApplicationCreditInTx(tx:Prisma.TransactionClient,actor:ProjectActor,raw:unknown){
- const input=z.object({applicationId:z.string().uuid(),entryDate:z.coerce.date()}).strict().parse(raw);
+ const input=z.object({applicationId:z.string().guid(),entryDate:z.coerce.date()}).strict().parse(raw);
  return correctionCreditInTx(tx,actor,"ADVANCE_APPLICATION",input.applicationId,input.entryDate);
 }

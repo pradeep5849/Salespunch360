@@ -13,7 +13,7 @@ const optional = (schema: z.ZodString) =>
     schema.optional(),
   );
 export const stockSummaryQuery = z.object({
-  branchId: optional(z.string().uuid()),
+  branchId: optional(z.string().guid()),
   scope: optional(z.string().regex(/^all$/)),
   asOf: optional(z.string().date()),
   q: optional(z.string().trim().max(240)),

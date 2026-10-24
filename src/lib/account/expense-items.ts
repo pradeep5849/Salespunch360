@@ -12,7 +12,7 @@ import type { ProjectActor } from "./projects";
 export const expenseItemInput = z
   .object({
     name: z.string().trim().min(1).max(240),
-    requestKey: z.string().uuid(),
+    requestKey: z.string().guid(),
   })
   .strict();
 async function access(actor: ProjectActor, write = false) {
@@ -74,8 +74,8 @@ export async function listExpenseItemsForActor(
   const query = z
     .object({
       q: z.string().trim().max(160).optional(),
-      offset: z.coerce.number().int().min(0).max(10_000_000).default(0),
-      limit: z.coerce.number().int().min(1).max(100).default(25),
+      offset: z.coerce.number().int().min(0).max(10_000_000).prefault(0),
+      limit: z.coerce.number().int().min(1).max(100).prefault(25),
     })
     .strict()
     .parse(raw);
@@ -227,7 +227,7 @@ export async function expenseItemPhotoForActor(
 ) {
   await access(actor);
   const item = await db.expenseItem.findFirst({
-    where: { companyId: actor.companyId, id: z.string().uuid().parse(id) },
+    where: { companyId: actor.companyId, id: z.string().guid().parse(id) },
   });
   if (!item?.photoObjectKey) throw new AuthorizationError();
   return privateStorage().get(item.photoObjectKey);

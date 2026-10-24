@@ -1,7 +1,7 @@
 import {z} from "zod";
 import {quantityInBaseUnits,type ItemUnitSelection} from "./unit-quantities";
 import {validUnitConversionRate} from "./unit-conversion-rate";
-const snapshotSchema=z.object({version:z.literal(1),selection:z.enum(["PRIMARY","SECONDARY"]),primaryUnitId:z.string().uuid(),secondaryUnitId:z.string().uuid(),secondaryUnitsPerBase:z.string().refine(validUnitConversionRate),unitName:z.string().max(80),unitSymbol:z.string().max(20)}).refine(value=>value.primaryUnitId!==value.secondaryUnitId);
+const snapshotSchema=z.object({version:z.literal(1),selection:z.enum(["PRIMARY","SECONDARY"]),primaryUnitId:z.string().guid(),secondaryUnitId:z.string().guid(),secondaryUnitsPerBase:z.string().refine(validUnitConversionRate),unitName:z.string().max(80),unitSymbol:z.string().max(20)}).refine(value=>value.primaryUnitId!==value.secondaryUnitId);
 export type CommercialUnitSnapshot=z.infer<typeof snapshotSchema>;
 export function parseCommercialUnitSnapshot(value:unknown):CommercialUnitSnapshot{
  const parsed=snapshotSchema.safeParse(value);

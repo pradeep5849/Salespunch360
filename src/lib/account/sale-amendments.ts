@@ -174,7 +174,7 @@ export function reversePostedSaleForActor(actor: ProjectActor, id: string) {
     !canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_JOURNAL_POST")
   )
     throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   return retrySerializable(() =>
     db.$transaction(
       async (tx) => {
@@ -246,12 +246,12 @@ export async function replacePostedSaleForActor(
     !canUsePermission(actor, "SALESPUNCH360_ACCOUNT", "ACCOUNT_JOURNAL_POST")
   )
     throw new AuthorizationError();
-  z.string().uuid().parse(id);
+  z.string().guid().parse(id);
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     throw new Error("INVALID_INPUT");
   const requestKey = z
     .string()
-    .uuid()
+    .guid()
     .parse((raw as Record<string, unknown>).idempotencyKey);
   const prepared=await prepareSaleAttachments(actor,files),attemptedKeys=new Set<string>();
   const attachmentManifest=prepared.length?saleAttachmentManifest(prepared):undefined;

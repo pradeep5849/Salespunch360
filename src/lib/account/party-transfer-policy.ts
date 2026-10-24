@@ -2,12 +2,12 @@ import {Prisma} from "@prisma/client";
 import {z} from "zod";
 const D=Prisma.Decimal.clone({precision:48});
 const amount=z.union([z.string(),z.number()]).transform(String).refine(value=>/^\d{1,16}(?:\.\d{1,2})?$/.test(value),"Use a non-negative amount with up to two decimal places").transform(value=>new D(value).toFixed(2));
-const uuid=z.string().uuid().transform(value=>value.toLowerCase());
+const uuid=z.string().guid().transform(value=>value.toLowerCase());
 const party=z.object({kind:z.enum(["CUSTOMER","VENDOR"]),id:uuid}).strict();
 /** Agency/pass-through flow: only the retained difference is Other Income. */
 export const partyTransferBaseInput=z.object({
  requestKey:uuid,branchId:uuid,moneyAccountId:uuid,transactionDate:z.string().date(),
- receivedParty:party,paidParty:party,receivedAmount:amount,paidAmount:amount,notes:z.string().trim().max(5000).default(""),
+ receivedParty:party,paidParty:party,receivedAmount:amount,paidAmount:amount,notes:z.string().trim().max(5000).prefault(""),
 }).strict();
 export const partyTransferInput=partyTransferBaseInput.superRefine((value,ctx)=>{
  if(new D(value.receivedAmount).lte(0))ctx.addIssue({code:"custom",path:["receivedAmount"],message:"Received amount must be greater than zero"});

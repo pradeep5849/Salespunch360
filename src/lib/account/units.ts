@@ -33,7 +33,7 @@ export async function saveUnitForActor(
   id?: string,
 ) {
   const input = unitSchema.strict().parse(raw);
-  if (id) z.string().uuid().parse(id);
+  if (id) z.string().guid().parse(id);
   try {
     return await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId + ":account-settings"}))`;
@@ -80,8 +80,8 @@ export async function saveUnitForActor(
 }
 export const unitConversionInput = z
   .object({
-    baseUnitId: z.string().uuid(),
-    secondaryUnitId: z.string().uuid(),
+    baseUnitId: z.string().guid(),
+    secondaryUnitId: z.string().guid(),
     rate: z
       .union([z.string(), z.number()])
       .transform(String)

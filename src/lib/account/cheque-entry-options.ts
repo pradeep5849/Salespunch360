@@ -12,10 +12,10 @@ export async function chequeEntryOptionsForActor(
     throw new AuthorizationError();
   const input = z
     .object({
-      branchId: z.string().uuid().optional(),
-      kind: z.enum(["BANK", "ALL"]).default("ALL"),
-      q: z.string().trim().max(160).default(""),
-      offset: z.coerce.number().int().min(0).max(1000000).default(0),
+      branchId: z.string().guid().optional(),
+      kind: z.enum(["BANK", "ALL"]).prefault("ALL"),
+      q: z.string().trim().max(160).prefault(""),
+      offset: z.coerce.number().int().min(0).max(1000000).prefault(0),
     })
     .strict()
     .parse(raw);

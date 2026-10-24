@@ -31,7 +31,7 @@ async function party(tx:Prisma.TransactionClient,companyId:string,branchId:strin
 }
 async function source(tx:Prisma.TransactionClient,companyId:string,id:string){return tx.accountOperationalAudit.findFirst({where:{companyId,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_POSTED"},select:{metadata:true,createdAt:true}})}
 export async function partyTransferForActor(a:ProjectActor,id:string){
- await access(a);z.string().uuid().parse(id);id=id.toLowerCase();const row=await source(db as unknown as Prisma.TransactionClient,a.companyId!,id);if(!row)throw new Error("PARTY_TRANSFER_NOT_FOUND");const data=partyTransferSnapshot.parse(row.metadata);branch(a,data.branchId);const reversed=await db.accountOperationalAudit.count({where:{companyId:a.companyId,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_REVERSED"}});return{id,...data,createdAt:row.createdAt,status:reversed?"REVERSED" as const:"POSTED" as const};
+ await access(a);z.string().guid().parse(id);id=id.toLowerCase();const row=await source(db as unknown as Prisma.TransactionClient,a.companyId!,id);if(!row)throw new Error("PARTY_TRANSFER_NOT_FOUND");const data=partyTransferSnapshot.parse(row.metadata);branch(a,data.branchId);const reversed=await db.accountOperationalAudit.count({where:{companyId:a.companyId,entityType:"PARTY_TRANSFER",entityId:id,eventType:"PARTY_TRANSFER_REVERSED"}});return{id,...data,createdAt:row.createdAt,status:reversed?"REVERSED" as const:"POSTED" as const};
 }
 /** One serializable commit; no invoice allocation or company expense is created for pass-through money. */
 export async function savePartyTransferForActor(a:ProjectActor,raw:unknown,file?:File){
@@ -99,11 +99,11 @@ export async function partyTransferOptionsForActor(a:ProjectActor){
  return{branches,customers,vendors,accounts,canPost:canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_MONEY_ENTRY")&&canUsePermission(a,"SALESPUNCH360_ACCOUNT","ACCOUNT_JOURNAL_POST")};
 }
 
-const reversalInput=z.object({requestKey:z.string().uuid().transform(value=>value.toLowerCase()),entryDate:z.string().date(),reason:z.string().trim().min(3).max(1000)}).strict();
+const reversalInput=z.object({requestKey:z.string().guid().transform(value=>value.toLowerCase()),entryDate:z.string().date(),reason:z.string().trim().min(3).max(1000)}).strict();
 /** Reverse the entire managed source; its original immutable snapshot remains intact. */
 export async function reversePartyTransferForActor(a:ProjectActor,id:string,raw:unknown){
  await access(a,true);if(a.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
- id=z.string().uuid().parse(id).toLowerCase();const input=reversalInput.parse(raw);
+ id=z.string().guid().parse(id).toLowerCase();const input=reversalInput.parse(raw);
  const requestHash=createHash("sha256").update(JSON.stringify({id,...input})).digest("hex");
  return retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM companies WHERE id=${a.companyId}::uuid FOR UPDATE`;

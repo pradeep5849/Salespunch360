@@ -10,13 +10,13 @@ import type {ProjectActor} from "./projects";
 const blank=(v:unknown)=>typeof v==="string"&&v.trim()===""?null:v;
 const text=(max:number)=>z.preprocess(blank,z.string().trim().max(max).nullable().optional());
 export const loanMetadataInput=z.object({
- requestKey:z.string().uuid(),expectedVersion:z.coerce.number().int().min(0).max(2147483646),
+ requestKey:z.string().guid(),expectedVersion:z.coerce.number().int().min(0).max(2147483646),
  displayName:text(240),loanAccountNumber:text(160),description:text(2000),
  durationMonths:z.preprocess(blank,z.coerce.number().int().min(1).max(1200).nullable().optional()),
 }).strict();
 export async function editLoanMetadataForActor(actor:ProjectActor,id:string,raw:unknown){
  if(!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LOAN_ADMIN"))throw new AuthorizationError();
- z.string().uuid().parse(id);const d=loanMetadataInput.parse(raw);const {requestKey,expectedVersion,...patch}=d;
+ z.string().guid().parse(id);const d=loanMetadataInput.parse(raw);const {requestKey,expectedVersion,...patch}=d;
  return retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM loans WHERE id=${id}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
   const before=await tx.loan.findFirst({where:{id,companyId:actor.companyId}});
@@ -35,14 +35,14 @@ export async function editLoanMetadataForActor(actor:ProjectActor,id:string,raw:
 }
 
 export const loanTopUpInput=z.object({
- requestKey:z.string().uuid(),expectedVersion:z.coerce.number().int().min(0).max(2147483646),
+ requestKey:z.string().guid(),expectedVersion:z.coerce.number().int().min(0).max(2147483646),
  amount:z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).refine(v=>new Prisma.Decimal(v).gt(0)),
- operationDate:z.coerce.date(),moneyAccountId:z.string().uuid(),description:text(2000),
+ operationDate:z.coerce.date(),moneyAccountId:z.string().guid(),description:text(2000),
 }).strict();
 /** Additional borrowing has its own immutable receipt; original principal stays intact. */
 export async function topUpLoanForActor(actor:ProjectActor,id:string,raw:unknown){
  if(!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LOAN_ADMIN"))throw new AuthorizationError();
- z.string().uuid().parse(id);const d=loanTopUpInput.parse(raw);
+ z.string().guid().parse(id);const d=loanTopUpInput.parse(raw);
  const hash=createHash("sha256").update(JSON.stringify({action:"TOP_UP",loanId:id,expectedVersion:d.expectedVersion,amount:new Prisma.Decimal(d.amount).toFixed(2),operationDate:d.operationDate.toISOString().slice(0,10),moneyAccountId:d.moneyAccountId,description:d.description??null})).digest("hex");
  return retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
@@ -67,10 +67,10 @@ export async function topUpLoanForActor(actor:ProjectActor,id:string,raw:unknown
  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable}),3,["companyId","requestKey"]);
 }
 
-export const loanLifecycleInput=z.object({requestKey:z.string().uuid(),expectedVersion:z.coerce.number().int().min(0).max(2147483646),action:z.enum(["CANCEL","ARCHIVE","RESTORE"]),operationDate:z.coerce.date(),reason:z.string().trim().min(3).max(1000)}).strict();
+export const loanLifecycleInput=z.object({requestKey:z.string().guid(),expectedVersion:z.coerce.number().int().min(0).max(2147483646),action:z.enum(["CANCEL","ARCHIVE","RESTORE"]),operationDate:z.coerce.date(),reason:z.string().trim().min(3).max(1000)}).strict();
 export async function changeLoanLifecycleForActor(actor:ProjectActor,id:string,raw:unknown){
  if(!canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_LOAN_ADMIN"))throw new AuthorizationError();
- z.string().uuid().parse(id);const d=loanLifecycleInput.parse(raw);const hash=createHash("sha256").update(JSON.stringify({...d,operationDate:d.operationDate.toISOString().slice(0,10),loanId:id})).digest("hex");
+ z.string().guid().parse(id);const d=loanLifecycleInput.parse(raw);const hash=createHash("sha256").update(JSON.stringify({...d,operationDate:d.operationDate.toISOString().slice(0,10),loanId:id})).digest("hex");
  return retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
   await tx.$queryRaw`SELECT id FROM loans WHERE id=${id}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;

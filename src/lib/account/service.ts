@@ -105,7 +105,7 @@ export async function accountMasterOverview(
   if (!masterKinds.has(master)) throw new Error("INVALID_MASTER_TYPE");
   let a = await readActor();
   if(master==="customers"&&(raw.branchId||raw.scope)){
-    const query=z.object({branchId:z.string().uuid().optional(),scope:z.literal("all").optional()}).refine(v=>!(v.branchId&&v.scope)).parse({branchId:raw.branchId,scope:raw.scope});
+    const query=z.object({branchId:z.string().guid().optional(),scope:z.literal("all").optional()}).refine(v=>!(v.branchId&&v.scope)).parse({branchId:raw.branchId,scope:raw.scope});
     const resolved=await resolveAccountBranchContext({...a,companyId:a.companyId!},query);
     a={...a,branchAccessScope:resolved.context.mode==="BRANCH"?"SELECTED_BRANCHES":"ALL_BRANCHES",branchIds:resolved.context.mode==="BRANCH"?[resolved.context.branchId]:[]};
   }
@@ -320,7 +320,7 @@ export async function createPartyWithCustomValues(
 ) {
   const a = await writeActor(),
     d = partySchema.parse(raw);
-  if(explicitBranchId){z.string().uuid().parse(explicitBranchId);if(a.branchAccessScope==="SELECTED_BRANCHES"&&!a.branchIds?.includes(explicitBranchId))throw new AuthorizationError();}
+  if(explicitBranchId){z.string().guid().parse(explicitBranchId);if(a.branchAccessScope==="SELECTED_BRANCHES"&&!a.branchIds?.includes(explicitBranchId))throw new AuthorizationError();}
   return db.$transaction(async (tx) => {
     const data = {
       companyId: a.companyId!,
@@ -446,7 +446,7 @@ export async function setItemsActiveForActor(
   const input = z
     .object({
       kind: z.enum(["products", "services"]),
-      ids: z.array(z.string().uuid()).max(1000),
+      ids: z.array(z.string().guid()).max(1000),
       isActive: z.boolean(),
     })
     .parse({ kind, ids, isActive });

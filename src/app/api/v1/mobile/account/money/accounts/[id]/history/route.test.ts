@@ -40,7 +40,7 @@ describe("mobile money account history read scope", () => {
         .status,
     ).toBe(403);
     mocks.money.mockRejectedValueOnce(
-      z.string().uuid().safeParse("invalid").error,
+      z.string().guid().safeParse("invalid").error,
     );
     expect(
       (await GET(request, { params: Promise.resolve({ id: "account" }) }))

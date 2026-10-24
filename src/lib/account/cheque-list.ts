@@ -9,12 +9,12 @@ import type { ProjectActor } from "./projects";
 export const chequeListQuerySchema = z
   .object({
     q: z.string().trim().max(160).optional(),
-    tab: z.enum(["OPEN", "CLOSED", "ALL"]).default("OPEN"),
+    tab: z.enum(["OPEN", "CLOSED", "ALL"]).prefault("OPEN"),
     status: z.nativeEnum(ChequeStatus).optional(),
-    branchId: z.string().uuid().optional(),
-    order: z.enum(["asc", "desc"]).default("desc"),
-    offset: z.coerce.number().int().min(0).max(10000000).default(0),
-    limit: z.coerce.number().int().min(1).max(100).default(25),
+    branchId: z.string().guid().optional(),
+    order: z.enum(["asc", "desc"]).prefault("desc"),
+    offset: z.coerce.number().int().min(0).max(10000000).prefault(0),
+    limit: z.coerce.number().int().min(1).max(100).prefault(25),
   })
   .strict();
 const openStatuses: ChequeStatus[] = ["ISSUED", "RECEIVED"];

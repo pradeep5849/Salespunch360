@@ -201,13 +201,33 @@ test("expense inline category, paid Save & New, review rejection and detail work
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 30000 });
   await page.goto("/workspace/account/expenses/new");
-  await expect(page.getByRole("heading", { name: "Expense", exact: true })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Expense number and date" })).toContainText("Expense No.");
-  await expect(page.locator(".expense-entry")).toContainText("Expense browser fixture");
-  await page.getByRole("button", { name: "Open tax settings", exact: true }).click();
-  await expect(page.locator("#expense-tax-settings")).toHaveAttribute("open", "");
-  await expect(page.getByRole("button", { name: "Enable GST for this expense", exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(
+    page.getByRole("heading", { name: "Expense", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Expense number and date" }),
+  ).toContainText("Expense No.");
+  await expect(page.locator(".expense-entry")).toContainText(
+    "Expense browser fixture",
+  );
+  await page
+    .getByRole("button", { name: "Open tax settings", exact: true })
+    .click();
+  await expect(page.locator("#expense-tax-settings")).toHaveAttribute(
+    "open",
+    "",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Enable GST for this expense",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   await page
     .getByLabel("Transaction type", { exact: true })
     .selectOption("OTHER_INCOME");
@@ -314,9 +334,7 @@ test("expense inline category, paid Save & New, review rejection and detail work
     .getByLabel("Cash / bank account", { exact: true })
     .selectOption(moneyId);
   await page.getByLabel("Transaction date", { exact: true }).fill("2026-10-09");
-  await page
-    .getByLabel("Round Off", { exact: true })
-    .check();
+  await page.getByLabel("Round Off", { exact: true }).check();
   await expect(page.getByRole("status")).toContainText("Total ₹101.00");
   const axe = await new AxeBuilder({ page })
     .include(".expense-entry")
@@ -1127,7 +1145,7 @@ test("A057 no-op legacy settings save preserves effective defaults and conversio
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/,{timeout:20000});
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
   await page.goto("/workspace/account/inventory/item-settings");
   await expect(
     page.getByRole("checkbox", { name: /Barcode scanning for items/ }),
@@ -3647,13 +3665,26 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 20000 });
   await page.goto("/workspace/account/money/cheques");
-  for(const [tab,heading] of [["Open","No open cheques"],["Closed","No closed cheques"],["All","No cheques"]]){
-    await page.getByRole("navigation",{name:"Cheque status tabs"}).getByRole("link",{name:tab,exact:true}).click();
-    await expect(page.getByRole("heading",{name:heading,exact:true})).toBeVisible();
+  for (const [tab, heading] of [
+    ["Open", "No open cheques"],
+    ["Closed", "No closed cheques"],
+    ["All", "No cheques"],
+  ]) {
+    await page
+      .getByRole("navigation", { name: "Cheque status tabs" })
+      .getByRole("link", { name: tab, exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: heading, exact: true }),
+    ).toBeVisible();
   }
-  await page.getByRole("link",{name:"Open",exact:true}).click();
-  await page.getByRole("link",{name:"Date order: newest first",exact:true}).click();
-  await expect(page.getByRole("link",{name:"Date order: oldest first",exact:true})).toBeVisible();
+  await page.getByRole("link", { name: "Open", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Date order: newest first", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "Date order: oldest first", exact: true }),
+  ).toBeVisible();
 
   await page.getByText("Record cheque", { exact: true }).first().click();
   await page.getByLabel("Bank account", { exact: true }).selectOption(bank.id);
@@ -3669,25 +3700,43 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   ).toBeAttached({ timeout: 15000 });
   await page.getByLabel("Party", { exact: true }).selectOption(party.id);
   await page.getByLabel("Amount", { exact: true }).fill("1593.00");
-  const recordForm=page.locator("form").filter({has:page.getByRole("button",{name:"Record cheque",exact:true})});const originalKey=await recordForm.locator('input[name="requestKey"]').inputValue();
+  const recordForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Record cheque", exact: true }),
+  });
+  const originalKey = await recordForm
+    .locator('input[name="requestKey"]')
+    .inputValue();
   await page
     .getByRole("button", { name: "Record cheque", exact: true })
     .click();
   const card = page.getByRole("article", { name: `Cheque ${number}` });
   await expect(card).toBeVisible({ timeout: 15000 });
-  await expect(recordForm.getByLabel("Cheque number",{exact:true})).toHaveValue("");
-  await expect(recordForm.getByLabel("Amount",{exact:true})).toHaveValue("");
-  await expect(recordForm.locator('input[name="requestKey"]')).not.toHaveValue(originalKey);
+  await expect(
+    recordForm.getByLabel("Cheque number", { exact: true }),
+  ).toHaveValue("");
+  await expect(recordForm.getByLabel("Amount", { exact: true })).toHaveValue(
+    "",
+  );
+  await expect(recordForm.locator('input[name="requestKey"]')).not.toHaveValue(
+    originalKey,
+  );
 
-  await page.getByRole("link",{name:"All",exact:true}).click();
+  await page.getByRole("link", { name: "All", exact: true }).click();
   await expect(card).toBeVisible();
-  await page.getByLabel("Search cheques",{exact:true}).fill("unmatched-cheque-reference");
-  await page.getByRole("button",{name:"Search",exact:true}).click();
-  await expect(page.getByRole("heading",{name:"No cheques match this search",exact:true})).toBeVisible();
-  await page.getByLabel("Search cheques",{exact:true}).fill(number);
-  await page.getByRole("button",{name:"Search",exact:true}).click();
+  await page
+    .getByLabel("Search cheques", { exact: true })
+    .fill("unmatched-cheque-reference");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "No cheques match this search",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByLabel("Search cheques", { exact: true }).fill(number);
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(card).toBeVisible();
-  await page.getByRole("link",{name:"Open",exact:true}).click();
+  await page.getByRole("link", { name: "Open", exact: true }).click();
   const recorded = await db.cheque.findFirstOrThrow({
     where: { companyId, chequeNumber: number },
   });
@@ -3709,12 +3758,14 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
     .getByRole("button", { name: "Confirm cheque action", exact: true })
     .click();
   await expect(card).not.toBeAttached({ timeout: 15000 });
-  await expect(page.getByRole("status",{name:"Cheque notification",exact:true})).toContainText("Cheque updated");
+  await expect(
+    page.getByRole("status", { name: "Cheque notification", exact: true }),
+  ).toContainText("Cheque updated");
   await page.getByRole("link", { name: "Closed", exact: true }).click();
   await expect(card).toContainText("CLEARED");
   await expect(card).toContainText("Cash closure reference");
   await expect(card).toContainText("Cash account:");
-  await expect(card.getByText("Bank:",{exact:false})).toHaveCount(0);
+  await expect(card.getByText("Bank:", { exact: false })).toHaveCount(0);
   await card
     .getByLabel("Cheque action", { exact: true })
     .selectOption("REOPEN");
@@ -3735,18 +3786,42 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
     .getByLabel("Action date", { exact: true })
     .fill("2026-10-13");
   await confirmation.getByLabel("Reason", { exact: true }).fill("Undo closure");
-  const journalsBeforeInvalid=await db.journalEntry.count({where:{companyId}});
-  await confirmation.getByLabel("Action date",{exact:true}).fill("2026-10-11");
-  await confirmation.getByRole("button",{name:"Yes",exact:true}).click();
-  const correctionError=confirmation.getByRole("alert");
-  await expect(correctionError).toHaveText("The correction date cannot be before the original payment date.");
+  const journalsBeforeInvalid = await db.journalEntry.count({
+    where: { companyId },
+  });
+  await confirmation
+    .getByLabel("Action date", { exact: true })
+    .fill("2026-10-11");
+  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
+  const correctionError = confirmation.getByRole("alert");
+  await expect(correctionError).toHaveText(
+    "The correction date cannot be before the original payment date.",
+  );
   await expect(correctionError).toBeFocused();
-  await expect(confirmation.getByLabel("Reason",{exact:true})).toHaveValue("Undo closure");
-  await expect(confirmation.getByLabel("Action date",{exact:true})).toHaveValue("2026-10-11");
-  expect((await db.cheque.findUniqueOrThrow({where:{id:recorded.id}})).actionVersion).toBe(closedBefore.actionVersion);
-  expect(await db.journalEntry.count({where:{companyId}})).toBe(journalsBeforeInvalid);
-  for(let tab=0;tab<8;tab++){await page.keyboard.press("Tab");expect(await confirmation.evaluate(node=>node.contains(document.activeElement))).toBe(true)}
-  await confirmation.getByLabel("Action date",{exact:true}).fill("2026-10-13");
+  await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
+    "Undo closure",
+  );
+  await expect(
+    confirmation.getByLabel("Action date", { exact: true }),
+  ).toHaveValue("2026-10-11");
+  expect(
+    (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
+      .actionVersion,
+  ).toBe(closedBefore.actionVersion);
+  expect(await db.journalEntry.count({ where: { companyId } })).toBe(
+    journalsBeforeInvalid,
+  );
+  for (let tab = 0; tab < 8; tab++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await confirmation.evaluate((node) =>
+        node.contains(document.activeElement),
+      ),
+    ).toBe(true);
+  }
+  await confirmation
+    .getByLabel("Action date", { exact: true })
+    .fill("2026-10-13");
   expect(
     (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
   ).toEqual([]);
@@ -3771,25 +3846,56 @@ test("cheque entry and confirmed cash closure/reopening work at this viewport", 
   await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
     "Undo closure",
   );
-  let releaseFailure:()=>void=()=>{};
-  const failureGate=new Promise<void>(resolve=>{releaseFailure=resolve});
-  const holdAction=async(route:import("@playwright/test").Route)=>{if(route.request().method()==="POST"&&route.request().headers()["next-action"]){await failureGate;await route.abort("failed")}else await route.continue()};
-  await page.route("**/workspace/account/money/cheques**",holdAction);
-  const seen=page.waitForRequest(request=>request.method()==="POST"&&!!request.headers()["next-action"]);
-  try{
-   await confirmation.getByRole("button",{name:"Yes",exact:true}).click();await seen;
-   await expect(confirmation.getByLabel("Reason",{exact:true})).toBeDisabled();
-   await expect(card.getByLabel("Cheque action",{exact:true})).toBeDisabled();
-   await expect(confirmation.locator('button[type="submit"]')).toBeDisabled();
-  }finally{releaseFailure()}
-  await expect(confirmation.getByRole("alert")).toHaveText("Connection interrupted. Your inputs were kept; try again when online.");
+  let releaseFailure: () => void = () => {};
+  const failureGate = new Promise<void>((resolve) => {
+    releaseFailure = resolve;
+  });
+  const holdAction = async (route: import("@playwright/test").Route) => {
+    if (
+      route.request().method() === "POST" &&
+      route.request().headers()["next-action"]
+    ) {
+      await failureGate;
+      await route.abort("failed");
+    } else await route.continue();
+  };
+  await page.route("**/workspace/account/money/cheques**", holdAction);
+  const seen = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && !!request.headers()["next-action"],
+  );
+  try {
+    await confirmation
+      .getByRole("button", { name: "Yes", exact: true })
+      .click();
+    await seen;
+    await expect(
+      confirmation.getByLabel("Reason", { exact: true }),
+    ).toBeDisabled();
+    await expect(
+      card.getByLabel("Cheque action", { exact: true }),
+    ).toBeDisabled();
+    await expect(confirmation.locator('button[type="submit"]')).toBeDisabled();
+  } finally {
+    releaseFailure();
+  }
+  await expect(confirmation.getByRole("alert")).toHaveText(
+    "Connection interrupted. Your inputs were kept; try again when online.",
+  );
   await expect(confirmation.getByRole("alert")).toBeFocused();
-  await expect(confirmation.getByLabel("Reason",{exact:true})).toHaveValue("Undo closure");
-  expect((await db.cheque.findUniqueOrThrow({where:{id:recorded.id}})).actionVersion).toBe(closedBefore.actionVersion);
-  await page.unroute("**/workspace/account/money/cheques**",holdAction);
+  await expect(confirmation.getByLabel("Reason", { exact: true })).toHaveValue(
+    "Undo closure",
+  );
+  expect(
+    (await db.cheque.findUniqueOrThrow({ where: { id: recorded.id } }))
+      .actionVersion,
+  ).toBe(closedBefore.actionVersion);
+  await page.unroute("**/workspace/account/money/cheques**", holdAction);
   await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(card).not.toBeAttached({ timeout: 15000 });
-  await expect(page.getByRole("status",{name:"Cheque notification",exact:true})).toContainText("Cheque updated");
+  await expect(
+    page.getByRole("status", { name: "Cheque notification", exact: true }),
+  ).toContainText("Cheque updated");
   await page.getByRole("link", { name: "Open", exact: true }).click();
   await expect(card).toContainText("RECEIVED");
   expect(
@@ -4205,7 +4311,12 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     where: { companyId },
   });
   try {
-    await db.accountSettings.update({where:{companyId},data:{itemSettings:{...settings.itemSettings as object,taxOnMrp:true}}});
+    await db.accountSettings.update({
+      where: { companyId },
+      data: {
+        itemSettings: { ...(settings.itemSettings as object), taxOnMrp: true },
+      },
+    });
     await page.goto("/sign-in");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
@@ -4215,7 +4326,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     await page
       .getByLabel("Item Name *", { exact: true })
       .fill(`Pricing web ${suffix}`);
-    await page.getByLabel("MRP (tax included)",{exact:true}).fill("118");
+    await page.getByLabel("MRP (tax included)", { exact: true }).fill("118");
     await page.getByPlaceholder("Sale Price", { exact: true }).fill("118");
     await page
       .getByLabel("Sale Price Tax Mode", { exact: true })
@@ -4252,7 +4363,9 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
       enteredSalePrice: "118.00",
       normalizedDiscountValue: "10",
       normalizedWholesalePrice: "90.00",
-      mrp:"118",normalizedMrp:"100.00",mrpTaxMode:"INCLUSIVE",
+      mrp: "118",
+      normalizedMrp: "100.00",
+      mrpTaxMode: "INCLUSIVE",
     });
     await page.goto("/workspace/account/transactions/new?type=SALES_INVOICE");
     await page.getByRole("button", { name: /Add Items/ }).click();
@@ -4307,7 +4420,7 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
         discountType: "PERCENTAGE",
         discountValue: "10",
         wholesalePrice: "106.20",
-        mrp:"118",
+        mrp: "118",
       },
       creationRequestKey: randomUUID(),
     };
@@ -4322,7 +4435,9 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     expect(native.pricing).toMatchObject({
       normalizedDiscountValue: "10",
       normalizedWholesalePrice: "90.00",
-      mrp:"118",normalizedMrp:"100.00",mrpTaxMode:"INCLUSIVE",
+      mrp: "118",
+      normalizedMrp: "100.00",
+      mrpTaxMode: "INCLUSIVE",
     });
     const replay = await request.post(
       "/api/v1/mobile/account/master-data/items",
@@ -4367,7 +4482,8 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
         enteredSalePrice: "177.00",
         saleTaxMode: "INCLUSIVE",
         discountType: "PERCENTAGE",
-        mrp:"118",normalizedMrp:"100.00",
+        mrp: "118",
+        normalizedMrp: "100.00",
       }),
     });
     await db.accountSettings.update({
@@ -4387,8 +4503,43 @@ test("A058 entered inclusive pricing and discounts persist through web and nativ
     );
     expect(disabled.ok()).toBe(false);
     expect((await disabled.json()).error).toBe("WHOLESALE_PRICING_DISABLED");
-    const retained=await request.patch(`/api/v1/mobile/account/master-data/items/${native.id}`,{headers,data:{name:payload.name,sellingRate:"150",cost:"50",taxRate:"18",pricing:{saleTaxMode:"EXCLUSIVE",purchaseTaxMode:"EXCLUSIVE",discountType:"PERCENTAGE",discountValue:"0"}}});expect(retained.status()).toBe(200);expect((await db.accountProduct.findUniqueOrThrow({where:{id:native.id}})).pricing).toMatchObject({mrp:"118",normalizedMrp:"100.00"});
-    const mrpDisabled=await request.post("/api/v1/mobile/account/master-data/items",{headers,data:{...payload,name:"Disabled MRP",creationRequestKey:randomUUID(),pricing:{...payload.pricing,wholesalePrice:undefined}}});expect(mrpDisabled.status()).toBe(400);expect((await mrpDisabled.json()).error).toBe("MRP_PRICING_DISABLED");
+    const retained = await request.patch(
+      `/api/v1/mobile/account/master-data/items/${native.id}`,
+      {
+        headers,
+        data: {
+          name: payload.name,
+          sellingRate: "150",
+          cost: "50",
+          taxRate: "18",
+          pricing: {
+            saleTaxMode: "EXCLUSIVE",
+            purchaseTaxMode: "EXCLUSIVE",
+            discountType: "PERCENTAGE",
+            discountValue: "0",
+          },
+        },
+      },
+    );
+    expect(retained.status()).toBe(200);
+    expect(
+      (await db.accountProduct.findUniqueOrThrow({ where: { id: native.id } }))
+        .pricing,
+    ).toMatchObject({ mrp: "118", normalizedMrp: "100.00" });
+    const mrpDisabled = await request.post(
+      "/api/v1/mobile/account/master-data/items",
+      {
+        headers,
+        data: {
+          ...payload,
+          name: "Disabled MRP",
+          creationRequestKey: randomUUID(),
+          pricing: { ...payload.pricing, wholesalePrice: undefined },
+        },
+      },
+    );
+    expect(mrpDisabled.status()).toBe(400);
+    expect((await mrpDisabled.json()).error).toBe("MRP_PRICING_DISABLED");
   } finally {
     await db.accountSettings.update({
       where: { companyId },

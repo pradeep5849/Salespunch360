@@ -26,11 +26,11 @@ export const environmentSchema = z
       ),
     NODE_ENV: z
       .enum(["development", "test", "production"])
-      .default("development"),
+      .prefault("development"),
     APP_URL: z.string().url(),
-    TRUST_PROXY: bool.default("false"),
-    PAYMENT_PROVIDER: z.enum(["UNCONFIGURED"]).default("UNCONFIGURED"),
-    STORAGE_DRIVER: z.literal("hostinger").default("hostinger"),
+    TRUST_PROXY: bool.prefault("false"),
+    PAYMENT_PROVIDER: z.enum(["UNCONFIGURED"]).prefault("UNCONFIGURED"),
+    STORAGE_DRIVER: z.literal("hostinger").prefault("hostinger"),
     HOSTINGER_STORAGE_PATH: z.string().min(1).optional(),
     SMTP_HOST: z.string().min(1).optional(),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),

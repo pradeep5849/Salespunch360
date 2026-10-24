@@ -2,7 +2,7 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {z} from "zod";
 import {env} from "@/lib/env";
 
-const claimsSchema=z.object({companyId:z.string().uuid(),branchId:z.string().uuid(),id:z.string().uuid(),version:z.string().datetime(),expires:z.number().int()}).strict();
+const claimsSchema=z.object({companyId:z.string().guid(),branchId:z.string().guid(),id:z.string().guid(),version:z.string().datetime(),expires:z.number().int()}).strict();
 type InvoiceIdentity={companyId:string;branchId:string;id:string;updatedAt:Date};
 const signature=(payload:string)=>createHmac("sha256",env.AUTH_SECRET).update(`invoice-share:v1:${payload}`).digest();
 

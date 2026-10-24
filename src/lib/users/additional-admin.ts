@@ -13,9 +13,9 @@ import {assertPlusAccountEntitled} from '@/lib/billing/plus-entitlement';
 
 const optionalPhone=z.preprocess(v=>typeof v==='string'&&v.trim()===''?null:v,z.string().trim().min(1).max(30).nullable().optional());
 export const createAdditionalAdminSchema=z.object({name:z.string().trim().min(1).max(120),email:z.string().trim().toLowerCase().email().max(320),phone:optionalPhone,password:strongPasswordSchema,confirmPassword:z.string()}).strict().refine(v=>v.password===v.confirmPassword,{path:['confirmPassword'],message:'Passwords do not match'});
-export const editAdditionalAdminSchema=z.object({userId:z.string().uuid(),name:z.string().trim().min(1).max(120),email:z.string().trim().toLowerCase().email().max(320),phone:optionalPhone}).strict();
-export const additionalAdminIdSchema=z.object({userId:z.string().uuid()}).strict();
-export const resetAdditionalAdminPasswordSchema=z.object({userId:z.string().uuid(),password:strongPasswordSchema,confirmPassword:z.string()}).strict().refine(v=>v.password===v.confirmPassword,{path:['confirmPassword'],message:'Passwords do not match'});
+export const editAdditionalAdminSchema=z.object({userId:z.string().guid(),name:z.string().trim().min(1).max(120),email:z.string().trim().toLowerCase().email().max(320),phone:optionalPhone}).strict();
+export const additionalAdminIdSchema=z.object({userId:z.string().guid()}).strict();
+export const resetAdditionalAdminPasswordSchema=z.object({userId:z.string().guid(),password:strongPasswordSchema,confirmPassword:z.string()}).strict().refine(v=>v.password===v.confirmPassword,{path:['confirmPassword'],message:'Passwords do not match'});
 
 async function primary(mutation:boolean){const actor=mutation?await requirePermissionForMutation('SALES_USER_ADMIN'):await requirePermission('SALES_USER_ADMIN');if(!actor.companyId||actor.salesRole!=='PRIMARY_ADMIN')throw new Error('NOT_AUTHORIZED');return{...actor,companyId:actor.companyId}}
 async function lockCompany(tx:Prisma.TransactionClient,id:string){await tx.$queryRaw`SELECT 1 FROM "companies" WHERE "id"=${id}::uuid FOR UPDATE`;const c=await tx.company.findUnique({where:{id},select:{productEdition:true,subscriptionStatus:true,trialStartedAt:true,trialEndsAt:true,teamStructure:true}});if(!c)throw new Error('NOT_FOUND');return c}

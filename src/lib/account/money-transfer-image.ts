@@ -15,7 +15,7 @@ export async function prepareTransferImage(file:File){
 }
 async function scopedTransfer(a:ProjectActor,id:string,write=false){
  if(!canUsePermission(a,"SALESPUNCH360_ACCOUNT",write?"ACCOUNT_MONEY_ENTRY":"ACCOUNT_MONEY_VIEW"))throw new AuthorizationError();
- if(!z.string().uuid().safeParse(id).success)throw new Error("TRANSFER_NOT_FOUND");
+ if(!z.string().guid().safeParse(id).success)throw new Error("TRANSFER_NOT_FOUND");
  const row=await db.moneyTransfer.findFirst({where:{id,companyId:a.companyId,...(a.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:a.branchIds??[]}}:{})},select:{id:true}});
  if(!row)throw new Error("TRANSFER_NOT_FOUND");return row;
 }

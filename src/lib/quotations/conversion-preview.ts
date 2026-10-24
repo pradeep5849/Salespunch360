@@ -7,8 +7,8 @@ import {getQuotationForActor, type QuotationActor} from "./service";
 import {quotationCommercialPrefill} from "./commercial-prefill";
 
 const input = z.object({
-  documentId: z.string().uuid(),
-  revisionId: z.string().uuid().optional(),
+  documentId: z.string().guid(),
+  revisionId: z.string().guid().optional(),
   targetType: z.enum(["SALES_INVOICE", "SALES_ORDER"]),
 }).strict();
 
