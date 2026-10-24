@@ -2,13 +2,46 @@ name: Production Prisma Migrations
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: "Read-only connection test or explicitly approved production migration"
+        type: choice
+        options:
+          - connection-test
+          - migrate
+        default: connection-test
+        required: true
 
 permissions:
   contents: read
 
 jobs:
+  connection-test:
+    if: inputs.operation == 'connection-test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact dispatched commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies without production credentials
+        run: npm ci --include=dev
+      - name: Generate Prisma Client without connecting
+        run: npm run prisma:generate
+      - name: Read-only connection and production identity check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: node scripts/production-readonly-connection.mjs
+
   deploy-migrations:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.operation == 'migrate'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -52,7 +85,6 @@ jobs:
 
       - name: Verify migration status after deployment
         run: npx --no-install prisma migrate status
-
 
       - name: Verify generated-client runtime columns
         run: node scripts/check-runtime-schema.mjs
