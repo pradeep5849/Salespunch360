@@ -115,10 +115,10 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Run Android release tests and lint
         working-directory: android
-        run: ./gradlew --no-daemon testDebugUnitTest testReleaseUnitTest lintRelease
+        run: ./gradlew --no-daemon --max-workers=1 "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process testDebugUnitTest testReleaseUnitTest lintRelease
       - name: Assemble unsigned release for verification
         working-directory: android
-        run: ./gradlew --no-daemon assembleRelease
+        run: ./gradlew --no-daemon --max-workers=1 "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process assembleRelease
       - name: Verify release configuration
         shell: bash
         run: |

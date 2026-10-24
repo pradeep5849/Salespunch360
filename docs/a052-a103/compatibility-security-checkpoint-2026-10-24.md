@@ -1,4 +1,5 @@
 # A052–A103 compatibility/security checkpoint — 2026-10-24
+Historical intermediate snapshot: main synchronization/security fixes were subsequently incorporated after user approval. See [final implementation report](final-implementation-report.md) for the current disposition.
 
 Intermediate evidence only; PR #153 is not certified ready.
 
