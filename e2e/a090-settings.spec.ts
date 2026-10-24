@@ -886,11 +886,10 @@ test("A095 and A096 preserve party field metadata and apply party settings to pa
     },
   });
   await page.goto("/workspace/account/customers");
+  await page.getByRole("link", { name: "New Party", exact: true }).click();
+  await expect(page.getByLabel("GSTIN", { exact: true })).toHaveCount(0);
   await expect(
-    page.getByLabel("GSTIN / TIN / VATIN", { exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByLabel("Shipping / site address", { exact: true }),
+    page.getByLabel("Shipping address", { exact: true }),
   ).toHaveCount(0);
   await expect(
     page.getByLabel("Site reference", { exact: true }),

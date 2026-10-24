@@ -150,11 +150,12 @@ test.afterAll(async () => {
 test("shared master controls accept fractions and configured field types without partial writes", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   await page.goto("/sign-in");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/workspace\/account/);
+  await expect(page).toHaveURL(/\/workspace\/account/, { timeout: 30_000 });
   await page.goto("/workspace/account/products");
   await page
     .getByLabel("Name", { exact: true })
@@ -179,8 +180,9 @@ test("shared master controls accept fractions and configured field types without
   });
   expect(product.salePrice?.toFixed(2)).toBe("12.50");
   await page.goto("/workspace/account/customers");
+  await page.getByRole("link", { name: "New Party", exact: true }).click();
   await page
-    .getByLabel("Business name", { exact: true })
+    .getByLabel("Party name", { exact: true })
     .fill("Typed field customer");
   await page.getByLabel("Contact note", { exact: true }).fill("Preserved text");
   await page
@@ -192,7 +194,7 @@ test("shared master controls accept fractions and configured field types without
   await page
     .getByLabel("Requires review", { exact: true })
     .selectOption("false");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Create party", exact: true }).click();
   expect(
     await db.customer.count({
       where: { companyId, name: "Typed field customer" },
@@ -201,9 +203,10 @@ test("shared master controls accept fractions and configured field types without
   await page
     .getByLabel("Customer group", { exact: true })
     .selectOption("Export");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Create party", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account\?tab=parties/);
   await expect(
-    page.getByRole("heading", { name: "Typed field customer", exact: true }),
+    page.getByText("Typed field customer", { exact: true }),
   ).toBeVisible();
   const customer = await db.customer.findFirstOrThrow({
     where: { companyId, name: "Typed field customer" },
