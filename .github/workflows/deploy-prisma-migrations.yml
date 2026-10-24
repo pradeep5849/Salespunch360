@@ -34,10 +34,17 @@ jobs:
         run: npm ci --include=dev
       - name: Generate Prisma Client without connecting
         run: npm run prisma:generate
+      - name: Obtain official public Supabase CA certificate
+        run: |
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+            https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt \
+            --output "$RUNNER_TEMP/supabase-ca-2021.crt"
+          openssl x509 -in "$RUNNER_TEMP/supabase-ca-2021.crt" -noout -checkend 86400
       - name: Read-only connection and production identity check
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
         run: node scripts/production-readonly-connection.mjs
 
   deploy-migrations:

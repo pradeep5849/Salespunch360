@@ -103,6 +103,8 @@ export async function main() {
   const connection = new URL(process.env[selected]);
   connection.searchParams.set("sslmode", "require");
   connection.searchParams.set("sslaccept", "strict");
+  if (process.env.SUPABASE_SSL_ROOT_CERT)
+    connection.searchParams.set("sslcert", process.env.SUPABASE_SSL_ROOT_CERT);
   let phase = "CONNECT_READ_ONLY";
   const client = new PrismaClient({
     datasources: { db: { url: connection.href } },
