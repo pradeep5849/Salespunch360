@@ -76275,6 +76275,38 @@
         "e2e/a090-settings.spec.ts",
         ".github/workflows/targeted-validation.yml"
       ]
+    },
+    {
+      "date": "2026-10-24",
+      "checkpoint": "Isolated main compatibility and dependency security preview",
+      "candidate_commit": "451d3ca0c6dc7b888d9af6891b14c0d99c9172f1",
+      "candidate_branch": "checkpoint/a052-main-compat-security",
+      "main_baseline": "611fc0ba6c6fdaf8ee521b6a445aa584890bf229",
+      "changes": [
+        "Next/eslint-config-next 16.4.3; Zod4.6.7; Vite8.3.5; no new audit waivers",
+        "Preserve127 input defaults with prefault and377 legacy identifier validators with guid",
+        "Fix customer required-phone regression caught by broad tests; retain normalization; add missing/blank/null/invalid regressions",
+        "Format three already-changed browser files for required CI check"
+      ],
+      "validation": {
+        "dependency_risk": "PASS; zero temporary development findings",
+        "prisma_schema": "PASS",
+        "typescript": "PASS after correction",
+        "eslint": "PASS after correction",
+        "production_build": "PASS before final required-phone correction; final-head rerun required",
+        "full_tests": "4145 passed,1 failed,6 skipped;4152 total;582 passed files,1 failed file,2 skipped files. Required-phone failure corrected afterward; no broad-pass claim.",
+        "focused_before": "37 passed /3files",
+        "focused_after": "28 passed /5files; overlapping evidence, not additive",
+        "format": "PASS",
+        "browser_android_runtime": "Not executed for candidate",
+        "migration_recovery": "Six opt-in cases skipped; separate rehearsal required"
+      },
+      "limitations": [
+        "Candidate is preserved locally, not synchronized into PR153. Pending main-sync clarification remains unresolved.",
+        "No final finding status promoted.198implemented-not-finally-verified/1production-partial remain.",
+        "No production DB, deployment, main merge or A104."
+      ],
+      "report": "docs/a052-a103/compatibility-security-checkpoint-2026-10-24.md"
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {
