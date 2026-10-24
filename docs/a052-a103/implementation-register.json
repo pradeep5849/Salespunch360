@@ -102205,6 +102205,14 @@
       "home_focused_unit": "16/16 PASS across4files,1.38s.",
       "typescript_lint_build": "PASS after final source/test changes.",
       "limits": "Chromium desktop/mobile Web and authenticated native HTTP executed; no emulator/device/TalkBack/OS-share runtime claim. Exact reference pixels and unexecuted providers remain limited. Exact final PR-head CI remains a merge gate."
+    },
+    {
+      "checkpoint": "2026-10-24-full-ci-postgres-toolchain",
+      "tested_head": "cd6d3c90c459cc06d240ed511f8e480ad91f99dc",
+      "run_id": 40086459215,
+      "result": "Unit 4147 PASS /6 opt-in skipped; global coverage PASS; critical coverage 192 PASS; production browser 428 PASS /0 failed; full Android PASS. Overall FAIL only in final isolated restore: runner PostgreSQL client emits transaction_timeout unsupported by PostgreSQL16.",
+      "correction": "Full workflow now uses pg_dump/pg_restore from exact service PostgreSQL image, matching existing targeted workflow; no data, application or migration changes. Final-head CI rerun required.",
+      "focused_test_result": "Matching-image local recovery safety + actual restore integrity regression:9/9PASS,10.74s; log final-recovery-toolchain-regression.log."
     }
   ],
   "checkpoint_pending_questions_2026_10_21": {

@@ -255,3 +255,6 @@ The earlier exact-head full CI was not green:373passed,25failed,28flaky,2did-not
 Focused production regressions:36/36PASS(2.5m);Home/PDF units16/16PASS(4files). TypeScript, focused lint and the fresh optimized production build pass. Full CI now supplies its isolated checkpoint database variable, enabling263 financial/database cases that previously skipped there; the six opt-in migration/recovery cases still execute in guarded separate rehearsals. Final exact-PR-head complete CI is required before the authorized merge. This evidence commit does not assert a future CI result.
 
 All199 IDs retain their final recorded dispositions:198FIXED + TEST LIMITATION,1BLOCKED for separately deferred production remediation. Physical Android/emulator/TalkBack/OS share and production deployment remain unexecuted. No A104.
+
+
+Final CI toolchain correction: run40086459215 on cd6d3c90 passed all428 browser cases,4147 automated cases, both coverage gates, build and Android; its final restore failed because newer runner PostgreSQL tools emitted `transaction_timeout` unsupported by PostgreSQL16. The full workflow now selects dump/restore binaries from the exact database service image, as the already-passing targeted workflow does. No application/data/migration change. This failed run is retained as evidence; merge requires a successful rerun on the corrected head.
