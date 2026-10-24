@@ -18,7 +18,7 @@ Base: `a3e284bca56db3608193a3833b986bb57450d86c` (contains merged PR145). Incorp
 
 Expense entry/review and reusable items; item pricing/units/stock; bank/cash/equity and owner/loan workflows; cheque closure/reopening; scoped notifications/Home; Project lifecycle; quotation conversion; immutable Sale corrections/returns/payments/files; report sources/working exports; persisted scoped settings; responsive Web and Android/API parity corrections. Original finding-specific implementation descriptions, permissions, module effects, branch/company effects, accounting effects and required tests are preserved in the register.
 
-Current-main comparison contains 1056 changed paths. There are45 new migration SQL files, zero modifications to historical migrations,52 changed/new models and199 new Web/server automated test files plus54 new Kotlin JVM test files compared with the approved original base. See exact lists in the inventory; file counts do not establish finding completion.
+Current-main comparison contains 1059 changed paths. There are45 new migration SQL files, zero modifications to historical migrations,52 changed/new models and199 new Web/server automated test files plus54 new Kotlin JVM test files compared with the approved original base. See exact lists in the inventory; file counts do not establish finding completion.
 
 Dependency compatibility/security: retain Node22 runtime and current-main Node26 type definitions, Firebase Admin14, Argon2 2.2.2 and GitHub Actions runtime updates. Patch Next/eslint-config-next16.4.3, Zod4.6.7 and Vite8.3.5. No new security waiver. Preserve parsed input defaults, legacy GUID validation and required customer phone. Purchase branch/permission guards retained. Final-head dependency check is a required CI gate.
 
@@ -245,3 +245,13 @@ PR is conflict-free after feature-branch synchronization. User authorized merge 
 | A097-F04 | A097 | Medium | FIXED + TEST LIMITATION |
 | A100-F01 | A100 | Medium | FIXED + TEST LIMITATION |
 | A101-F01 | A101 | Medium | FIXED + TEST LIMITATION |
+
+## Final production-browser verification
+
+Implementation/test source: `675a1c20bb8fc76f89cf30b6a450bf64904ed524`. Complete local optimized-production browser suite: **428/428 PASS,0failed/skipped/flaky/retries,21.2minutes;214mobile and214desktop cases**. Includes responsive/accessibility/permission/module/branch/company/financial/API/export regressions and previously merged page compatibility. Named case results and raw-result hash are in the machine test evidence.
+
+The earlier exact-head full CI was not green:373passed,25failed,28flaky,2did-not-run in its browser stage; its Android release job passed. The failures were investigated rather than skipped. Three suites now own fresh per-case company/ledger/session fixtures. Eighteen controlled network-fault scenarios block service workers so the intended HTTP mocks are observable; other cases retain actual PWA operation. Paths/imports/selectors/retry payloads and stale policy expectations were corrected without removing financial assertions. A071-F06's real search-history defect is fixed in Home; the existing PDF sharing handler was preserved after proving the PWA/mock mismatch. Temporary diagnostics were removed.
+
+Focused production regressions:36/36PASS(2.5m);Home/PDF units16/16PASS(4files). TypeScript, focused lint and the fresh optimized production build pass. Full CI now supplies its isolated checkpoint database variable, enabling263 financial/database cases that previously skipped there; the six opt-in migration/recovery cases still execute in guarded separate rehearsals. Final exact-PR-head complete CI is required before the authorized merge. This evidence commit does not assert a future CI result.
+
+All199 IDs retain their final recorded dispositions:198FIXED + TEST LIMITATION,1BLOCKED for separately deferred production remediation. Physical Android/emulator/TalkBack/OS share and production deployment remain unexecuted. No A104.

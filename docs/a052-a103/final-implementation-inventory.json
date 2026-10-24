@@ -206,10 +206,13 @@
     "docs/a052-a103/recovery-verification.md",
     "docs/a052-a103/sale-return-revision-verification.md",
     "docs/a052-a103/theme-reference-manifest.json",
+    "e2e/a001-login-recovery.spec.ts",
     "e2e/a042-master-fields.spec.ts",
+    "e2e/a043-accounting.spec.ts",
     "e2e/a048-dashboard.spec.ts",
     "e2e/a049-a051-expenses.spec.ts",
     "e2e/a090-settings.spec.ts",
+    "e2e/project-material-workflow.spec.ts",
     "next.config.ts",
     "package-lock.json",
     "package.json",
@@ -1488,14 +1491,15 @@
     "src/lib/security/schema-compatibility.test.ts"
   ],
   "tree_objects": {
-    "src": "f6fceb013ecf9e7ee045e0314a66e14b116efb6c",
+    "src": "feb0310bebf85116e9bd8ef3dc1317e82d08e857",
     "android": "99a6f0b39904bff4bbfb397001d74140c845e9db",
     "prisma": "4d886c94b5df5a19985112198f9c2aa52a080d71",
-    "e2e": "14d683f21c6ef7014356cf8b58ad30c56d17d4b5",
+    "e2e": "ee5b5d666e2546b54750b7307eced203cbb64573",
     "package.json": "dc3d68dc828b046dbdb1c0ccdc40ca54503ba539",
-    "package-lock.json": "fda70b03da3371e4c56433e9931071e5c69150a1"
+    "package-lock.json": "fda70b03da3371e4c56433e9931071e5c69150a1",
+    ".github/workflows": "4148bcfbbb4485093c4f521f02462549c2689e17"
   },
-  "last_implementation_test_commit": "d2510ce3dd9ed534671aa39f349a4cc057d6615d",
+  "last_implementation_test_commit": "675a1c20bb8fc76f89cf30b6a450bf64904ed524",
   "validation": {
     "implementation_head": "7b527d443f148b2fab17f8f187cc719275b188ad",
     "complete_run": {
@@ -1540,6 +1544,9 @@
     "A052-F01": "User-deferred production schema remediation; no production deployment/DB writes."
   },
   "commit_history": [
+    "675a1c20bb8fc76f89cf30b6a450bf64904ed524 Restore Home search history and isolate portable browser fault regressions",
+    "e3f11ffcac29269e8a08f83b871da4764aa9ec81 Serialize full Android validation and record passing debug release lint and build",
+    "64be470f00d38ced39b9271483b4ef12c40fbbd1 Finalize 199 finding dispositions and preserve explicit verification limitations",
     "d2510ce3dd9ed534671aa39f349a4cc057d6615d Follow scoped New Party navigation in browser regressions",
     "7b527d443f148b2fab17f8f187cc719275b188ad Patch dependency advisories while preserving schema validation behavior",
     "38e7d42cd40f0525586cc84f1ea48763196dda16 Sync current main while preserving A052-A103 authorization and implementation",
@@ -2250,5 +2257,49 @@
       }
     },
     "unsigned_apk_sha256": "e963ebb7b46a98dcbaeb5a06ef6667f28afbec11cbcdf6a22cfd4df8d6a47692"
+  },
+  "production_browser_final": {
+    "date": "2026-10-24",
+    "checkpoint": "Complete production-browser regression after CI remediation",
+    "source_commit": "675a1c20bb8fc76f89cf30b6a450bf64904ed524",
+    "profiles": {
+      "mobile-chromium": 214,
+      "desktop-chromium": 214
+    },
+    "stats": {
+      "startTime": "2026-10-24T10:05:27.030Z",
+      "duration": 1269101.135,
+      "expected": 428,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "raw_results_sha256": "e43fd722835e2b57b8574cf861408f8e5adae69087e126cb5e0b836715979f9b",
+    "passed": 428,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "production_definition": "Local optimized Next production build and isolated localhost *_ci PostgreSQL; no production deployment/database.",
+    "original_ci_failure": {
+      "head": "e3f11ffcac29269e8a08f83b871da4764aa9ec81",
+      "run": 40065005627,
+      "passed": 373,
+      "failed": 25,
+      "flaky": 28,
+      "did_not_run": 2,
+      "scope": "Full Android job passed; Web failed broad browser gate. No failure concealed."
+    },
+    "corrections": [
+      "Every scenario in the three stateful suites now receives fresh company/branch/user/ledger identities with guarded localhost-only cleanup.",
+      "Only18 network-fault scenarios use serviceWorkers:block so Page.route mocks are actually observable; normal browser/PWA tests retain real service workers. Application SW/cache/auth behavior unchanged.",
+      "Portable screenshot/camera paths and static internal imports. Semantic journal-line selectors, exact captured payment retry payload, selected-transaction card targeting, current loan/paid-sale expectations and currency-aware Project cells. All financial correction assertions retained.",
+      "A071-F06 genuine Home search Back/Forward defect fixed through router-based GET submission plus URL reconciliation after history restoration; branch and filters preserved. Existing PDF sharing implementation preserved after proving the service-worker/mock mismatch.",
+      "Full CI now supplies ACCOUNT_CHECKPOINT_DATABASE_URL to execute263 financial/database cases that previously skipped in that workflow. Six guarded opt-in migration/recovery cases retain separate rehearsal."
+    ],
+    "focused_browser": "36/36 PASS,0failed/skipped,2.5m; same original failed/related scenarios.",
+    "home_focused_unit": "16/16 PASS across4files,1.38s.",
+    "typescript_lint_build": "PASS after final source/test changes.",
+    "limits": "Chromium desktop/mobile Web and authenticated native HTTP executed; no emulator/device/TalkBack/OS-share runtime claim. Exact reference pixels and unexecuted providers remain limited. Exact final PR-head CI remains a merge gate."
   }
 }
