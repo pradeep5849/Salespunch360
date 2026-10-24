@@ -11,6 +11,15 @@ on:
           - migrate
         default: connection-test
         required: true
+      connection_secret:
+        description: "Existing secret to verify; no secret values are accepted as inputs"
+        type: choice
+        options:
+          - auto
+          - DIRECT_URL
+          - DATABASE_URL
+        default: auto
+        required: true
 
 permissions:
   contents: read
@@ -45,6 +54,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
           SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca-2021.crt
+          VERIFY_CONNECTION_SECRET: ${{ inputs.connection_secret }}
         run: node scripts/production-readonly-connection.mjs
 
   deploy-migrations:

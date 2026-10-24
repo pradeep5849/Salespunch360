@@ -34,6 +34,8 @@ export function inspectConnection(value) {
       present: true,
       usable,
       expected_project: target,
+      expected_pooler_region:
+        direct || /-ap-south-1\.pooler\.supabase\.com$/.test(url.hostname),
       endpoint: session
         ? "SESSION_POOLER_5432"
         : transaction
@@ -90,10 +92,18 @@ export async function main() {
       inspectConnection(process.env[key]),
     ]),
   );
-  const selected =
+  const automatic =
     ["DIRECT_URL", "DATABASE_URL"].find(
       (key) => candidates[key].migration_suitable,
     ) ?? ["DIRECT_URL", "DATABASE_URL"].find((key) => candidates[key].usable);
+  const requested = process.env.VERIFY_CONNECTION_SECRET ?? "auto";
+  const selected =
+    requested === "auto"
+      ? automatic
+      : ["DIRECT_URL", "DATABASE_URL"].includes(requested) &&
+          candidates[requested].usable
+        ? requested
+        : undefined;
   if (!selected) {
     emit({ result: "BLOCKED", candidates, production_writes: false });
     process.exitCode = 1;
