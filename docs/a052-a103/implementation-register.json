@@ -724,13 +724,13 @@
     {
       "finding_id": "A052-F01",
       "page_id": "A052",
-      "title": "Account Admin cannot open deployed Expenses; production cause unresolved",
+      "title": "Deployed Expenses schema/client mismatch — database remediated; authenticated page retest pending",
       "severity": "Medium",
       "classification": "Confirmed runtime defect — production schema/client mismatch",
       "platform": "Mobile Web",
       "current_behavior": "Production expenseTransaction.findMany fails with P2022 because expense_transactions.creationRequestKey does not exist; supplied log timestamp 2026-10-12T03:35:52.327Z, correlationId 142fb75d-8610-4398-8000-f780aa770cce.",
       "expected_behavior": "Authorized Account Admin can open the Expenses area and recover from expected errors without losing access.",
-      "root_cause": "Confirmed schema/client mismatch: production Prisma P2022 from expenseTransaction.findMany reports expense_transactions.creationRequestKey absent. Whether its migration is pending, failed, incorrectly marked applied, or targeted a different database remains unverified.",
+      "root_cause": "Production had 89 of 148 required Prisma migrations. 20261009050000_asset_and_expense_reference_fields was absent, including expense_transactions.creationRequestKey; live catalog comparison confirmed the missing migration/columns. All59pending migrations now applied through native Prisma in reviewed stages.",
       "affected_files": [
         "src/app/workspace/account/expenses/page.tsx",
         "src/lib/account/expenses.ts",
@@ -832,8 +832,8 @@
         ],
         "final_head_regression": "NOT RUN"
       },
-      "implementation_status": "PARTIAL",
-      "final_status": "BLOCKED",
+      "implementation_status": "IMPLEMENTED BUT NOT VERIFIED",
+      "final_status": "FIXED + TEST LIMITATION",
       "final_tests": [
         {
           "checkpoint": "2026-10-24 final implementation validation",
@@ -1130,9 +1130,9 @@
         "verification_status": "PARTIAL",
         "final_status": null
       },
-      "final_status_reason": "Production schema remediation intentionally deferred by the user until controlled deployment after PR implementation. Missing expense_transactions.creationRequestKey is proven; local migration/load/save regressions pass, but no production database change, deployment or authenticated production retest was authorized/executed.",
+      "final_status_reason": "Production schema remediation and full expenseTransaction.findMany read verified through real database Actions postflight. Original user fields preserved and all148migration checksums/schema gates pass. Authenticated Account Admin mobile-web page and original-password login were not executed; no full browser/device verification is inferred.",
       "final_verification": {
-        "code_implementation": "PARTIAL — production execution deferred",
+        "code_implementation": "IMPLEMENTED — production schema remediation and read-only ORM verification passed; authenticated production page/browser verification remains a stated limitation",
         "automated_tests": {
           "implementation_head": "7b527d443f148b2fab17f8f187cc719275b188ad",
           "complete_run": {
@@ -1235,7 +1235,36 @@
         "android_automated": "BUILD SUCCESSFUL in9m29s;360debug +360release JVM tests;0failures/errors/skips;lintRelease and unsigned assembleRelease PASS. Android source unchanged;physical device runtime not executed. Exact-head CI remains required.",
         "android_device_runtime": "NOT EXECUTED; device/emulator/TalkBack unavailable.",
         "backend_database_runtime": "Complete local run uses isolated migrated PostgreSQL *_ci plus separately restored *_test. Fresh migration rehearsal and five restore cases pass. Production is untouched.",
-        "ci_gate": "Merge only after exact-PR-head required CI succeeds; consult GitHub check runs rather than infer success from this pre-CI report."
+        "ci_gate": "Merge only after exact-PR-head required CI succeeds; consult GitHub check runs rather than infer success from this pre-CI report.",
+        "production_recovery_2026_10_25": {
+          "date": "2026-10-25",
+          "timezone": "Asia/Calcutta",
+          "migration_workflow_head": "1383da85df922d0738b523e13a086af7a700df93",
+          "migration_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40121559734",
+          "native_stages_verified": 59,
+          "postflight_head": "ddd8c1027280443258b7631578814b74966129c0",
+          "postflight_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40124472679",
+          "production_history": {
+            "successful": 148,
+            "pending": 0,
+            "unresolved": 0,
+            "checksum_mismatches": 0
+          },
+          "missing_runtime_columns": 0,
+          "actual_production_expenseTransaction_findMany": "PASS — read-only full scalar model query, including creationRequestKey",
+          "users_retained": 7,
+          "eligible_super_admins": 1,
+          "original_user_fields_unchanged_after_every_stage": true,
+          "invalid_constraints": 0,
+          "invalid_indexes": 0,
+          "unbalanced_posted_journals": 0,
+          "original_password_browser_login": "NOT EXECUTED — private owner login still required",
+          "authenticated_expenses_mobile_web_page": "NOT EXECUTED — owner/browser retest required",
+          "application_deployment_executed": false,
+          "production_financial_smoke_writes": false,
+          "backup": "Not created; owner explicitly accepted no-backup risk",
+          "authorization": "Owner authorized pinned workflow and confirmed writers paused before dispatch"
+        }
       },
       "intentional_deferral": {
         "approved_by": "user",
@@ -102248,21 +102277,22 @@
     "posted_return_valuation": "RESOLVED:original billed100credit remains100 after80Saleedit. Core implementation and17financialcases have intermediate evidence. No unanswered decision here;remaining completion/final-head limitations are in finding checkpoints."
   },
   "current_implementation_counts": {
-    "as_of_date": "2026-10-24",
+    "as_of_date": "2026-10-25",
     "code_head_commit": "675a1c20bb8fc76f89cf30b6a450bf64904ed524",
     "finding_count": 199,
     "by_status": {
-      "PARTIAL": 1,
-      "IMPLEMENTED BUT NOT VERIFIED": 198
+      "IMPLEMENTED BUT NOT VERIFIED": 199
     },
     "not_started": 0,
     "final_status_verified": 0,
-    "scope_note": "198 code-implemented/resolved findings end FIXED + TEST LIMITATION with preserved actual evidence; A052-F01 ends BLOCKED for user-deferred production deployment/remediation. No full device/reference/production verification inferred. Original199 IDs/52pages retained. Merge authorized only after green exact-head checks; no deploy/productionDB/A104.",
+    "scope_note": "199 original findings implemented with test limitations preserved; A052-F01 production database remediation completed and full Prisma Expenses read passed. No original-password login, authenticated production page/device retest, financial smoke writes or deployment inferred. Original199 IDs retained.",
     "final_status_counts": {
       "FIXED + VERIFIED": 0,
-      "FIXED + TEST LIMITATION": 198,
-      "BLOCKED": 1
-    }
+      "FIXED + TEST LIMITATION": 199,
+      "BLOCKED": 0
+    },
+    "production_recovery_workflow_head": "1383da85df922d0738b523e13a086af7a700df93",
+    "production_postflight_head": "ddd8c1027280443258b7631578814b74966129c0"
   },
   "checkpoint_pending_questions_2026_10_24": {
     "tax_report_scope": "RESOLVED:userconfirmedOption1workingPDF/Excelreports;all5implementedwithexplicitno-filingdisclaimer."
@@ -102348,5 +102378,35 @@
       "limits": "Chromium desktop/mobile Web and authenticated native HTTP executed; no emulator/device/TalkBack/OS-share runtime claim. Exact reference pixels and unexecuted providers remain limited. Exact final PR-head CI remains a merge gate."
     }
   },
-  "final_head_commit_kind": "IMPLEMENTATION SOURCE/TEST HEAD BEFORE FINAL EVIDENCE COMMIT; final PR/documentation SHA is resolved by GitHub and the exported final status after merge."
+  "final_head_commit_kind": "IMPLEMENTATION SOURCE/TEST HEAD BEFORE FINAL EVIDENCE COMMIT; final PR/documentation SHA is resolved by GitHub and the exported final status after merge.",
+  "production_recovery_2026_10_25": {
+    "finding": "A052-F01",
+    "date": "2026-10-25",
+    "timezone": "Asia/Calcutta",
+    "migration_workflow_head": "1383da85df922d0738b523e13a086af7a700df93",
+    "migration_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40121559734",
+    "native_stages_verified": 59,
+    "postflight_head": "ddd8c1027280443258b7631578814b74966129c0",
+    "postflight_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40124472679",
+    "production_history": {
+      "successful": 148,
+      "pending": 0,
+      "unresolved": 0,
+      "checksum_mismatches": 0
+    },
+    "missing_runtime_columns": 0,
+    "actual_production_expenseTransaction_findMany": "PASS — read-only full scalar model query, including creationRequestKey",
+    "users_retained": 7,
+    "eligible_super_admins": 1,
+    "original_user_fields_unchanged_after_every_stage": true,
+    "invalid_constraints": 0,
+    "invalid_indexes": 0,
+    "unbalanced_posted_journals": 0,
+    "original_password_browser_login": "NOT EXECUTED — private owner login still required",
+    "authenticated_expenses_mobile_web_page": "NOT EXECUTED — owner/browser retest required",
+    "application_deployment_executed": false,
+    "production_financial_smoke_writes": false,
+    "backup": "Not created; owner explicitly accepted no-backup risk",
+    "authorization": "Owner authorized pinned workflow and confirmed writers paused before dispatch"
+  }
 }

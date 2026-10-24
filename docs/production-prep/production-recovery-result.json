@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-25",
+  "timezone": "Asia/Calcutta",
+  "migration_workflow_head": "1383da85df922d0738b523e13a086af7a700df93",
+  "migration_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40121559734",
+  "native_stages_verified": 59,
+  "postflight_head": "ddd8c1027280443258b7631578814b74966129c0",
+  "postflight_run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40124472679",
+  "production_history": {
+    "successful": 148,
+    "pending": 0,
+    "unresolved": 0,
+    "checksum_mismatches": 0
+  },
+  "missing_runtime_columns": 0,
+  "actual_production_expenseTransaction_findMany": "PASS \u2014 read-only full scalar model query, including creationRequestKey",
+  "users_retained": 7,
+  "eligible_super_admins": 1,
+  "original_user_fields_unchanged_after_every_stage": true,
+  "invalid_constraints": 0,
+  "invalid_indexes": 0,
+  "unbalanced_posted_journals": 0,
+  "original_password_browser_login": "NOT EXECUTED \u2014 private owner login still required",
+  "authenticated_expenses_mobile_web_page": "NOT EXECUTED \u2014 owner/browser retest required",
+  "application_deployment_executed": false,
+  "production_financial_smoke_writes": false,
+  "backup": "Not created; owner explicitly accepted no-backup risk",
+  "authorization": "Owner authorized pinned workflow and confirmed writers paused before dispatch",
+  "application_health": {
+    "status": "PASS \u2014 /api/health reports ready/database reachable",
+    "run": "https://github.com/pradeep5849/Salespunch360/actions/runs/40124661060",
+    "scope": "Read-only public health endpoint; no authenticated UI/device claim"
+  }
+}
