@@ -1,1 +1,51 @@
-import{describe,expect,it}from"vitest";import{readFileSync}from"node:fs";describe("native Purchase workflow",()=>{const boundary=readFileSync("src/lib/mobile/account-purchases.ts","utf8"),shell=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt","utf8"),editor=readFileSync("android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt","utf8");it.each(["PURCHASE_BILL","PURCHASE_ORDER","DEBIT_NOTE"])("exposes %s through the shared domain",type=>expect(boundary).toContain(`\"${type}\"`));it("uses authoritative posting, settlement, outstanding and entitlement",()=>{for(const x of ["postCommercialDocumentForActor","createSettlementForActor","documentOutstandingsBatch","assertOperationalWrite"])expect(boundary).toContain(x)});it("routes Purchase and Payment-Out natively",()=>{expect(shell).toContain("PurchaseScreen");expect(shell).toContain("VendorPaymentScreen")});it("supports source bills, original lines, warehouses and return quantities",()=>{for(const x of ["Source purchase bill","Original line","Warehouse","Physical return quantity"])expect(editor).toContain(x)})});
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+
+describe("native Purchase workflow", () => {
+  const boundary = readFileSync("src/lib/mobile/account-purchases.ts", "utf8"),
+    shell = readFileSync(
+      "android/app/src/main/java/com/salespunch360/mobile/ui/account/NativeAccountApp.kt",
+      "utf8",
+    ),
+    editor = readFileSync(
+      "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt",
+      "utf8",
+    );
+
+  it.each(["PURCHASE_BILL", "PURCHASE_ORDER", "DEBIT_NOTE"])(
+    "exposes %s through the shared domain",
+    (type) => expect(boundary).toContain(`\"${type}\"`),
+  );
+
+  it("uses authoritative posting, settlement, outstanding and entitlement", () => {
+    for (const x of [
+      "postCommercialDocumentForActor",
+      "createSettlementForActor",
+      "documentOutstandingsBatch",
+      "assertOperationalWrite",
+    ])
+      expect(boundary).toContain(x);
+  });
+
+  it("keeps vendor payment money accounts inside the authorized branch scope", () => {
+    expect(boundary).toContain("moneyAccountScope");
+    expect(boundary).toContain("{ branchId: null }");
+    expect(boundary).toContain("{ branchId: { in: a.branchIds ?? [] } }");
+    expect(boundary).toContain("...moneyAccountScope");
+  });
+
+  it("routes Purchase and Payment-Out natively", () => {
+    expect(shell).toContain("PurchaseScreen");
+    expect(shell).toContain("VendorPaymentScreen");
+  });
+
+  it("supports source bills, original lines, warehouses and return quantities", () => {
+    for (const x of [
+      "Source purchase bill",
+      "Original line",
+      "Warehouse",
+      "Physical return quantity",
+    ])
+      expect(editor).toContain(x);
+  });
+});
