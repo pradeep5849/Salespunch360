@@ -2,7 +2,14 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 const value = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
-const url = new URL(value ?? "invalid:");
+let url;
+try {
+  url = new URL(value ?? "invalid:");
+} catch {
+  throw new Error(
+    "Database connection configuration rejected; sensitive details suppressed.",
+  );
+}
 const local = ["localhost", "127.0.0.1"].includes(url.hostname);
 const project = "mranivjvxysycpqpvrss";
 const expected =

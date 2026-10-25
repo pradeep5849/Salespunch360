@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { spawnSync } from "node:child_process";
 import { probeDataApi } from "./data-api-probe.mjs";
 const url = "https://mranivjvxysycpqpvrss.supabase.co";
 describe("safe zero-row production Data API probe", () => {
@@ -53,4 +54,25 @@ describe("safe zero-row production Data API probe", () => {
     );
     expect(f).not.toHaveBeenCalled();
   });
+});
+
+it("read-only preflight never prints a malformed connection secret", () => {
+  const sentinel = "private-fixture-sentinel";
+  const child = spawnSync(
+    process.execPath,
+    ["scripts/production-readiness/preflight.mjs"],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        DIRECT_URL: `postgresql://fixture:${sentinel}@[`,
+        DATABASE_URL: "",
+      },
+      encoding: "utf8",
+      timeout: 10000,
+    },
+  );
+  expect(child.status).not.toBe(0);
+  expect(child.stderr + child.stdout).not.toContain(sentinel);
+  expect(child.stderr).toContain("sensitive details suppressed");
 });
