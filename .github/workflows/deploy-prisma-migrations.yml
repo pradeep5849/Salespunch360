@@ -1,58 +1,34 @@
-name: Production Prisma Migrations
-
+name: Production Prisma Read-only Verification
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  deploy-migrations:
-    if: github.ref == 'refs/heads/main'
+  read-only-preflight:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.DIRECT_URL }}
-
+    timeout-minutes: 10
     steps:
-      - name: Check out main
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check out exact dispatched commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: main
-
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: 22
+          node-version: "22"
           cache: npm
-
-      - name: Install locked dependencies
+      - name: Install without production credentials
         run: npm ci
-
-      - name: Validate production database secrets
+      - run: npm run prisma:generate
+      - name: Obtain official public Supabase CA
         run: |
-          if [ -z "$DATABASE_URL" ] || [ -z "$DIRECT_URL" ]; then
-            echo "Required DATABASE_URL or DIRECT_URL repository secret is unavailable." >&2
-            exit 1
-          fi
-
-      - name: Generate Prisma Client
-        run: npm run prisma:generate
-
-      - name: Validate Prisma schema
-        run: npm run prisma:validate
-
-      - name: Check migration status before deployment
-        continue-on-error: true
-        run: npx --no-install prisma migrate status
-
-      - name: Deploy pending migrations
-        run: npm run db:migrate:deploy
-
-      - name: Verify migration status after deployment
-        run: npx --no-install prisma migrate status
-
-
-      - name: Verify generated-client runtime columns
-        run: node scripts/check-runtime-schema.mjs
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+            https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt \
+            --output "$RUNNER_TEMP/supabase-ca.crt"
+          openssl x509 -in "$RUNNER_TEMP/supabase-ca.crt" -noout -checkend 86400
+      - name: Read-only history, actual connection role, user counts, security and Prisma checks
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca.crt
+        run: node scripts/production-readiness/preflight.mjs
+      # Deliberately no migrate/deploy/repair step. Production execution needs a verified backup and separate reviewed path.
