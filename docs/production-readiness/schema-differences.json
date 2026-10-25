@@ -1,0 +1,922 @@
+{
+  "baseline": {
+    "head": "b0441cb1f5a1f1d47af8902338353a4b30cdc984",
+    "history": {
+      "repository": 148,
+      "successful": 148,
+      "pending": [],
+      "unknown": [],
+      "checksum_mismatches": [],
+      "unresolved": [],
+      "historical_rolled_back": 5
+    },
+    "expected_models": 121,
+    "expected_scalar_columns": 1679,
+    "missing_tables": [],
+    "missing_columns": [],
+    "type_or_nullability_differences": [
+      {
+        "column": "companies.enabledModules",
+        "expected": {
+          "type": "\"CompanyModule\"[]",
+          "nullable": true,
+          "default": "ARRAY['SALES_CRM', 'ATTENDANCE', 'GPS_TRACKING', 'FOLLOW_UP_TASKS', 'TARGETS', 'REPORTS']::\"CompanyModule\"[]"
+        },
+        "actual_type": "CompanyModule[]",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "billing_orders.retainAdminUserIds",
+        "expected": {
+          "type": "UUID[]",
+          "nullable": true,
+          "default": "ARRAY[]::UUID[]"
+        },
+        "actual_type": "uuid[]",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "billing_orders.retainManagerUserIds",
+        "expected": {
+          "type": "UUID[]",
+          "nullable": true,
+          "default": "ARRAY[]::UUID[]"
+        },
+        "actual_type": "uuid[]",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "billing_orders.retainSalesUserIds",
+        "expected": {
+          "type": "UUID[]",
+          "nullable": true,
+          "default": "ARRAY[]::UUID[]"
+        },
+        "actual_type": "uuid[]",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "account_settings.enabledModules",
+        "expected": {
+          "type": "\"AccountModule\"[]",
+          "nullable": true,
+          "default": "ARRAY[]::\"AccountModule\"[]"
+        },
+        "actual_type": "AccountModule[]",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "commercial_documents.documentNumber",
+        "expected": {
+          "type": "VARCHAR(100)",
+          "nullable": false,
+          "default": null
+        },
+        "actual_type": "text",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "commercial_documents.partyName",
+        "expected": {
+          "type": "VARCHAR(240)",
+          "nullable": false,
+          "default": null
+        },
+        "actual_type": "text",
+        "actual_nullable": "NO"
+      },
+      {
+        "column": "account_settlements.reference",
+        "expected": {
+          "type": "VARCHAR(160)",
+          "nullable": true,
+          "default": null
+        },
+        "actual_type": "text",
+        "actual_nullable": "YES"
+      }
+    ],
+    "missing_equivalent_prisma_indexes": [
+      {
+        "name": "commercial_documents_companyId_type_issueDate_idx",
+        "definition": "CREATE INDEX \"commercial_documents_companyId_type_issueDate_idx\" ON \"commercial_documents\"(\"companyId\", \"type\", \"issueDate\");"
+      },
+      {
+        "name": "commercial_documents_companyId_customerId_idx",
+        "definition": "CREATE INDEX \"commercial_documents_companyId_customerId_idx\" ON \"commercial_documents\"(\"companyId\", \"customerId\");"
+      },
+      {
+        "name": "commercial_documents_companyId_vendorId_idx",
+        "definition": "CREATE INDEX \"commercial_documents_companyId_vendorId_idx\" ON \"commercial_documents\"(\"companyId\", \"vendorId\");"
+      },
+      {
+        "name": "commercial_documents_companyId_vendorId_purchaseFinancialYe_key",
+        "definition": "CREATE UNIQUE INDEX \"commercial_documents_companyId_vendorId_purchaseFinancialYe_key\" ON \"commercial_documents\"(\"companyId\", \"vendorId\", \"purchaseFinancialYearId\", \"vendorInvoiceNumberNormalized\");"
+      },
+      {
+        "name": "account_settlements_companyId_partyId_transactionDate_idx",
+        "definition": "CREATE INDEX \"account_settlements_companyId_partyId_transactionDate_idx\" ON \"account_settlements\"(\"companyId\", \"partyId\", \"transactionDate\");"
+      },
+      {
+        "name": "payment_reminders_companyId_remindAt_status_idx",
+        "definition": "CREATE INDEX \"payment_reminders_companyId_remindAt_status_idx\" ON \"payment_reminders\"(\"companyId\", \"remindAt\", \"status\");"
+      },
+      {
+        "name": "commercial_audit_events_companyId_entityType_entityId_creat_idx",
+        "definition": "CREATE INDEX \"commercial_audit_events_companyId_entityType_entityId_creat_idx\" ON \"commercial_audit_events\"(\"companyId\", \"entityType\", \"entityId\", \"createdAt\");"
+      },
+      {
+        "name": "project_change_orders_companyId_id_key",
+        "definition": "CREATE UNIQUE INDEX \"project_change_orders_companyId_id_key\" ON \"project_change_orders\"(\"companyId\", \"id\");"
+      },
+      {
+        "name": "expense_transactions_companyId_projectId_status_idx",
+        "definition": "CREATE INDEX \"expense_transactions_companyId_projectId_status_idx\" ON \"expense_transactions\"(\"companyId\", \"projectId\", \"status\");"
+      },
+      {
+        "name": "recurring_expense_templates_companyId_nextDueDate_isActive_idx",
+        "definition": "CREATE INDEX \"recurring_expense_templates_companyId_nextDueDate_isActive_idx\" ON \"recurring_expense_templates\"(\"companyId\", \"nextDueDate\", \"isActive\");"
+      },
+      {
+        "name": "expense_attachments_companyId_expenseId_idx",
+        "definition": "CREATE INDEX \"expense_attachments_companyId_expenseId_idx\" ON \"expense_attachments\"(\"companyId\", \"expenseId\");"
+      },
+      {
+        "name": "money_accounts_companyId_type_isActive_idx",
+        "definition": "CREATE INDEX \"money_accounts_companyId_type_isActive_idx\" ON \"money_accounts\"(\"companyId\", \"type\", \"isActive\");"
+      },
+      {
+        "name": "loans_companyId_status_idx",
+        "definition": "CREATE INDEX \"loans_companyId_status_idx\" ON \"loans\"(\"companyId\", \"status\");"
+      },
+      {
+        "name": "loan_payments_companyId_id_key",
+        "definition": "CREATE UNIQUE INDEX \"loan_payments_companyId_id_key\" ON \"loan_payments\"(\"companyId\", \"id\");"
+      }
+    ],
+    "prisma_index_names_not_found": [
+      "project_material_movements_reversalOfId_key",
+      "project_material_movements_companyId_projectId_movementDate_idx",
+      "project_material_movements_companyId_projectId_sourceMoveme_idx",
+      "project_material_movements_companyId_branchId_projectId_pro_idx",
+      "project_material_movements_companyId_purchaseAllocationId_p_idx",
+      "project_material_movements_companyId_correctionDocumentId_c_idx",
+      "project_material_movements_companyId_idempotencyKey_key",
+      "branches_companyId_id_key",
+      "email_verification_tokens_userId_createdAt_idx",
+      "email_verification_tokens_expiresAt_idx",
+      "leads_companyId_stage_idx",
+      "leads_companyId_assignedUserId_idx",
+      "leads_companyId_followUpAt_idx",
+      "leads_companyId_createdAt_idx",
+      "leads_customerId_idx",
+      "leads_sourceVisitId_idx",
+      "follow_up_tasks_companyId_assignedUserId_status_dueDate_idx",
+      "follow_up_tasks_companyId_leadId_status_dueDate_idx",
+      "follow_up_tasks_companyId_status_dueDate_idx",
+      "lead_activities_leadId_createdAt_idx",
+      "lead_activities_companyId_createdAt_idx",
+      "sales_notifications_companyId_recipientUserId_readAt_create_idx",
+      "geofence_events_companyId_occurredAt_idx",
+      "geofence_events_companyId_employeeId_occurredAt_idx",
+      "geofence_events_companyId_action_occurredAt_idx",
+      "geofence_events_customerId_occurredAt_idx",
+      "sales_targets_companyId_assignedUserId_idx",
+      "sales_targets_companyId_startDate_endDate_idx",
+      "sales_targets_companyId_metric_idx",
+      "sales_targets_companyId_assignedUserId_metric_startDate_end_key",
+      "daily_travel_approvals_companyId_branchId_employeeId_busine_key",
+      "employee_reimbursements_companyId_branchId_employeeId_statu_idx",
+      "salary_history_links_companyId_employeeId_periodStart_perio_key",
+      "billing_prices_role_period_effectiveFrom_idx",
+      "company_subscriptions_companyId_status_endsAt_idx",
+      "billing_orders_companyId_createdAt_idx",
+      "payment_transactions_companyId_createdAt_idx",
+      "payment_transactions_orderId_idx",
+      "billing_audit_events_companyId_occurredAt_idx",
+      "billing_audit_events_type_occurredAt_idx",
+      "rate_limit_buckets_resetsAt_idx",
+      "print_templates_companyId_documentType_paperSize_isDefault__idx",
+      "print_templates_companyId_branchId_documentType_name_versio_key",
+      "account_terms_templates_companyId_documentType_isDefault_is_idx",
+      "commercial_documents_companyId_type_issueDate_idx",
+      "commercial_documents_companyId_branchId_status_type_issueDa_idx",
+      "commercial_documents_companyId_customerId_idx",
+      "commercial_documents_companyId_vendorId_idx",
+      "commercial_documents_companyId_vendorId_purchaseFinancialYe_key",
+      "account_settlements_companyId_partyId_transactionDate_idx",
+      "account_settlements_companyId_branchId_type_settlementNumbe_key",
+      "party_opening_balances_companyId_branchId_partyType_partyId_idx",
+      "party_opening_balances_companyId_journalEntryId_partyType_p_key",
+      "opening_balance_allocations_companyId_settlementId_openingB_key",
+      "payment_reminders_companyId_remindAt_status_idx",
+      "commercial_audit_events_companyId_entityType_entityId_creat_idx",
+      "project_change_orders_companyId_projectId_status_idx",
+      "project_change_orders_companyId_id_key",
+      "project_change_orders_companyId_projectId_changeOrderNumber_key",
+      "expense_transactions_companyId_projectId_status_idx",
+      "recurring_expense_templates_companyId_nextDueDate_isActive_idx",
+      "expense_attachments_companyId_expenseId_idx",
+      "money_accounts_companyId_type_isActive_idx",
+      "loans_companyId_status_idx",
+      "loan_payments_companyId_id_key",
+      "account_operational_audits_companyId_entityType_entityId_cr_idx",
+      "owner_asset_funding_returns_companyId_ownerTransactionId_fu_key",
+      "owner_transactions_companyId_transactionDate_idx",
+      "inventory_batches_companyId_productId_batchNumber_key",
+      "inventory_serial_numbers_companyId_id_key",
+      "inventory_serial_numbers_companyId_productId_serialNumber_key",
+      "stock_movements_companyId_warehouseId_productId_movementDat_idx",
+      "stock_movements_companyId_sourceType_sourceId_sourceLineId__key",
+      "product_prices_companyId_productId_priceType_customerId_isA_idx",
+      "assets_companyId_branchId_status_idx",
+      "asset_assignment_history_companyId_assetId_assignedAt_idx",
+      "asset_assignment_history_companyId_id_key"
+    ],
+    "missing_prisma_foreign_keys": [],
+    "renamed_equivalent_foreign_keys": [
+      {
+        "table": "email_verification_tokens",
+        "expected": "email_verification_tokens_userId_fkey",
+        "actual": "email_verification_tokens_user_fkey"
+      },
+      {
+        "table": "authorized_signature_versions",
+        "expected": "authorized_signature_versions_companyId_fkey",
+        "actual": "authorized_signature_versions_company_fkey"
+      },
+      {
+        "table": "authorized_signature_versions",
+        "expected": "authorized_signature_versions_companyId_uploadedById_fkey",
+        "actual": "authorized_signature_versions_uploader_fkey"
+      },
+      {
+        "table": "commercial_documents",
+        "expected": "commercial_documents_companyId_signatureVersionId_fkey",
+        "actual": "commercial_documents_signatureVersionId_fkey"
+      },
+      {
+        "table": "commercial_documents",
+        "expected": "commercial_documents_companyId_sourcePurchaseOrderId_fkey",
+        "actual": "commercial_documents_sourcePurchaseOrder_company_fkey"
+      },
+      {
+        "table": "purchase_line_allocations",
+        "expected": "purchase_line_allocations_companyId_documentLineId_fkey",
+        "actual": "purchase_line_allocations_documentLine_fkey"
+      },
+      {
+        "table": "party_opening_balances",
+        "expected": "party_opening_balances_companyId_fkey",
+        "actual": "party_opening_balances_company_fkey"
+      },
+      {
+        "table": "party_opening_balances",
+        "expected": "party_opening_balances_companyId_branchId_fkey",
+        "actual": "party_opening_balances_branch_fkey"
+      },
+      {
+        "table": "party_opening_balances",
+        "expected": "party_opening_balances_companyId_journalEntryId_fkey",
+        "actual": "party_opening_balances_journal_fkey"
+      },
+      {
+        "table": "party_opening_balances",
+        "expected": "party_opening_balances_companyId_createdById_fkey",
+        "actual": "party_opening_balances_creator_fkey"
+      },
+      {
+        "table": "opening_balance_allocations",
+        "expected": "opening_balance_allocations_companyId_settlementId_fkey",
+        "actual": "opening_balance_allocations_settlement_fkey"
+      },
+      {
+        "table": "opening_balance_allocations",
+        "expected": "opening_balance_allocations_companyId_openingBalanceId_fkey",
+        "actual": "opening_balance_allocations_opening_fkey"
+      },
+      {
+        "table": "money_transfer_images",
+        "expected": "money_transfer_images_companyId_transferId_fkey",
+        "actual": "money_transfer_images_transfer_fkey"
+      }
+    ],
+    "stronger_composite_foreign_keys": [
+      {
+        "table": "leads",
+        "expected": "leads_companyId_fkey",
+        "actual": "leads_company_fkey",
+        "expected_definition": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "leads",
+        "expected": "leads_customerId_fkey",
+        "actual": "leads_customer_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"customerId\") REFERENCES \"customers\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"customerId\", \"companyId\") REFERENCES customers(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "leads",
+        "expected": "leads_sourceVisitId_fkey",
+        "actual": "leads_visit_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"sourceVisitId\") REFERENCES \"customer_visits\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"sourceVisitId\", \"companyId\") REFERENCES customer_visits(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "leads",
+        "expected": "leads_assignedUserId_fkey",
+        "actual": "leads_assignee_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"assignedUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"assignedUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "leads",
+        "expected": "leads_createdByUserId_fkey",
+        "actual": "leads_creator_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"createdByUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"createdByUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "follow_up_tasks",
+        "expected": "follow_up_tasks_leadId_fkey",
+        "actual": "follow_up_tasks_lead_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"leadId\") REFERENCES \"leads\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"leadId\", \"companyId\") REFERENCES leads(id, \"companyId\") ON UPDATE RESTRICT ON DELETE RESTRICT"
+      },
+      {
+        "table": "follow_up_tasks",
+        "expected": "follow_up_tasks_assignedUserId_fkey",
+        "actual": "follow_up_tasks_assignee_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"assignedUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"assignedUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON UPDATE RESTRICT ON DELETE RESTRICT"
+      },
+      {
+        "table": "follow_up_tasks",
+        "expected": "follow_up_tasks_createdByUserId_fkey",
+        "actual": "follow_up_tasks_creator_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"createdByUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"createdByUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON UPDATE RESTRICT ON DELETE RESTRICT"
+      },
+      {
+        "table": "lead_activities",
+        "expected": "lead_activities_companyId_fkey",
+        "actual": "activities_company_fkey",
+        "expected_definition": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "lead_activities",
+        "expected": "lead_activities_leadId_fkey",
+        "actual": "activities_lead_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"leadId\") REFERENCES \"leads\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"leadId\", \"companyId\") REFERENCES leads(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "lead_activities",
+        "expected": "lead_activities_actorUserId_fkey",
+        "actual": "activities_actor_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"actorUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"actorUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "lead_activities",
+        "expected": "lead_activities_previousAssignedUserId_fkey",
+        "actual": "activities_previous_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"previousAssignedUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"previousAssignedUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "lead_activities",
+        "expected": "lead_activities_newAssignedUserId_fkey",
+        "actual": "activities_new_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"newAssignedUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"newAssignedUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "geofence_events",
+        "expected": "geofence_events_companyId_fkey",
+        "actual": "geofence_company_fkey",
+        "expected_definition": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "geofence_events",
+        "expected": "geofence_events_employeeId_fkey",
+        "actual": "geofence_employee_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"employeeId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"employeeId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "geofence_events",
+        "expected": "geofence_events_customerId_fkey",
+        "actual": "geofence_customer_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"customerId\") REFERENCES \"customers\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"customerId\", \"companyId\") REFERENCES customers(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "geofence_events",
+        "expected": "geofence_events_attendanceId_fkey",
+        "actual": "geofence_attendance_owner_fkey",
+        "expected_definition": "FOREIGN KEY (\"attendanceId\") REFERENCES \"attendances\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"attendanceId\", \"companyId\", \"employeeId\") REFERENCES attendances(id, \"companyId\", \"userId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "sales_targets",
+        "expected": "sales_targets_companyId_fkey",
+        "actual": "targets_company_fkey",
+        "expected_definition": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "sales_targets",
+        "expected": "sales_targets_assignedUserId_fkey",
+        "actual": "targets_assignee_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"assignedUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"assignedUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "sales_targets",
+        "expected": "sales_targets_createdByUserId_fkey",
+        "actual": "targets_creator_tenant_fkey",
+        "expected_definition": "FOREIGN KEY (\"createdByUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual_definition": "FOREIGN KEY (\"createdByUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "company_subscriptions",
+        "expected": "company_subscriptions_sourceOrderId_fkey",
+        "actual": "company_subscriptions_sourceOrderId_companyId_fkey",
+        "expected_definition": "FOREIGN KEY (\"sourceOrderId\") REFERENCES \"billing_orders\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual_definition": "FOREIGN KEY (\"sourceOrderId\", \"companyId\") REFERENCES billing_orders(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "billing_orders",
+        "expected": "billing_orders_createdByUserId_fkey",
+        "actual": "billing_orders_createdByUserId_companyId_fkey",
+        "expected_definition": "FOREIGN KEY (\"createdByUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual_definition": "FOREIGN KEY (\"createdByUserId\", \"companyId\") REFERENCES users(id, \"companyId\") ON DELETE RESTRICT"
+      },
+      {
+        "table": "payment_transactions",
+        "expected": "payment_transactions_orderId_fkey",
+        "actual": "payment_transactions_orderId_companyId_fkey",
+        "expected_definition": "FOREIGN KEY (\"orderId\") REFERENCES \"billing_orders\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual_definition": "FOREIGN KEY (\"orderId\", \"companyId\") REFERENCES billing_orders(id, \"companyId\") ON DELETE RESTRICT"
+      }
+    ],
+    "foreign_key_definition_differences": [
+      {
+        "table": "billing_prices",
+        "name": "billing_prices_createdByUserId_fkey",
+        "expected": "FOREIGN KEY (\"createdByUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual": "FOREIGN KEY (\"createdByUserId\") REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "company_subscriptions",
+        "name": "company_subscriptions_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "billing_orders",
+        "name": "billing_orders_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "payment_transactions",
+        "name": "payment_transactions_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "billing_audit_events",
+        "name": "billing_audit_events_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "billing_audit_events",
+        "name": "billing_audit_events_actorUserId_fkey",
+        "expected": "FOREIGN KEY (\"actorUserId\") REFERENCES \"users\"(\"id\") ON DELETE RESTRICT ON UPDATE CASCADE",
+        "actual": "FOREIGN KEY (\"actorUserId\") REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_documents",
+        "name": "commercial_documents_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_documents",
+        "name": "commercial_documents_companyId_branchId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"branchId\") REFERENCES \"branches\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"branchId\") REFERENCES branches(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_documents",
+        "name": "commercial_documents_companyId_customerId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"customerId\") REFERENCES \"customers\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"customerId\") REFERENCES customers(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_documents",
+        "name": "commercial_documents_companyId_vendorId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"vendorId\") REFERENCES \"vendors\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"vendorId\") REFERENCES vendors(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_documents",
+        "name": "commercial_documents_companyId_journalEntryId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"journalEntryId\") REFERENCES \"journal_entries\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"journalEntryId\") REFERENCES journal_entries(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_documents",
+        "name": "commercial_documents_companyId_createdById_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES \"users\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES users(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_document_lines",
+        "name": "commercial_document_lines_companyId_documentId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES \"commercial_documents\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES commercial_documents(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "account_settlements",
+        "name": "account_settlements_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "account_settlements",
+        "name": "account_settlements_companyId_branchId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"branchId\") REFERENCES \"branches\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"branchId\") REFERENCES branches(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "account_settlements",
+        "name": "account_settlements_companyId_journalEntryId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"journalEntryId\") REFERENCES \"journal_entries\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"journalEntryId\") REFERENCES journal_entries(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "account_settlements",
+        "name": "account_settlements_companyId_createdById_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES \"users\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES users(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "settlement_allocations",
+        "name": "settlement_allocations_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "settlement_allocations",
+        "name": "settlement_allocations_companyId_settlementId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"settlementId\") REFERENCES \"account_settlements\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"settlementId\") REFERENCES account_settlements(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "settlement_allocations",
+        "name": "settlement_allocations_companyId_documentId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES \"commercial_documents\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES commercial_documents(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "advance_applications",
+        "name": "advance_applications_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "advance_applications",
+        "name": "advance_applications_companyId_advanceId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"advanceId\") REFERENCES \"account_settlements\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"advanceId\") REFERENCES account_settlements(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "advance_applications",
+        "name": "advance_applications_companyId_documentId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES \"commercial_documents\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES commercial_documents(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "advance_applications",
+        "name": "advance_applications_companyId_journalEntryId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"journalEntryId\") REFERENCES \"journal_entries\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"journalEntryId\") REFERENCES journal_entries(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "advance_applications",
+        "name": "advance_applications_companyId_createdById_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES \"users\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES users(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "payment_reminders",
+        "name": "payment_reminders_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "payment_reminders",
+        "name": "payment_reminders_companyId_documentId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES \"commercial_documents\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"documentId\") REFERENCES commercial_documents(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "payment_reminders",
+        "name": "payment_reminders_companyId_createdById_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES \"users\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"createdById\") REFERENCES users(\"companyId\", id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_audit_events",
+        "name": "commercial_audit_events_companyId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\") REFERENCES \"companies\"(\"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\") REFERENCES companies(id) ON DELETE RESTRICT"
+      },
+      {
+        "table": "commercial_audit_events",
+        "name": "commercial_audit_events_companyId_actorId_fkey",
+        "expected": "FOREIGN KEY (\"companyId\", \"actorId\") REFERENCES \"users\"(\"companyId\", \"id\") ON DELETE RESTRICT ON UPDATE RESTRICT",
+        "actual": "FOREIGN KEY (\"companyId\", \"actorId\") REFERENCES users(\"companyId\", id) ON DELETE RESTRICT"
+      }
+    ],
+    "missing_primary_keys": [],
+    "enum_differences": [
+      {
+        "name": "Role",
+        "expected": [
+          "SUPER_ADMIN",
+          "COMPANY_ADMIN",
+          "FIELD_ADMIN",
+          "MANAGER",
+          "SALES",
+          "ACCOUNT_USER"
+        ],
+        "actual": [
+          "SUPER_ADMIN",
+          "COMPANY_ADMIN",
+          "MANAGER",
+          "SALES",
+          "ACCOUNT_USER",
+          "FIELD_ADMIN"
+        ]
+      },
+      {
+        "name": "BusinessType",
+        "expected": [
+          "INTERIOR_CONSTRUCTION",
+          "RETAIL_TRADING",
+          "SERVICE_BUSINESS",
+          "MANUFACTURING",
+          "RESTAURANT_FOOD",
+          "WHOLESALE_DISTRIBUTION",
+          "PROFESSIONAL_CONSULTANCY",
+          "OTHER_MIXED"
+        ],
+        "actual": [
+          "INTERIOR_CONSTRUCTION",
+          "RETAIL_TRADING",
+          "SERVICE_BUSINESS",
+          "MANUFACTURING",
+          "OTHER_MIXED",
+          "RESTAURANT_FOOD",
+          "WHOLESALE_DISTRIBUTION",
+          "PROFESSIONAL_CONSULTANCY"
+        ]
+      },
+      {
+        "name": "AccountModule",
+        "expected": [
+          "QUOTATIONS_BOQ",
+          "SALES",
+          "SALES_ORDER",
+          "PROFORMA_INVOICE",
+          "DELIVERY_CHALLAN",
+          "CREDIT_NOTE",
+          "CUSTOMER_RECEIPTS",
+          "CUSTOMER_ADVANCES",
+          "PAYMENT_REMINDERS",
+          "PURCHASES",
+          "PURCHASE_ORDER",
+          "PURCHASE_BILLS",
+          "DEBIT_NOTE",
+          "VENDOR_PAYMENTS",
+          "VENDOR_ADVANCES",
+          "SUBCONTRACTORS",
+          "PROJECTS",
+          "PROJECT_COSTING",
+          "INVENTORY",
+          "BARCODE",
+          "POS",
+          "EXPENSES",
+          "ASSETS",
+          "GST_ADVANCED"
+        ],
+        "actual": [
+          "QUOTATIONS_BOQ",
+          "SALES",
+          "SALES_ORDER",
+          "PROFORMA_INVOICE",
+          "DELIVERY_CHALLAN",
+          "CREDIT_NOTE",
+          "CUSTOMER_RECEIPTS",
+          "CUSTOMER_ADVANCES",
+          "PAYMENT_REMINDERS",
+          "PURCHASES",
+          "PURCHASE_ORDER",
+          "PURCHASE_BILLS",
+          "DEBIT_NOTE",
+          "VENDOR_PAYMENTS",
+          "VENDOR_ADVANCES",
+          "SUBCONTRACTORS",
+          "PROJECTS",
+          "PROJECT_COSTING",
+          "INVENTORY",
+          "BARCODE",
+          "EXPENSES",
+          "ASSETS",
+          "GST_ADVANCED",
+          "POS"
+        ]
+      },
+      {
+        "name": "ProjectMaterialMovementType",
+        "expected": [
+          "DIRECT_PROJECT_RECEIPT",
+          "INVENTORY_ISSUE_TO_PROJECT",
+          "CONSUMPTION",
+          "RETURN_TO_INVENTORY",
+          "RETURN_TO_VENDOR",
+          "TRANSFER_OUT",
+          "TRANSFER_IN",
+          "REVERSAL"
+        ],
+        "actual": [
+          "DIRECT_PROJECT_RECEIPT",
+          "INVENTORY_ISSUE_TO_PROJECT",
+          "CONSUMPTION",
+          "RETURN_TO_INVENTORY",
+          "TRANSFER_OUT",
+          "TRANSFER_IN",
+          "REVERSAL",
+          "RETURN_TO_VENDOR"
+        ]
+      },
+      {
+        "name": "TargetMetric",
+        "expected": [
+          "LEADS_CREATED_COUNT",
+          "WON_LEADS_COUNT",
+          "WON_LEADS_VALUE"
+        ],
+        "actual": ["WON_LEADS_COUNT", "WON_LEADS_VALUE", "LEADS_CREATED_COUNT"]
+      },
+      {
+        "name": "BillingRole",
+        "expected": ["ADMIN", "MANAGER", "SALES", "ACCOUNT_PACKAGE"],
+        "actual": ["MANAGER", "SALES", "ADMIN", "ACCOUNT_PACKAGE"]
+      },
+      {
+        "name": "QuotationAuditEventType",
+        "expected": [
+          "DRAFT_UPDATED",
+          "CREATED",
+          "REVISION_CREATED",
+          "SUBMITTED_FOR_APPROVAL",
+          "APPROVED",
+          "REJECTED",
+          "SHARED",
+          "SENT",
+          "SHARE_REVOKED",
+          "ACCEPTED",
+          "DECLINED",
+          "EXPIRED",
+          "CANCELLED",
+          "CONVERTED"
+        ],
+        "actual": [
+          "CREATED",
+          "REVISION_CREATED",
+          "SUBMITTED_FOR_APPROVAL",
+          "APPROVED",
+          "REJECTED",
+          "SHARED",
+          "SENT",
+          "SHARE_REVOKED",
+          "ACCEPTED",
+          "DECLINED",
+          "EXPIRED",
+          "CANCELLED",
+          "DRAFT_UPDATED",
+          "CONVERTED"
+        ]
+      },
+      {
+        "name": "BillingAuditType",
+        "expected": [
+          "PRICING_CHANGED",
+          "ORDER_CREATED",
+          "ORDER_CANCELLED",
+          "PAYMENT_CAPTURED",
+          "MANUAL_PAYMENT_CONFIRMED",
+          "PAYMENT_FAILED",
+          "SUBSCRIPTION_ACTIVATED",
+          "SUBSCRIPTION_RENEWED",
+          "SEATS_CHANGED",
+          "SUPER_ADMIN_OVERRIDE",
+          "SUBSCRIPTION_SUSPENDED"
+        ],
+        "actual": [
+          "PRICING_CHANGED",
+          "ORDER_CREATED",
+          "PAYMENT_CAPTURED",
+          "PAYMENT_FAILED",
+          "SUBSCRIPTION_ACTIVATED",
+          "SUBSCRIPTION_RENEWED",
+          "SEATS_CHANGED",
+          "SUPER_ADMIN_OVERRIDE",
+          "SUBSCRIPTION_SUSPENDED",
+          "ORDER_CANCELLED",
+          "MANUAL_PAYMENT_CONFIRMED"
+        ]
+      },
+      {
+        "name": "ProjectAuditEventType",
+        "expected": [
+          "PROJECT_MATERIAL_POSTED",
+          "PROJECT_MATERIAL_REVERSED",
+          "PROJECT_CREATED",
+          "PROJECT_UPDATED",
+          "PROJECT_MANAGER_CHANGED",
+          "PROJECT_TEAM_CHANGED",
+          "PROJECT_STATUS_CHANGED",
+          "PROJECT_BUDGET_CHANGED",
+          "BOQ_LINKED",
+          "MILESTONE_CHANGED",
+          "TASK_CHANGED",
+          "DOCUMENT_ADDED",
+          "PROJECT_CLOSED",
+          "PROJECT_REOPENED",
+          "CHANGE_ORDER_CREATED",
+          "CHANGE_ORDER_SUBMITTED",
+          "CHANGE_ORDER_APPROVED",
+          "CHANGE_ORDER_REJECTED",
+          "CHANGE_ORDER_CANCELLED"
+        ],
+        "actual": [
+          "PROJECT_CREATED",
+          "PROJECT_UPDATED",
+          "PROJECT_MANAGER_CHANGED",
+          "PROJECT_TEAM_CHANGED",
+          "PROJECT_STATUS_CHANGED",
+          "PROJECT_BUDGET_CHANGED",
+          "BOQ_LINKED",
+          "MILESTONE_CHANGED",
+          "TASK_CHANGED",
+          "DOCUMENT_ADDED",
+          "PROJECT_CLOSED",
+          "PROJECT_REOPENED",
+          "CHANGE_ORDER_CREATED",
+          "CHANGE_ORDER_SUBMITTED",
+          "CHANGE_ORDER_APPROVED",
+          "CHANGE_ORDER_REJECTED",
+          "CHANGE_ORDER_CANCELLED",
+          "PROJECT_MATERIAL_POSTED",
+          "PROJECT_MATERIAL_REVERSED"
+        ]
+      }
+    ],
+    "invalid_indexes": 0,
+    "unvalidated_constraints": 0,
+    "posted_journal_imbalances": 0,
+    "users": {
+      "count": 7,
+      "super_admins": 1,
+      "eligible_super_admins": 1,
+      "verified_super_admins": 0
+    },
+    "tables_with_rls_disabled": 127,
+    "anonymous_readable_tables": 127,
+    "authenticated_readable_tables": 127,
+    "anonymous_writable_tables": 127,
+    "security_definer_functions": [],
+    "functions_without_explicit_search_path": 49
+  },
+  "classification": {
+    "array_nullability": "Five production arrays are intentionally stricter NOT NULL; no data/column change proposed.",
+    "text_varchar": "Three widened TEXT columns accept current valid input; retain to avoid truncating existing data.",
+    "enum_order": "Same labels; historical ALTER TYPE append order. Do not rebuild enums.",
+    "foreign_keys": "Renamed and stronger composite tenant relationships are preserved. Update-action differences involve immutable IDs; no cascade rewrite proposed.",
+    "vendor_invoice_unique": "Keep partial unique index excluding CANCELLED; do not impose unconditional Prisma uniqueness.",
+    "redundant_company_id_unique": "ID primary key already guarantees uniqueness on project change orders and loan payments. No additional unique index required.",
+    "vendor_lookup": "Existing(companyId,vendorId,vendorInvoiceNumberNormalized) index covers the declared leading prefix.",
+    "ten_query_indexes": "Prepared concurrent non-unique indexes to match the ten other missing declarative query shapes. Production performance improvement is not yet measured.",
+    "zero_drift": "Not claimed; documented migration-native constraints remain authoritative."
+  }
+}

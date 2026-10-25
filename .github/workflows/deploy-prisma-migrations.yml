@@ -1,58 +1,119 @@
-name: Production Prisma Migrations
-
+name: Production Prisma Read-only Verification
 on:
   workflow_dispatch:
-
+    inputs:
+      operation:
+        type: choice
+        options: [read-only, apply-readiness]
+        default: read-only
+      approved_head:
+        type: string
+        default: ""
+      authorization:
+        type: string
+        default: ""
+      acknowledge_no_backup:
+        type: boolean
+        default: false
+      full_run_id:
+        type: string
+        default: ""
+      security_run_id:
+        type: string
+        default: ""
 permissions:
   contents: read
-
+  actions: read
 jobs:
-  deploy-migrations:
-    if: github.ref == 'refs/heads/main'
+  read-only-preflight:
+    if: inputs.operation != 'apply-readiness'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.DIRECT_URL }}
-
+    timeout-minutes: 10
     steps:
-      - name: Check out main
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check out exact dispatched commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: main
-
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: 22
+          node-version: "22"
           cache: npm
-
-      - name: Install locked dependencies
+      - name: Install without production credentials
         run: npm ci
-
-      - name: Validate production database secrets
+      - run: npm run prisma:generate
+      - name: Obtain official public Supabase CA
         run: |
-          if [ -z "$DATABASE_URL" ] || [ -z "$DIRECT_URL" ]; then
-            echo "Required DATABASE_URL or DIRECT_URL repository secret is unavailable." >&2
-            exit 1
-          fi
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+            https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt \
+            --output "$RUNNER_TEMP/supabase-ca.crt"
+          openssl x509 -in "$RUNNER_TEMP/supabase-ca.crt" -noout -checkend 86400
+      - name: Read-only history, actual connection role, user counts, security and Prisma checks
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca.crt
+        run: node scripts/production-readiness/preflight.mjs
+      # Deliberately no migrate/deploy/repair step. Production execution needs a verified backup and separate reviewed path.
 
-      - name: Generate Prisma Client
-        run: npm run prisma:generate
-
-      - name: Validate Prisma schema
-        run: npm run prisma:validate
-
-      - name: Check migration status before deployment
-        continue-on-error: true
-        run: npx --no-install prisma migrate status
-
-      - name: Deploy pending migrations
-        run: npm run db:migrate:deploy
-
-      - name: Verify migration status after deployment
-        run: npx --no-install prisma migrate status
-
-
-      - name: Verify generated-client runtime columns
-        run: node scripts/check-runtime-schema.mjs
+  approved-readiness-migrations:
+    if: inputs.operation == 'apply-readiness'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: salespunch-production-database-migrations
+      cancel-in-progress: false
+    steps:
+      - name: Require explicit pinned no-backup authorization
+        env:
+          APPROVED_HEAD: ${{ inputs.approved_head }}
+          AUTHORIZATION: ${{ inputs.authorization }}
+          ACKNOWLEDGE_NO_BACKUP: ${{ inputs.acknowledge_no_backup }}
+        run: |
+          test "$APPROVED_HEAD" = "$GITHUB_SHA"
+          test "$AUTHORIZATION" = APPLY_11_TESTED_READINESS_FIXES_WITHOUT_BACKUP
+          test "$ACKNOWLEDGE_NO_BACKUP" = true
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Require passing full regression for identical app/SQL and exact-head staged security CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FULL_RUN: ${{ inputs.full_run_id }}
+          SECURITY_RUN: ${{ inputs.security_run_id }}
+        run: |
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$FULL_RUN --jq .conclusion)" = success
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$FULL_RUN --jq .name)" = 'Full validation'
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$SECURITY_RUN --jq .conclusion)" = success
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$SECURITY_RUN --jq .name)" = 'Readiness security rehearsal'
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$SECURITY_RUN --jq .head_sha)" = "$GITHUB_SHA"
+          tested_head="$(gh api repos/$GITHUB_REPOSITORY/actions/runs/$FULL_RUN --jq .head_sha)"
+          git diff --exit-code "$tested_head" "$GITHUB_SHA" -- src android prisma e2e package.json package-lock.json next.config.ts .github/workflows/full-validation.yml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - name: Obtain official public Supabase CA
+        run: |
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt --output "$RUNNER_TEMP/supabase-ca.crt"
+          openssl x509 -in "$RUNNER_TEMP/supabase-ca.crt" -noout -checkend 86400
+      - name: Native Prisma one-stage-at-a-time with protected users and metadata rollback snapshot
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SSL_ROOT_CERT: ${{ runner.temp }}/supabase-ca.crt
+          APPROVED_HEAD: ${{ inputs.approved_head }}
+          READINESS_AUTHORIZATION: ${{ inputs.authorization }}
+          ACKNOWLEDGE_NO_BACKUP: ${{ inputs.acknowledge_no_backup }}
+          READINESS_ROLLBACK_PATH: ${{ runner.temp }}/readiness-metadata-recovery.sql
+        run: node scripts/production-readiness/execute.mjs
+      - name: Preserve permission/function recovery SQL only — no user rows or credentials
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: readiness-metadata-recovery
+          path: ${{ runner.temp }}/readiness-metadata-recovery.sql
+          if-no-files-found: warn
+          retention-days: 30
