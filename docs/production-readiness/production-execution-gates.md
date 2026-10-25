@@ -1,5 +1,7 @@
 # Production execution gates — no live changes performed
 
+**Current instruction:** the owner subsequently replied “No backup continue”. The no-backup waiver section below supersedes the earlier backup prerequisite for this reviewed non-destructive run. No full backup or disaster-recovery guarantee is claimed. Exact metadata recovery, tested compatibility and first-failure stopping remain required.
+
 The owner conditionally authorized tested, non-destructive production corrections on25October2026. A **verified recoverable production backup and rollback plan are mandatory**. This supersedes the earlier no-backup waiver. Data API is OFF by the owner's Dashboard verification and must remain OFF. PostgREST backend processes being present does not contradict the disabled gateway.
 
 ## Current disposition

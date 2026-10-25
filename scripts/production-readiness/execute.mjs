@@ -149,7 +149,14 @@ export async function main() {
     );
     const actualBodies =
       await db.$queryRaw`SELECT p.proname AS name,pg_get_function_identity_arguments(p.oid) AS identity_args,encode(sha256(convert_to(p.prosrc,'UTF8')),'hex') AS checksum FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' ORDER BY p.proname,pg_get_function_identity_arguments(p.oid)`;
-    if (JSON.stringify(actualBodies) !== JSON.stringify(reviewedBodies))
+    if (
+      JSON.stringify(
+        actualBodies.map((x) => [x.name, x.identity_args, x.checksum]).sort(),
+      ) !==
+      JSON.stringify(
+        reviewedBodies.map((x) => [x.name, x.identity_args, x.checksum]).sort(),
+      )
+    )
       throw new Error("FUNCTION_BASELINE_CHANGED");
     const plannedIndexNames = initial.pending.flatMap((m) => {
       const sql = readFileSync(
