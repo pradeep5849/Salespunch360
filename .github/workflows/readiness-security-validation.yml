@@ -27,7 +27,7 @@ jobs:
           POSTGRES_DB: verified_readiness_ci
         ports: ["5432:5432"]
         options: >-
-          --health-cmd 'pg_isready -U readiness -d verified_readiness_ci'
+          --health-cmd "pg_isready -U readiness -d verified_readiness_ci"
           --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       READINESS_DATABASE_URL: postgresql://readiness:isolated-ci-fixture-only@127.0.0.1:5432/verified_readiness_ci
