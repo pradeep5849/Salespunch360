@@ -1,0 +1,1638 @@
+{
+  "production_snapshot": "2026-10-25; read-only catalog",
+  "data_api": {
+    "enabled": false,
+    "evidence": "Owner confirmation from Supabase Dashboard in this conversation; gateway settings not changed by agent"
+  },
+  "application_boundary": {
+    "web": "Prisma backend",
+    "android": "SalesPunch360 mobile API with own tokens",
+    "supabase_auth_uid_policies_applicable": false,
+    "backend_role": "Production activity shows postgres through Supavisor; existing private URLs require final role check before change"
+  },
+  "tables": [
+    {
+      "table": "_prisma_migrations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "attendances",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "location_points",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "users",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sessions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sales_targets",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "lead_activities",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "geofence_events",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "customers",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "billing_prices",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "company_subscriptions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "billing_orders",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "billing_audit_events",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "payment_transactions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "rate_limit_buckets",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "customer_visits",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "pending_storage_deletions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "visit_photos",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "email_verification_tokens",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "lead_deletion_audits",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "companies",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "user_branch_accesses",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "push_devices",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "leads",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "branches",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "follow_up_tasks",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "daily_travel_approvals",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "employee_compensation_profiles",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "employee_advances",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "employee_reimbursements",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "salary_history_links",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_units",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_categories",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "work_categories",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "custom_field_definitions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "numbering_series",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_products",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "work_packages",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "financial_years",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_services",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_settings",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "vendors",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "ledger_accounts",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "cost_centres",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "accounting_period_locks",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "accounting_audit_events",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "journal_lines",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "journal_entries",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_adjustments",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_payment_schedules",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_shares",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_audit_events",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_lines",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_revisions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_documents",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "payment_reminders",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "commercial_documents",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "commercial_audit_events",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_settlements",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "settlement_allocations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "advance_applications",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "commercial_document_lines",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_members",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_budget_lines",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_milestones",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_tasks",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_documents",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_audit_events",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "projects",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_change_orders",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "expense_categories",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "expense_attachments",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "cheques",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_operational_audits",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "owner_transactions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "money_transfers",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "loan_payments",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "recurring_expense_templates",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "warehouses",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "inventory_batches",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "inventory_serial_numbers",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "product_prices",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "asset_assignment_history",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "custom_field_values",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_import_jobs",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_recycle_records",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "print_templates",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_terms_templates",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_backup_records",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "party_opening_balances",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "opening_balance_allocations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "authorized_signature_versions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "mobile_sessions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "public_testimonials",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "public_site_settings",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "public_blog_posts",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "public_video_tutorials",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "lead_sales_actions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "field_jobs",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "telecaller_billing_orders",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "lead_calls",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "telecaller_subscriptions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "mobile_device_bindings",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sales_notifications",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "project_material_movements",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "purchase_line_allocations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "assets",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "stock_movements",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "service_reminder_completions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "owner_financial_accounts",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "expense_items",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "expense_transactions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "money_transfer_images",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "money_accounts",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "asset_owner_fundings",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "loan_operations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "loans",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "asset_owner_funding_cancellations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "owner_asset_funding_returns",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "asset_funding_confirmations",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "account_report_favourites",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "quotation_attachments",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "commercial_attachments",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sale_return_revisions",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sale_revision_credits",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sale_revision_credit_lines",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    },
+    {
+      "table": "sale_lifecycle_snapshots",
+      "classification": "BACKEND_ONLY",
+      "rls_current": false,
+      "anon_select_current": true,
+      "authenticated_select_current": true,
+      "proposed_api_roles": "No direct access; application APIs enforce roles/company/branch",
+      "service_role": "Preserve existing privileged access"
+    }
+  ],
+  "functions": [
+    {
+      "name": "check_sale_attachment_append_complete",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_order_source_identity",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_order_line_source",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_party_transfer_history",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_sale_return_revision_history",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "prevent_company_id_change",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_user_manager",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_attendance_tenant",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_location_tenant",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "prevent_lead_activity_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": ["search_path=pg_catalog, public"],
+      "proposal": "Preserve existing fixed path"
+    },
+    {
+      "name": "prevent_geofence_event_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": ["search_path=pg_catalog, public"],
+      "proposal": "Preserve existing fixed path"
+    },
+    {
+      "name": "prevent_billing_audit_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": ["search_path=pg_catalog, public"],
+      "proposal": "Preserve existing fixed path"
+    },
+    {
+      "name": "prevent_paid_order_snapshot_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_customer_visit_tenant",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_follow_up_task_completed_visit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": ["search_path=pg_catalog, public"],
+      "proposal": "Preserve existing fixed path"
+    },
+    {
+      "name": "prevent_branch_company_id_change",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_user_branch_access",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_existing_user_branch_access_on_user_change",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_journal_lifecycle",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_posted_journal_delete",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_journal_lines",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_accounting_audit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_quotation_revision",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_quotation_child",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_quotation_document_lifecycle",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "prevent_quotation_audit_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "prevent_financial_history_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_commercial_line_history",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_settlement_allocation_insert",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "enforce_paid_telecaller_seat",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "prevent_project_material_mutation",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_settlement_update",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "check_project_material_insert_scope",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_loan_operation_history",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_posted_loan_origin",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "valid_commercial_unit_snapshot",
+      "identity_args": "snapshot jsonb, entered numeric, base numeric",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": false,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_receipt_advance_credit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_advance_application_credit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_receipt_credit_date",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_receipt_credit_journal_reversal",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_commercial_quotation_source",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_quotation_conversion_closure",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "require_posted_quotation_closure",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "protect_sale_attachment_append_audit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_commercial_attachment_history",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_sale_return_revision",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_sale_revision_credit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_sale_revision_credit_line",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_retained_return_journal_reversal",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_sale_revision_advance_source",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "validate_sale_lifecycle_snapshot",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_sale_lifecycle_audit",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    },
+    {
+      "name": "guard_sale_lifecycle_journal",
+      "identity_args": "",
+      "owner": "postgres",
+      "security_definer": false,
+      "is_trigger": true,
+      "search_path_current": null,
+      "proposal": "Set pg_catalog, public, pg_temp without changing body"
+    }
+  ],
+  "provider_schemas_changed": []
+}

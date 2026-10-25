@@ -1,0 +1,10 @@
+{
+  "status": "PARTIAL — FULL HINDI USER-DEFERRED",
+  "web_dictionary_entries": 103,
+  "android_dictionary_entries": 103,
+  "missing_in_android": [],
+  "missing_in_web": [],
+  "translation_differences": [],
+  "fallback": "Both implementations return the original English string for an unknown label. This is not proof that every UI string calls the translation helper.",
+  "functionality_changes": "None. Investigated coverage; do not claim universal localization."
+}
