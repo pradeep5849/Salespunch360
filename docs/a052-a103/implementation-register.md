@@ -1,3 +1,5 @@
+> Current update2026-10-25: A052 production schema remediation executed;159 migrations verified. Original report below is historical. See [current readiness report](../production-readiness/final-report.md) and JSON register. All199 findings retain test limitations.
+
 # A052–A103 consolidated implementation finding register
 
 12 October 2026. Dedicated branch: `fix/a052-a103-implementation`. Base: `a3e284bca56db3608193a3833b986bb57450d86c`. All 52 pages and all 199 saved finding IDs are preserved exactly once. Source reports are hashed in the JSON. Historical results do not establish final-head verification. A104 is forbidden until this checkpoint is merged.
