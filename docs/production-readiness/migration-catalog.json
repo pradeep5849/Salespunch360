@@ -1,0 +1,638 @@
+[
+  {
+    "name": "20260828000000_stage_1_foundation",
+    "checksum": "0c977a2b65a0d843503e223f7e38c4de4683605a995a20217f704db8c61521dd"
+  },
+  {
+    "name": "20260828010000_stage_2_company_trials",
+    "checksum": "677cc047ab92508be675cb70a622043d4671c4b3375df2a4983a0940fb95f46c"
+  },
+  {
+    "name": "20260828020000_stage_3_employee_management",
+    "checksum": "e34f7dd7e637f0b1506dfd33d878fc064e5dd31d447e9728a16316dcffd6a48c"
+  },
+  {
+    "name": "20260828030000_stage_4_attendance_gps",
+    "checksum": "9393b8b71d99d3b8b1f707b78f70d1b756d13a113be6d89f6da548304003e84e"
+  },
+  {
+    "name": "20260828040000_stage_5_customers_visits",
+    "checksum": "aaa36d4a4b8bc3ff110a3b66ce5b186c61d82a4c97eb6046db2caf8725779cd9"
+  },
+  {
+    "name": "20260828050000_stage_6_leads_pipeline",
+    "checksum": "1b3d6f0f3bc5956db8eeb23f717880b52b2325a329712b5876cbcd07539e0b41"
+  },
+  {
+    "name": "20260828060000_stage_8_geofence_targets",
+    "checksum": "f617aec2fbf8960c04f03f6bb2cde58714dd8fed54ccdbcfe7cebfaf28c19488"
+  },
+  {
+    "name": "20260829000000_stage_9_billing",
+    "checksum": "d7bc1ee95df8473c0f86889412790642fe3df5e8526c971deb4736b18fe660aa"
+  },
+  {
+    "name": "20260829010000_stage_10_production_hardening",
+    "checksum": "7b27e0f009f8be63b8e852113787290bfa51b3f4efdea38ed3b3d62a603717eb"
+  },
+  {
+    "name": "20260830000000_android_stage_a_mobile",
+    "checksum": "cf55701a220e6e1bcb447a40f94a46ffd1b816a775681ff022c69bd3b7db75b2"
+  },
+  {
+    "name": "20260830010000_add_company_team_structure",
+    "checksum": "d87fccb0a1031b052568f1f03f63e649f7ee56bfc47e3e000ca457a882acaafb"
+  },
+  {
+    "name": "20260830020000_post_phase_8_production",
+    "checksum": "eccfbd728661aa6f9828f62a79cfdaa8d9a681c80b03232fda0d9ab3e73906ef"
+  },
+  {
+    "name": "20260901000000_w5a_field_checkin",
+    "checksum": "97a5b6d6f7a8bb451644de2798d4b40b34ed2ed0d19dd8c0a17251dc229d12cb"
+  },
+  {
+    "name": "20260901010000_w5a_repair",
+    "checksum": "df8145ee096f9f24344a32d7c72daaf5944259700634c245912e2c59caa11907"
+  },
+  {
+    "name": "20260901020000_checkin_retention_lead_deletion",
+    "checksum": "adeb865ab2bdcda8e9f98ac8659dfff53a9fe16d82a4260e0c8ea7f57aefb0ac"
+  },
+  {
+    "name": "20260902000000_fix_nullable_customer_visit_trigger",
+    "checksum": "4ebfc873e484a662dcab39a7f25a59682fbec3318651327e2685f0c128177782"
+  },
+  {
+    "name": "20260902010000_w5b_follow_up_tasks",
+    "checksum": "7dc4b97d8aca67be71aa550dbbc05808a3c8859e0abdb326971af45b06f23b14"
+  },
+  {
+    "name": "20260902020000_company_logo",
+    "checksum": "e1f674a51f174db06fab1c239959cbc29b791f130f44004a9d6cd3fca6c890d8"
+  },
+  {
+    "name": "20260902120000_checkin_address",
+    "checksum": "72550cbe74c1f05aa7006363d8ad7b7f1fd1f9485510d1d52835a32fb6a59ff4"
+  },
+  {
+    "name": "20260902130000_push_notifications_fcm",
+    "checksum": "0bbfa34c67bd33fbbd3cbaff9c72c9a367dac1c3f4c506eedf5b68f74aa3a0f6"
+  },
+  {
+    "name": "20260902140000_manager_types",
+    "checksum": "9c862622284a59128297327745ea52cfbf8d53df514d69fcf0ac80a5614c6ca2"
+  },
+  {
+    "name": "20260902233000_final_seat_prices",
+    "checksum": "f1b7a31254ff06c8959b4ee6e7506cb7f7b03eac7263e565f5e9d2ee73e648d6"
+  },
+  {
+    "name": "20260902233500_created_leads_target_metric",
+    "checksum": "e799a5543cd92bdece3bf6b4355654c23fab9389786c4dda5c4efe902d90a929"
+  },
+  {
+    "name": "20260903002000_travel_rates_daily_approvals",
+    "checksum": "58799809334ee1f103b64549fe159cbdaf0d7ca63448ca6894a760ff6951c7db"
+  },
+  {
+    "name": "20260903004000_renewal_seat_retention",
+    "checksum": "32cba1087780043e18220aa2879638f8c72b251a1adb5510222731132e4de6af"
+  },
+  {
+    "name": "20260903010000_single_active_login",
+    "checksum": "d26308b81f86a536a6502d1e6a346a41ce8dcf4da2a770f9b71183c8a7200b98"
+  },
+  {
+    "name": "20260906000000_product_edition_multi_branch_foundation",
+    "checksum": "64a65cb264ba0b36961449f8f9831e4c0142a8a8af0f22d375dc1b8e095b43cc"
+  },
+  {
+    "name": "20260907000000_roles_permission_foundation",
+    "checksum": "2c7b11881e16f3085e7fcb5174db080f82c6895b60c8b6342efa5d21f09cde58"
+  },
+  {
+    "name": "20260907010000_fix_f2_role_compatibility_employee_sync",
+    "checksum": "89edcaef9d192d206868f0032f27f68e1ab68de3a70d075bf05c4ed5c8d3f77d"
+  },
+  {
+    "name": "20260908000000_workspace_lifecycle",
+    "checksum": "54adc1837ee35a3155a0aaa736258e28a90df92b339d3c5f99a6afe7b8036d62"
+  },
+  {
+    "name": "20260908010000_minimal_employee_profile",
+    "checksum": "7942d9c13a33aa2d5a5abcf62118651d15ad1c9a40baed8a4f7028dc8e452e46"
+  },
+  {
+    "name": "20260908020000_f3kl_canonical_sales_billing",
+    "checksum": "13066c7124fee16057be1b65c5d169b280cb43303d3183eb7855e132dc89ad21"
+  },
+  {
+    "name": "20260909000000_scope_append_only_tenant_purge",
+    "checksum": "cc57fc4f18b87b89aa335159f28f4dcca73f6c463dcaff217833d83f31ded98b"
+  },
+  {
+    "name": "20260909010000_f4_registration_company_setup",
+    "checksum": "506df79c0c3b5220b30b86f1b3c14c9960354fb9f899d644179899737af383e2"
+  },
+  {
+    "name": "20260909020000_f0_f6_final_closure",
+    "checksum": "7b14a66f2b583b1a00715a3b792aa5bf4fb3919b874beb141535677729fd4bac"
+  },
+  {
+    "name": "20260909030000_f0_f6_tenant_invariant_hardening",
+    "checksum": "ef2339be32dc48d5e185e4e95a42ce3975511d626b61cb1b367c5d1d2385f475"
+  },
+  {
+    "name": "20260910000000_a1_account_core_data_foundation",
+    "checksum": "0290f57c2957db4c3bd80fd6b3243be1a96b65e076d106ed8c91f5507ff32228"
+  },
+  {
+    "name": "20260910010000_a2_accounting_engine",
+    "checksum": "d0a907412261a17627116a71c4f5a3347a555df9361b7287d6656f95ee5664b0"
+  },
+  {
+    "name": "20260910020000_a3_quotation_estimate_boq",
+    "checksum": "2d4f63929084081d1f707f24184308cad0973efba1ada503d3e936704e4d498d"
+  },
+  {
+    "name": "20260910030000_a4_a5_sales_purchases_modules",
+    "checksum": "921963cb1219945a817b7ed9274d2f3ebe58e887999017e12fa40691c9a571de"
+  },
+  {
+    "name": "20260911010000_a4_a5_completion_hardening",
+    "checksum": "1ca1374b284753d40fe756734f3b62557a56a4e0ca2a9891fb6f9c07f7fee83f"
+  },
+  {
+    "name": "20260911120000_a6_projects",
+    "checksum": "8715dc94f16947196b4c938a5004407098d7da9a0aa0fef7d27752d82f4e7a63"
+  },
+  {
+    "name": "20260911130000_a7_lead_project_integration",
+    "checksum": "f37f6d334278324d97b2ad046d434e8ca68adf8dabb4f376a3d24322b8af2bf3"
+  },
+  {
+    "name": "20260911140000_a8_project_costing",
+    "checksum": "31c3972878839693e15018466489f8d730a986e06044da7c589225cb99a2a87f"
+  },
+  {
+    "name": "20260911150000_a9_expenses",
+    "checksum": "3e65e3c9d1c96ce86713824dcafe510186140672478259a5b2542cc25e9fab59"
+  },
+  {
+    "name": "20260911160000_a10_money_capital_loans",
+    "checksum": "74fbb0830714bda97057a8676847596c6e5ff06a55c2b72480eea1952f29dda3"
+  },
+  {
+    "name": "20260911170000_a8_runtime",
+    "checksum": "aac09543115b0cb5c78bce6f995ee72dd5e8fdd7156be906d7290aa2884bcb12"
+  },
+  {
+    "name": "20260911180000_a9_runtime_integrity",
+    "checksum": "bb739d91132c2eec53fe748e8050954439ef5dcc3a9f65d9c83716e827c9b675"
+  },
+  {
+    "name": "20260911185000_owner_composite_key_prerequisite",
+    "checksum": "1e14c0623919e4e6fd423ebf4915acdae9ede10a6b5fc9246d9960ecfeb7917d"
+  },
+  {
+    "name": "20260911190000_a10_runtime_integrity",
+    "checksum": "a54b6f0d047dcc514f1aa61aa88b2102029f4e47e7ca13dd3a4ba2468d7980f6"
+  },
+  {
+    "name": "20260911200000_a8_a10_accounting_scope_corrections",
+    "checksum": "1ffcc537ae87fed82b40d983f6cd052be8dcb69bdb06239bc5146a3ec0349bd8"
+  },
+  {
+    "name": "20260911210000_a11_inventory",
+    "checksum": "be0e308cdc95353dcb4d832e121de88fd575b3ab75e57cd68ef10fce96677843"
+  },
+  {
+    "name": "20260911220000_a12_gst_taxes",
+    "checksum": "ddcf784d73217710d13be988dec2c0444162371a8a08428a34d1b3680be699cf"
+  },
+  {
+    "name": "20260911230000_a13_assets",
+    "checksum": "2969bdc752e99ec430b2b85f3aec1e99d4f15d318031932f0b8b79e967b19584"
+  },
+  {
+    "name": "20260911235000_commercial_line_key_prerequisite",
+    "checksum": "98897f65734cd9e226e467a98d748100ef4f16584429515a90f20d6f123db92d"
+  },
+  {
+    "name": "20260911240000_a11_a14_runtime_closure",
+    "checksum": "c8f3a35fff7b7324ef69f3edf0640ee28d2b06f48c3e1243b12c40bf339e4908"
+  },
+  {
+    "name": "20260911250000_a11_a14_final_accounting_corrections",
+    "checksum": "5e74e4b8e0bdb93a884322951aa40294c3b6ef7de3b7f1a693d8baff6c96cab9"
+  },
+  {
+    "name": "20260912120000_a15_a16_account_finalization",
+    "checksum": "7c0503df50ae458d09517e7b928b3ebcc94f08107ead2b8e92fe37236db7a0fc"
+  },
+  {
+    "name": "20260912170000_y02_party_opening_balances",
+    "checksum": "d00a437f883cc10cb165a6ff796aad315d9e4cbb2b3bb2f770540e13e0abe486"
+  },
+  {
+    "name": "20260912173000_y03_signature_history",
+    "checksum": "c1c46fac7d4c13455fbeea5c0153ff689fd804c4635d131827bbedf3963a83bf"
+  },
+  {
+    "name": "20260913100000_y02_y03_tenant_invariants",
+    "checksum": "8f1ee493e6c5ab36281255bbd9a0a1a60220e9bf606e470748923acfbcab9bf4"
+  },
+  {
+    "name": "20260913150000_r2_performance_indexes",
+    "checksum": "a5998e31ed2196da5ed479349d06d56e6311f783140104b0136aa95cf76c7079"
+  },
+  {
+    "name": "20260914130000_m1_m2_mobile_web_session_bridge",
+    "checksum": "d305d7797942cbc1e23fbc0f9355e92d8bbf13a58ae1994df2ca00987b32b1e4"
+  },
+  {
+    "name": "20260918100000_account_package_pricing",
+    "checksum": "3943a3cf9bb566299aa6e80b846af405451552eedbd0d34c01ace462e2e3c055"
+  },
+  {
+    "name": "20260918100500_seed_account_package_price",
+    "checksum": "f0085d3f221e1358faca0f4beacd8e235019b8d41e479015112e3ddda374e5c2"
+  },
+  {
+    "name": "20260918110000_billing_audit_types",
+    "checksum": "ee4a3e869bb910e4e56a6e4c98fd8c9662cd41592332de215e0414edf63532e3"
+  },
+  {
+    "name": "20260918143000_coherent_account_packages",
+    "checksum": "656b833643b973e5059d7351e7796225edf8e8ec72cac06518140a28430b82ae"
+  },
+  {
+    "name": "20260918180000_public_testimonials",
+    "checksum": "868fd7423bb6ea6a6dbcf534739d2bd0c8f034f4db0066a7a6d035ce5505e562"
+  },
+  {
+    "name": "20260918180500_public_testimonial_image",
+    "checksum": "b2b6b10b9106071fb06d7ff8ca59a6f0c8d24d34ae05f99b69d2eddd8b3defff"
+  },
+  {
+    "name": "20260918183000_public_site_settings",
+    "checksum": "c5a9683bca1bef029f378f903c931f0aaeaffbb41e09bad6f637e56b7b8975e7"
+  },
+  {
+    "name": "20260918183500_public_site_google_play",
+    "checksum": "5b63ff4715ca5fd006d5e87b0d375540a6299127b0a0fe587dcfbf5c0cb1ffe6"
+  },
+  {
+    "name": "20260918184500_public_blog_posts",
+    "checksum": "93686424c1d87ec0b73543ebc71f465227a1b2f1342e31eb4d5a2adf356ad2ec"
+  },
+  {
+    "name": "20260918190000_user_legal_acceptance",
+    "checksum": "974f6e62115e88878cb52f126138cfd1830a0215239d5574ce288d57bfd66c88"
+  },
+  {
+    "name": "20260918191500_public_video_tutorials",
+    "checksum": "4a709d72b5074bb11eb1b41a68a6d188ca5a175f300ba8d93e1a5d511db00a94"
+  },
+  {
+    "name": "20260921120000_billing_order_account_price_constraint",
+    "checksum": "00af74e0447b7383d354be6f1896f9707f1ab66d861bde6aa12f3cc6fdb86142"
+  },
+  {
+    "name": "20260923170000_p1_completed_projects_final",
+    "checksum": "112056616a5388859c9a7951f6745966ad78f24032263f125775910676250c05"
+  },
+  {
+    "name": "20260923183000_telecalling_workflow",
+    "checksum": "333fe1be1f3a6c1c60da02a9daf30704d33bc1badaf048d8e6fd268253c29c11"
+  },
+  {
+    "name": "20260924120000_telecalling_dial_session_timing",
+    "checksum": "6cfbe752f40ee2cc73d5d492c036277eacfa9ca7408d232742aa081b3b556752"
+  },
+  {
+    "name": "20260925150000_mobile_device_binding",
+    "checksum": "209e66c6249741e407b80d30f84d97b857a99011b7e5688376d67a36aaea266d"
+  },
+  {
+    "name": "20260926160000_add_travel_approval_mode",
+    "checksum": "9fb12f0d7da7d725ba69901afd03e7a06f0ce0b41eee474e5b433197d3241a71"
+  },
+  {
+    "name": "20260927100000_deferred_field_jobs",
+    "checksum": "81ad7025f9bfc7bba9a4e0324d49ee4875a4d6e090bfd44915eb5eb25aa53340"
+  },
+  {
+    "name": "20260927170000_sales_notifications",
+    "checksum": "0b529b96f09fcac2cd68a6d28527efa3d4e62b399bbfffcda8732ebc6635baa0"
+  },
+  {
+    "name": "20260928173000_account_item_settings",
+    "checksum": "b4b52ff156d697bbdf8e6778a58c7da644533b5efd925341359e012add5482dd"
+  },
+  {
+    "name": "20260928193000_purchase_allocation_foundation",
+    "checksum": "fb96b698b29e4f74da4a23e8ba6357c0c797158bde7b4340a0d12fdc92a37860"
+  },
+  {
+    "name": "20260928200000_purchase_document_details",
+    "checksum": "f879c5f564d07277b175741cc7998fc6dc076630363f88d85b1409d76fe49e51"
+  },
+  {
+    "name": "20260928203000_project_material_account",
+    "checksum": "a9223271ffe5229799223891f4d790b91b25f433262449c49d47dc0dcf4fc579"
+  },
+  {
+    "name": "20260928210000_project_material_ledger",
+    "checksum": "ad6952f0dbfa8080fa1e09952499b7cdf322b786278edd1bf1a60a2c9bc0dab3"
+  },
+  {
+    "name": "20260928213000_project_material_cost_account",
+    "checksum": "ee30636baeb888d62abb78c76361f5c2c712f76471d619f10148605b40b2b11f"
+  },
+  {
+    "name": "20260928220000_project_linked_advances",
+    "checksum": "b839ed3fc779a4cc58bae210ecbfe8004b0b09c9229feb1bd74466531365822f"
+  },
+  {
+    "name": "20261001090000_a1_business_module_setup",
+    "checksum": "a41fd19da5a09ba863596d7640364a8f78200ddaead358fdc9ae638927a0d2fa"
+  },
+  {
+    "name": "20261001110000_a2_general_preferences",
+    "checksum": "e27fcec4ac89b8c3fcbae2df0de9fb22bdd25064ba2b1d1b807b5799e5986ec4"
+  },
+  {
+    "name": "20261009042000_asset_request_identity",
+    "checksum": "a550cc3fc73f7a95449fbb21b7fdf562fcc05438d713f0d27d24622ff56c1071"
+  },
+  {
+    "name": "20261009043000_storage_deletion_survives_tenant",
+    "checksum": "65b780c59a1725f904105137be2d11150e60f3b8bcda4612551aea37173230fb"
+  },
+  {
+    "name": "20261009044000_manual_payment_reference",
+    "checksum": "bd050c2f843188de0b1d3bc01d60fac0b14f9f8c099cd7605f58e2284d7859f2"
+  },
+  {
+    "name": "20261009050000_asset_and_expense_reference_fields",
+    "checksum": "90ec4734f54c40927b7e1b27b0b39af511525c1239963730a3ed173d13f11ed5"
+  },
+  {
+    "name": "20261009051000_asset_opening_fields_complete",
+    "checksum": "179e03b72adf2facd29c237fe18e8ebeb340edf9e752b6931a67d44425396d8b"
+  },
+  {
+    "name": "20261009085000_manual_payment_reference_repair",
+    "checksum": "eace0312d7fc3a9df10ee2ac8352f529d021aec9d5bae5aee62921577cc1e207"
+  },
+  {
+    "name": "20261009093000_project_material_request_identity",
+    "checksum": "62cd6c3e339390bb17ab2848d082da46c56932f5a73d00a988a44ec625d2d1c6"
+  },
+  {
+    "name": "20261009100000_project_material_audit_events",
+    "checksum": "a648e0eb200ebc494fbb5b0ee111e4a1a9f5aa72356d0f61204806ec5ad2f558"
+  },
+  {
+    "name": "20261009110000_project_material_scope_integrity",
+    "checksum": "5e2d7618c58a4d7f5d3ee4a7e17a68492f97bd2fa86bed22856540a73e440092"
+  },
+  {
+    "name": "20261009120000_project_change_order_request_identity",
+    "checksum": "6375b33562cc704f8a2c864af51f6f4b7b1d9558586792cdf8660188ff75c6b3"
+  },
+  {
+    "name": "20261009123000_project_creation_request_identity",
+    "checksum": "3e8ee356a5e56ccae5686f3540aa1a7ef93af6e067a2930e8bee64233085d38c"
+  },
+  {
+    "name": "20261009132000_project_purchase_return_lineage",
+    "checksum": "aab4252cff474507beb6832df1446b6b00a776e0035883bc275d2c64e3e357e2"
+  },
+  {
+    "name": "20261009133000_project_inventory_quantity_precision",
+    "checksum": "ba6a882356540d0d1f091d2d9277ce91f506d18d0f34831855da104f79b10d50"
+  },
+  {
+    "name": "20261009140000_commercial_creation_request_identity",
+    "checksum": "9fe79e68c4fe5406964edfcfcb47ac045fd239479e094a8a98a31c8882de6287"
+  },
+  {
+    "name": "20261011100000_transaction_header_snapshots",
+    "checksum": "a208e49dabef5e59f87455438d4189dec9baa4076b17101257e873e62b01bd5f"
+  },
+  {
+    "name": "20261011113000_customer_payment_discounts",
+    "checksum": "4553d0f9d5fb604e900763307007a58324e2f8eb42b194ceaa550ec339817309"
+  },
+  {
+    "name": "20261011123000_service_reminder_lifecycle",
+    "checksum": "c44a81f96c6e95e6ed2c5a6180b7dd7677510b37886769b9cd74b51f655ce4d7"
+  },
+  {
+    "name": "20261012060000_recurring_expense_identity",
+    "checksum": "60a3a246a513a82cf780749ef63a15f6b98000a61fc5f2884d4efd324937c4a5"
+  },
+  {
+    "name": "20261012080000_owner_identity_and_withdrawal_types",
+    "checksum": "5f1ed35171e3d5690011cc1ec12abbe9a789f2678d25a48e745fe4203eb303e4"
+  },
+  {
+    "name": "20261012103000_item_opening_creation_identity",
+    "checksum": "808bb785609511d742a39ff72d20ae0ee9c4b8b3a08efbae31816b22d7e225ef"
+  },
+  {
+    "name": "20261012110000_expense_paid_review",
+    "checksum": "87cf0ff277515c2a6bf1c75968738bd2d8e43a4c688b775f0be1b88b1b722b34"
+  },
+  {
+    "name": "20261012120000_company_expense_items",
+    "checksum": "d660907c462ed9bffc4ab74f12398bf0ee218eca2cb94e3fa2d480b61607e971"
+  },
+  {
+    "name": "20261012125000_cheque_company_identity",
+    "checksum": "6618bac4cfcfaef55e1327c7f6e02d31e8879bf9bdf9ece8fe0024663e0edc6d"
+  },
+  {
+    "name": "20261012130000_cheque_payment_lifecycle",
+    "checksum": "25daca1482dceb4ad3bebb7dc4e1df45523e7ded30ef60616d91e12fe72385b1"
+  },
+  {
+    "name": "20261012132000_cheque_payment_mode",
+    "checksum": "e7dd003e1e7b3d45267e8af6be0d28bd201ecdb51040e1c00e75d54b8b12e3ac"
+  },
+  {
+    "name": "20261012133000_settlement_cheque_state_integrity",
+    "checksum": "9a3b311fe9729b7ebcb0e64f0cc6f023592491b1db7a676e5cc3f42529095ac1"
+  },
+  {
+    "name": "20261013010000_money_account_creation_identity",
+    "checksum": "47039a634667723b15523eaf254b40ffc1920c4d6b2c284c36c83fab13fdc4df"
+  },
+  {
+    "name": "20261013020000_quotation_draft_edit_audit",
+    "checksum": "d469962b9f30a30e86299f230832891e07c525c73ac75e7c8e1f6f6b4ddf578c"
+  },
+  {
+    "name": "20261013030000_loan_identity_terms",
+    "checksum": "d7fb784aeac034efca40ffebc994aec883d76e60450f06c8ce28e35f1c7d72a9"
+  },
+  {
+    "name": "20261013040000_loan_payment_description",
+    "checksum": "e3016a119e0d55a3a906c17320ff9389b8ec0e6b8a3832ee55bb5b443561f97f"
+  },
+  {
+    "name": "20261013050000_money_bank_metadata",
+    "checksum": "68f481134fbebe281b756fd99bb72dde0edc794213e79e24ddcddbe1f5ec43d6"
+  },
+  {
+    "name": "20261013060000_loan_operations",
+    "checksum": "5f130f2029e5b5895e3b1357a3e689b55bfd431411214ab2482c4902a5f948e5"
+  },
+  {
+    "name": "20261014010000_money_transfer_description",
+    "checksum": "be470abcefa4cfe1248d813bdf061e5e5688d4b6baa1b8bfce4a6254c74155c8"
+  },
+  {
+    "name": "20261014020000_money_transfer_image",
+    "checksum": "8d7779cb2a6eecfc4601e0def59e1011a7448700fe5592a2d4f97291efe29788"
+  },
+  {
+    "name": "20261014030000_owner_asset_funding",
+    "checksum": "5214bc8aa9aef888e9ab7bc85c80508d7f8476f20744b799f6e23c33f2e25bfc"
+  },
+  {
+    "name": "20261016010000_item_master_pricing",
+    "checksum": "c8946976be0f3a05533e4a42ea02fa58a8ec7b02c0219949e8b4d96427af9d07"
+  },
+  {
+    "name": "20261016160000_account_report_favourites",
+    "checksum": "e400f75b4b8d30eb23c71d66b2d979065752744fe47a4ea254c686b842b32c12"
+  },
+  {
+    "name": "20261017040000_item_master_photos",
+    "checksum": "dd17dd86bb90f96aff4ab555203d17fe8099bc434ced4a5544871acc154dde0d"
+  },
+  {
+    "name": "20261017060000_quotation_creation_identity",
+    "checksum": "984f0eedc813135f3b186da4ab225bb4a90a46203d1f8b11350fb0a44686379e"
+  },
+  {
+    "name": "20261017120000_item_secondary_units",
+    "checksum": "e70f2f5a91520c3d6d1d7d1df044bd8cec63205be8d4d60ef11bb70a6b9f6b9b"
+  },
+  {
+    "name": "20261017121000_item_secondary_unit_integrity",
+    "checksum": "7e551504f2c7da2794ef161e6e67399acc5d14e0c6ab013e16af69e5fc1ee39f"
+  },
+  {
+    "name": "20261019060000_commercial_shipping_snapshot",
+    "checksum": "52606a20079b7761c556ae045d3d1bf39719ad33850187eed078f26336a37185"
+  },
+  {
+    "name": "20261019090000_quotation_rounding_snapshot",
+    "checksum": "a5b53f6a67206ecea2f257ad5379c7a7ad1ee8b6fead58293c078e7e39775f99"
+  },
+  {
+    "name": "20261019110000_quotation_supply_snapshot",
+    "checksum": "231ab45d8c56a0f3275af62b13a104ea540bf7cc153a99e84d737856584aab97"
+  },
+  {
+    "name": "20261019120000_quotation_tax_mode_snapshot",
+    "checksum": "901bc56b3f54096f7a78a3b148868d70d678894639deb17e8f09fccc17ee9f25"
+  },
+  {
+    "name": "20261019140000_quotation_billing_name_snapshot",
+    "checksum": "23e7e6ac4be3174ca15f3b51e8ba71b5bd9cb5d932f330f9ae6b08a6e1c4ded3"
+  },
+  {
+    "name": "20261019180000_quotation_private_attachments",
+    "checksum": "d84892c31693d5027d18db6431059b9c8fce2c2e2681ad820c3a4b8672cc7f8a"
+  },
+  {
+    "name": "20261020060000_commercial_unit_snapshots",
+    "checksum": "b5a7e0582c07c4b50ca45227d3675bcd32de968ebca0158462b191542575d30f"
+  },
+  {
+    "name": "20261020100000_receipt_advance_credit",
+    "checksum": "d32f138335701684f9a31d6851118243188c32fc11c6186c4dfd9355f950609c"
+  },
+  {
+    "name": "20261020103000_advance_application_credit",
+    "checksum": "cb13eef282b4773bec087b60410b4669bfd17d88f36d2b90b47d75959b167fa8"
+  },
+  {
+    "name": "20261020120000_quotation_commercial_conversion",
+    "checksum": "7269809be2f7185d50ed42a31c76b905b82b68541f3b6b2990cfc0d1052b1455"
+  },
+  {
+    "name": "20261021010000_commercial_private_attachments",
+    "checksum": "136dccbdb2c1c1e0b43e9b0e83cdec4525de7450d0229edc2c586486840fda05"
+  },
+  {
+    "name": "20261021020000_sale_attachment_append_history",
+    "checksum": "ff4bc11e9cdc936a1459a6b8a44120a5b299b9afb63ecf4ca8f78c9480d025af"
+  },
+  {
+    "name": "20261021120000_order_line_fulfilment",
+    "checksum": "4bfae4c29dd2f7fa54daee027dc5471a8b6cd798a7667aca31410adb55188f52"
+  },
+  {
+    "name": "20261022110000_invoice_description",
+    "checksum": "9d1cb459facad5b481bbe552274399680931df63a1cc393c6e32f47a4ac8bf99"
+  },
+  {
+    "name": "20261023040000_party_transfer_snapshot",
+    "checksum": "6725f3a4f5acc06bdda9d4a2aee452b09b1e2ec7d78cbf9e3310a067a29a5146"
+  },
+  {
+    "name": "20261023150000_sale_return_revision_carry",
+    "checksum": "9ef09d4c4b20decd3e5adf85004376e8a11cfdf76042b4e8d3f6ae60ad94e7b2"
+  },
+  {
+    "name": "20261025090000_backend_only_api_privileges",
+    "checksum": "00db55d10ada95a8a52ed640f55e4374f50de886b492a6ab8243901582afab7c"
+  },
+  {
+    "name": "20261025090100_runtime_index_01",
+    "checksum": "3b7159c5b9bba53e0688a10c87e428b1ba42cea87297938d02d2e0b39d2d7507"
+  },
+  {
+    "name": "20261025090101_runtime_index_02",
+    "checksum": "3898d907ec30d6bd0d20aaa3c7578946ffd642645f79bbf775d2a24ab1eaed1e"
+  },
+  {
+    "name": "20261025090102_runtime_index_03",
+    "checksum": "b900687e9a38d8d5a9caa889c6fac840a26dd0fbb2cd0250c11e4beee7b34a63"
+  },
+  {
+    "name": "20261025090103_runtime_index_04",
+    "checksum": "0d2ef2d5a55cd67e1eafe5cefd2b3c71991912c74c8172a255bef09729e24e39"
+  },
+  {
+    "name": "20261025090104_runtime_index_05",
+    "checksum": "e81f8956eae970c763ceb65ab7f205205e51e46812af4823d9a32ec4209ac8a7"
+  },
+  {
+    "name": "20261025090105_runtime_index_06",
+    "checksum": "c061ec6f87598b26dc330b0cba9c0643a3e0c69d7e64f20b30b31e1257bf123e"
+  },
+  {
+    "name": "20261025090106_runtime_index_07",
+    "checksum": "6db4a893be98952c606bf89df6535a0ab35e571f0d4abcb0202eec1b91466e55"
+  },
+  {
+    "name": "20261025090107_runtime_index_08",
+    "checksum": "46373fe7db57de025367f74edcb0bc7bfa9658750aac0509425f826968d38484"
+  },
+  {
+    "name": "20261025090108_runtime_index_09",
+    "checksum": "c9f361889d401d08870800aa1a1ca70d2dc8e0ae6f5cc04c5d36aa33d2082f3b"
+  },
+  {
+    "name": "20261025090109_runtime_index_10",
+    "checksum": "db9211d2418f5d0ee71a3867a18b1fee17d471f43b331b82110da1283f381408"
+  }
+]

@@ -32,3 +32,9 @@ Pin the exact reviewed branch commit; verify all tests/CI and original148migrati
 ## Remaining acceptance limits
 
 No production backup/decryption/restore, original-password login, live authenticated Web/Android smoke or physical-device synchronization has been executed in this preparation. The owner's new conditional authorization does not waive these gates. A104 stays on hold until the owner accepts the final security/schema/verification disposition.
+
+## Latest owner instruction — backup waived
+
+After the secure encryption-recipient question, the owner replied **“No backup continue”**. This supersedes the mandatory-backup condition above for the explicitly authorized tested non-destructive hardening/index changes. No verified database backup exists and none is claimed. The prepared runner preserves exact permission/default/function-path recovery metadata before any DDL, fingerprints all seven user records privately after every stage, verifies backend ownership/service_role access, and stops on first failure. This metadata file is not a data backup. Destructive SQL, app deployment, merge, data-affecting corrections or a known interruption still require separate approval.
+
+Execution additionally requires successful full validation on identical application/SQL files, exact-head successful staged security CI, an exact reviewed SHA, explicit no-backup acknowledgment and the fixed11-migration authorization phrase. It refuses a changed148-success baseline or unknown/checksum-mismatched history. The isolated staged rehearsal uses a non-superuser table/function owner to match Supabase's backend privilege boundary.

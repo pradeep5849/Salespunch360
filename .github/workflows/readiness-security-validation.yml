@@ -55,3 +55,21 @@ jobs:
       - name: Rehearse native forward migrations, preserved credentials, role boundary and defaults
         run: node scripts/production-readiness/rehearse.mjs
       - run: npx vitest run scripts/production-readiness/data-api-probe.test.ts
+      - name: Verify staged runner approval and first-failure guards
+        run: node --test scripts/production-readiness/execute.node-check.mjs scripts/production-readiness/staged-migration.node-check.mjs
+      - name: Rehearse with a non-superuser application owner
+        run: |
+          psql -h 127.0.0.1 -U readiness -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE readiness_backend LOGIN PASSWORD 'isolated-owner-fixture';
+          CREATE DATABASE staged_readiness_ci OWNER readiness_backend;
+          SQL
+          export READINESS_DATABASE_URL=postgresql://readiness_backend:isolated-owner-fixture@127.0.0.1:5432/staged_readiness_ci
+          export PGPASSWORD=isolated-owner-fixture
+          node scripts/production-readiness/bootstrap-baseline.mjs
+          psql -h 127.0.0.1 -U readiness_backend -d staged_readiness_ci -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT ALL ON ALL TABLES IN SCHEMA public TO anon,authenticated,service_role;
+          GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon,authenticated,service_role;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon,authenticated,service_role;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon,authenticated,service_role;
+          SQL
+          READINESS_ROLLBACK_PATH="$RUNNER_TEMP/synthetic-rollback.sql" node scripts/production-readiness/rehearse-staged.mjs
