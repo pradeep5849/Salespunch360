@@ -76,13 +76,13 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  }));
  const routeDistanceMeters=distanceBySession.totalDistanceMeters;
  const events:GpsTimelineEvent[]=[];
- const markers:Array<{latitude:number;longitude:number;label:string}>=[];
+ const markers:Array<{latitude:number;longitude:number;label:string;icon:string}>=[];
  const seenVisits=new Set<string>();
 
  for(const s of sessions){
   if(s.startedAt>=start&&s.startedAt<end){
    events.push({id:`${s.id}:start`,type:"ATTENDANCE_STARTED",at:s.startedAt,sessionId:s.id,latitude:s.startLatitude??undefined,longitude:s.startLongitude??undefined});
-   if(s.startLatitude!=null&&s.startLongitude!=null)markers.push({latitude:s.startLatitude,longitude:s.startLongitude,label:"Attendance Started"});
+   if(s.startLatitude!=null&&s.startLongitude!=null)markers.push({latitude:s.startLatitude,longitude:s.startLongitude,label:"Attendance Started",icon:"https://maps.google.com/mapfiles/ms/icons/green-dot.png"});
   }
   const route=orderedRoute(s.locationPoints);
   if(route.length){
@@ -111,12 +111,12 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
     ?["Completed visit",v.checkoutSentiment,v.checkoutRemarks].filter(Boolean).join(" · ")
     :["Visit check-in",v.checkInAddress||v.visitNotes].filter(Boolean).join(" · ");
    events.push({id:`${v.id}:visit`,type:"VISIT",at,sessionId:s.id,customer,detail:detail||undefined,latitude,longitude});
-   markers.push({latitude,longitude,label:`Visit: ${customer}`});
+   markers.push({latitude,longitude,label:`Visit: ${customer}`,icon:"https://maps.google.com/mapfiles/ms/icons/red-dot.png"});
   }
 
   if(s.endedAt&&s.endedAt>=start&&s.endedAt<end){
    events.push({id:`${s.id}:end`,type:"ATTENDANCE_ENDED",at:s.endedAt,sessionId:s.id,latitude:s.endLatitude??undefined,longitude:s.endLongitude??undefined});
-   if(s.endLatitude!=null&&s.endLongitude!=null)markers.push({latitude:s.endLatitude,longitude:s.endLongitude,label:"Attendance Ended"});
+   if(s.endLatitude!=null&&s.endLongitude!=null)markers.push({latitude:s.endLatitude,longitude:s.endLongitude,label:"Attendance Ended",icon:"https://maps.google.com/mapfiles/ms/icons/grey-dot.png"});
   }
  }
 
