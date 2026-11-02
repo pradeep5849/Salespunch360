@@ -1,0 +1,45 @@
+{
+  "page_id": "A104",
+  "page_name": "GST Report",
+  "audit_status": "AUDIT COMPLETE (historical record)",
+  "recovery_date": "2026-11-02",
+  "recovery_source": "Existing task conversation; not invented completion or byte-for-byte original file recovery",
+  "original_audit_base": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "findings": [
+    {
+      "finding_id": "A104-F01",
+      "title": "Navigation/reference mapping",
+      "required_correction": "Reconcile legacy transaction tax route with existing party GST destination; reuse A084.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A104-F02",
+      "title": "Android legacy presentation",
+      "required_correction": "Replace generic JsonRows on legacy route with appropriate report presentation.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A104-F03",
+      "title": "Date-default parity",
+      "required_correction": "Use shared business-calendar date defaults; legacy Web April/current-year fails January\u2013March.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A104-F04",
+      "title": "User-confirmed WhatsApp sharing",
+      "required_correction": "Prepare scoped report and open user WhatsApp/system file handoff; no API or delivery claim.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    }
+  ],
+  "historical_tests_reported_in_task": {
+    "focused_passed": 45,
+    "browser_passed": 2
+  },
+  "historical_evidence_limit": "These prior results are preserved as task-history statements. Raw earlier browser JSON/temporary fixture files are not present in resumed workspace. Do not present as current-head reruns.",
+  "reference_status": "supplied in conversation",
+  "production_changes": "NONE during this audit/recovery"
+}

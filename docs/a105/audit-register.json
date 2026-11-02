@@ -1,0 +1,59 @@
+{
+  "page_id": "A105",
+  "page_name": "Tax List",
+  "audit_status": "AUDIT COMPLETE (historical record)",
+  "recovery_date": "2026-11-02",
+  "recovery_source": "Existing task conversation; not invented completion or byte-for-byte original file recovery",
+  "original_audit_base": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "findings": [
+    {
+      "finding_id": "A105-F01",
+      "title": "Missing refresh",
+      "required_correction": "Provide reference refresh while retaining selected tab.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A105-F02",
+      "title": "Inert group Edit",
+      "required_correction": "Implement supported editing or remove misleading immutable built-in control.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A105-F03",
+      "title": "Native custom catalogue parity",
+      "required_correction": "Render company custom rates/groups; native currently uses built-ins only.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A105-F04",
+      "title": "Concurrent JSON overwrite and silent eviction",
+      "required_correction": "Preserve concurrent/unrelated settings; reject capacity overflow instead of dropping oldest entries.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A105-F05",
+      "title": "Save feedback and server validation",
+      "required_correction": "Wait for confirmed save, retain errors/input; reject missing rate rather than Number(null)=0.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A105-F06",
+      "title": "Accessibility/reference appearance",
+      "required_correction": "Correct observed contrast and provide tab/dialog keyboard/focus semantics.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    }
+  ],
+  "historical_tests_reported_in_task": {
+    "browser_probes_passed": 2,
+    "observed_contrast_nodes_per_profile": 4
+  },
+  "historical_evidence_limit": "These prior results are preserved as task-history statements. Raw earlier browser JSON/temporary fixture files are not present in resumed workspace. Do not present as current-head reruns.",
+  "reference_status": "supplied in conversation",
+  "production_changes": "NONE during this audit/recovery"
+}

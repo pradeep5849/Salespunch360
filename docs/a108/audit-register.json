@@ -1,0 +1,115 @@
+{
+  "page_id": "A108",
+  "page_name": "Receipts, payments and advances",
+  "audit_status": "AUDIT COMPLETE",
+  "recovery_date": "2026-11-02",
+  "recovery_source": "Existing task conversation; not invented completion or byte-for-byte original file recovery",
+  "original_audit_base": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "findings": [
+    {
+      "finding_id": "A108-F01",
+      "title": "Entry/reference metadata",
+      "required_correction": "Receipt/date/firm/party balance/billing/payment/attachments/settings missing from generic form.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F02",
+      "title": "Editable payment date",
+      "required_correction": "Web constructs current UTC date without date input; provide validated business-calendar date.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F03",
+      "title": "Partial/multi-allocation and unused advance",
+      "required_correction": "Current UI fully allocates to one target; support balanced atomic residual/advance operation without second cash receipt.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F04",
+      "title": "Save & New",
+      "required_correction": "Provide explicit save modes and safe post-success reset/new identity, no draft/autosave inferred.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F05",
+      "title": "Native vendor advance/opening parity",
+      "required_correction": "Native vendor payment requires bill; Web has vendor advances/opening targets.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F06",
+      "title": "Native vendor retry identity",
+      "required_correction": "Keep operation key across lost-response retry; current save builds fresh UUID per attempt.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F07",
+      "title": "Payment duplicate/PDF share",
+      "required_correction": "Add payment duplicate preparation and Web file-share fallback; native PDF sharing already exists.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A108-F08",
+      "title": "Interactive receipt preview",
+      "required_correction": "Reuse A097 themes/preferences for receipt preview/color/share/close; never repost payment from preview.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    }
+  ],
+  "historical_tests_reported_in_task": {
+    "focused_passed": 86,
+    "browser_passed": 4
+  },
+  "historical_evidence_limit": "These prior results are preserved as task-history statements. Raw earlier browser JSON/temporary fixture files are not present in resumed workspace. Do not present as current-head reruns.",
+  "reference_status": "supplied in conversation",
+  "production_changes": "NONE during this audit/recovery",
+  "owner_clarification": {
+    "payment_in": "Money received from customer, usable against sales; purchase remains separate.",
+    "screenshot_observations": [
+      "Sale1593 shows593balance",
+      "Payment-In1000shows Used/unused0",
+      "Separate purchase472shows Paid",
+      "Vendor Payment-Out1000remains Unused"
+    ],
+    "interpretation_limit": "Matching sale/payment amounts support intended allocation behavior but screenshot alone does not prove exact ledger linkage. No customer/vendor netting is authorized."
+  },
+  "reference_scope": [
+    "Entry Payment-In/Out",
+    "Link Payment screen",
+    "Home used/unused cards",
+    "Receipt Theme1/GSTTheme6 previews",
+    "Payment menu Duplicate and Share as PDF"
+  ],
+  "remaining": "Implement/dispose8original findings; test partial/multi-allocation, uncertain native retries and physical sharing separately. Screenshot118balance and exact mixed screen origin remain unexplained but do not authorize cross-role allocation. These limits do not require inventing a financial rule to finish source/reference audit.",
+  "audit_completion_scope": "Reference/source audit complete; implementation and unexecuted runtime acceptance remain pending. No customer/vendor netting inferred.",
+  "current_verification": {
+    "date": "2026-11-02",
+    "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+    "node": "22.23.4",
+    "vitest": "4.1.12",
+    "passed": 86,
+    "failed": 0,
+    "skipped": 0,
+    "files": 7,
+    "command": "node node_modules/vitest/vitest.mjs run src/app/workspace/account/transactions/money/money-form.test.ts src/lib/account/project-payment-in.test.ts src/lib/account/project-advance.test.ts src/lib/account/project-advance-acceptance.test.ts src/lib/account/y04-print-coverage.test.ts src/lib/account/invoice-print-options-validation.test.ts src/lib/account/home-noncommercial.test.ts",
+    "scope": "Focused tests with existing mock/policy/source-contract coverage; not live database/native acceptance.",
+    "initial_environment_failure": "Preinstalled Zod3.25.76/Vitest4.1.11 mismatch caused5suite collection failures/5passing cases. Restored exact lockfile dependencies using npm ci and generated Prisma client; unchanged source rerun passed86. Initial default npm cache path failed; workspace cache succeeded. No manifest/lockfile changes.",
+    "browser": "Previous4browser passes retained as historical only; not rerun in replacement environment.",
+    "native": "Not executed",
+    "production": "Not accessed or changed"
+  },
+  "next_page": {
+    "id": "A109",
+    "route": "/workspace/account/transactions/new",
+    "description": "Sale/Purchase/Add Transaction entry; name derived from known route/source, original inventory file absent in replacement workspace.",
+    "audit_status": "NOT STARTED",
+    "reference_status": "Earlier Add Purchase and transaction settings references supplied; further entry/items/menu references needed for full scope."
+  }
+}

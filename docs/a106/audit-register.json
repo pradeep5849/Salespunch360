@@ -1,0 +1,60 @@
+{
+  "page_id": "A106",
+  "page_name": "Taxes & GST",
+  "audit_status": "AUDIT COMPLETE (historical record)",
+  "recovery_date": "2026-11-02",
+  "recovery_source": "Existing task conversation; not invented completion or byte-for-byte original file recovery",
+  "original_audit_base": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "findings": [
+    {
+      "finding_id": "A106-F01",
+      "title": "Route/read-access alignment",
+      "required_correction": "Reference settings route differs from root report landing and report permission gate.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A106-F02",
+      "title": "Inert Search",
+      "required_correction": "Make Search functional/accessibly filter settings.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A106-F03",
+      "title": "Inert information controls",
+      "required_correction": "Implement supplied nine named explanatory dialogs and OK dismissal.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A106-F04",
+      "title": "TCS/TDS downstream wiring",
+      "required_correction": "Verify transaction ON/OFF effects and Manage TCS Rates; flags only saved/rendered in inspected references.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A106-F05",
+      "title": "Atomicity/concurrent autosaves",
+      "required_correction": "Atomically update tax profile/preferences/audit; protect read-merge-write and uncertain saves.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A106-F06",
+      "title": "Composition category workflow",
+      "required_correction": "Provide or explicitly map Manufacturing/Trader Goods/Restaurant choice; preserve posted tax history.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    }
+  ],
+  "historical_tests_reported_in_task": {
+    "focused_passed": 31,
+    "browser_passed": 2,
+    "all_nine_sequential_toggle_persistence": true
+  },
+  "historical_evidence_limit": "These prior results are preserved as task-history statements. Raw earlier browser JSON/temporary fixture files are not present in resumed workspace. Do not present as current-head reruns.",
+  "reference_status": "supplied in conversation",
+  "production_changes": "NONE during this audit/recovery"
+}

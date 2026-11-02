@@ -1,0 +1,60 @@
+{
+  "page_id": "A107",
+  "page_name": "Commercial Transaction Details \u2014 Purchase",
+  "audit_status": "AUDIT COMPLETE (historical record)",
+  "recovery_date": "2026-11-02",
+  "recovery_source": "Existing task conversation; not invented completion or byte-for-byte original file recovery",
+  "original_audit_base": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "findings": [
+    {
+      "finding_id": "A107-F01",
+      "title": "Reference detail metadata",
+      "required_correction": "Show persisted purchase party/billing/item/payment/supply/terms/attachment details; retain histories.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A107-F02",
+      "title": "Safe Edit/Delete lifecycle",
+      "required_correction": "Provide correction/cancel UX preserving immutable posted journals, payments and stock; no hard-delete policy inferred.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A107-F03",
+      "title": "Purchase duplicate preparation",
+      "required_correction": "Prepare independent purchase without allocations/posting/new cash on opening.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A107-F04",
+      "title": "Share/menu parity",
+      "required_correction": "Reference open/print/share/save PDF, image/default and SMS capabilities need verified handoffs.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A107-F05",
+      "title": "Transaction settings shortcut",
+      "required_correction": "Reuse A103 settings and return context.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    },
+    {
+      "finding_id": "A107-F06",
+      "title": "Android detail parity",
+      "required_correction": "Replace minimal modal with usable rich detail/history where required.",
+      "implementation_status": "NOT STARTED",
+      "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
+    }
+  ],
+  "historical_tests_reported_in_task": {
+    "focused_passed": 38,
+    "browser_passed": 4,
+    "initial_browser_db_unavailable": 2
+  },
+  "historical_evidence_limit": "These prior results are preserved as task-history statements. Raw earlier browser JSON/temporary fixture files are not present in resumed workspace. Do not present as current-head reruns.",
+  "reference_status": "supplied in conversation",
+  "production_changes": "NONE during this audit/recovery"
+}
