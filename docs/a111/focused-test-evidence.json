@@ -1,0 +1,18 @@
+{
+  "numTotalTests": 7,
+  "numPassedTests": 7,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/lib/account/a111.audit-probe.test.ts",
+      "status": "passed",
+      "assertions": 4
+    },
+    {
+      "name": "src/lib/mobile/account-administration.contract.test.ts",
+      "status": "passed",
+      "assertions": 3
+    }
+  ]
+}
