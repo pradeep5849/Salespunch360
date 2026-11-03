@@ -123,7 +123,12 @@
   "audit_completion_scope": "Reference/source audit of supplied chooser and Purchase entry/item/menu handoff completed. Six findings identified, not fixed. Existing earlier Sale/master/settings findings reused, no independent universal form/device verification claimed.",
   "next_page": {
     "id": "A110",
-    "status": "BLOCKED \u2014 roadmap definition unavailable in replacement workspace",
-    "reason": "Original external pages.json/inventory document was not included in replacement workspace or recovered audit branch; A110 definition not present in conversation. Do not invent name/route or advance out of sequence."
+    "inventory_label": "New document",
+    "actual_source_title": "Sales & Purchases",
+    "route": "/workspace/account/transactions",
+    "source_file": "src/app/workspace/account/transactions/page.tsx",
+    "status": "NOT STARTED",
+    "authority": "Reuploaded SalesPunch360_Inventory_and_Audit_Status.pdf; SHA2569c209c200a8c8bd4cfaf30a06249308516c4e473cfb15a39873ddf0e051a2613",
+    "note": "Inventory label reflects header action; actual source identifies transaction list. Original roadmap missing blocker resolved. Existing Home screenshots linked as related references, not automatically identical route."
   }
 }
