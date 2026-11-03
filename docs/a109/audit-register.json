@@ -2,13 +2,16 @@
   "page_id": "A109",
   "recorded_route": "/workspace/account/transactions/new",
   "scope_policy": "Source route remains entry form. New screenshot is linked Home Add Transaction chooser, not a replacement definition. Individual sale/purchase/payment/quotation/expense forms retain previous IDs and evidence.",
-  "audit_status": "IN PROGRESS",
+  "audit_status": "AUDIT COMPLETE",
   "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
   "reference_received": "2026-11-03",
   "references": [
     "Owner Add Transaction chooser:9sale actions,5purchase actions,3other actions",
     "Prior Add Purchase entry and saved Purchase/settings references retained",
-    "Earlier Sale entry references in conversation reused, not requested as missing"
+    "Earlier Sale entry references in conversation reused, not requested as missing",
+    "Purchase Add Items search with typed Pla, no result and Add New Item action",
+    "Add Item Product/Services form with typed name carried over; unit/code/category/HSN/pricing/stock controls",
+    "Unsaved Purchase bottom More Options sheet: Share and Print"
   ],
   "findings": [
     {
@@ -50,6 +53,32 @@
       "implementation_status": "NOT STARTED",
       "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
       "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F05",
+      "severity": "Medium",
+      "classification": "Purchase item search/inline master-create handoff",
+      "current_behavior": "Web CommercialEditor uses select from provided masters and has no search/no-result Add New Item action or inline creation/return callback. Native PurchaseEditor similarly uses SelectField and has no inline master-create handoff. Custom ad hoc line does not create reusable company item.",
+      "required_correction": "Provide scoped searchable company catalogue and permission-aware Add New Item path carrying typed name; reuse existing A057/A058 item master/unit/code/category/photo/HSN/pricing rules; return created item to current purchase without losing bill, party, branch, lines or amounts. Cancel/back must preserve unfinished purchase without posting. HSN search remains company saved codes per original decision.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt"
+      ],
+      "implementation_status": "NOT STARTED",
+      "verification": "Source/reference confirmed; actual create-and-return browser/device runtime not executed. Standalone item master completion not re-audited or inferred."
+    },
+    {
+      "finding_id": "A109-F06",
+      "severity": "Medium",
+      "classification": "Purchase entry footer and Share/Print actions",
+      "current_behavior": "Web generic Purchase editor finishes with CreateDraftButton; no reference Save & New or bottom More Options Share/Print actions. Native PurchaseEditor lacks corresponding Share/Print handoff. Saved detail PDF links are a different workflow and do not satisfy unsaved entry menu.",
+      "required_correction": "Provide reference-appropriate footer and user-triggered Share/Print entry menu using shared A107/print infrastructure. Keep line Save & New distinct from document Save & New; reset request identity only after confirmed success. Define whether preview requires explicit save or is unsaved/nonposting; do not silently post or save abandoned input. Existing sale immediate-save/no-draft decisions remain intact; do not invent purchase posting policy from menu screenshot.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt"
+      ],
+      "implementation_status": "NOT STARTED",
+      "verification": "Source and supplied footer/menu references; share/print OS/runtime not executed. Purchase Save/Post lifecycle disposition needs explicit verification against existing module policy before implementation."
     }
   ],
   "known_correct": [
@@ -69,12 +98,32 @@
     ],
     "scope": "Existing source contracts/static rendering; existing exact-list contract currently codifies missing3reference entries. Passing tests do not establish complete reference parity.",
     "browser": "Not executed this turn",
-    "android_device": "Not executed"
+    "android_device": "Not executed",
+    "additional_item_editor_tests": {
+      "date": "2026-11-03",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "files": [
+        "src/app/workspace/account/transactions/new/commercial-editor.test.ts",
+        "src/lib/account/commercial-editor-pricing.test.ts",
+        "src/lib/account/item-settings-quick.test.ts",
+        "src/lib/account/item-workflow-settings.runtime.test.ts"
+      ],
+      "scope": "Existing focused tests; includes mock/source/policy behavior, not inline create-return browser/device proof."
+    },
+    "total_focused_distinct_cases_passed": 48
   },
   "remaining": [
-    "Continue entry form source/API checks while reusing prior Sale/Purchase evidence.",
-    "Add Items selection and form three-dot menu reference still required to cover entry-specific scope.",
-    "Verify chooser item destinations/roles/modules/branch context and keyboard/runtime in isolated environment."
+    "Implement/dispose6findings with focused regressions and isolated browser/native evidence.",
+    "Purchase entry Save/Post and unsaved Share/Print policy must be confirmed before changing financial lifecycle.",
+    "Physical Android, create/return flow, modal keyboard and device share/print remain unexecuted."
   ],
-  "changes": "Documentation only; no app, dependency, production, merge or deployment change."
+  "changes": "Documentation only; no app, dependency, production, merge or deployment change.",
+  "audit_completion_scope": "Reference/source audit of supplied chooser and Purchase entry/item/menu handoff completed. Six findings identified, not fixed. Existing earlier Sale/master/settings findings reused, no independent universal form/device verification claimed.",
+  "next_page": {
+    "id": "A110",
+    "status": "BLOCKED \u2014 roadmap definition unavailable in replacement workspace",
+    "reason": "Original external pages.json/inventory document was not included in replacement workspace or recovered audit branch; A110 definition not present in conversation. Do not invent name/route or advance out of sequence."
+  }
 }

@@ -1,0 +1,28 @@
+{
+  "numTotalTests": 32,
+  "numPassedTests": 32,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/lib/account/commercial-editor-pricing.test.ts",
+      "status": "passed",
+      "assertions": 7
+    },
+    {
+      "name": "src/lib/account/item-settings-quick.test.ts",
+      "status": "passed",
+      "assertions": 10
+    },
+    {
+      "name": "src/lib/account/item-workflow-settings.runtime.test.ts",
+      "status": "passed",
+      "assertions": 4
+    },
+    {
+      "name": "src/app/workspace/account/transactions/new/commercial-editor.test.ts",
+      "status": "passed",
+      "assertions": 11
+    }
+  ]
+}
