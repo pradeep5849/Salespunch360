@@ -1,0 +1,37 @@
+{
+  "page_id": "A111",
+  "page_name": "Audit history",
+  "route": "/workspace/account/utilities/audit",
+  "audit_status": "IN PROGRESS",
+  "reference_status": "Owner current SalesPunch360 menu screenshot supplied; no direct Audit History menu entry shown",
+  "navigation_observation": "Main menu only Import, export & backup at /workspace/account/utilities. Web hub source contains nested Audit History link. Native dispatcher recognizes /utilities/audit, but no direct audit link in inspected main menu; actual native reachability still to verify.",
+  "correction_to_prior_response": "Do not tell owner Audit History is visibly listed in current menu; screenshot establishes it is not. Web nested route availability is source evidence, not current deployed native navigation proof.",
+  "findings": [
+    {
+      "finding_id": "A111-F01",
+      "severity": "Medium",
+      "classification": "Navigation and platform permission parity",
+      "current_behavior": "Audit History is nested in Web Utilities hub, absent as direct main-menu item. Native audit dispatcher exists; reachability unverified. Web read uses ACCOUNT_REPORTS, mobile audit uses ACCOUNT_SETTINGS.",
+      "required_correction": "Verify intended authorized audit-reader roles and expose consistent reachable navigation on Web/native; use shared read permission without broadening access blindly.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Owner screenshot and inspected navigation/utilities/native dispatcher source; runtime pending."
+    },
+    {
+      "finding_id": "A111-F02",
+      "severity": "High",
+      "classification": "Audit metadata redaction parity",
+      "current_behavior": "Web getAuditHistory applies redactAuditMetadata to rows; mobileUtilities audit returns raw accountingAuditEvent rows with metadata without that redaction.",
+      "required_correction": "Use shared authorized redacted audit DTO across Web/mobile, retain only needed fields, add nested sensitive-key redaction and negative API tests.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source comparison only. No production audit metadata fetched or exposed."
+    }
+  ],
+  "tests_run": "NONE in this checkpoint",
+  "implementation_changes": "NONE",
+  "remaining": [
+    "Verify native Utilities hub/audit reachability and permission matrix",
+    "Inspect redaction and API serialization, add focused nonproduction probes",
+    "Complete audit-source pagination/activity coverage review before marking complete"
+  ],
+  "next_page": "A112 NOT STARTED"
+}
