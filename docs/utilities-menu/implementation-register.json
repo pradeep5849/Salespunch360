@@ -31,12 +31,16 @@
     "No database models, migrations or financial writes changed"
   ],
   "verification": {
-    "focused_tests": "See focused-test-evidence.json",
-    "typescript": "PASS locally under Node22; rerun after final edits required",
-    "eslint": "PASS on changed TS/TSX; rerun after final edits required",
-    "android": "Serialization tests added; local SDK unavailable; CI required",
-    "browser": "No actual viewport/physical device runtime certified"
+    "focused_tests": "34passed,0failed,0skipped across6files; see focused-test-evidence.json",
+    "typescript": "PASS after final source edits under Node22",
+    "eslint": "PASS on changed TS/TSX after final source edits",
+    "android": "GitHub targeted-validation Android testReleaseUnitTest and lintRelease PASS;2newserialization test cases included; physical device not executed",
+    "browser": "No actual viewport/physical device runtime certified",
+    "ci": "PASS Web + Android + isolated migration on code head38bf8eb8c35511deabeb9c40b54c83594807d117; https://github.com/pradeep5849/Salespunch360/actions/runs/41621747934",
+    "tested_code_head": "38bf8eb8c35511deabeb9c40b54c83594807d117",
+    "production_build": "PASS266/266static pages locally with Node22 and fixture-only environment; no productionDBconnection. Initial fixture run rejected SMTP hostname; corrected fixture rerun passed unchanged source."
   },
   "audit_scope_note": "Menu change does not resolve A111 raw-metadata/security findings, implement Bulk Tax or Messages, or mark A112 audited. Previous audits preserved.",
-  "production": "No merge/deploy/database change authorized or executed"
+  "production": "No merge/deploy/database change authorized or executed",
+  "remaining": "Bulk Update Tax Slab and Messages are intentionally disabled pending reference/workflow implementation. Need owner screenshots to define these options. Native physical/browser viewport verification not executed; no merge/deploy."
 }

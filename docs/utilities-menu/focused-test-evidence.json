@@ -1,0 +1,38 @@
+{
+  "numTotalTests": 34,
+  "numPassedTests": 34,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/components/account/account-navigation-regression.test.ts",
+      "status": "passed",
+      "assertions": 2
+    },
+    {
+      "name": "src/lib/account/a17-navigation.test.ts",
+      "status": "passed",
+      "assertions": 13
+    },
+    {
+      "name": "src/lib/account/mobile-phase-completion.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/account/utilities-menu.test.ts",
+      "status": "passed",
+      "assertions": 7
+    },
+    {
+      "name": "src/lib/mobile/account-route.contract.test.ts",
+      "status": "passed",
+      "assertions": 4
+    },
+    {
+      "name": "src/app/workspace/account/menu/page.test.tsx",
+      "status": "passed",
+      "assertions": 5
+    }
+  ]
+}
