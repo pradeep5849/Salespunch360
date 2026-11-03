@@ -52,12 +52,14 @@ private suspend fun readImportBytes(context: android.content.Context, uri: Uri):
 fun AccountUtilityScreen(
     mode: String,
     padding: PaddingValues,
-    vm: AccountUtilityViewModel = viewModel()
+    vm: AccountUtilityViewModel = viewModel(),
+    initialImportType: String = "CUSTOMERS",
+    initialExportType: String? = null
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var importType by remember { mutableStateOf("CUSTOMERS") }
+    var importType by remember(mode, initialImportType) { mutableStateOf(initialImportType.takeIf { it in listOf("CUSTOMERS", "VENDORS", "ITEMS", "PROJECTS", "OPENING_BALANCES") } ?: "CUSTOMERS") }
     var confirmRestore by remember { mutableStateOf<String?>(null) }
     var fileMessage by remember { mutableStateOf<String?>(null) }
     var fileBusy by remember { mutableStateOf(false) }
@@ -143,7 +145,7 @@ fun AccountUtilityScreen(
                 }
             }
             "export" -> {
-                listOf("customers", "vendors", "items", "projects", "chart-of-accounts").forEach { type ->
+                listOf("customers", "vendors", "items", "projects", "chart-of-accounts").filter { initialExportType == null || initialExportType !in listOf("customers", "vendors", "items", "projects", "chart-of-accounts") || it == initialExportType }.forEach { type ->
                     Row {
                         Text(type, Modifier.weight(1f))
                         Button(onClick = { vm.export(type, "csv") }) { Text("CSV") }

@@ -1,0 +1,42 @@
+{
+  "scope": "Owner selected reference Utilities options1,3,5,6,7,8,9,10; excludes2Calculator and4MyBillBook",
+  "selected": [
+    "Verify my data",
+    "Import Items",
+    "Bulk Update Tax Slab",
+    "Export Items",
+    "Import Parties",
+    "Recycle Bin",
+    "Close Financial Year",
+    "Messages"
+  ],
+  "working_existing_destinations": [
+    "Verify my data",
+    "Import Items",
+    "Export Items",
+    "Import Parties",
+    "Recycle Bin",
+    "Close Financial Year"
+  ],
+  "pending_disabled": [
+    "Bulk Update Tax Slab",
+    "Messages"
+  ],
+  "implementation": [
+    "Web native details dropdown; Android independent expandable Utilities state",
+    "Shared server permission/module filtered navigation including disabled flag",
+    "Type preselection for Items/Parties imports; item-only export entry on Web/native",
+    "Backup/Restore remains separate; no reset/deletion of old utility routes",
+    "Company items OFF and Inventory module OFF hide item tools",
+    "No database models, migrations or financial writes changed"
+  ],
+  "verification": {
+    "focused_tests": "See focused-test-evidence.json",
+    "typescript": "PASS locally under Node22; rerun after final edits required",
+    "eslint": "PASS on changed TS/TSX; rerun after final edits required",
+    "android": "Serialization tests added; local SDK unavailable; CI required",
+    "browser": "No actual viewport/physical device runtime certified"
+  },
+  "audit_scope_note": "Menu change does not resolve A111 raw-metadata/security findings, implement Bulk Tax or Messages, or mark A112 audited. Previous audits preserved.",
+  "production": "No merge/deploy/database change authorized or executed"
+}

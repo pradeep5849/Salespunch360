@@ -16,6 +16,8 @@ export type AccountNavItem = {
   requiredModules?: readonly AccountModule[];
   permission?: Permission;
   roles?: readonly AccountRole[];
+  disabled?: boolean;
+  requiresItems?: boolean;
 };
 export type AccountNavGroup = {
   label: string;
@@ -270,13 +272,22 @@ const groups: AccountNavGroup[] = [
     ],
   },
   {
+    label: "Backup/Restore",
+    expandable: true,
+    items: [{ label: "Backup & Recovery", href: "/workspace/account/utilities/backup", permission: "ACCOUNT_SETTINGS", roles: ["ACCOUNT_ADMIN"] }],
+  },
+  {
     label: "Utilities",
+    expandable: true,
     items: [
-      {
-        label: "Import, export & backup",
-        href: "/workspace/account/utilities",
-        permission: "ACCOUNT_REPORTS",
-      },
+      { label: "Verify my data", href: "/workspace/account/utilities/verification", permission: "ACCOUNT_SETTINGS" },
+      { label: "Import Items", href: "/workspace/account/utilities/import?type=ITEMS", permission: "ACCOUNT_ACCOUNTS", requiredModules: ["INVENTORY"], requiresItems: true },
+      { label: "Bulk Update Tax Slab", href: "#pending-bulk-tax", permission: "ACCOUNT_SETTINGS", disabled: true },
+      { label: "Export Items", href: "/workspace/account/utilities/export?type=items", permission: "ACCOUNT_REPORTS", requiredModules: ["INVENTORY"], requiresItems: true },
+      { label: "Import Parties", href: "/workspace/account/utilities/import?type=CUSTOMERS", permission: "ACCOUNT_ACCOUNTS" },
+      { label: "Recycle Bin", href: "/workspace/account/utilities/recycle-bin", permission: "ACCOUNT_SETTINGS" },
+      { label: "Close Financial Year", href: "/workspace/account/utilities/financial-year", permission: "ACCOUNT_PERIOD_LOCK" },
+      { label: "Messages", href: "#pending-messages", permission: "ACCOUNT_SETTINGS", disabled: true },
     ],
   },
   {
@@ -336,6 +347,7 @@ export function buildAccountNavigation(
     const items = group.items.filter(
       (item) =>
         (item.requiredModules ?? []).every((module) => set.has(module)) &&
+        (!item.requiresItems || itemsEnabled) &&
         !(
           item.href === "/workspace/account/expenses" &&
           actor.accountRole === "PROJECT_MANAGER" &&
@@ -365,7 +377,7 @@ export function hasAccountNavigationItem(
 ): boolean {
   return navigation.some(
     (group) =>
-      group.items.some((item) => item.label === label && item.href === href) ||
+      group.items.some((item) => !item.disabled && item.label === label && item.href === href) ||
       hasAccountNavigationItem(group.children ?? [], label, href),
   );
 }
