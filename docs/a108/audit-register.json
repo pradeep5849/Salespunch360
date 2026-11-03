@@ -51,7 +51,7 @@
     {
       "finding_id": "A108-F07",
       "title": "Payment duplicate/PDF share",
-      "required_correction": "Add payment duplicate preparation and Web file-share fallback; native PDF sharing already exists.",
+      "required_correction": "Provide payment duplicate preparation with fresh identity/no posting or copied allocations. Reuse existing active Web/native Home PDF sharing; verify destination-specific fallback rather than claim Home sharing absent.",
       "implementation_status": "NOT STARTED",
       "evidence_provenance": "Recovered from earlier conversation audit records; original file blob and raw logs unavailable in replacement workspace. Not newly runtime-verified by this recovery."
     },
@@ -111,5 +111,6 @@
     "description": "Sale/Purchase/Add Transaction entry; name derived from known route/source, original inventory file absent in replacement workspace.",
     "audit_status": "NOT STARTED",
     "reference_status": "Earlier Add Purchase and transaction settings references supplied; further entry/items/menu references needed for full scope."
-  }
+  },
+  "source_clarification_2026_11_03": "Active AccountMobileHome already has sharePdf/Share Transaction sheet; the older TransactionCardActions text-only helper is not proof that active Home lacks PDF sharing. F07 remains for payment duplication and route-specific handoff verification; reuse existing Web/native Home file sharing rather than implement it again."
 }

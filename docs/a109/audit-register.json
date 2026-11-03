@@ -1,0 +1,80 @@
+{
+  "page_id": "A109",
+  "recorded_route": "/workspace/account/transactions/new",
+  "scope_policy": "Source route remains entry form. New screenshot is linked Home Add Transaction chooser, not a replacement definition. Individual sale/purchase/payment/quotation/expense forms retain previous IDs and evidence.",
+  "audit_status": "IN PROGRESS",
+  "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "reference_received": "2026-11-03",
+  "references": [
+    "Owner Add Transaction chooser:9sale actions,5purchase actions,3other actions",
+    "Prior Add Purchase entry and saved Purchase/settings references retained",
+    "Earlier Sale entry references in conversation reused, not requested as missing"
+  ],
+  "findings": [
+    {
+      "finding_id": "A109-F01",
+      "severity": "Medium",
+      "classification": "Linked launcher missing reference entries",
+      "current_behavior": "Source Web/native chooser has8sale,4purchase,2other entries; reference has9,5,3. Missing Sale Assets, Purchase Assets and Other Income.",
+      "required_correction": "Map existing authorized asset sale/purchase and Other Income flows into launcher; do not implement duplicate modules. Keep Mobile POS Coming Soon unless separately approved.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F02",
+      "severity": "Medium",
+      "classification": "Launcher capability visibility",
+      "current_behavior": "Web renders constant ADD_GROUPS links without per-action actor/module/capability input; native AddTransactionLauncher receives only dismiss/navigate, and enables entries when path is nonnull.",
+      "required_correction": "Filter/disable actions from authoritative backend capabilities; retain independent destination API/permission checks. This is not proof of backend authorization bypass.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F03",
+      "severity": "Medium",
+      "classification": "Selected branch context on handoff",
+      "current_behavior": "Chooser links contain fixed type URLs but omit selected Home branch/scope. Existing Web MoneyForm defaults first branch when no initial project, risking unintended entry branch within authorized choices.",
+      "required_correction": "Carry and validate selected branch/company context through launcher and destination forms, or explicitly prompt; never authorize branch merely from URL.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F04",
+      "severity": "Medium",
+      "classification": "Web modal keyboard/focus lifecycle",
+      "current_behavior": "Chooser declares role dialog and close/backdrop controls; inspected component effects handle search restoration/scroll only, no chooser focus trap, Escape or focus restoration.",
+      "required_correction": "Provide initial focus, keyboard containment, Escape dismissal and return focus; preserve native modal semantics. Keyboard/browser runtime confirmation pending.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    }
+  ],
+  "known_correct": [
+    "Three group headings and primary payment/return/order/quotation routes exist.",
+    "Mobile POS intentionally disabled Coming Soon; screenshot alone does not authorize POS implementation.",
+    "All entry icons navigate only; no posting should happen on opening/closing chooser."
+  ],
+  "tests": {
+    "date": "2026-11-03",
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0,
+    "files": [
+      "src/components/account/__tests__/account-mobile-home.contract.test.ts",
+      "src/components/account/d-final-ui.contract.test.ts",
+      "src/lib/account/account-home.test.ts"
+    ],
+    "scope": "Existing source contracts/static rendering; existing exact-list contract currently codifies missing3reference entries. Passing tests do not establish complete reference parity.",
+    "browser": "Not executed this turn",
+    "android_device": "Not executed"
+  },
+  "remaining": [
+    "Continue entry form source/API checks while reusing prior Sale/Purchase evidence.",
+    "Add Items selection and form three-dot menu reference still required to cover entry-specific scope.",
+    "Verify chooser item destinations/roles/modules/branch context and keyboard/runtime in isolated environment."
+  ],
+  "changes": "Documentation only; no app, dependency, production, merge or deployment change."
+}
