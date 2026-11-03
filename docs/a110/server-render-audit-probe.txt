@@ -1,0 +1,13 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { it, expect, vi } from 'vitest';
+const m=vi.hoisted(()=>({list:vi.fn(),outstanding:vi.fn()}));
+vi.mock('@/lib/account/commercial',()=>({listCommercialDocuments:m.list,documentOutstanding:m.outstanding}));
+vi.mock('@/components/account/account-ui',()=>({humanize:(x:string)=>x,Money:({value}:{value:unknown})=>String(value)}));
+vi.mock('@/components/account/display-preferences',()=>({AccountDate:({value}:{value:string})=>value}));
+vi.mock('@/components/account/account-shell',()=>({AccountPageHeader:({title}:{title:string})=>createElement('h1',null,title),AccountEmptyState:()=>createElement('p',null,'Empty')}));
+vi.mock('@/app/workspace/account/transactions/transaction-card-actions',()=>({TransactionCardActions:()=>null}));
+import Page from '@/app/workspace/account/transactions/page';
+const row=(type:string,status:string)=>({id:'audit',type,status,documentNumber:'AUDIT-1',partyName:'Audit party',issueDate:new Date('2026-11-03'),grandTotal:'100',balanceDue:'0'});
+it('captures actual paid-purchase list output without database writes',async()=>{m.list.mockResolvedValue([row('PURCHASE_BILL','POSTED')]);m.outstanding.mockClear();const html=renderToStaticMarkup(await Page());console.log('A110_PAID_PURCHASE',JSON.stringify({balanceRenderedAsGrandTotal:html.includes('<small>Balance</small><strong>100</strong>'),outstandingServiceCalls:m.outstanding.mock.calls.length}));expect(html).toContain('Audit party');expect(html).toContain('<small>Balance</small><strong>100</strong>');expect(m.outstanding).not.toHaveBeenCalled()});
+it('captures cancelled-sale status without inferring settlement',async()=>{m.list.mockResolvedValue([row('SALES_INVOICE','CANCELLED')]);const html=renderToStaticMarkup(await Page());console.log('A110_CANCELLED_SALE',JSON.stringify({unpaidBadge:html.includes('SALE : UNPAID'),cancelledBadge:html.includes('CANCELLED')}));expect(html).toContain('SALE : UNPAID');expect(html).not.toContain('CANCELLED')});
