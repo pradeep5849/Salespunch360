@@ -1,0 +1,116 @@
+{
+  "page_id": "A110",
+  "page_name": "Sales & Purchases transaction list",
+  "inventory_label": "New document",
+  "route": "/workspace/account/transactions",
+  "authority": "Owner uploaded SalesPunch360_Inventory_and_Audit_Status.pdf; recorded in docs/audit-numbering-source.json",
+  "audit_status": "AUDIT COMPLETE",
+  "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "reference_status": "Existing owner Home transaction-card references reused with explicit dedicated-route distinction",
+  "findings": [
+    {
+      "finding_id": "A110-F01",
+      "severity": "High",
+      "classification": "Incorrect card balances for purchases/non-invoices",
+      "current_behavior": "Financial outstanding is fetched only for POSTED SALES_INVOICE. Purchase cards always show grandTotal as Balance even if paid/adjusted. Orders/notes also show grandTotal as if collectible/payable balance.",
+      "required_correction": "Use authoritative batched financial snapshot for sales/purchase invoices and appropriate nonfinancial balance visibility; preserve signed allocations, credits, advances and reversals.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/page.tsx"
+      ],
+      "evidence": "Synthetic paid-purchase row grandTotal100/balanceDue0 renders Balance100 and never calls outstanding service. No database writes.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A110-F02",
+      "severity": "Medium",
+      "classification": "Cancelled-sale status mislabelling",
+      "current_behavior": "Every SALES_INVOICE is classified from paymentStatus; CANCELLED sale gets no financial snapshot and falls through to SALE:UNPAID.",
+      "required_correction": "Represent lifecycle first, then payment status only for eligible posted sale; cancelled/reversed history must not suggest new collectible debt.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/page.tsx"
+      ],
+      "evidence": "Actual server component render of CANCELLED synthetic sale contains SALE:UNPAID and omits CANCELLED.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A110-F03",
+      "severity": "Medium",
+      "classification": "List filtering and selected-context consistency",
+      "current_behavior": "Dedicated /transactions page does not accept searchParams or expose search/type/status/date/branch filters. Reader applies authorized actor scope only; explicit Home selected branch URL context is not resolved here.",
+      "required_correction": "Use validated company/selected authorized branch and practical list filters; preserve context into New document and details. Distinguish dedicated Documents list from related mixed Home feed rather than blindly copy all Home modules.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/page.tsx",
+        "src/lib/account/commercial.ts"
+      ],
+      "evidence": "Source confirmed; no branch authorization bypass asserted; Home related reference reused.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A110-F04",
+      "severity": "Medium",
+      "classification": "Unbounded list and per-invoice financial queries",
+      "current_behavior": "listCommercialDocumentsForActor fetches all company/authorized-branch docs with all lines, without pagination; page issues separate outstanding calls per posted sale with Promise.all.",
+      "required_correction": "Add deterministic server pagination/query projection and batch financial snapshots for visible rows. Filter hidden sale drafts in query; avoid unbounded concurrent transactions. Verify query-count and large-tenant performance.",
+      "affected_files": [
+        "src/lib/account/commercial.ts",
+        "src/app/workspace/account/transactions/page.tsx"
+      ],
+      "evidence": "Source query shape only; large-tenant load benchmark not executed.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A110-F05",
+      "severity": "Medium",
+      "classification": "Dedicated card action/menu parity",
+      "current_behavior": "TransactionCardActions More is a detail link rather than reference action menu; Share sends summary text with Invoice title even for purchases and silently falls back to clipboard/errors. Active Home uses different component with PDF sharing already present.",
+      "required_correction": "Reuse shared permission-aware menu and scoped document file handoff from existing Home/A107/A108 work; keep user confirmation and truthful download/clipboard/cancellation feedback. Do not reimplement already-correct Home PDF sharing.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/transaction-card-actions.tsx",
+        "src/components/account/account-mobile-home.tsx"
+      ],
+      "evidence": "Source-confirmed distinct component wiring; physical browser/OS share not executed.",
+      "implementation_status": "NOT STARTED"
+    }
+  ],
+  "tests": {
+    "date": "2026-11-03",
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "files": 4,
+    "probe_cases": 2,
+    "scope": "Two temporary audit probes render actual async page with synthetic mocked commercial rows;28existing policy/Home tests. Passing probe captures confirmed defects, not successful corrected behavior.",
+    "observations": [
+      "Paid purchase100 with stored balance0 renders Balance100; outstanding helper called0times",
+      "Cancelled sale renders SALE:UNPAID and no CANCELLED label"
+    ],
+    "browser": "NOT EXECUTED for A110",
+    "native": "NOT EXECUTED",
+    "database": "No database connection/writes; synthetic fixtures only",
+    "performance": "Source risk identified; not benchmarked"
+  },
+  "known_correct": [
+    "Reader requires ACCOUNT_LEDGER_VIEW and filters actor company/branch scope.",
+    "Legacy sale drafts hidden in displayed list.",
+    "Sales detail link redirects to prior scoped sales implementation.",
+    "Current posted sale balances use financial outstanding helper."
+  ],
+  "linked_scope": [
+    "A071 Home remains separate route; existing mixed transaction feed not marked broken because Documents list is commercial-only.",
+    "A107/A108 action implementations are shared dependencies; payment-only cards are not required in commercial Documents list.",
+    "A084 cancelled economic report policy is related, but F02 here is dedicated card UI not duplicated report computation."
+  ],
+  "implementation_changes": "NONE; audit documentation only",
+  "limitations": [
+    "No browser viewport/accessibility, physical Android, live schema or production accounting test in this audit.",
+    "Audit complete identifies5findings; none fixed or verified as corrected.",
+    "Source financial helper/query scope inspected, not exhaustive module/permission penetration certification."
+  ],
+  "next_page": {
+    "id": "A111",
+    "name": "Audit history",
+    "route": "/workspace/account/utilities/audit",
+    "audit_status": "NOT STARTED",
+    "reference_status": "reference still required"
+  }
+}

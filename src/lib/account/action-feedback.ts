@@ -9,6 +9,9 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  GOOGLE_DRIVE_BACKUP_NOT_CONFIGURED:"Google Drive backup is not configured on the server.",
+  GOOGLE_DRIVE_BACKUP_NOT_CONNECTED:"Connect Google Drive before enabling automatic backup.",
+  GOOGLE_DRIVE_BACKUP_RECONNECT_REQUIRED:"Reconnect Google Drive to resume automatic backup.",
   PARTY_TRANSFER_SOURCE_REQUIRED:"This income or cash entry belongs to a party transfer and must be corrected together with that transfer.",
   INVALID_PARTY_TRANSFER_PARTY:"Select active parties available to this firm.",
   INVALID_PARTY_TRANSFER_CLEARING:"The pass-through clearing account is unavailable. Ask your administrator to review it.",

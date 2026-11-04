@@ -1,6 +1,7 @@
 package com.salespunch360.mobile.ui.account.admin
 
 import com.salespunch360.mobile.ui.account.accountLabel
+import android.content.Intent
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -677,10 +678,37 @@ private fun ChoiceSetting(label:String,value:String,choices:List<Pair<String,Str
  var days by remember(saved){mutableStateOf(saved?.get("defaultDueDays")?.jsonPrimitive?.content?:"0")};var sale by remember(saved){mutableStateOf(saved?.get("salesTerms")?.jsonPrimitive?.content?:"")};var purchase by remember(saved){mutableStateOf(saved?.get("purchaseTerms")?.jsonPrimitive?.content?:"")};var project by remember(saved){mutableStateOf(saved?.get("projectTerms")?.jsonPrimitive?.content?:"")}
  LazyColumn{item{OutlinedTextField(days,{days=it},label={Text("Default Due Days")})};item{OutlinedTextField(sale,{sale=it},label={Text("Sale Terms & Conditions")})};item{OutlinedTextField(purchase,{purchase=it},label={Text("Purchase Terms & Conditions")})};item{OutlinedTextField(project,{project=it},label={Text("Project Terms & Conditions")})};item{Button(enabled=!busy&&days.toIntOrNull() in 0..365&&listOf(sale,purchase,project).all{it.length<=5000},onClick={vm.save("transaction-defaults",buildJsonObject{put("defaultDueDays",days.toInt());put("salesTerms",sale);put("purchaseTerms",purchase);put("projectTerms",project)})}){Text("Save")}}}
 }
+@Composable private fun BackupDayStepper(label:String,value:String,set:(String)->Unit){
+ Row(verticalAlignment=Alignment.CenterVertically){
+  Text(label,Modifier.weight(1f))
+  TextButton(enabled=(value.toIntOrNull()?:1)>1,onClick={set(((value.toIntOrNull()?:2)-1).coerceIn(1,365).toString())}){Text("−")}
+  OutlinedTextField(value,set,Modifier.width(72.dp),singleLine=true)
+  TextButton(enabled=(value.toIntOrNull()?:0)<365,onClick={set(((value.toIntOrNull()?:0)+1).coerceIn(1,365).toString())}){Text("+")}
+  Text("days")
+ }
+}
 @Composable private fun BackupSettingsView(data:JsonElement,vm:AccountAdministrationViewModel,navigate:(String)->Unit){
  val saved=data.jsonObject["settings"]?.jsonObject?.get("transactionDefaults")?.jsonObject?.get("backupSettings")?.jsonObject
- var auto by remember(saved){mutableStateOf(saved?.get("autoBackup")?.jsonPrimitive?.booleanOrNull?:false)};var interval by remember(saved){mutableStateOf(saved?.get("intervalDays")?.jsonPrimitive?.content?:"7")};var reminder by remember(saved){mutableStateOf(saved?.get("manualReminderDays")?.jsonPrimitive?.content?:"7")}
- Column{SwitchRow("Enable auto backup",auto){auto=it};OutlinedTextField(interval,{interval=it},label={Text("Automatic Backup Interval (days)")});OutlinedTextField(reminder,{reminder=it},label={Text("Manual Backup Reminder (days)")});Button(enabled=interval.toIntOrNull() in 1..365&&reminder.toIntOrNull() in 1..365,onClick={vm.save("backup-settings",buildJsonObject{put("autoBackup",auto);put("intervalDays",interval.toInt());put("manualReminderDays",reminder.toInt())})}){Text("Save")};TextButton({navigate("/workspace/account/utilities/backup")}){Text("Open Manual Backup")}}
+ val drive=data.jsonObject["googleBackup"]?.jsonObject
+ val connected=drive?.get("connected")?.jsonPrimitive?.booleanOrNull==true
+ val context=LocalContext.current
+ var auto by remember(saved,connected){mutableStateOf(connected && (saved?.get("autoBackup")?.jsonPrimitive?.booleanOrNull?:false))}
+ var interval by remember(saved){mutableStateOf(saved?.get("intervalDays")?.jsonPrimitive?.content?:"2")}
+ var reminder by remember(saved){mutableStateOf(saved?.get("manualReminderDays")?.jsonPrimitive?.content?:"10")}
+ var browserError by remember{mutableStateOf<String?>(null)}
+ Column{
+  Text("Auto backup settings")
+  if(connected){SwitchRow("Enable auto backup",auto){auto=it};Text("Connected Google Drive: "+(drive?.get("email")?.jsonPrimitive?.content?:""))}
+  else Text("Enable auto backup: connect Google Drive first")
+  Text("Automatic backups use only your personal Google Drive. Internet access is required.")
+  TextButton(onClick={try{context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.salespunch360.com/workspace/account/settings/backup")))}catch(_:Exception){browserError="Could not open your browser."}}){Text(if(connected) "Manage Google Drive connection" else "Connect Google Drive on website")}
+  if(!connected)Text("Sign in to SalesPunch360 in your browser, connect Google Drive, then return and refresh this screen.")
+  browserError?.let{Text(it)}
+  if(auto)BackupDayStepper("Auto Backup every",interval){interval=it}
+  BackupDayStepper("Manual Backup Reminder",reminder){reminder=it}
+  Button(enabled=interval.toIntOrNull() in 1..365&&reminder.toIntOrNull() in 1..365,onClick={vm.save("backup-settings",buildJsonObject{put("autoBackup",auto);put("intervalDays",interval.toInt());put("manualReminderDays",reminder.toInt())})}){Text("Save")}
+  TextButton({navigate("/workspace/account/utilities/backup")}){Text("Open Manual Backup")}
+ }
 }
 @Composable private fun AttentionView(data:JsonElement,navigate:(String)->Unit,complete:(String)->Unit,busy:Boolean,page:(Int)->Unit){
  var selectedTab by androidx.compose.runtime.saveable.rememberSaveable{mutableStateOf("APP")}

@@ -1,0 +1,46 @@
+{
+  "numTotalTests": 86,
+  "numPassedTests": 86,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/lib/account/home-noncommercial.test.ts",
+      "status": "passed",
+      "assertions": 10
+    },
+    {
+      "name": "src/lib/account/invoice-print-options-validation.test.ts",
+      "status": "passed",
+      "assertions": 12
+    },
+    {
+      "name": "src/lib/account/project-advance-acceptance.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/account/project-advance.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/account/project-payment-in.test.ts",
+      "status": "passed",
+      "assertions": 2
+    },
+    {
+      "name": "src/lib/account/y04-print-coverage.test.ts",
+      "status": "passed",
+      "assertions": 52
+    },
+    {
+      "name": "src/app/workspace/account/transactions/money/money-form.test.ts",
+      "status": "passed",
+      "assertions": 4
+    }
+  ],
+  "command": "node node_modules/vitest/vitest.mjs run src/app/workspace/account/transactions/money/money-form.test.ts src/lib/account/project-payment-in.test.ts src/lib/account/project-advance.test.ts src/lib/account/project-advance-acceptance.test.ts src/lib/account/y04-print-coverage.test.ts src/lib/account/invoice-print-options-validation.test.ts src/lib/account/home-noncommercial.test.ts",
+  "node": "22.23.4",
+  "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5"
+}

@@ -1,0 +1,28 @@
+{
+  "numTotalTests": 30,
+  "numPassedTests": 30,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/lib/account/a110.audit-probe.test.ts",
+      "status": "passed",
+      "assertions": 2
+    },
+    {
+      "name": "src/lib/account/account-home.test.ts",
+      "status": "passed",
+      "assertions": 5
+    },
+    {
+      "name": "src/lib/account/commercial-policy.test.ts",
+      "status": "passed",
+      "assertions": 13
+    },
+    {
+      "name": "src/lib/account/home-noncommercial.test.ts",
+      "status": "passed",
+      "assertions": 10
+    }
+  ]
+}

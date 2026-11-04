@@ -1,0 +1,23 @@
+{
+  "numTotalTests": 16,
+  "numPassedTests": 16,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/components/account/d-final-ui.contract.test.ts",
+      "status": "passed",
+      "assertions": 6
+    },
+    {
+      "name": "src/lib/account/account-home.test.ts",
+      "status": "passed",
+      "assertions": 5
+    },
+    {
+      "name": "src/components/account/__tests__/account-mobile-home.contract.test.ts",
+      "status": "passed",
+      "assertions": 5
+    }
+  ]
+}

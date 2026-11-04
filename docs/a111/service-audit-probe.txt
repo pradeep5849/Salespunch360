@@ -1,0 +1,15 @@
+import { beforeEach,it,expect,vi } from 'vitest';
+const m=vi.hoisted(()=>({find:vi.fn(),permission:vi.fn(),allow:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{accountingAuditEvent:{findMany:m.find}}}));
+vi.mock('@/lib/auth/authorization',()=>({requirePermission:m.permission,requirePermissionForMutation:m.permission,AuthorizationError:class extends Error{}}));
+vi.mock('@/lib/auth/permissions',()=>({canUsePermission:m.allow}));
+vi.mock('@/lib/mobile/account-transactions',()=>({mobileAccountActor:(u:unknown)=>u}));
+import { getAuditHistory,redactAuditMetadata } from './utilities';
+import { mobileUtilities } from '../mobile/account-administration';
+const actor={id:'audit-reader',companyId:'company-a',accountRole:'ACCOUNT_ADMIN',productEdition:'SALESPUNCH360_ACCOUNT',branchAccessScope:'SELECTED_BRANCHES',branchIds:['branch-a']};
+const rows=[{id:'audit-event',companyId:'company-a',metadata:{password:'SYNTHETIC_ONLY',nested:[{token:'SYNTHETIC_ONLY'}]},actor:{name:'Synthetic reader'}}];
+beforeEach(()=>{vi.clearAllMocks();m.permission.mockResolvedValue(actor);m.allow.mockReturnValue(true);m.find.mockResolvedValue(rows)});
+it('confirms Web masks supported nested sensitive fields',async()=>{const result=await getAuditHistory();expect(result[0].metadata).toEqual({password:'[REDACTED]',nested:[{token:'[REDACTED]'}]});expect(m.find.mock.calls[0][0].where).toEqual({companyId:'company-a'})});
+it('captures mobile raw-metadata defect with synthetic values',async()=>{const result=await mobileUtilities(actor as never,'audit') as typeof rows;expect(result[0].metadata.password).toBe('SYNTHETIC_ONLY');expect(m.find.mock.calls[0][0].where).toEqual({companyId:'company-a'});expect(m.allow).toHaveBeenCalledWith(expect.anything(),'SALESPUNCH360_ACCOUNT','ACCOUNT_SETTINGS')});
+it('denies mobile audit before database access when permission fails',async()=>{m.allow.mockReturnValue(false);await expect(mobileUtilities(actor as never,'audit')).rejects.toThrow('MOBILE_FORBIDDEN');expect(m.find).not.toHaveBeenCalled()});
+it('preserves ordinary metadata and redacts arrays without mutation',()=>{const value={entity:'Company settings',items:[{smtpPassword:'SYNTHETIC_ONLY'}]};expect(redactAuditMetadata(value)).toEqual({entity:'Company settings',items:[{smtpPassword:'[REDACTED]'}]});expect(value.items[0].smtpPassword).toBe('SYNTHETIC_ONLY')});

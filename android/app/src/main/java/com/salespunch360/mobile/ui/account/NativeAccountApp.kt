@@ -185,7 +185,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
-            utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding)
+            utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding,initialImportType=queryValue(state.selectedPath,"type")?:"CUSTOMERS",initialExportType=queryValue(state.selectedPath,"type"),backupMode=queryValue(state.selectedPath,"mode"))
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
@@ -406,6 +406,8 @@ private fun AccountSegmentedTabs(partyMode:Boolean,onChange:(Boolean)->Unit){
 @Composable
 private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:PaddingValues,account:com.salespunch360.mobile.data.AccountBootstrap?,switching:Boolean,onBranch:(String?,Boolean)->Unit,open:(String)->Unit){
     var reportsOpen by rememberSaveable{mutableStateOf(false)}
+    var utilitiesOpen by rememberSaveable{mutableStateOf(false)}
+    var backupOpen by rememberSaveable{mutableStateOf(false)}
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
         contentPadding=PaddingValues(16.dp),
@@ -423,20 +425,23 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
         groups.forEachIndexed{groupIndex,group->
             val rows=group.items+group.children.flatMap{it.items}
             val reports=group.label.equals("Reports",ignoreCase=true)
-            if(reports){
+            val utilities=group.label=="Utilities"
+            val backup=group.label=="Backup/Restore"
+            val expanded=if(utilities)utilitiesOpen else if(backup)backupOpen else reportsOpen
+            if(reports||utilities||backup){
                 item(key="account-group-$groupIndex-${group.label}"){
-                    OutlinedButton(onClick={reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
+                    OutlinedButton(onClick={if(utilities)utilitiesOpen=!utilitiesOpen else if(backup)backupOpen=!backupOpen else reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                             Text(accountLabel(group.label),fontWeight=FontWeight.Bold)
-                            Text(if(reportsOpen)"⌃" else "⌄")
+                            Text(if(expanded)"⌃" else "⌄")
                         }
                     }
                 }
-                if(reportsOpen){
+                if(expanded){
                     items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
                         val nav=rows[rowIndex]
-                        OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text("›")}
+                        OutlinedButton(onClick={open(nav.href)},enabled=!nav.disabled,modifier=Modifier.fillMaxWidth()){
+                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text(if(nav.disabled)"Pending" else "›")}
                         }
                     }
                 }
@@ -446,8 +451,8 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
                 }
                 items(rows.size,key={rowIndex->"account-row-$groupIndex-$rowIndex-${rows[rowIndex].label}-${rows[rowIndex].href}"}){rowIndex->
                     val nav=rows[rowIndex]
-                    OutlinedButton(onClick={open(nav.href)},modifier=Modifier.fillMaxWidth()){
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text("›")}
+                    OutlinedButton(onClick={open(nav.href)},enabled=!nav.disabled,modifier=Modifier.fillMaxWidth()){
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(accountLabel(nav.label));Text(if(nav.disabled)"Pending" else "›")}
                     }
                 }
             }
@@ -593,9 +598,9 @@ private fun adminMode(path:String)=when{
 }
 
 private fun utilityMode(path:String)=when{
-    path.endsWith("/utilities/import")||path.contains("/utilities/import/")->"import"
-    path.endsWith("/utilities/export")->"export"
-    path.endsWith("/utilities/backup")->"backup"
-    path.endsWith("/utilities/recycle-bin")->"recycle"
+    path.substringBefore("?").endsWith("/utilities/import")||path.substringBefore("?").contains("/utilities/import/")->"import"
+    path.substringBefore("?").endsWith("/utilities/export")->"export"
+    path.substringBefore("?").endsWith("/utilities/backup")->"backup"
+    path.substringBefore("?").endsWith("/utilities/recycle-bin")->"recycle"
     else->null
 }

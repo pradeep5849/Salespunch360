@@ -1,0 +1,134 @@
+{
+  "page_id": "A109",
+  "recorded_route": "/workspace/account/transactions/new",
+  "scope_policy": "Source route remains entry form. New screenshot is linked Home Add Transaction chooser, not a replacement definition. Individual sale/purchase/payment/quotation/expense forms retain previous IDs and evidence.",
+  "audit_status": "AUDIT COMPLETE",
+  "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+  "reference_received": "2026-11-03",
+  "references": [
+    "Owner Add Transaction chooser:9sale actions,5purchase actions,3other actions",
+    "Prior Add Purchase entry and saved Purchase/settings references retained",
+    "Earlier Sale entry references in conversation reused, not requested as missing",
+    "Purchase Add Items search with typed Pla, no result and Add New Item action",
+    "Add Item Product/Services form with typed name carried over; unit/code/category/HSN/pricing/stock controls",
+    "Unsaved Purchase bottom More Options sheet: Share and Print"
+  ],
+  "findings": [
+    {
+      "finding_id": "A109-F01",
+      "severity": "Medium",
+      "classification": "Linked launcher missing reference entries",
+      "current_behavior": "Source Web/native chooser has8sale,4purchase,2other entries; reference has9,5,3. Missing Sale Assets, Purchase Assets and Other Income.",
+      "required_correction": "Map existing authorized asset sale/purchase and Other Income flows into launcher; do not implement duplicate modules. Keep Mobile POS Coming Soon unless separately approved.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F02",
+      "severity": "Medium",
+      "classification": "Launcher capability visibility",
+      "current_behavior": "Web renders constant ADD_GROUPS links without per-action actor/module/capability input; native AddTransactionLauncher receives only dismiss/navigate, and enables entries when path is nonnull.",
+      "required_correction": "Filter/disable actions from authoritative backend capabilities; retain independent destination API/permission checks. This is not proof of backend authorization bypass.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F03",
+      "severity": "Medium",
+      "classification": "Selected branch context on handoff",
+      "current_behavior": "Chooser links contain fixed type URLs but omit selected Home branch/scope. Existing Web MoneyForm defaults first branch when no initial project, risking unintended entry branch within authorized choices.",
+      "required_correction": "Carry and validate selected branch/company context through launcher and destination forms, or explicitly prompt; never authorize branch merely from URL.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F04",
+      "severity": "Medium",
+      "classification": "Web modal keyboard/focus lifecycle",
+      "current_behavior": "Chooser declares role dialog and close/backdrop controls; inspected component effects handle search restoration/scroll only, no chooser focus trap, Escape or focus restoration.",
+      "required_correction": "Provide initial focus, keyboard containment, Escape dismissal and return focus; preserve native modal semantics. Keyboard/browser runtime confirmation pending.",
+      "implementation_status": "NOT STARTED",
+      "scope": "Linked Home launcher and entry handoff; reuse A071 shared launcher infrastructure and relevant A065/A052/A108 modules.",
+      "verification": "Source-confirmed observation; independent interactive runtime pending."
+    },
+    {
+      "finding_id": "A109-F05",
+      "severity": "Medium",
+      "classification": "Purchase item search/inline master-create handoff",
+      "current_behavior": "Web CommercialEditor uses select from provided masters and has no search/no-result Add New Item action or inline creation/return callback. Native PurchaseEditor similarly uses SelectField and has no inline master-create handoff. Custom ad hoc line does not create reusable company item.",
+      "required_correction": "Provide scoped searchable company catalogue and permission-aware Add New Item path carrying typed name; reuse existing A057/A058 item master/unit/code/category/photo/HSN/pricing rules; return created item to current purchase without losing bill, party, branch, lines or amounts. Cancel/back must preserve unfinished purchase without posting. HSN search remains company saved codes per original decision.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt"
+      ],
+      "implementation_status": "NOT STARTED",
+      "verification": "Source/reference confirmed; actual create-and-return browser/device runtime not executed. Standalone item master completion not re-audited or inferred."
+    },
+    {
+      "finding_id": "A109-F06",
+      "severity": "Medium",
+      "classification": "Purchase entry footer and Share/Print actions",
+      "current_behavior": "Web generic Purchase editor finishes with CreateDraftButton; no reference Save & New or bottom More Options Share/Print actions. Native PurchaseEditor lacks corresponding Share/Print handoff. Saved detail PDF links are a different workflow and do not satisfy unsaved entry menu.",
+      "required_correction": "Provide reference-appropriate footer and user-triggered Share/Print entry menu using shared A107/print infrastructure. Keep line Save & New distinct from document Save & New; reset request identity only after confirmed success. Define whether preview requires explicit save or is unsaved/nonposting; do not silently post or save abandoned input. Existing sale immediate-save/no-draft decisions remain intact; do not invent purchase posting policy from menu screenshot.",
+      "affected_files": [
+        "src/app/workspace/account/transactions/new/commercial-editor.tsx",
+        "android/app/src/main/java/com/salespunch360/mobile/ui/account/purchase/PurchaseEditor.kt"
+      ],
+      "implementation_status": "NOT STARTED",
+      "verification": "Source and supplied footer/menu references; share/print OS/runtime not executed. Purchase Save/Post lifecycle disposition needs explicit verification against existing module policy before implementation."
+    }
+  ],
+  "known_correct": [
+    "Three group headings and primary payment/return/order/quotation routes exist.",
+    "Mobile POS intentionally disabled Coming Soon; screenshot alone does not authorize POS implementation.",
+    "All entry icons navigate only; no posting should happen on opening/closing chooser."
+  ],
+  "tests": {
+    "date": "2026-11-03",
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0,
+    "files": [
+      "src/components/account/__tests__/account-mobile-home.contract.test.ts",
+      "src/components/account/d-final-ui.contract.test.ts",
+      "src/lib/account/account-home.test.ts"
+    ],
+    "scope": "Existing source contracts/static rendering; existing exact-list contract currently codifies missing3reference entries. Passing tests do not establish complete reference parity.",
+    "browser": "Not executed this turn",
+    "android_device": "Not executed",
+    "additional_item_editor_tests": {
+      "date": "2026-11-03",
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "files": [
+        "src/app/workspace/account/transactions/new/commercial-editor.test.ts",
+        "src/lib/account/commercial-editor-pricing.test.ts",
+        "src/lib/account/item-settings-quick.test.ts",
+        "src/lib/account/item-workflow-settings.runtime.test.ts"
+      ],
+      "scope": "Existing focused tests; includes mock/source/policy behavior, not inline create-return browser/device proof."
+    },
+    "total_focused_distinct_cases_passed": 48
+  },
+  "remaining": [
+    "Implement/dispose6findings with focused regressions and isolated browser/native evidence.",
+    "Purchase entry Save/Post and unsaved Share/Print policy must be confirmed before changing financial lifecycle.",
+    "Physical Android, create/return flow, modal keyboard and device share/print remain unexecuted."
+  ],
+  "changes": "Documentation only; no app, dependency, production, merge or deployment change.",
+  "audit_completion_scope": "Reference/source audit of supplied chooser and Purchase entry/item/menu handoff completed. Six findings identified, not fixed. Existing earlier Sale/master/settings findings reused, no independent universal form/device verification claimed.",
+  "next_page": {
+    "id": "A110",
+    "inventory_label": "New document",
+    "actual_source_title": "Sales & Purchases",
+    "route": "/workspace/account/transactions",
+    "source_file": "src/app/workspace/account/transactions/page.tsx",
+    "status": "NOT STARTED",
+    "authority": "Reuploaded SalesPunch360_Inventory_and_Audit_Status.pdf; SHA2569c209c200a8c8bd4cfaf30a06249308516c4e473cfb15a39873ddf0e051a2613",
+    "note": "Inventory label reflects header action; actual source identifies transaction list. Original roadmap missing blocker resolved. Existing Home screenshots linked as related references, not automatically identical route."
+  }
+}

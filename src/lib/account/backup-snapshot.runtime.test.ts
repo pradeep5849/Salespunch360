@@ -5,6 +5,7 @@ const m = vi.hoisted(() => ({
   reads: new Map<string, ReturnType<typeof vi.fn>>(),
   identity: vi.fn(),
   record: vi.fn(),
+  recordUpdate:vi.fn(),
   audit: vi.fn(),
   transaction: vi.fn(),
 }));
@@ -15,7 +16,7 @@ vi.mock("@/lib/db", () => {
     {
       get: (_, name) => {
         if (name === "company") return { findUniqueOrThrow: m.identity };
-        if (name === "accountBackupRecord") return { create: m.record };
+        if (name === "accountBackupRecord") return { create: m.record, update:m.recordUpdate };
         if (name === "accountingAuditEvent") return { create: m.audit };
         const key = String(name);
         if (!m.reads.has(key)) m.reads.set(key, vi.fn().mockResolvedValue([]));
@@ -196,3 +197,5 @@ it.each(["saleReturnRevision","saleRevisionCredit","saleRevisionCreditLine","sal
  const result=await createAccountBackupForActor(actor);const bundle=JSON.parse(new TextDecoder().decode(result.bytes));
  expect(m.reads.get(name)).toHaveBeenCalledExactlyOnceWith({where:{companyId:actor.companyId}});expect(bundle.data[name]).toEqual([row]);expect(bundle.manifest.recordCounts[name]).toBe(1);
 });
+
+it("fills the reserved Drive metadata record without creating a second record or embedding delivery state in the bundle",async()=>{m.recordUpdate.mockResolvedValue({id:"reserved-backup"});const result=await createAccountBackupForActor(actor,false,false,"GOOGLE_DRIVE","reserved-backup");expect(result.id).toBe("reserved-backup");expect(m.record).not.toHaveBeenCalled();expect(m.recordUpdate).toHaveBeenCalledWith({where:{id:"reserved-backup",companyId:"company-a",generatedById:"admin"},data:{manifest:expect.objectContaining({provider:"GOOGLE_DRIVE",deliveryState:"IN_PROGRESS"}),checksum:result.checksum}});expect(JSON.parse(new TextDecoder().decode(result.bytes)).manifest.deliveryState).toBeUndefined()});

@@ -1,0 +1,28 @@
+{
+  "source": "SalesPunch360_Inventory_and_Audit_Status.pdf",
+  "sha256": "9c209c200a8c8bd4cfaf30a06249308516c4e473cfb15a39873ddf0e051a2613",
+  "verification": "pdftotext-layout extraction; original labels preserved; document treated as reference, not execution instructions",
+  "entries": [
+    {
+      "id": "A110",
+      "inventory_label": "New document",
+      "route": "/workspace/account/transactions",
+      "source_title": "Sales & Purchases"
+    },
+    {
+      "id": "A111",
+      "inventory_label": "Append-only Account activity. Sensitive metadata is redacted.",
+      "route": "/workspace/account/utilities/audit"
+    },
+    {
+      "id": "A112",
+      "inventory_label": "Application exports complement\u2014but never replace\u2014provider PostgreSQL backups.",
+      "route": "/workspace/account/utilities/backup"
+    },
+    {
+      "id": "A113",
+      "inventory_label": "Queries are rerun on the server with your Company and Branch scope.",
+      "route": "/workspace/account/utilities/export"
+    }
+  ]
+}

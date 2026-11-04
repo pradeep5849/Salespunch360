@@ -52,12 +52,15 @@ private suspend fun readImportBytes(context: android.content.Context, uri: Uri):
 fun AccountUtilityScreen(
     mode: String,
     padding: PaddingValues,
-    vm: AccountUtilityViewModel = viewModel()
+    vm: AccountUtilityViewModel = viewModel(),
+    initialImportType: String = "CUSTOMERS",
+    initialExportType: String? = null,
+    backupMode: String? = null
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var importType by remember { mutableStateOf("CUSTOMERS") }
+    var importType by remember(mode, initialImportType) { mutableStateOf(initialImportType.takeIf { it in listOf("CUSTOMERS", "VENDORS", "ITEMS", "PROJECTS", "OPENING_BALANCES") } ?: "CUSTOMERS") }
     var confirmRestore by remember { mutableStateOf<String?>(null) }
     var fileMessage by remember { mutableStateOf<String?>(null) }
     var fileBusy by remember { mutableStateOf(false) }
@@ -85,10 +88,32 @@ fun AccountUtilityScreen(
         }
     }
 
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val downloadable = state.file
+        if(uri == null) { fileMessage = "Backup save cancelled."; vm.consumed() }
+        else if(downloadable != null) {
+            fileBusy = true
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val output = context.contentResolver.openOutputStream(uri, "w") ?: throw IllegalStateException("Could not open the selected file.")
+                        output.buffered().use { it.write(downloadable.second) }
+                    }
+                    fileMessage = "Backup saved to the selected location."
+                } catch(_:Exception) { fileMessage = "Backup could not be saved. Please retry." }
+                finally { fileBusy = false; vm.consumed() }
+            }
+        }
+    }
+
     LaunchedEffect(mode) { vm.load(mode) }
 
     LaunchedEffect(state.file) {
         state.file?.let { downloadable ->
+            if(mode == "backup" && backupMode == "phone") {
+                try { saveBackup.launch(downloadable.first) } catch(_:Exception) { fileMessage = "Could not open the file picker."; vm.consumed() }
+                return@let
+            }
             try {
                 val file = withContext(Dispatchers.IO) {
                     File(context.cacheDir, downloadable.first).also { target ->
@@ -143,7 +168,7 @@ fun AccountUtilityScreen(
                 }
             }
             "export" -> {
-                listOf("customers", "vendors", "items", "projects", "chart-of-accounts").forEach { type ->
+                listOf("customers", "vendors", "items", "projects", "chart-of-accounts").filter { initialExportType == null || initialExportType !in listOf("customers", "vendors", "items", "projects", "chart-of-accounts") || it == initialExportType }.forEach { type ->
                     Row {
                         Text(type, Modifier.weight(1f))
                         Button(onClick = { vm.export(type, "csv") }) { Text("CSV") }
@@ -152,9 +177,14 @@ fun AccountUtilityScreen(
                 }
             }
             "backup" -> Column {
-                Button(onClick = {vm.backup()}) { Text("Generate and share backup") }
+                if(backupMode=="restore") {
+                    Text("Restore backup")
+                    Text("Restore setup pending. No data will be replaced or restored until the recovery mode is confirmed.")
+                } else {
+                Button(onClick = {vm.backup()}) { Text(if(backupMode=="phone") "Generate and save backup" else "Generate and share backup") }
                 Text("Include live uploaded files and signatures, up to 64 MiB. Missing files stop generation. Provider backups are still required for full recovery.")
-                Button(onClick = {vm.backup(true)}) { Text("Share records and private files") }
+                Button(onClick = {vm.backup(true)}) { Text(if(backupMode=="phone") "Save records and private files" else "Share records and private files") }
+                }
             }
             else -> JsonList(state.rows) { id -> confirmRestore = id }
         }

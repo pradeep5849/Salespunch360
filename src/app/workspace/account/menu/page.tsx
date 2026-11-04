@@ -7,6 +7,7 @@ import {
   accountNavSectionId,
   buildAccountNavigation,
   type AccountNavGroup,
+  type AccountNavItem,
 } from "@/lib/account/navigation";
 import { db } from "@/lib/db";
 
@@ -30,22 +31,20 @@ export default async function Page() {
     modules,
     (settings?.itemSettings as { enabled?: boolean } | null)?.enabled !== false,
   );
+  const navItem = (item: AccountNavItem) => item.disabled ? (
+    <span className="account-menu-pending" aria-disabled="true" key={item.href + item.label}>{item.label}<small>Pending implementation</small></span>
+  ) : <Link href={item.href} key={item.href + item.label}>{item.label}<span aria-hidden="true">›</span></Link>;
   const expandable = (group: AccountNavGroup) => (
     <details key={group.label}>
       <summary>
         <span className="account-menu-icon" aria-hidden>
-          {group.label === "Sales" ? "↗" : "↙"}
+          {group.label === "Utilities" ? "▣" : group.label === "Backup/Restore" ? "↻" : group.label === "Sales" ? "↗" : "↙"}
         </span>
         {group.label}
         <i>⌄</i>
       </summary>
       <nav>
-        {group.items.map((item) => (
-          <Link href={item.href} key={item.href + item.label}>
-            {item.label}
-            <span>›</span>
-          </Link>
-        ))}
+        {group.items.map(navItem)}
       </nav>
     </details>
   );
@@ -66,9 +65,9 @@ export default async function Page() {
           key={group.label}
           id={accountNavSectionId(group.label)}
         >
-          <h2>{group.label}</h2>
+          {group.expandable ? expandable(group) : <h2>{group.label}</h2>}
           {group.children?.map(expandable)}
-          {group.items.length > 0 && (
+          {!group.expandable && group.items.length > 0 && (
             <nav>
               {group.items.map((item) => (
                 <Link href={item.href} key={item.href + item.label}>

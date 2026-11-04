@@ -484,8 +484,9 @@ export async function createAccountBackupForActor(actor: {
   id: string;
   companyId: string;
   accountRole: string | null;
-},archive=false,includePrivateFiles=false) {
+},archive=false,includePrivateFiles=false,deliveryProvider?:"GOOGLE_DRIVE",reservationId?:string) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  if(reservationId && (!deliveryProvider || archive))throw new Error("INVALID_BACKUP_RESERVATION");
   const companyId = actor.companyId!;
   // Repeatable read keeps invoices, payments and ledger balances from different moments out of one bundle.
   const company = await db.$transaction(async tx => {
@@ -665,6 +666,7 @@ export async function createAccountBackupForActor(actor: {
   const privateFiles=includePrivateFiles?await collectBackupPrivateFiles(companyId,company,privateStorage()):undefined;
   if(privateFiles)verifyBackupPrivateFiles(companyId,company,privateFiles);
   const manifest = {
+    ...(deliveryProvider?{provider:deliveryProvider}:{}),
     format: "SalesPunch360 Account Backup",
     formatVersion: includePrivateFiles?3:2,
     generatedAt: new Date().toISOString(),
@@ -693,17 +695,19 @@ export async function createAccountBackupForActor(actor: {
       ),
     ),
     checksum = createHash("sha256").update(bytes).digest("hex");
-  const backupId=randomUUID(),objectKey=`companies/${companyId}/account-backups/${backupId}.json`;
+  const backupId=reservationId??randomUUID(),objectKey=`companies/${companyId}/account-backups/${backupId}.json`;
   if(archive)await privateStorage().put(objectKey,Buffer.from(bytes));
+  const recordManifest={...manifest,...(deliveryProvider?{deliveryState:"IN_PROGRESS"}:{})};
   let record;
   try{
     record=await db.$transaction(async tx=>{
-      const created=await tx.accountBackupRecord.create({data:{id:backupId,companyId,generatedById:actor.id,manifest:archive?{...manifest,objectKey}:manifest,checksum}});
+      const created=reservationId?await tx.accountBackupRecord.update({where:{id:backupId,companyId,generatedById:actor.id},data:{manifest:recordManifest,checksum}}):await tx.accountBackupRecord.create({data:{id:backupId,companyId,generatedById:actor.id,manifest:archive?{...recordManifest,objectKey}:recordManifest,checksum}});
       await tx.accountingAuditEvent.create({data:{companyId,actorUserId:actor.id,eventType:"BACKUP_GENERATED",entityType:"ACCOUNT_BACKUP",entityId:created.id,metadata:{checksum,recordCounts:manifest.recordCounts}}});
       return created;
     });
   }catch(error){if(archive)await privateStorage().delete(objectKey).catch(()=>undefined);throw error}
   return {
+    id: record.id,
     fileName: `salespunch360-${company.slug}-${record.id}.json`,
     bytes,
     manifest,

@@ -1,0 +1,86 @@
+{
+  "page_id": "A111",
+  "page_name": "Audit history",
+  "route": "/workspace/account/utilities/audit",
+  "audit_status": "AUDIT COMPLETE",
+  "reference_status": "Owner current SalesPunch360 main-menu screenshot supplied; no external Audit History equivalent required for documented activity-log purpose.",
+  "navigation_observation": "Main menu only Import, export & backup at /workspace/account/utilities. Web hub source contains nested Audit History link. Native dispatcher recognizes /utilities/audit, but no direct audit link in inspected main menu; actual native reachability still to verify.",
+  "correction_to_prior_response": "Do not tell owner Audit History is visibly listed in current menu; screenshot establishes it is not. Web nested route availability is source evidence, not current deployed native navigation proof.",
+  "findings": [
+    {
+      "finding_id": "A111-F01",
+      "severity": "Medium",
+      "classification": "Navigation and platform permission parity",
+      "current_behavior": "Main menu Utilities leaf points to /workspace/account/utilities. Web hub includes nested Audit History. Native has no hub dispatcher for exact /utilities path and falls through to NativeDestinationNotice; /utilities/audit exists only in adminMode. Web read uses ACCOUNT_REPORTS, mobile read uses ACCOUNT_SETTINGS.",
+      "required_correction": "Verify intended authorized audit-reader roles and expose consistent reachable navigation on Web/native; use shared read permission without broadening access blindly.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Owner screenshot and direct source dispatcher/hub inspection. Backend permission mismatch captured by focused probe; native tap runtime not executed."
+    },
+    {
+      "finding_id": "A111-F02",
+      "severity": "High",
+      "classification": "Audit metadata redaction parity",
+      "current_behavior": "Web getAuditHistory applies redactAuditMetadata to rows; mobileUtilities audit returns raw accountingAuditEvent rows with metadata without that redaction.",
+      "required_correction": "Use shared authorized redacted audit DTO across Web/mobile, retain only needed fields, add nested sensitive-key redaction and negative API tests.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual mobileUtilities call with synthetic mocked metadata returned SYNTHETIC_ONLY password unchanged, whereas Web getAuditHistory returned REDACTED including nested token array. No production secrets/data queried."
+    },
+    {
+      "finding_id": "A111-F03",
+      "severity": "Medium",
+      "classification": "Audit history truncation and ordering",
+      "current_behavior": "Web/mobile query latest200events only, no cursor/offset/filter input, total count or older-event action; orderBy only createdAt. Older events cannot be reached in this screen.",
+      "required_correction": "Provide authorized deterministic createdAt/id pagination and relevant event/date/actor/entity filters with explicit empty/error/loading states; retain append-only history.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source query/UI/API review; no large-data runtime probe."
+    },
+    {
+      "finding_id": "A111-F04",
+      "severity": "Medium",
+      "classification": "Native activity presentation parity",
+      "current_behavior": "Native audit adminMode has no dedicated rendering case and falls back to JsonRows, displaying full item.toString() instead of readable event/actor/date/entity records. Web shows eventType, actor name, date and entityType; source metadata serialization differs.",
+      "required_correction": "Use shared minimal redacted audit DTO and accessible chronological activity rows, with relevant entity context and loading/error/empty handling. Never display raw metadata objects as primary UI.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "AccountAdministrationScreen else JsonRows and Text(item.toString()) inspected; physical device not executed."
+    },
+    {
+      "finding_id": "A111-F05",
+      "severity": "Medium",
+      "classification": "Audit-reader scope policy consistency",
+      "current_behavior": "Both reads scope only companyId, without actor selected-branch restriction; branch-restricted readers can receive company-wide administrative metadata when permitted. Company-wide admin-event visibility policy is not explicit in these methods.",
+      "required_correction": "Define permitted audit readers and company-wide admin versus branch-specific event visibility; enforce one Web/mobile policy with DTO redaction and negative company/branch tests. Do not invent a branch column or silently grant global audit visibility.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Synthetic SELECTED_BRANCHES actor produced where companyId only. No claim of unauthorized production access; policy decision/acceptance required before implementation."
+    }
+  ],
+  "implementation_changes": "NONE",
+  "remaining": [
+    "Implement/dispose5findings with shared authorization/redaction and runtime regressions.",
+    "Resolve intended branch/company audit-reader policy before production implementation.",
+    "Native/real HTTP/browser/accessibility, full event coverage and DB append-only enforcement not certified in this source audit."
+  ],
+  "next_page": {
+    "id": "A112",
+    "page_name": "Backup & Recovery",
+    "route": "/workspace/account/utilities/backup",
+    "status": "NOT STARTED",
+    "reference_status": "reference still required"
+  },
+  "verification": {
+    "date": "2026-11-03",
+    "node": "22.23.4",
+    "source_commit": "35adae2adb11df2bdcdb6bf6262f5d7fbea4e8f5",
+    "focused_passed": 7,
+    "focused_failed": 0,
+    "skipped": 0,
+    "files": 2,
+    "scope": "4actual-function synthetic mocked probes and3existing source-contract checks. No real database/API gateway/browser/device execution.",
+    "executed": [
+      "Web nested password/token redaction",
+      "Mobile raw metadata return captured",
+      "Denied mobile permission prevents database call",
+      "Recursive redactor preserves nonsensitive fields and does not mutate input"
+    ],
+    "provenance": "Current run JSON retained in focused-test-evidence.json; probes retained as txt, not a regression suite asserting defects are correct."
+  }
+}
