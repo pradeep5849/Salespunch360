@@ -1,5 +1,5 @@
 import type { LeadStage, ManagerType, SalesRole } from "@prisma/client";
-export class LeadError extends Error { constructor(public code:"NOT_FOUND"|"INVALID_ASSIGNMENT"|"STALE"|"TERMINAL"|"INVALID_REFERENCE"|"ACTIVE_FOLLOW_UP"){super(code)} }
+export class LeadError extends Error { constructor(public code:"NOT_FOUND"|"INVALID_ASSIGNMENT"|"STALE"|"TERMINAL"|"INVALID_REFERENCE"|"ACTIVE_FOLLOW_UP"|"LEAD_HAS_LINKED_DOCUMENTS"){super(code)} }
 type Actor={id:string;salesRole:SalesRole;managerType?:ManagerType|null;designation?:string|null};
 type Assignee={id:string;salesRole:SalesRole|null;managerType?:ManagerType|null;isActive:boolean;salesAccessActive:boolean;managerId:string|null};
 export function canAssign(actor:Actor,assignee:Assignee){const actorRole=actor.salesRole,assigneeRole=assignee.salesRole;if(!assignee.isActive||assignee.salesAccessActive!==true||(assigneeRole!=="MANAGER"&&assigneeRole!=="SALES"))return false;if(assigneeRole==="MANAGER"&&assignee.managerType==="MANAGER_ONLY")return false;if(actorRole==="PRIMARY_ADMIN"||actorRole==="ADMIN")return true;if(actorRole==="SALES")return assignee.id===actor.id&&assigneeRole==="SALES";return actorRole==="MANAGER"&&((actor.managerType!=="MANAGER_ONLY"&&assignee.id===actor.id&&assigneeRole==="MANAGER")||(assigneeRole==="SALES"&&assignee.managerId===actor.id));}
