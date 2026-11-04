@@ -1,0 +1,38 @@
+{
+  "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+  "prior_audit_checkpoint": "52ebeea7",
+  "date": "2026-11-04",
+  "numTotalTests": 33,
+  "numPassedTests": 33,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/lib/account/a115-a116.audit-probe.test.tsx",
+      "status": "passed",
+      "assertions": 15
+    },
+    {
+      "name": "src/lib/account/a15-imports.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/account/utilities-menu.test.ts",
+      "status": "passed",
+      "assertions": 7
+    },
+    {
+      "name": "src/lib/mobile/account-administration.contract.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/app/workspace/account/menu/page.test.tsx",
+      "status": "passed",
+      "assertions": 5
+    }
+  ],
+  "scope": "15 audit probes call actual import parser/preview/save/execute services or actual page SSR with mocked database, posting and transaction boundaries. 18 existing parser/menu/native-boundary checks also passed. No actual user file, real import, real ledger posting, live HTTP server or physical device execution. Serialized mock transactions do not certify a real database race.",
+  "probe_retention": "docs/a115/service-audit-probe.txt; defect-capturing probes retired outside the active regression suite."
+}

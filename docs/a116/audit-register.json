@@ -1,0 +1,95 @@
+{
+  "page_id": "A116",
+  "page_name": "Import data / Import Items entry",
+  "route": "/workspace/account/utilities/import",
+  "inventory_label": "Upload \u2192 validate \u2192 preview \u2192 confirm. No rows are written during preview.",
+  "audit_status": "SOURCE AUDIT COMPLETE \u2014 Microsoft Excel reference subflow pending",
+  "reference_status": "Owner supplied Import Items entry screenshot with Item Library and Microsoft Excel. A115 reference is waived, but no blanket A116 waiver or Microsoft Excel sub-screen was supplied.",
+  "reference_observations": {
+    "title": "Import Items",
+    "choices": [
+      {
+        "label": "Item Library",
+        "description": "Reference advertises a database of 1 lakh+ items."
+      },
+      {
+        "label": "Microsoft Excel",
+        "description": "Upload items from an Excel file."
+      }
+    ],
+    "other_visible_elements": [
+      "Back navigation",
+      "Security/encryption marketing banner",
+      "Contact Support link"
+    ],
+    "limits": "The reference screen does not establish template columns, actual catalog content/licensing, upload size, validation layout or update behavior. Marketing/security claims are not adopted as verified SalesPunch360 guarantees."
+  },
+  "findings": [
+    {
+      "finding_id": "A116-F01",
+      "severity": "Medium",
+      "classification": "Template link ignores selected import type",
+      "current_behavior": "The upload form can select/preselect ITEMS, but Download templates always points to CUSTOMERS XLSX. Customers and Items have different required columns.",
+      "required_correction": "Offer a template for the actual selected type and keep template/schema/version aligned with preview. Give clear examples for required unit/category/branch references.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual Items-entry SSR selected ITEMS and linked /templates/CUSTOMERS?format=xlsx, with no Items-template link. Imports required headers confirm the schema difference."
+    },
+    {
+      "finding_id": "A116-F02",
+      "severity": "Medium",
+      "classification": "Web and native effective upload limits differ",
+      "current_behavior": "Web Server Action transport has bodySizeLimit:\"6mb\", while the action accepts files up to 10 MiB and the mobile endpoint/native picker allow 10 MiB. A file below the action's own cap may be rejected by the Web transport first, including multipart overhead.",
+      "required_correction": "Define one supported size policy per platform/transport and communicate it. Align the upload transport and validator, or use a bounded upload endpoint; return a useful oversized-file error without silent rejection.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source next.config.ts:32, account-finalization uploadAccountImport 10*1024*1024, mobileImportPreview and native MAX_IMPORT_BYTES. No live 6\u201310 MiB HTTP upload or Hostinger request limit was tested."
+    },
+    {
+      "finding_id": "A116-F03",
+      "severity": "Medium",
+      "classification": "Native create-only import mode cannot express Web update intent",
+      "current_behavior": "Web has an explicit update-existing checkbox. The native file picker always calls vm.upload(...,false), with no corresponding user control. The API supports both modes.",
+      "required_correction": "Expose an explicit matching mode and its consequences on native, bind that choice to the authoritative preview and retain safe create-only defaults. Fix A115-F03 before enabling mode changes broadly.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source AccountUtilityScreen.kt:81 hard-codes false and the inspected import controls lack an update option. Web form has updateExisting checkbox. No physical Android interaction was executed."
+    },
+    {
+      "finding_id": "A116-F04",
+      "severity": "Medium",
+      "classification": "Row/batch validation is incomplete or escapes row-error reporting",
+      "current_behavior": "Base item sale/purchase/tax decimals are not fully validated in preview; malformed values can be marked valid and fail during execution. Duplicate item codes within the same new file are not detected against one another. Invalid opening decimals are caught per row but can throw again in the aggregate sum, preventing a row-error preview.",
+      "required_correction": "Use shared typed per-row validation for every writable field, finite/range/date rules and batch identity checks before READY. Aggregate only parsed valid amounts and retain actionable row errors; reject duplicate/conflicting file rows without relying on database failures.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual previews accepted a not-money/not-tax item as CREATE with zero errors, then actual execute rejected its Decimal construction. Two new rows with the same code were both CREATE without errors; schema has company/code uniqueness (no real constraint failure was run). An invalid opening amount threw the whole preview instead of returning its row error."
+    }
+  ],
+  "owner_decisions": [
+    {
+      "id": "A116-D01",
+      "subject": "Optional Item Library scope",
+      "status": "NOT DECIDED",
+      "notes": "The owner selected Import Items in Utilities, but has not specified a real item catalog/source/license. Current source is file-import oriented. Do not invent a 1-lakh-item library or copy a security guarantee merely because the reference advertises it."
+    }
+  ],
+  "additional_source_observations": [
+    "The generic import form supports Customers, Vendors, Items, Projects and opening balances. Extra CSV support is not treated as a defect solely because the reference names Excel.",
+    "Uncompressed workbook/row-count bounds and large-file resource behavior were not stress tested; this checkpoint makes no measured capacity/denial-of-service claim.",
+    "Inventory/item feature-gate consistency across direct import entry points still needs policy review; related A113-F04 is not silently marked resolved."
+  ],
+  "verification": {
+    "date": "2026-11-04",
+    "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "combined_passed": 33,
+    "combined_failed": 0,
+    "files": 5,
+    "test_report": "docs/a115/focused-test-evidence.json",
+    "scope": "15 audit probes call actual import parser/preview/save/execute services or actual page SSR with mocked database, posting and transaction boundaries. 18 existing parser/menu/native-boundary checks also passed. No actual user file, real import, real ledger posting, live HTTP server or physical device execution. Serialized mock transactions do not certify a real database race."
+  },
+  "implementation_changes": "NONE \u2014 findings only; reference entry recorded without inventing unavailable catalog content.",
+  "remaining_reference": "Tap Microsoft Excel on the supplied reference Import Items screen and show the screen that opens. No real import needs to be confirmed.",
+  "next_page": {
+    "id": "A117",
+    "page_name": "Account utilities / Data management",
+    "route": "/workspace/account/utilities",
+    "status": "NOT STARTED \u2014 no numbering skip; finish the A116 reference comparison first"
+  }
+}

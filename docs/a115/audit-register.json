@@ -1,0 +1,110 @@
+{
+  "page_id": "A115",
+  "page_name": "Import preview / job detail",
+  "route": "/workspace/account/utilities/import/[id]",
+  "inventory_label": "workspace /account /utilities /import /[id]",
+  "audit_status": "AUDIT COMPLETE \u2014 owner-approved functional baseline and source/synthetic scope",
+  "reference_status": "Owner explicitly waived a reference for A115: \"115 no refrence do as u find suitable\". No additional A115 reference is required. This supersedes the previous A114 next-page reference gate.",
+  "owner_approved_design_basis": {
+    "flow": [
+      "Upload",
+      "Validate",
+      "Readable preview",
+      "Explicit confirmation",
+      "Result"
+    ],
+    "criteria": [
+      "Show filename, import type and row counts by planned create/update/skip/error action.",
+      "Show parsed business values and readable resolved targets; explain planned changes before confirmation.",
+      "Surface row errors and a way to correct/re-upload without silently reusing an older plan.",
+      "Keep create-only versus update-existing intent explicit and consistent across Web/native.",
+      "Bind confirmation to the exact validated preview/intent, recheck current company/branch permissions and reference state, and execute once.",
+      "Show actual committed created/updated/skipped results and safe failure/loading states. Opening-balance groups require explicit consistent accounting context."
+    ],
+    "implementation_authorization": "This turn continues the numbered audit and establishes the expected A115 behavior. It does not execute an import or deploy a redesign."
+  },
+  "findings": [
+    {
+      "finding_id": "A115-F01",
+      "severity": "High",
+      "classification": "Concurrent confirmation can repeat creates",
+      "current_behavior": "Execution reads READY metadata before the transaction and updates PROCESSING by ID without an atomic ready-state claim/recheck. Two calls can both retain the earlier READY snapshot and repeat non-financial master creates even when their transaction bodies run sequentially.",
+      "required_correction": "Atomically claim/recheck the job under a lock or conditional state transition inside the transaction, bind the immutable plan and preserve replay-safe completed outcomes. Test real overlapping requests, including creates without unique codes/phones.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual execute helper called twice against two READY snapshots with serialized mocked transaction bodies invoked customer.create twice and returned two non-idempotent results. Real PostgreSQL concurrency was not executed. Existing opening-journal idempotency is not asserted broken."
+    },
+    {
+      "finding_id": "A115-F02",
+      "severity": "High",
+      "classification": "Persisted preview execution lacks current branch/reference revalidation",
+      "current_behavior": "Job lookup and target updates are company-scoped, but execution trusts persisted resolved IDs/branch IDs without checking the confirming actor's current selected branches or revalidating active units/categories/targets. Mobile detail also returns company-scoped job metadata without branch filtering.",
+      "required_correction": "Reauthorize the whole stored plan for the current actor, including source/target branch eligibility, active references and changed targets. Keep intended shared-company review access explicit; creator-only access is not assumed. Add negative branch, role-change and stale-reference tests.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual execute helper with a SELECTED_BRANCHES actor restricted to branch-a invoked a mocked customer.create for persisted branch-b. Its job filter contained only id/companyId. No real unauthorized branch write or production disclosure was performed."
+    },
+    {
+      "finding_id": "A115-F03",
+      "severity": "High",
+      "classification": "File-only job identity can retain a different update plan",
+      "current_behavior": "Preview storage keys only company/type/fileHash and uses update:{}. Re-uploading identical bytes with updateExisting false after a prior true preview returns the old job while mobile returns the newly computed preview alongside it. Confirmation can execute the persisted UPDATE plan despite the latest displayed SKIP plan.",
+      "required_correction": "Version/bind preview identity to explicit intent and relevant validation context. Return the authoritative stored plan on every platform. Preserve completed import history rather than overwriting it blindly; ensure a changed-intent preview cannot execute an older plan.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual parser/preview/save/execute probes produced UPDATE then SKIP for the same bytes; the emulated upsert retained UPDATE and actual execute invoked a mocked product update. No real product was changed."
+    },
+    {
+      "finding_id": "A115-F04",
+      "severity": "High",
+      "classification": "Opening-balance rows can lose their accounting context",
+      "current_behavior": "Preview validates individual row dates/financial years/branches and only checks an overall debit/credit total. Execution posts all rows in one journal using the first row's year, branch and effective date. Rows for other contexts lose their specified context.",
+      "required_correction": "Require a uniform journal context per opening-balance job or explicitly partition independently balanced and authorized groups. Revalidate every group at confirmation; show each context in the preview. Do not move entries across periods or branches.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual preview accepted a balanced two-row fixture for branch-a/FY-A and branch-b/FY-B. Actual execute constructed one mocked posting call with both lines under branch-a/FY-A. postJournalInTx was mocked; no real journal was posted."
+    },
+    {
+      "finding_id": "A115-F05",
+      "severity": "Medium",
+      "classification": "Confirmation lacks a readable change preview and result summary",
+      "current_behavior": "Web preview renders row number, action and messages, omitting row business values and resolved targets. Native renders raw JSON instead of a typed business preview. Web result state shows status/valid counts rather than committed create/update/skip counts. Confirmation visibility is based mainly on invalidCount/status rather than explicit current capabilities.",
+      "required_correction": "Implement the owner-approved readable preview criteria, including planned values/target context and suitable before/after details for updates, explicit authorized confirmation and actual result counts. Provide safe retry/correction, pending and error states.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual Web SSR showed Row 2/UPDATE but omitted synthetic item name/code/target. Native JsonList preview falls back to item.toString() by source review; physical-device readability and accessibility were not tested."
+    },
+    {
+      "finding_id": "A115-F06",
+      "severity": "Medium",
+      "classification": "Update counters ignore affected row counts",
+      "current_behavior": "Customer/vendor/product updateMany calls are followed by updated++ regardless of the returned count. A disappeared or unmatched target can yield COMPLETED and updated:1 despite zero rows being changed.",
+      "required_correction": "Use actual affected counts and treat stale/missing targets as an explicit conflict/skip according to the approved plan. Never report a successful update when no row was affected; keep transaction/job outcomes consistent.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual execute helper with mocked product.updateMany count:0 returned status COMPLETED, updated:1."
+    }
+  ],
+  "verified_existing_controls": [
+    "Master preview parsing is read-only: the synthetic valid-item preview invoked no master create/update or job-save operation.",
+    "Company-scoped missing-job denial prevented execution.",
+    "An already-COMPLETED sequential replay returned idempotent:true without master writes. This does not establish concurrent safety.",
+    "Persisted blocking row errors were rejected before master writes.",
+    "Opening-balance execution rejected a non-admin and did not invoke the posting service."
+  ],
+  "related_findings": [
+    "A116-F04 covers shallow numeric/intra-file validation that affects whether previews can be trusted.",
+    "A113-F03 covers current export files missing required import columns."
+  ],
+  "verification": {
+    "date": "2026-11-04",
+    "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "combined_passed": 33,
+    "combined_failed": 0,
+    "files": 5,
+    "audit_probes": 15,
+    "test_report": "docs/a115/focused-test-evidence.json",
+    "scope": "15 audit probes call actual import parser/preview/save/execute services or actual page SSR with mocked database, posting and transaction boundaries. 18 existing parser/menu/native-boundary checks also passed. No actual user file, real import, real ledger posting, live HTTP server or physical device execution. Serialized mock transactions do not certify a real database race."
+  },
+  "implementation_changes": "NONE \u2014 audit findings and chosen expected design only; no imports or application fixes were run.",
+  "next_page": {
+    "id": "A116",
+    "page_name": "Import data entry",
+    "route": "/workspace/account/utilities/import",
+    "status": "Source reviewed; Microsoft Excel reference subflow still pending"
+  }
+}

@@ -1,0 +1,9 @@
+A115_CONFIRM_REPLAY {"confirmations":2,"creates":2,"serializedMockTransactions":true,"realDatabaseRace":false}
+A115_BRANCH_RECHECK {"actorBranch":"branch-a","persistedRowBranch":"branch-b","mockedCreateInvoked":true,"productionWrite":false}
+A115_PREVIEW_IDENTITY {"latestDisplayedPlan":"SKIP","persistedPlan":"UPDATE","sameFileHash":true,"mockedUpdateInvoked":true}
+A115_OPENING_CONTEXT {"rows":2,"valid":true,"inputBranches":["branch-a","branch-b"],"inputYears":["fy-a","fy-b"],"singlePostedBranch":"branch-a","singlePostedYear":"fy-a","realJournalPosted":false}
+A115_FALSE_UPDATE_COUNT {"affectedRows":0,"reportedUpdated":1,"status":"COMPLETED"}
+A116_TEMPLATE {"selectedType":"ITEMS","templateType":"CUSTOMERS"}
+A116_NUMERIC_VALIDATION {"previewInvalidCount":0,"executeRejected":true,"realDatabaseWrite":false}
+A116_FILE_DUPLICATES {"sameCodeRows":2,"previewErrors":0,"plannedCreates":2}
+A116_OPENING_DECIMAL {"invalidCellCausesWholePreviewException":true,"rowErrorPreviewReturned":false,"realJournalPosted":false}
