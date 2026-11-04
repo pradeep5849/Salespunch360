@@ -14,8 +14,9 @@ const callLabel=(s:string)=>s.toLowerCase().split("_").map(x=>x[0]?.toUpperCase(
 const callDuration=(seconds:number)=>{const minutes=Math.floor(seconds/60),remainder=seconds%60;return minutes?`${minutes}m ${remainder}s`:`${remainder}s`;};
 export default async function LeadDetail({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{updated?:string}>}){
  const{id}=await params,q=await searchParams;
- const[lead,user,followUps,calls,callHistory]=await Promise.all([getLead(id),requirePermission("SALES_LEADS"),listLeadFollowUpTasks(id),leadCallCount(id),getLeadCallHistory(id)]);
+ const lead=await getLead(id);
  if(!lead)notFound();
+ const[user,followUps,calls,callHistory]=await Promise.all([requirePermission("SALES_LEADS"),listLeadFollowUpTasks(id),leadCallCount(id),getLeadCallHistory(id)]);
  const project=lead.stage==="WON"&&user.companyId?await ensureWonLeadProjectForActor({id:user.id,companyId:user.companyId},lead.id):null;
  const canManage=user.salesRole==="PRIMARY_ADMIN"||user.salesRole==="ADMIN"||lead.assignedUserId===user.id;
  return <main className="leads-shell"><section className="leads-content">
