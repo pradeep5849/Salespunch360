@@ -85,4 +85,6 @@ export async function deleteLeadAction(f: FormData): Promise<void> {
   await permanentlyDeleteLead(String(f.get("leadId")));
   revalidatePath("/workspace/leads");
   revalidatePath("/workspace");
+  const { redirect } = await import("next/navigation");
+  redirect("/workspace/leads?deleted=1");
 }
