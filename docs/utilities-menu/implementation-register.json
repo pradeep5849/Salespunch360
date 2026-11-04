@@ -1,14 +1,12 @@
 {
-  "scope": "Owner selected reference Utilities options1,3,5,6,7,8,9,10; excludes2Calculator and4MyBillBook",
+  "scope": "Owner final selection1,3,6,7,8,9; removed Calculator, MyBillBook, Bulk Update Tax Slab and Messages",
   "selected": [
     "Verify my data",
     "Import Items",
-    "Bulk Update Tax Slab",
     "Export Items",
     "Import Parties",
     "Recycle Bin",
-    "Close Financial Year",
-    "Messages"
+    "Close Financial Year"
   ],
   "working_existing_destinations": [
     "Verify my data",
@@ -18,10 +16,7 @@
     "Recycle Bin",
     "Close Financial Year"
   ],
-  "pending_disabled": [
-    "Bulk Update Tax Slab",
-    "Messages"
-  ],
+  "pending_disabled": [],
   "implementation": [
     "Web native details dropdown; Android independent expandable Utilities state",
     "Shared server permission/module filtered navigation including disabled flag",
@@ -36,11 +31,13 @@
     "eslint": "PASS on changed TS/TSX after final source edits",
     "android": "GitHub targeted-validation Android testReleaseUnitTest and lintRelease PASS;2newserialization test cases included; physical device not executed",
     "browser": "No actual viewport/physical device runtime certified",
-    "ci": "PASS Web + Android + isolated migration on code head38bf8eb8c35511deabeb9c40b54c83594807d117; https://github.com/pradeep5849/Salespunch360/actions/runs/41621747934",
     "tested_code_head": "38bf8eb8c35511deabeb9c40b54c83594807d117",
-    "production_build": "PASS266/266static pages locally with Node22 and fixture-only environment; no productionDBconnection. Initial fixture run rejected SMTP hostname; corrected fixture rerun passed unchanged source."
+    "production_build": "PASS266/266static pages locally with Node22 and fixture-only environment; no productionDBconnection. Initial fixture run rejected SMTP hostname; corrected fixture rerun passed unchanged source.",
+    "ci_previous_scope": "PASS Web + Android + isolated migration on code head38bf8eb8c35511deabeb9c40b54c83594807d117; https://github.com/pradeep5849/Salespunch360/actions/runs/41621747934",
+    "current_head_note": "Focused validation rerun for six-option scope; earlier full CI belongs to previous code head, not this update."
   },
   "audit_scope_note": "Menu change does not resolve A111 raw-metadata/security findings, implement Bulk Tax or Messages, or mark A112 audited. Previous audits preserved.",
   "production": "No merge/deploy/database change authorized or executed",
-  "remaining": "Bulk Update Tax Slab and Messages are intentionally disabled pending reference/workflow implementation. Need owner screenshots to define these options. Native physical/browser viewport verification not executed; no merge/deploy."
+  "remaining": "No selected utility is pending implementation. Browser/physical device runtime remains unverified; no merge/deploy.",
+  "owner_scope_update": "2026-11-04: remove Bulk Update Tax Slab and Messages entirely, not pending placeholders."
 }

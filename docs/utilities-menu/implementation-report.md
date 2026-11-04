@@ -1,3 +1,5 @@
+> Current scope — 4 November 2026: Owner removed Bulk Update Tax Slab and Messages. Utilities now contains only Verify my data, Import Items, Export Items, Import Parties, Recycle Bin and Close Financial Year. No pending placeholders. Earlier eight-option scope and CI results below are historical.
+
 # Selected Utilities reference menu
 
 Owner selected1,3,5,6,7,8,9,10. Implemented expandable Utilities menu on Web/native with these exact labels/order; Calculator/MyBillBook excluded. Existing6tools linked with permission/module filtering; Items import preselection and item-only export work across clients. Backup/Restore remains separate. Bulk Update Tax Slab and Messages are disabled pending implementation, not fake functioning links. Owner reference screens needed for their workflows.

@@ -3,6 +3,7 @@
   "numPassedTests": 34,
   "numFailedTests": 0,
   "numPendingTests": 0,
+  "scope": "Six final Utilities options; 4 November 2026",
   "files": [
     {
       "name": "src/components/account/account-navigation-regression.test.ts",
