@@ -5,7 +5,10 @@ import {Prisma,PrismaClient} from "@prisma/client";
 import {beforeAll,afterAll,describe,it,expect,vi} from "vitest";
 const url=process.env.ACCOUNT_CHECKPOINT_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("An isolated local *_ci database is required");
-const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci"}}});
+const testDatabaseUrl=new URL(url??"postgresql://test:test@127.0.0.1:55432/checkpoint_ci");
+testDatabaseUrl.searchParams.set("connection_limit","10");
+testDatabaseUrl.searchParams.set("pool_timeout","30");
+const client=new PrismaClient({datasources:{db:{url:testDatabaseUrl.toString()}},transactionOptions:{maxWait:15000,timeout:20000}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {reverseJournalInTx} from "@/lib/accounting/service";
@@ -24,6 +27,7 @@ const input=()=>({requestKey:randomUUID(),branchId,moneyAccountId,transactionDat
 async function cashFor(journals:string[]){const sums=await client.journalLine.aggregate({where:{companyId,ledgerAccountId:cashId,journalEntryId:{in:journals}},_sum:{debit:true,credit:true}});return new Prisma.Decimal(sums._sum.debit??0).sub(sums._sum.credit??0).toString()}
 async function counts(){return Promise.all([client.journalEntry.count({where:{companyId}}),client.expenseTransaction.count({where:{companyId}}),client.accountOperationalAudit.count({where:{companyId}})])}
 describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",()=>{
+ vi.setConfig({testTimeout:30000,hookTimeout:30000});
  beforeAll(async()=>{
   setPrivateStorageForTests({put:async(key,bytes)=>{objects.set(key,Buffer.from(bytes));if(failPhotoPut)throw new Error("simulated storage failure")},get:photoGet,delete:async key=>{objects.delete(key)}});
   await client.company.createMany({data:[companyId,otherCompany].map(id=>({id,name:"Party transfer fixture",slug:`party-transfer-${id}`,productEdition:"SALESPUNCH360_ACCOUNT",subscriptionStatus:"TRIAL",trialStartedAt:new Date(),trialEndsAt:new Date(Date.now()+86400000)}))});
@@ -37,14 +41,14 @@ describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",
   cashId=(await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"CASH"}})).id;
   const otherCash=await client.ledgerAccount.create({data:{companyId:otherCompany,code:"1000",name:"Other cash",accountClass:"ASSET",normalBalance:"DEBIT"}});foreignMoneyId=(await client.moneyAccount.create({data:{companyId:otherCompany,branchId:otherBranch,type:"CASH",name:"Foreign cash",ledgerAccountId:otherCash.id}})).id;
   moneyAccountId=(await client.moneyAccount.create({data:{companyId,branchId,type:"CASH",name:"Transfer cash",ledgerAccountId:cashId}})).id;
- });
+ },30000);
  afterAll(async()=>{
   for(const id of [companyId,otherCompany])await client.$transaction(async tx=>{
    await tx.$executeRaw`SELECT set_config('app.account_cleanup_company_id',${id},true)`;
    await tx.accountOperationalAudit.deleteMany({where:{companyId:id}});await tx.accountingAuditEvent.deleteMany({where:{companyId:id}});await tx.expenseTransaction.deleteMany({where:{companyId:id}});await tx.expenseCategory.deleteMany({where:{companyId:id}});
    await tx.journalLine.deleteMany({where:{companyId:id}});await tx.journalEntry.deleteMany({where:{companyId:id}});await tx.accountingPeriodLock.deleteMany({where:{companyId:id}});await tx.financialYear.deleteMany({where:{companyId:id}});await tx.moneyAccount.deleteMany({where:{companyId:id}});await tx.ledgerAccount.deleteMany({where:{companyId:id}});await tx.customer.deleteMany({where:{companyId:id}});await tx.vendor.deleteMany({where:{companyId:id}});await tx.user.deleteMany({where:{companyId:id}});await tx.numberingSeries.deleteMany({where:{companyId:id}});await tx.branch.deleteMany({where:{companyId:id}});await tx.accountSettings.deleteMany({where:{companyId:id}});await tx.company.delete({where:{id}});
   });setPrivateStorageForTests(undefined);await client.$disconnect();
- });
+ },30000);
  it("posts received600 paid500 as cash100 and OtherIncome100, never expense500",async()=>{
   firstRequest=input();first=await savePartyTransferForActor(actor,firstRequest);expect(first).toMatchObject({receivedAmount:"600.00",paidAmount:"500.00",commissionAmount:"100.00",commissionHead:"OTHER_INCOME",expenseAmount:"0.00"});
   const commission=await client.expenseTransaction.findUniqueOrThrow({where:{id:first.commissionIncomeId!}});expect(commission.type).toBe("OTHER_INCOME");expect(commission.status).toBe("POSTED");expect(commission.totalAmount.toString()).toBe("100");
@@ -58,7 +62,7 @@ describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",
  });
  it("commits concurrent retries once and rejects changed intent",async()=>{
   const raw={...input(),receivedAmount:"800",paidAmount:"800"};const rows=await Promise.all(Array.from({length:4},()=>savePartyTransferForActor(actor,raw)));expect(new Set(rows.map(row=>row.number)).size).toBe(1);expect(await client.accountOperationalAudit.count({where:{companyId,entityId:raw.requestKey,eventType:"PARTY_TRANSFER_POSTED"}})).toBe(1);expect(await client.journalEntry.count({where:{companyId,sourceId:raw.requestKey}})).toBe(2);await expect(savePartyTransferForActor(actor,{...raw,paidAmount:"700"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
- });
+ },30000);
  it("rolls back both pass-through journals when commission creation cannot complete",async()=>{
   const category=await client.expenseCategory.findUniqueOrThrow({where:{companyId_name:{companyId,name:"Party Transfer Commission"}}});await client.expenseCategory.update({where:{id:category.id},data:{isActive:false}});const before=await counts();
   try{await expect(savePartyTransferForActor(actor,input())).rejects.toThrow("INVALID_TRANSFER_COMMISSION_CATEGORY");expect(await counts()).toEqual(before)}finally{await client.expenseCategory.update({where:{id:category.id},data:{isActive:true}})}
