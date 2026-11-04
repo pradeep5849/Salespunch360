@@ -3,8 +3,8 @@
   "page_name": "Import data / Import Items entry",
   "route": "/workspace/account/utilities/import",
   "inventory_label": "Upload \u2192 validate \u2192 preview \u2192 confirm. No rows are written during preview.",
-  "audit_status": "SOURCE AUDIT COMPLETE \u2014 Microsoft Excel reference subflow pending",
-  "reference_status": "Owner supplied Import Items entry screenshot with Item Library and Microsoft Excel. A115 reference is waived, but no blanket A116 waiver or Microsoft Excel sub-screen was supplied.",
+  "audit_status": "AUDIT COMPLETE \u2014 supplied entry/Excel references and source/synthetic scope; no implementation",
+  "reference_status": "Owner supplied both Import Items entry and Upload Excel File instructions screens. A115 reference was explicitly waived. Exact downloaded sample workbook and actual receiving-app behavior were not supplied or verified.",
   "reference_observations": {
     "title": "Import Items",
     "choices": [
@@ -22,7 +22,29 @@
       "Security/encryption marketing banner",
       "Contact Support link"
     ],
-    "limits": "The reference screen does not establish template columns, actual catalog content/licensing, upload size, validation layout or update behavior. Marketing/security claims are not adopted as verified SalesPunch360 guarantees."
+    "limits": "The supplied screens establish the entry choices, Excel instructions, sample link/illustration and advertised xlsx/xls extensions. They do not establish actual catalog content/licensing, upload size, exact sample workbook headers or accounting/stock execution semantics. Security marketing is not a verified SalesPunch360 guarantee.",
+    "excel_upload_screen": {
+      "title": "Upload Excel File",
+      "steps": [
+        "Create an Excel file in the shown format; Download Sample link",
+        "Upload an xlsx or xls file using Upload File",
+        "Verify items and complete import"
+      ],
+      "visible_sample_columns": [
+        "Item Code",
+        "Item Name",
+        "HSN",
+        "Sale Price",
+        "Purchase Price",
+        "Opening Stock Quantity",
+        "Minimum Stock Quantity",
+        "Item Location",
+        "Tax Rate",
+        "Tax Inclusive"
+      ],
+      "sample_limits": "These are headings visible in the screenshot illustration. The underlying sample workbook, exact stored column text and actual stock/tax import behavior were not tested.",
+      "action": "Upload File"
+    }
   },
   "findings": [
     {
@@ -60,6 +82,15 @@
       "required_correction": "Use shared typed per-row validation for every writable field, finite/range/date rules and batch identity checks before READY. Aggregate only parsed valid amounts and retain actionable row errors; reject duplicate/conflicting file rows without relying on database failures.",
       "implementation_status": "NOT STARTED",
       "evidence": "Actual previews accepted a not-money/not-tax item as CREATE with zero errors, then actual execute rejected its Decimal construction. Two new rows with the same code were both CREATE without errors; schema has company/code uniqueness (no real constraint failure was run). An invalid opening amount threw the whole preview instead of returning its row error."
+    },
+    {
+      "finding_id": "A116-F05",
+      "severity": "Medium",
+      "classification": "Reference XLS support is absent from the current parser",
+      "current_behavior": "The reference explicitly advertises xlsx or xls upload. Current file controls accept CSV/XLSX, and parseImportFile handles only csv/xlsx; an xls filename falls into UNSUPPORTED_IMPORT_FORMAT.",
+      "required_correction": "Choose and clearly advertise the supported spreadsheet formats. If reference-format parity is required, add a bounded validated XLS conversion/parser with equivalent authorization and validation; otherwise explicitly disclose XLS as unsupported.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "New owner Upload Excel File screenshot and direct source inspection of imports.ts parseImportFile plus Web/native file filters. No legacy XLS file was uploaded or parsed during this update."
     }
   ],
   "owner_decisions": [
@@ -73,7 +104,8 @@
   "additional_source_observations": [
     "The generic import form supports Customers, Vendors, Items, Projects and opening balances. Extra CSV support is not treated as a defect solely because the reference names Excel.",
     "Uncompressed workbook/row-count bounds and large-file resource behavior were not stress tested; this checkpoint makes no measured capacity/denial-of-service claim.",
-    "Inventory/item feature-gate consistency across direct import entry points still needs policy review; related A113-F04 is not silently marked resolved."
+    "Inventory/item feature-gate consistency across direct import entry points still needs policy review; related A113-F04 is not silently marked resolved.",
+    "The new sample illustration contains opening/minimum stock, item location and tax-inclusive fields. Current Items preview requires name/unit/category and its executor does not consume corresponding opening/minimum/location/tax-inclusive columns. Treat exact workbook mapping and stock/accounting effects as requirements to establish before implementation; do not silently import opening stock without a validated financial/inventory workflow."
   ],
   "verification": {
     "date": "2026-11-04",
@@ -85,11 +117,16 @@
     "scope": "15 audit probes call actual import parser/preview/save/execute services or actual page SSR with mocked database, posting and transaction boundaries. 18 existing parser/menu/native-boundary checks also passed. No actual user file, real import, real ledger posting, live HTTP server or physical device execution. Serialized mock transactions do not certify a real database race."
   },
   "implementation_changes": "NONE \u2014 findings only; reference entry recorded without inventing unavailable catalog content.",
-  "remaining_reference": "Tap Microsoft Excel on the supplied reference Import Items screen and show the screen that opens. No real import needs to be confirmed.",
+  "remaining_reference": "No additional A116 entry/instruction screenshot is required for this checkpoint. Exact downloaded workbook compatibility and live upload/device behavior remain unverified.",
   "next_page": {
     "id": "A117",
     "page_name": "Account utilities / Data management",
     "route": "/workspace/account/utilities",
-    "status": "NOT STARTED \u2014 no numbering skip; finish the A116 reference comparison first"
+    "status": "NOT STARTED \u2014 A116 entry/instruction reference comparison recorded; A117 is next."
+  },
+  "reference_update": {
+    "date": "2026-11-04",
+    "scope": "Screenshot/source review only; no new tests run or prior test counts increased.",
+    "owner_scope": "Audit only. Implementation requires a separate explicit request."
   }
 }

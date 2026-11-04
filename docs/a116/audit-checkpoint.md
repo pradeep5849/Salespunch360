@@ -14,3 +14,11 @@ The same **33-check combined run** supports A115/A116; see `../a115/focused-test
 Item Library is an optional scope decision, not a license to fabricate the advertised catalog size. The reference security banner is not treated as a verified claim about SalesPunch360. CSV support alongside XLSX is not considered a defect merely because the reference says Microsoft Excel.
 
 Source-only review is complete at `887402cf9868ca3df800513dd8e776c0b1874ff9`; reference Excel-step comparison is still pending. A117 Account utilities / Data management follows after that gate; numbering is preserved.
+
+## Reference update and audit-only scope
+
+The owner supplied the Microsoft Excel instruction screen: Download Sample, upload `.xlsx` or `.xls`, verify items, then complete import. A116-F05 is appended for the current parser's missing `.xls` support. The screenshot sample also shows stock quantities, item location and tax-inclusive fields; exact workbook mapping and financial/inventory effects remain unverified. No new tests were run or added to the earlier 33-check count, and no application code was changed.
+
+The entry/instructions reference gate is now satisfied at screenshot/source-review level. This supersedes the earlier pending-reference wording above; no actual sample workbook or live upload was tested. A117 is next.
+
+The owner clarified that current work is **audit only**. Findings remain open. Implementation PRs, merges and deployments must not be part of continued audit work without a separate explicit request. The earlier PR #172 exception is explained in `../audit-scope.json`; no new implementation PR or release is being made by this update.

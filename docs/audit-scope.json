@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-04",
+  "active_scope": "AUDIT_ONLY",
+  "allowed_work": [
+    "Inspect source and supplied reference images",
+    "Run read-only or synthetic/mocked audit checks",
+    "Record findings, evidence and design decisions in audit documents"
+  ],
+  "implementation_boundary": "Do not fix application code, create implementation PRs, merge implementation branches or deploy as part of the audit. Wait for a separate explicit implementation request.",
+  "owner_clarification": "We adiutimg only right not implimenting? But why made pr 72 can i know",
+  "historical_exception": {
+    "pr_number": 172,
+    "url": "https://github.com/pradeep5849/Salespunch360/pull/172",
+    "purpose": "Utilities navigation, separate Backup/Restore menu, and Google Drive-only backup implementation",
+    "state": "MERGED",
+    "merge_sha": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "explanation": "Earlier feature-change requests were interpreted as implementation instructions, followed by an explicit merge/release question and the owner reply Ok do. The assistant acknowledges this exception should have been kept clearly separate from the numbered audit.",
+    "hosting_deployment": "UNVERIFIED; hosting access and scheduled-job setup were paused by the owner."
+  }
+}
