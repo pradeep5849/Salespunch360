@@ -484,7 +484,7 @@ export async function createAccountBackupForActor(actor: {
   id: string;
   companyId: string;
   accountRole: string | null;
-},archive=false,includePrivateFiles=false) {
+},archive=false,includePrivateFiles=false,deliveryProvider?:"GOOGLE_DRIVE") {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   const companyId = actor.companyId!;
   // Repeatable read keeps invoices, payments and ledger balances from different moments out of one bundle.
@@ -665,6 +665,7 @@ export async function createAccountBackupForActor(actor: {
   const privateFiles=includePrivateFiles?await collectBackupPrivateFiles(companyId,company,privateStorage()):undefined;
   if(privateFiles)verifyBackupPrivateFiles(companyId,company,privateFiles);
   const manifest = {
+    ...(deliveryProvider?{provider:deliveryProvider}:{}),
     format: "SalesPunch360 Account Backup",
     formatVersion: includePrivateFiles?3:2,
     generatedAt: new Date().toISOString(),
@@ -704,6 +705,7 @@ export async function createAccountBackupForActor(actor: {
     });
   }catch(error){if(archive)await privateStorage().delete(objectKey).catch(()=>undefined);throw error}
   return {
+    id: record.id,
     fileName: `salespunch360-${company.slug}-${record.id}.json`,
     bytes,
     manifest,

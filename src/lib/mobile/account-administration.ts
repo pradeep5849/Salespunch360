@@ -1,3 +1,4 @@
+import {googleBackupStatus} from "@/lib/account/google-drive-backup";
 import {ACCOUNT_NOTIFICATION_TABS,accountNotificationCategory} from "@/lib/account/notification-tabs";
 import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
 import { updateQuickItemSettingForActor } from "@/lib/account/item-settings-quick";
@@ -87,6 +88,7 @@ export async function mobileSettings(u: MobileAppPrincipal) {
       db.moneyAccount.findMany({where:{companyId:a.companyId,type:"BANK",isActive:true,...(a.branchAccessScope==="SELECTED_BRANCHES"?{OR:[{branchId:null},{branchId:{in:a.branchIds??[]}}]}:{})},select:{id:true,name:true},orderBy:{name:"asc"}}),
     ]);
   return {
+    googleBackup:a.accountRole==="ACCOUNT_ADMIN"?await googleBackupStatus(a.companyId):undefined,
     invoiceBanks,
     settings,
     fields,

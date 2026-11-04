@@ -185,7 +185,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
-            utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding,initialImportType=queryValue(state.selectedPath,"type")?:"CUSTOMERS",initialExportType=queryValue(state.selectedPath,"type"))
+            utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding,initialImportType=queryValue(state.selectedPath,"type")?:"CUSTOMERS",initialExportType=queryValue(state.selectedPath,"type"),backupMode=queryValue(state.selectedPath,"mode"))
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)

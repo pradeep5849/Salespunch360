@@ -274,7 +274,12 @@ const groups: AccountNavGroup[] = [
   {
     label: "Backup/Restore",
     expandable: true,
-    items: [{ label: "Backup & Recovery", href: "/workspace/account/utilities/backup", permission: "ACCOUNT_SETTINGS", roles: ["ACCOUNT_ADMIN"] }],
+    items: [
+      { label: "Auto Backup", href: "/workspace/account/settings/backup", permission: "ACCOUNT_SETTINGS", roles: ["ACCOUNT_ADMIN"] },
+      { label: "Backup to phone", href: "/workspace/account/utilities/backup?mode=phone", permission: "ACCOUNT_SETTINGS", roles: ["ACCOUNT_ADMIN"] },
+      { label: "Backup to e-mail", href: "/workspace/account/utilities/backup?mode=email", permission: "ACCOUNT_SETTINGS", roles: ["ACCOUNT_ADMIN"] },
+      { label: "Restore backup", href: "/workspace/account/utilities/backup?mode=restore", permission: "ACCOUNT_SETTINGS", roles: ["ACCOUNT_ADMIN"] },
+    ],
   },
   {
     label: "Utilities",

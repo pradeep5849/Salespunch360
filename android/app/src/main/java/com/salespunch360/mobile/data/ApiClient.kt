@@ -33,7 +33,16 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  private suspend fun call(path:String,method:String="GET",body:String?=null,auth:Boolean=true)=withContext(Dispatchers.IO){val requestToken=if(auth)(pinnedToken?:session.token()) else null;val builder=Request.Builder().url(BuildConfig.API_BASE_URL+path).header("Accept","application/json");requestToken?.let{builder.header("Authorization","Bearer $it")};when(method){"POST"->builder.post((body?:"{}").toRequestBody(media));"PATCH"->builder.patch((body?:"{}").toRequestBody(media));"DELETE"->builder.delete();"PUT"->builder.put((body?:"{}").toRequestBody(media))};http.newCall(builder.build()).awaitResponse().use{val response=it.body?.string()?:"{}";if(!it.isSuccessful){val code=runCatching{json.parseToJsonElement(response).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull();if(auth){if(it.code==401)session.invalidateIfCurrent(requestToken);if(it.code==403&&code=="FORBIDDEN"&&session.token()==requestToken)session.authorizationChanged()};val distance=runCatching{json.parseToJsonElement(response).jsonObject["distanceMeters"]?.jsonPrimitive?.content?.toDouble()}.getOrNull();throw ApiException(it.code,code,distance,if(it.code in listOf(400,409))runCatching{json.parseToJsonElement(response).jsonObject["message"]?.jsonPrimitive?.contentOrNull?.take(300)}.getOrNull() else null)};response}}
  private fun decodeBootstrap(raw:String,path:String=""):Bootstrap{val root=json.parseToJsonElement(raw).jsonObject;val payload=if(path.isEmpty())root else root[path]!!.jsonObject;return json.decodeFromJsonElement(Bootstrap.serializer(),payload)}
  private fun enc(value:String)=java.net.URLEncoder.encode(value,"UTF-8")
- private suspend fun download(path:String)=withContext(Dispatchers.IO){val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.build();http.newCall(request).awaitResponse().use{if(!it.isSuccessful){if(it.code==401)session.invalidateIfCurrent(token);throw ApiException(it.code,"DOWNLOAD_FAILED")};it.body?.bytes()?:throw IOException("Empty download")}}
+ private suspend fun download(path:String,verifyBackup:Boolean=false)=withContext(Dispatchers.IO){
+  val token=session.token()
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.build()
+  http.newCall(request).awaitResponse().use{
+   if(!it.isSuccessful){if(it.code==401)session.invalidateIfCurrent(token);throw ApiException(it.code,"DOWNLOAD_FAILED")}
+   val bytes=it.body?.bytes()?:throw IOException("Empty download")
+   if(verifyBackup){if(it.header("Content-Type")?.startsWith("application/json")!=true)throw IOException("The server did not return a backup file.");verifyBackupIntegrity(bytes,it.header("x-content-sha256"))}
+   bytes
+  }
+ }
  suspend fun login(identifier:String,password:String):Bootstrap{val raw=call("api/v1/mobile/auth/login","POST",json.encodeToString(LoginRequest(identifier,password)),false);val root=json.parseToJsonElement(raw).jsonObject;val bootstrap=decodeBootstrap(raw,"bootstrap");session.save(root["accessToken"]!!.jsonPrimitive.content,bootstrap.user.id);return bootstrap}
  suspend fun bootstrap()=decodeBootstrap(call("api/v1/mobile/bootstrap"))
  suspend fun accountBootstrap(branchId:String?=null,companyWide:Boolean=false):AccountBootstrap{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/bootstrap$query"))}
@@ -233,7 +242,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}")).jsonObject
  suspend fun executeAccountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}/execute","POST")).jsonObject
  suspend fun accountMasterExport(type:String,format:String)=download("api/v1/mobile/account/exports/${enc(type)}/${enc(format)}")
- suspend fun accountBackup(includePrivateFiles:Boolean=false)=download("api/v1/mobile/account/backup"+if(includePrivateFiles)"?includeFiles=true" else "")
+ suspend fun accountBackup(includePrivateFiles:Boolean=false)=download("api/v1/mobile/account/backup"+(if(includePrivateFiles)"?includeFiles=true" else ""),true)
  suspend fun restoreAccountRecycle(id:String)=call("api/v1/mobile/account/recycle-bin/${enc(id)}/restore","POST")
  private suspend fun multipart(path:String,field:String,name:String,mime:String,bytes:ByteArray,fields:Map<String,String>)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{fields.forEach{(k,v)->addFormDataPart(k,v)}}.addFormDataPart(field,name,bytes.toRequestBody(mime.toMediaType())).build();val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).awaitResponse().use{val raw=it.body?.string()?: "{}";if(!it.isSuccessful)throw ApiException(it.code,runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull());raw}}
  suspend fun accountUsers()=json.parseToJsonElement(call("api/v1/mobile/account/users")).jsonObject

@@ -13,7 +13,7 @@ describe("A088 bounded private-file recovery bundles",()=>{
   expect(verifyBackupPrivateFiles("a",snapshot,files)).toEqual({files:1,bytes:5});
  });
  it("rejects foreign tenant, path traversal and recursive backup archives before storage reads",async()=>{
-  for(const objectKey of ["companies/foreign/photo","companies/a/../foreign/photo","/etc/passwd","companies/a/account-backups/old.json"]){
+  for(const objectKey of ["companies/foreign/photo","companies/a/../foreign/photo","/etc/passwd","companies/a/account-backups/old.json","companies/a/backup-connections/google-drive.enc"]){
    const get=vi.fn();await expect(collectBackupPrivateFiles("a",{objectKey},{get})).rejects.toThrow();expect(get).not.toHaveBeenCalled();
   }
  });

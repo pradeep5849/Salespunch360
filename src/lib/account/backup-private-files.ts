@@ -11,7 +11,7 @@ export function backupPrivateFileKeys(companyId:string,snapshot:Record<string,un
   if(!value||typeof value!=="object"||Array.isArray(value))return;
   for(const [field,key] of Object.entries(value))if(keyFields.has(field)&&typeof key==="string"&&key){
    assertSafeObjectKey(key);
-   if(!key.startsWith(`companies/${companyId}/`)||key.startsWith(`companies/${companyId}/account-backups/`))throw new Error("BACKUP_FILE_SCOPE_INVALID");
+   if(!key.startsWith(`companies/${companyId}/`)||key.startsWith(`companies/${companyId}/account-backups/`)||key.startsWith(`companies/${companyId}/backup-connections/`))throw new Error("BACKUP_FILE_SCOPE_INVALID");
    keys.add(key);if(keys.size>MAX_FILES)throw new Error("BACKUP_FILES_TOO_LARGE");
   }
  }
