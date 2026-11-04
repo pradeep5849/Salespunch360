@@ -12,12 +12,12 @@ export async function POST(request: Request) {
     return new Response("Forbidden", { status: 403 });
   let result = "backup-failed";
   try {
-    await runGoogleDriveBackup(
+    const uploaded = await runGoogleDriveBackup(
       { ...actor, companyId: actor.companyId },
       new Date(),
       true,
     );
-    result = "uploaded";
+    result = uploaded ? "uploaded" : "in-progress";
   } catch {
     /* Never expose provider tokens or company snapshot details. */
   }

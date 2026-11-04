@@ -39,6 +39,8 @@ export default async function Page({
     unavailable:
       "Google Drive setup is unavailable. Check the server configuration.",
     uploaded: "Backup uploaded to Google Drive. File integrity verified.",
+    "in-progress":
+      "A Google Drive backup is already in progress. Check the history shortly.",
     "backup-failed":
       "Backup was not confirmed on Google Drive. Check the connection, storage and internet access, then retry.",
   };

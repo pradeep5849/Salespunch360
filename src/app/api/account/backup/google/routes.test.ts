@@ -44,6 +44,7 @@ const request = (path = "connect", origin = "https://www.salespunch360.com") =>
 beforeEach(() => {
   vi.resetAllMocks();
   m.auth.mockResolvedValue(actor);
+  m.run.mockResolvedValue(true);
   m.begin.mockReturnValue({
     url: "https://accounts.google.com/o/oauth2/v2/auth?state=nonce",
     cookie: "encrypted-state",
@@ -142,4 +143,10 @@ it("never claims an unsuccessful upload succeeded or reflects provider secrets",
   const response = await run(request("run"));
   expect(response.headers.get("location")).toContain("google=backup-failed");
   expect(response.headers.get("location")).not.toContain("provider-secret");
+});
+
+it("reports an active delivery rather than falsely confirming a second manual upload", async () => {
+  m.run.mockResolvedValue(false);
+  const response = await run(request("run"));
+  expect(response.headers.get("location")).toContain("google=in-progress");
 });

@@ -4,7 +4,7 @@
 
 The owner-selected six Utilities entries remain separate from the expandable Backup/Restore menu. Backup/Restore contains Auto Backup, Backup to phone, Backup to e-mail, and Restore backup.
 
-Automatic backups use Google Drive only. A disconnected or unconfigured company never falls back to private server archives. Existing historical server archives remain downloadable. The scheduler acquires a company advisory lock, rechecks enablement, observes the configured interval after confirmed Drive delivery, and backs off pending failed deliveries for one hour. It continues other companies after an upload failure. Explicit administrator-requested Drive backups can run independently of the auto toggle.
+Automatic backups use Google Drive only. A disconnected or unconfigured company never falls back to private server archives. Existing historical server archives remain downloadable. The scheduler acquires a short company advisory lock, rechecks enablement and creates a fifteen-minute delivery reservation. It releases the database transaction before snapshotting or uploading, observes the configured interval after confirmed Drive delivery, and backs off failed scheduled deliveries for one hour. Concurrent manual requests respect an active reservation. It continues other companies after an upload failure. Explicit administrator-requested Drive backups can run independently of the auto toggle.
 
 Google OAuth uses `drive.file`, offline consent, PKCE, a ten-minute encrypted HttpOnly/SameSite state cookie bound to the current administrator and company, and the canonical callback below. It does not create or reset SalesPunch360 login sessions. Connection initiation uses same-origin POST and a client navigation to Google, preserving the existing self-only form-action CSP. Callback codes/provider errors are not echoed into UI messages or logs.
 
@@ -40,8 +40,7 @@ Restore backup remains explicitly pending the owner's choice of new-company rest
 
 ## Validation
 
-- 77 focused tests passed before the final internal-runner additions.
-- TypeScript and full ESLint passed at that checkpoint.
-- Final build, current focused tests and Android CI results are recorded in the PR/checkpoint update.
-
-Latest local checkpoint: 79 focused tests passed across 12 files, including protected internal-runner tests. A production build passed for the Google connection/upload implementation (269 pages); the later dedicated runner route requires the final build below. No tests used production credentials or made real Google requests.
+- 84 focused tests passed across 12 files, including OAuth state/permissions, confirmed delivery, short-transaction reservation, concurrent manual exclusion, retry backoff, previous-success interval, protected runner, menu, UI state and file integrity.
+- TypeScript passed. Full ESLint passed before the reservation refinement; targeted ESLint passed for all changed source after that refinement.
+- Production build passed with all 270 pages/routes before the reservation refinement. The final refined-source build and PR CI are still being checked.
+- PR #172: https://github.com/pradeep5849/Salespunch360/pull/172. No merge or deployment performed.
