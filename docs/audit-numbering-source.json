@@ -23,6 +23,12 @@
       "id": "A113",
       "inventory_label": "Queries are rerun on the server with your Company and Branch scope.",
       "route": "/workspace/account/utilities/export"
+    },
+    {
+      "id": "A114",
+      "inventory_label": "Close only after verification. Closing preserves history and locks posting.",
+      "route": "/workspace/account/utilities/financial-year",
+      "source_title": "Financial Years"
     }
   ]
 }

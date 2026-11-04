@@ -1,0 +1,10 @@
+A113_CSV_FORMULA {"literalCell":"=1+1","neutralized":false,"spreadsheetExecuted":false}
+A113_TRUNCATION {"fixtureRows":10001,"exportedRows":10000,"stableQueryOrdering":false,"outputWarning":false}
+A113_REIMPORT {"type":"customers","result":"MISSING_COLUMNS:branch"}
+A113_REIMPORT {"type":"items","result":"MISSING_COLUMNS:unit,category"}
+A113_REIMPORT {"type":"projects","result":"MISSING_COLUMNS:customer,branch"}
+A113_ITEM_GATE {"reportsPermission":true,"inventoryConfigurationRead":false,"itemDataReturned":true}
+A112_NATIVE_STARTUP {"kind":"backup","result":"INVALID_SECTION","databaseSnapshotCalls":0}
+A112_NATIVE_STARTUP {"kind":"export","result":"INVALID_SECTION","databaseSnapshotCalls":0}
+A112_GENERATION_VS_DELIVERY {"generatedBytes":3387,"recorded":true,"storageSaved":false,"manualReminderDue":false,"consumerSaveOrSharePerformed":false}
+A112_UNSTRUCTURED_METADATA {"syntheticSensitiveValuesRetained":true,"productionSecretsQueried":false}
