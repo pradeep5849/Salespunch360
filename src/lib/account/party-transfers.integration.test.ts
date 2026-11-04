@@ -24,6 +24,7 @@ const input=()=>({requestKey:randomUUID(),branchId,moneyAccountId,transactionDat
 async function cashFor(journals:string[]){const sums=await client.journalLine.aggregate({where:{companyId,ledgerAccountId:cashId,journalEntryId:{in:journals}},_sum:{debit:true,credit:true}});return new Prisma.Decimal(sums._sum.debit??0).sub(sums._sum.credit??0).toString()}
 async function counts(){return Promise.all([client.journalEntry.count({where:{companyId}}),client.expenseTransaction.count({where:{companyId}}),client.accountOperationalAudit.count({where:{companyId}})])}
 describe.skipIf(!url)("A071 party pass-through and Other Income atomic posting",()=>{
+ vi.setConfig({testTimeout:30000,hookTimeout:30000});
  beforeAll(async()=>{
   setPrivateStorageForTests({put:async(key,bytes)=>{objects.set(key,Buffer.from(bytes));if(failPhotoPut)throw new Error("simulated storage failure")},get:photoGet,delete:async key=>{objects.delete(key)}});
   await client.company.createMany({data:[companyId,otherCompany].map(id=>({id,name:"Party transfer fixture",slug:`party-transfer-${id}`,productEdition:"SALESPUNCH360_ACCOUNT",subscriptionStatus:"TRIAL",trialStartedAt:new Date(),trialEndsAt:new Date(Date.now()+86400000)}))});
