@@ -26,6 +26,8 @@ jobs:
         run: npx vitest run src/lib/billing/combined-order.test.ts src/lib/billing/current-term.test.ts src/lib/billing/entitlement.test.ts src/lib/billing/seat-reduction.test.ts src/lib/billing/telecaller-surface.contract.test.ts src/lib/account/won-project-handoff.contract.test.ts src/lib/telecalling/lead-telecalling-ui.contract.test.ts src/lib/workspace/final-ui.contract.test.ts src/lib/visits/immutable-reference.test.ts src/lib/visits/lead-linked-new-checkin.test.ts
       - name: Sale invoice save and inventory regression
         run: npx vitest run src/lib/account/transaction-header.test.ts src/lib/account/sale-duplicate.test.ts src/lib/account/project-invoice-selection.test.ts src/lib/account/sale-submit.test.ts src/app/actions/commercial.test.ts src/lib/account/sale-invoice-save.runtime.test.ts src/lib/account/sale-warehouse.test.ts src/lib/account/commercial-action-errors.test.ts src/lib/account/commercial.runtime.test.ts src/lib/account/reports/catalogue.test.ts src/lib/account/item-pricing.test.ts src/lib/account/sale-price-updates.test.ts src/lib/account/customer-price-options.test.ts src/lib/account/customer-price-selection.test.ts src/lib/account/item-photo-upload.test.ts src/lib/account/expense-items.test.ts src/lib/account/item-opening.test.ts src/lib/account/cheque-transaction-target.test.ts src/lib/account/cheque-list.test.ts src/lib/account/y04-print-coverage.test.ts src/lib/account/invoice-print-toggle-consumers.test.ts src/lib/account/commercial.contract.test.ts src/lib/account/inventory.test.ts src/lib/account/inventory-policy.test.ts src/lib/account/project-purchase-inventory.runtime.test.ts src/lib/account/tax.test.ts src/lib/accounting/service.runtime.test.ts
+      - name: A104–A117 transfer and payment boundaries
+        run: npx vitest run src/lib/account/imports.runtime.test.ts src/lib/account/exports.runtime.test.ts src/lib/account/tax-catalog.test.ts src/lib/account/tabular-transfer.test.ts src/lib/account/audit-redaction.test.ts src/lib/account/calendar-date-input.test.ts src/lib/account/transaction-launcher.test.ts src/lib/storage/deletion-queue.test.ts
       - name: Authorized PDF and image sharing regression
         run: npx vitest run src/components/account/share-print-file.test.ts src/components/account/print-page-images.test.ts
       - name: Dashboard company date formatting regression
@@ -105,6 +107,10 @@ jobs:
         env:
           ACCOUNT_MIGRATION_REHEARSAL_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/account/migration-chain.integration.test.ts --maxWorkers=1
+      - name: Existing-company restore and atomic payment allocation
+        env:
+          RESTORE_TEST_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+        run: npx vitest run src/lib/account/company-restore.integration.test.ts src/lib/account/allocated-payment.integration.test.ts src/lib/account/imports.integration.test.ts --maxWorkers=1
       - name: Backup tenant isolation and reusable expense item retention
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci

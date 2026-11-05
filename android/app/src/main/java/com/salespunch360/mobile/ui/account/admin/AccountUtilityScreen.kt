@@ -211,7 +211,7 @@ fun AccountUtilityScreen(
                         Text("Company: $company",style=MaterialTheme.typography.titleMedium)
                         Text("Backup taken: ${review["backupDate"]?.jsonPrimitive?.content}")
                         (review["counts"] as? JsonArray)?.filter{it.jsonObject["current"]!=it.jsonObject["restored"]}?.forEach{entry->val row=entry.jsonObject;Text("${row["model"]?.jsonPrimitive?.content}: ${row["current"]} current → ${row["restored"]} saved")}
-                        Text("A private file-inclusive safety copy is saved before replacement. If current data changes, review again.")
+                        Text("A private file-inclusive safety copy is saved before replacement. Public quotation share links are revoked. If current data changes, review again.")
                         OutlinedTextField(restoreName,{restoreName=it},label={Text("Type $company to confirm")},enabled=!state.loading)
                         Row{Checkbox(replaceConfirmed,{replaceConfirmed=it},enabled=!state.loading);Text("I understand that entries and changes after the backup will be removed.")}
                         Button(enabled=!state.loading&&replaceConfirmed&&restoreName==company&&id.isNotBlank(),onClick={vm.executeRestore(id,restoreName)}){Text(if(state.loading)"Restoring…" else "Replace existing company data")}

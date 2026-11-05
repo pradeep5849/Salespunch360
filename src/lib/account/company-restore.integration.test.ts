@@ -182,6 +182,10 @@ describe.skipIf(!url)(
       expect(bundle.data.restoreSnapshot.models.JournalEntry[0].entryDate).toBe(
         "2026-11-05T00:00:00.000Z",
       );
+      const laterCustomer=await client.customer.create({data:{companyId,branchId,name:"Later quotation customer"}});
+      const laterQuote = await client.quotationDocument.create({data:{companyId,branchId,customerId:laterCustomer.id,createdById:userId,documentType:"QUOTATION",documentNumber:"AFTER-BACKUP"}});
+      const laterRevision = await client.quotationRevision.create({data:{companyId,documentId:laterQuote.id,revisionNumber:1,issueDate:new Date("2026-11-05"),customerName:"Later quote"}});
+      await client.quotationShare.create({data:{companyId,revisionId:laterRevision.id,tokenHash:"a".repeat(64)}});
       const later = await client.vendor.create({
         data: { companyId, name: "After backup" },
       });
@@ -201,6 +205,8 @@ describe.skipIf(!url)(
       ).toMatchObject({ restored: true, idempotent: false });
       expect(await client.pendingStorageDeletion.count({where:{companyId,objectKey:logoKey}})).toBe(0);
       expect(storage.get(logoKey)?.toString()).toBe("fixture-logo-bytes");
+      expect(await client.quotationShare.count({where:{companyId}})).toBe(0);
+      expect(await client.quotationDocument.findUnique({where:{id:laterQuote.id}})).toBeNull();
       expect(
         await client.vendor.findUnique({ where: { id: later.id } }),
       ).toBeNull();

@@ -38,8 +38,8 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = _state.value.copy(loading = true, error = null)
             try {
                 val options = api.purchaseOptions()
-                val rows = api.purchases(type, query)
-                    .map { it.jsonObject }
+                val page = api.purchasesPage(type, query)
+                val rows = page.array("rows")
                     .map {
                         SalesDocumentRow(
                             it.str("id"),
@@ -48,7 +48,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                             it.str("partyName"),
                             it.str("issueDate").take(10),
                             it.str("status"),
-                            it.str("grandTotal")
+                            it.str("grandTotal"),it.str("outstanding"),it.str("paymentStatus")
                         )
                     }
 
@@ -59,6 +59,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                     invoiceCustomFields=options.array("invoiceCustomFields"),
                     accountSettings=options["accountSettings"] as? JsonObject?:JsonObject(emptyMap()),
                     rows = rows,
+                    nextCursor=page.str("nextCursor").takeIf{it.isNotBlank()&&it!="null"},
                     types = options["allowedDocumentTypes"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty(),
                     branches = options.array("branches").map { it.option() },
                     vendors = options.array("vendors").map { it.option() },
@@ -143,7 +144,11 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun save() {
+    fun loadMore(){val s=_state.value;val cursor=s.nextCursor?:return;if(s.loading)return;val generation=refreshGeneration;_state.value=s.copy(loading=true,error=null);viewModelScope.launch{try{val page=api.purchasesPage(s.type,s.query,cursor);if(generation!=refreshGeneration)return@launch;val rows=page.array("rows").map{SalesDocumentRow(it.str("id"),it.str("type"),it.str("documentNumber"),it.str("partyName"),it.str("issueDate").take(10),it.str("status"),it.str("grandTotal"),it.str("outstanding"),it.str("paymentStatus"))};_state.value=_state.value.copy(loading=false,rows=(s.rows+rows).distinctBy{it.id},nextCursor=page.str("nextCursor").takeIf{it.isNotBlank()&&it!="null"})}catch(e:CancellationException){throw e}catch(e:Exception){if(generation==refreshGeneration)fail(e)}}}
+
+    fun save() = saveDraft(false)
+    fun saveAndNew() = saveDraft(true)
+    private fun saveDraft(saveAndNew:Boolean) {
         if (_state.value.saving) return
         val draft = _state.value.draft ?: return
         purchaseValidation(draft, _state.value)?.let {
@@ -163,7 +168,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                     draft = null,
                     message = "Purchase draft created with server totals."
                 )
-                open(id)
+                if(saveAndNew)create(draft.type, initialBranchId=draft.branchId) else open(id)
                 refresh()
             } catch (e: Exception) {
                 fail(e)

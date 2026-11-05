@@ -73,7 +73,7 @@ export function CompanyRestore() {
       </p>
       <p>
         User accounts, login credentials, subscriptions and recovery records are
-        retained. Replacement requires the primary company administrator with
+        retained. Public quotation share links are revoked. Replacement requires the primary company administrator with
         all-branch access.
       </p>
       <label>

@@ -55,6 +55,7 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp)) }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (!state.loading && state.rows.isEmpty()) item { Text("No sales documents found.", Modifier.padding(24.dp)) }
+            if(state.nextCursor!=null)item{TextButton(onClick=vm::loadMore,enabled=!state.loading){Text("Load older transactions")}}
             items(state.rows, key = { it.id }) { row ->
                 val isSale=row.type=="SALES_INVOICE"
                 val paymentLabel=when(row.paymentStatus){"PAID"->"SALE : PAID";"PARTIALLY_PAID"->"SALE : PARTIAL";"UNPAID"->"SALE : UNPAID";else->row.status}

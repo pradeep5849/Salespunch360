@@ -18,7 +18,11 @@ Auto backup remains Google Drive only. Manual generation and share-sheet opening
 - 34 focused unit/runtime regression tests passed across payment validation, purchases, imports, launcher, tax catalogue, CSV transfer and metadata redaction.
 - 15 isolated PostgreSQL/import tests passed, including exact existing-company replacement, cross-company and tampered-backup rejection, stale preview, rollback on incompatible identity references, and single-cash multi-invoice allocation with residual advance and retry safety.
 - All 161 Prisma migrations applied to an isolated loopback PostgreSQL fixture, never production.
-- Android compilation and remaining UI/runtime verification are outstanding.
+- The first implementation checkpoint passed GitHub Android unit tests/lint and Web regressions. Follow-up native payment/pagination/footer changes require a new platform run.
+- Production Web build passed locally with synthetic configuration.
+- A fresh migration-chain upgrade test caught and then verified a correction preserving existing initially-deferred quotation/invoice foreign keys.
+- Four export service tests passed, including 10,001 rows, empty XLSX headers and literal formula/apostrophe text round-trip.
+- Restore cancels deferred deletion of live files, and the cleanup worker serializes with restore and rechecks cancelled queue records.
 
 ## Outstanding scope
 

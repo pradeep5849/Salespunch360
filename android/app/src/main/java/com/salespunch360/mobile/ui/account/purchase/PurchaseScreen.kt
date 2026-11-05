@@ -52,11 +52,12 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
             }
         }
         LazyColumn(Modifier.fillMaxSize()) {
+            if(state.nextCursor!=null)item{TextButton(onClick=vm::loadMore,enabled=!state.loading){Text("Load older purchases")}}
             items(state.rows, key = { it.id }) { row ->
                 ListItem(
                     headlineContent = { Text(row.number, fontWeight = FontWeight.Bold) },
                     supportingContent = { Text("${row.party} · ${accountDate(row.date)} · ${row.type.replace('_', ' ')}") },
-                    trailingContent = { Column { Text(accountMoney(row.total)); Text(row.status) } },
+                    trailingContent = { Column { Text(accountMoney(row.total)); Text(row.paymentStatus.ifBlank{row.status}); if(row.balance.isNotBlank())Text("Balance ${accountMoney(row.balance)}") } },
                     modifier = Modifier.clickable { vm.open(row.id) }
                 )
             }

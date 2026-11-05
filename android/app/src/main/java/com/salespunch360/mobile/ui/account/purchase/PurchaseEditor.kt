@@ -21,6 +21,7 @@ import com.salespunch360.mobile.ui.account.inventory.AddItemScreen
 
 @Composable
 fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurchaseViewModel) {
+    var moreOptions by remember{mutableStateOf(false)}
     val orderPrepared=draft.lines.any{it.sourceOrderLineId.isNotBlank()}
     val sources = state.sources.filter {
         it.str("type") == "PURCHASE_BILL" && it.str("branchId") == draft.branchId && it.str("vendorId") == draft.vendorId
@@ -33,7 +34,7 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
         confirmButton = {
             Button(enabled = !state.saving && draft.lines.none{it.quotationUnitReviewRequired} && invoiceCustomFieldsValid(state.invoiceCustomFields,draft.type,draft.customFields), onClick = vm::save) { Text(if (state.saving) "Saving…" else "Create draft") }
         },
-        dismissButton = { TextButton(enabled = !state.saving, onClick = vm::closeDraft) { Text("Cancel") } },
+        dismissButton = { Column { Row { TextButton(enabled = !state.saving, onClick = vm::closeDraft) { Text("Cancel") }; TextButton(enabled=!state.saving,onClick=vm::saveAndNew){Text("Save & New")}; TextButton(enabled=!state.saving,onClick={moreOptions=true}){Text("⋮ More options")} }; DropdownMenu(expanded=moreOptions,onDismissRequest={moreOptions=false}) { DropdownMenuItem(text={Text("Share (save draft first)")},onClick={moreOptions=false;vm.save()}); DropdownMenuItem(text={Text("Print (save draft first)")},onClick={moreOptions=false;vm.save()}) }; Text("Share and Print save a draft, then open its authorized preview. No posting.") } },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }

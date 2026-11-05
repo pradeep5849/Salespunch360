@@ -6,7 +6,7 @@ BEGIN;
 DO $restore_constraints$
 DECLARE c record; definition text; selected_tables text[] := ARRAY['project_material_movements','branches','attendances','customers','customer_visits','leads','follow_up_tasks','visit_photos','lead_deletion_audits','lead_activities','location_points','sales_notifications','geofence_events','sales_targets','daily_travel_approvals','employee_compensation_profiles','employee_advances','employee_reimbursements','salary_history_links','account_settings','authorized_signature_versions','financial_years','numbering_series','vendors','account_units','account_categories','account_products','account_services','work_categories','work_packages','custom_field_definitions','custom_field_values','account_import_jobs','account_recycle_records','print_templates','account_terms_templates','ledger_accounts','cost_centres','journal_entries','journal_lines','accounting_period_locks','accounting_audit_events','quotation_documents','quotation_revisions','quotation_lines','quotation_adjustments','quotation_payment_schedules','quotation_shares','quotation_audit_events','commercial_documents','commercial_attachments','service_reminder_completions','commercial_document_lines','purchase_line_allocations','account_settlements','settlement_allocations','party_opening_balances','opening_balance_allocations','advance_applications','payment_reminders','commercial_audit_events','projects','project_members','project_budget_lines','project_milestones','project_tasks','project_documents','project_audit_events','project_change_orders','expense_categories','expense_transactions','recurring_expense_templates','expense_attachments','money_accounts','money_transfers','money_transfer_images','cheques','owner_financial_accounts','loans','loan_operations','loan_payments','account_operational_audits','asset_funding_confirmations','asset_owner_fundings','asset_owner_funding_cancellations','owner_asset_funding_returns','owner_transactions','warehouses','inventory_batches','inventory_serial_numbers','stock_movements','product_prices','assets','asset_assignment_history','field_jobs','expense_items','account_report_favourites','quotation_attachments','sale_return_revisions','sale_revision_credits','sale_revision_credit_lines','sale_lifecycle_snapshots']::text[];
 BEGIN
- FOR c IN SELECT con.oid, con.conname, child.relname AS child_name
+ FOR c IN SELECT con.oid, con.conname, con.condeferred, child.relname AS child_name
   FROM pg_constraint con JOIN pg_class child ON child.oid=con.conrelid
   JOIN pg_class parent ON parent.oid=con.confrelid
   JOIN pg_namespace ns ON ns.oid=child.relnamespace
@@ -18,7 +18,7 @@ BEGIN
   definition:=regexp_replace(definition,' DEFERRABLE( INITIALLY (DEFERRED|IMMEDIATE))?','', 'g');
   definition:=replace(definition,' NOT DEFERRABLE','');
   EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I',c.child_name,c.conname);
-  EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I %s DEFERRABLE INITIALLY IMMEDIATE',c.child_name,c.conname,definition);
+  EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I %s DEFERRABLE INITIALLY %s',c.child_name,c.conname,definition, CASE WHEN c.condeferred THEN 'DEFERRED' ELSE 'IMMEDIATE' END);
  END LOOP;
 END $restore_constraints$;
 

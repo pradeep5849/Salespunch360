@@ -32,6 +32,8 @@ data class VendorPaymentRow(
 data class VendorOpening(val id:String,val branchId:String,val vendorId:String,val outstanding:String,val date:String)
 
 data class VendorPaymentState(
+    val multipleLinks:Boolean=false,
+    val links:Map<String,String> = emptyMap(),
     val requestKey:String=UUID.randomUUID().toString(),
     val type:String="VENDOR_PAYMENT",
     val allowedTypes:List<String> = emptyList(),
@@ -69,8 +71,10 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun update(transform: (VendorPaymentState) -> VendorPaymentState) {
-        if(!_state.value.saving)_state.value = transform(_state.value)
+        _state.value = transform(_state.value)
     }
+
+    fun edit(transform:(VendorPaymentState)->VendorPaymentState){if(_state.value.saving||_state.value.loading)return;val old=_state.value;val next=transform(old);val changed=old.vendorId!=next.vendorId||old.branchId!=next.branchId||old.type!=next.type;_state.value=next.copy(links=if(changed)emptyMap()else next.links,error=null,message=null)}
 
     fun refresh() = viewModelScope.launch {
         update { it.copy(loading = true, error = null) }
@@ -114,43 +118,23 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
 
     fun initialBranch(branch:String?){if(initialBranchApplied)return;initialBranchApplied=true;if(branch!=null&&_state.value.branchId!=branch&&_state.value.branches.any{it.id==branch})update{it.copy(branchId=branch,vendorId="",billId="",openingId="")}}
 
+    private var duplicateApplied:String?=null
+    fun duplicate(id:String?){if(id==null||_state.value.loading||duplicateApplied==id)return;duplicateApplied=id;update{it.copy(loading=true)};viewModelScope.launch{try{val draft=api.accountSettlement(id,true);val s=_state.value;require(draft.str("type") in s.allowedTypes&&s.branches.any{it.id==draft.str("branchId")}&&s.vendors.any{it.id==draft.str("partyId")}){"This duplicate is unavailable in your current context."};update{it.copy(loading=false,type=draft.str("type"),branchId=draft.str("branchId"),vendorId=draft.str("partyId"),billId="",openingId="",multipleLinks=true,links=emptyMap(),amount=draft.str("amount"),mode=draft.str("paymentMode"),accountId=draft.str("moneyAccountId"),notes=draft.str("notes"),reference="",linkAmount="",date=com.salespunch360.mobile.account.accountReportToday().toString(),requestKey=UUID.randomUUID().toString(),message="Independent unlinked payment prepared. Review it before posting.")}}catch(e:Exception){fail(e)}}}
+
     fun save() = viewModelScope.launch {
         val current = _state.value
         if(current.saving||current.loading)return@launch
-        if (current.type !in current.allowedTypes || current.amount.toBigDecimalOrNull()?.let { it.signum()>0 && it.scale()<=2 } != true || current.vendorId.isBlank() || (current.type!="VENDOR_ADVANCE" && current.billId.isBlank() && current.openingId.isBlank())) {
-            update { it.copy(error = "Select an available payment type, vendor and target, and enter a positive amount with up to two decimals.") }
-            return@launch
-        }
+        val validation=vendorPaymentValidation(current)
+        if(validation!=null){update{it.copy(error=validation)};return@launch}
 
         update { it.copy(saving = true) }
         try {
-            api.createVendorPayment(
-                buildJsonObject {
-                    put("idempotencyKey", current.requestKey)
-                    put("type", current.type)
-                    put("branchId", current.branchId)
-                    put("partyId", current.vendorId)
-                    put("paymentMode", current.mode)
-                    current.accountId.takeIf { it.isNotBlank() }?.let { put("moneyAccountId", it) }
-                    put("amount", current.amount)
-                    put("transactionDate", current.date)
-                    put("reference", current.reference)
-                    put("notes", current.notes)
-                    putJsonArray("allocations") {
-                        if(current.type!="VENDOR_ADVANCE")add(
-                            buildJsonObject {
-                                if(current.openingId.isNotBlank())put("openingBalanceId",current.openingId) else put("documentId", current.billId)
-                                put("amount", current.linkAmount.ifBlank{current.amount})
-                            }
-                        )
-                    }
-                }
-            )
+            api.createVendorPayment(vendorPaymentPayload(current))
             update {
                 it.copy(
                     saving = false,
                     requestKey=UUID.randomUUID().toString(),
-                    openingId="",linkAmount="",
+                    openingId="",linkAmount="",links=emptyMap(),
                     billId = "",
                     amount = "",
                     message = "Vendor payment posted by the server."
@@ -175,4 +159,25 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
     }
+}
+
+internal fun vendorPaymentValidation(s:VendorPaymentState):String? {
+ val amount=s.amount.toBigDecimalOrNull()
+ if(s.type !in s.allowedTypes||s.vendorId.isBlank()||s.branchId.isBlank())return "Select an available payment type, branch and vendor."
+ if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.amount)||amount==null||amount.signum()<=0)return "Enter a positive amount with up to two decimals."
+ if(runCatching{java.time.LocalDate.parse(s.date)}.isFailure)return "Enter a real payment date."
+ if(s.type=="VENDOR_ADVANCE")return null
+ if(s.multipleLinks){var total=java.math.BigDecimal.ZERO;for((id,text) in s.links){if(text.isBlank())continue
+  val bill=s.bills.find{it.id==id&&it.branchId==s.branchId&&it.vendorId==s.vendorId}?:return "A bill is outside this vendor and branch."
+  val link=text.toBigDecimalOrNull()
+  if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(text)||link==null||link.signum()<=0||link>(bill.outstanding.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO))return "Enter positive link amounts within each bill balance."
+  total+=link
+ };if(total>amount)return "Linked amounts exceed the payment.";return null}
+ if(s.billId.isBlank()&&s.openingId.isBlank())return "Select a bill or opening balance."
+ return null
+}
+internal fun vendorPaymentPayload(current:VendorPaymentState)=buildJsonObject {
+ put("idempotencyKey",current.requestKey);put("type",current.type);put("branchId",current.branchId);put("partyId",current.vendorId);put("paymentMode",current.mode)
+ current.accountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",current.amount);put("transactionDate",current.date);put("reference",current.reference);put("notes",current.notes)
+ putJsonArray("allocations"){if(current.type!="VENDOR_ADVANCE"){if(current.multipleLinks)current.links.filterValues{it.isNotBlank()}.forEach{(id,amount)->add(buildJsonObject{put("documentId",id);put("amount",amount)})}else add(buildJsonObject{if(current.openingId.isNotBlank())put("openingBalanceId",current.openingId)else put("documentId",current.billId);put("amount",current.linkAmount.ifBlank{current.amount})})}}
 }

@@ -3240,10 +3240,12 @@ export async function setPaymentReminderStatus(raw: unknown) {
     return updated;
   });
 }
-export async function listCommercialDocumentsPageForActor(actor:Actor,raw:{cursor?:string;type?:string;q?:string;branchId?:string}={}) {
+export async function listCommercialDocumentsPageForActor(actor:Actor,raw:{cursor?:string;type?:string;q?:string;branchId?:string}={},allowedTypes?:CommercialDocumentType[]) {
  const input=z.object({cursor:z.string().uuid().optional(),type:z.nativeEnum(CommercialDocumentType).optional(),q:z.string().trim().max(100).optional(),branchId:z.string().uuid().optional()}).parse(Object.fromEntries(Object.entries(raw).filter(([,value])=>value!=="" && value!==undefined)));
+ if(input.type && allowedTypes && !allowedTypes.includes(input.type))throw new AuthorizationError();
  if(input.branchId && actor.branchAccessScope==="SELECTED_BRANCHES" && !actor.branchIds?.includes(input.branchId))throw new AuthorizationError();
- const rows=await db.commercialDocument.findMany({where:{companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(input.type?{type:input.type}:{}),NOT:{type:"SALES_INVOICE",status:"DRAFT"},...(input.q?{OR:[{documentNumber:{contains:input.q,mode:"insensitive"}},{partyName:{contains:input.q,mode:"insensitive"}}]}:{})},orderBy:[{createdAt:"desc"},{id:"desc"}],take:51,...(input.cursor?{cursor:{id:input.cursor},skip:1}:{})});
+ if(input.cursor && !await db.commercialDocument.findFirst({where:{id:input.cursor,companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(allowedTypes?{type:{in:allowedTypes}}:{})},select:{id:true}}))throw new AuthorizationError();
+ const rows=await db.commercialDocument.findMany({where:{companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(input.type?{type:input.type}:allowedTypes?{type:{in:allowedTypes}}:{}),NOT:{type:"SALES_INVOICE",status:"DRAFT"},...(input.q?{OR:[{documentNumber:{contains:input.q,mode:"insensitive"}},{partyName:{contains:input.q,mode:"insensitive"}}]}:{})},orderBy:[{createdAt:"desc"},{id:"desc"}],take:51,...(input.cursor?{cursor:{id:input.cursor},skip:1}:{})});
  const visible=rows.slice(0,50);
  const outstanding=await documentOutstandingsBatch(actor.companyId,visible.filter(row=>row.status==="POSTED" && ["SALES_INVOICE","PURCHASE_BILL"].includes(row.type)));
  return {rows:visible.map(row=>({...row,outstanding:outstanding.get(row.id)??row.balanceDue})),nextCursor:rows.length>50?visible[visible.length-1].id:undefined};

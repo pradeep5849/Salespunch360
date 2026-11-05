@@ -44,6 +44,8 @@ function parseBundle(bytes: Uint8Array, companyId: string): Bundle {
     throw new Error("RESTORE_INVALID_FILE");
   }
   if (
+    !bundle ||
+    typeof bundle !== "object" ||
     bundle.manifest?.format !== "SalesPunch360 Account Backup" ||
     bundle.manifest.formatVersion !== 4
   )
@@ -238,7 +240,11 @@ export async function executeCompanyRestore(actor: Actor, raw: unknown) {
         > | null;
         if (currentPlan?.state === "COMPLETED")
           return { restored: true, idempotent: true };
-        if (currentPlan?.state !== "PENDING")
+        if (
+          currentPlan?.state !== "PENDING" ||
+          !Number.isFinite(Date.parse(String(currentPlan?.expiresAt))) ||
+          Date.parse(String(currentPlan?.expiresAt)) <= Date.now()
+        )
           throw new Error("RESTORE_REVIEW_EXPIRED");
         const owner = await tx.user.findFirst({
           where: {
@@ -253,6 +259,7 @@ export async function executeCompanyRestore(actor: Actor, raw: unknown) {
           select: { id: true },
         });
         if (!owner) throw new Error("UNAUTHORIZED");
+        await assertFilesAvailable(bundle, actor.companyId, true);
         const current = await readRestoreSnapshot(tx, actor.companyId);
         if (snapshotDigest(current) !== expectedCurrent)
           throw new Error("RESTORE_COMPANY_CHANGED_REVIEW_AGAIN");
@@ -268,6 +275,11 @@ export async function executeCompanyRestore(actor: Actor, raw: unknown) {
         });
         await tx.$executeRawUnsafe("SET CONSTRAINTS ALL DEFERRED");
         await tx.$queryRaw`SELECT set_config('app.company_restore_company_id',${actor.companyId},true)`;
+        // Public quotation bearer links are credentials, excluded from snapshots.
+        // Revoke them rather than retaining links to replaced/reused revisions.
+        await tx.quotationShare.deleteMany({
+          where: { companyId: actor.companyId },
+        });
         for (const model of [...RESTORE_MODELS].reverse())
           await restoreDelegate(tx, model.name).deleteMany({
             where: { companyId: actor.companyId },
@@ -315,7 +327,7 @@ export async function executeCompanyRestore(actor: Actor, raw: unknown) {
         if (restoredFileKeys.length)
           await tx.pendingStorageDeletion.deleteMany({
             where: {
-              companyId: actor.companyId,
+              OR: [{ companyId: actor.companyId }, { companyId: null }],
               objectKey: { in: restoredFileKeys },
             },
           });

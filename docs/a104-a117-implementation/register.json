@@ -5,373 +5,522 @@
   "findings": [
     {
       "finding_id": "A104-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
     },
     {
       "finding_id": "A104-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
     },
     {
       "finding_id": "A104-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
     },
     {
       "finding_id": "A104-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
     },
     {
       "finding_id": "A105-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending."
+      ]
     },
     {
       "finding_id": "A105-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending."
+      ]
     },
     {
       "finding_id": "A105-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending."
+      ]
     },
     {
       "finding_id": "A105-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending."
+      ]
     },
     {
       "finding_id": "A105-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending."
+      ]
     },
     {
       "finding_id": "A105-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending."
+      ]
     },
     {
       "finding_id": "A106-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review."
+      ]
     },
     {
       "finding_id": "A106-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review."
+      ]
     },
     {
       "finding_id": "A106-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review."
+      ]
     },
     {
       "finding_id": "A106-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review."
+      ]
     },
     {
       "finding_id": "A106-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review."
+      ]
     },
     {
       "finding_id": "A106-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review."
+      ]
     },
     {
       "finding_id": "A107-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+      ]
     },
     {
       "finding_id": "A107-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+      ]
     },
     {
       "finding_id": "A107-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+      ]
     },
     {
       "finding_id": "A107-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+      ]
     },
     {
       "finding_id": "A107-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+      ]
     },
     {
       "finding_id": "A107-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F07",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A108-F08",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+      ]
     },
     {
       "finding_id": "A109-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
     },
     {
       "finding_id": "A109-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
     },
     {
       "finding_id": "A109-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
     },
     {
       "finding_id": "A109-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
     },
     {
       "finding_id": "A109-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
     },
     {
       "finding_id": "A109-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
     },
     {
       "finding_id": "A110-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+      ]
     },
     {
       "finding_id": "A110-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+      ]
     },
     {
       "finding_id": "A110-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+      ]
     },
     {
       "finding_id": "A110-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+      ]
     },
     {
       "finding_id": "A110-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+      ]
     },
     {
       "finding_id": "A111-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "AWAITING_PRODUCT_DECISION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+      ]
     },
     {
       "finding_id": "A111-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+      ]
     },
     {
       "finding_id": "A111-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+      ]
     },
     {
       "finding_id": "A111-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+      ]
     },
     {
       "finding_id": "A111-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "AWAITING_PRODUCT_DECISION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+      ]
     },
     {
       "finding_id": "A112-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained."
+      ]
     },
     {
       "finding_id": "A112-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained."
+      ]
     },
     {
       "finding_id": "A112-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained."
+      ]
     },
     {
       "finding_id": "A112-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained."
+      ]
     },
     {
       "finding_id": "A113-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+      ]
     },
     {
       "finding_id": "A113-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+      ]
     },
     {
       "finding_id": "A113-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+      ]
     },
     {
       "finding_id": "A113-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+      ]
     },
     {
       "finding_id": "A113-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+      ]
     },
     {
       "finding_id": "A113-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+      ]
     },
     {
       "finding_id": "A114-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+      ]
     },
     {
       "finding_id": "A114-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+      ]
     },
     {
       "finding_id": "A114-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+      ]
     },
     {
       "finding_id": "A114-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+      ]
     },
     {
       "finding_id": "A114-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "AWAITING_PRODUCT_DECISION",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+      ]
     },
     {
       "finding_id": "A115-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass."
+      ]
     },
     {
       "finding_id": "A115-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass."
+      ]
     },
     {
       "finding_id": "A115-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass."
+      ]
     },
     {
       "finding_id": "A115-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass."
+      ]
     },
     {
       "finding_id": "A115-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass."
+      ]
     },
     {
       "finding_id": "A115-F06",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass."
+      ]
     },
     {
       "finding_id": "A116-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
     },
     {
       "finding_id": "A116-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
     },
     {
       "finding_id": "A116-F03",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
     },
     {
       "finding_id": "A116-F04",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
     },
     {
       "finding_id": "A116-F05",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
     },
     {
       "finding_id": "A117-F01",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Legacy utility hub redirects to canonical approved menu on Web/native; final reachability review pending."
+      ]
     },
     {
       "finding_id": "A117-F02",
-      "status": "PENDING",
-      "verification": []
+      "status": "IN_PROGRESS",
+      "verification": [
+        "Legacy utility hub redirects to canonical approved menu on Web/native; final reachability review pending."
+      ]
     }
-  ]
+  ],
+  "latest_checkpoint": "Implementation branch only; no merge, deployment or production restore. First Web/Android checkpoint passed; follow-up validation pending."
 }
