@@ -34,7 +34,7 @@ import {
   updateGeneralSettingsForActor,
 } from "@/lib/account/settings";
 import { taxProfileInput } from "@/lib/account/tax";
-import { verifyAccountDataForActor } from "@/lib/account/utilities";
+import { redactAuditMetadata, verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 import { PREFIX_TYPES } from "@/lib/account/transaction-settings";
@@ -116,6 +116,13 @@ export async function mobileSaveSettings(
 ) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
+  if(section === "manual-backup-confirmation") {const {confirmManualBackupSaved}=await import("@/lib/account/backup-settings");return confirmManualBackupSaved(a,raw);}
+  if(section === "tax-catalog") {
+    const {saveTaxCatalogEntry}=await import("@/lib/account/tax-catalog");
+    const input=z.object({kind:z.enum(["RATE","GROUP"]),name:z.string(),rate:z.string(),cgst:z.string().optional(),sgst:z.string().optional()}).strict().parse(raw);
+    const fd=new FormData();for(const [key,value] of Object.entries(input))if(key!=="kind"&&value!==undefined)fd.set(key,value);
+    return saveTaxCatalogEntry(a,input.kind,fd);
+  }
   if (section === "item-settings-quick")
     return updateQuickItemSettingForActor(a, raw);
   if (section === "sales-invoice-prefix") {
@@ -390,12 +397,12 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string) {
       : "ACCOUNT_REPORTS",
   );
   if (kind === "audit")
-    return db.accountingAuditEvent.findMany({
+    return (await db.accountingAuditEvent.findMany({
       where: { companyId: a.companyId },
       orderBy: { createdAt: "desc" },
       take: 200,
       include: { actor: { select: { name: true } } },
-    });
+    })).map(row => ({ ...row, metadata: redactAuditMetadata(row.metadata) }));
   if (kind === "recycle-bin")
     return db.accountRecycleRecord.findMany({
       where: { companyId: a.companyId, restoredAt: null },
@@ -466,7 +473,8 @@ export async function mobileImportPreview(
     updateExisting,
   });
   const job = await saveImportPreviewForActor(a, preview);
-  return { job, ...preview };
+  const stored=await db.accountImportJob.findFirstOrThrow({where:{id:job.id,companyId:a.companyId},select:{metadata:true}});
+  return { job, ...(stored.metadata as unknown as typeof preview) };
 }
 export async function mobileImportDetail(u: MobileAppPrincipal, id: string) {
   const a = actor(u, "ACCOUNT_ACCOUNTS"),
@@ -474,6 +482,8 @@ export async function mobileImportDetail(u: MobileAppPrincipal, id: string) {
       where: { id, companyId: a.companyId },
     });
   if (!row) throw new Error("MOBILE_FORBIDDEN");
+  const {assertImportPreviewScope} = await import("@/lib/account/imports");
+  assertImportPreviewScope(a, row.metadata as never);
   return row;
 }
 export async function mobileImportExecute(u: MobileAppPrincipal, id: string) {
@@ -495,7 +505,8 @@ export async function mobileExport(
 export async function mobileBackup(u: MobileAppPrincipal,includePrivateFiles=false) {
   const a = admin(u),
     { createAccountBackupForActor } = await import("@/lib/account/utilities");
-  return createAccountBackupForActor(a,false,includePrivateFiles);
+  const {isCompanyRestoreOwner}=await import("@/lib/account/restore-owner");
+  return createAccountBackupForActor(a,false,includePrivateFiles,undefined,undefined,await isCompanyRestoreOwner(a));
 }
 export async function mobileRecycleRestore(u: MobileAppPrincipal, id: string) {
   const a = admin(u);

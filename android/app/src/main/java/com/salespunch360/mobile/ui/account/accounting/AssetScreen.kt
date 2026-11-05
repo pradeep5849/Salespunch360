@@ -20,8 +20,10 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.serialization.json.*
 
-@Composable fun AssetScreen(padding:PaddingValues,vm:AccountAssetViewModel=viewModel(),onNavigate:(String)->Unit={}){
+@Composable fun AssetScreen(padding:PaddingValues,vm:AccountAssetViewModel=viewModel(),onNavigate:(String)->Unit={},initialCreate:Boolean=false,initialBranchId:String?=null){
  val s=vm.state.collectAsStateWithLifecycle().value
+ var initialOpened by remember(initialCreate){mutableStateOf(false)}
+ LaunchedEffect(initialCreate,s.loading,s.options){if(initialCreate&&!initialOpened&&!s.loading&&s.options.isNotEmpty()){initialOpened=true;vm.createForBranch(initialBranchId)}}
  Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)){
   if(s.options.isNotEmpty()&&s.capitalLoading)Text("Loading owner capital…")
   if(s.options.isNotEmpty())s.capitalError?.let{Text(it,color=MaterialTheme.colorScheme.error)}

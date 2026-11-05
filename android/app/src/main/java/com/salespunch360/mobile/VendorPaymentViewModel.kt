@@ -22,13 +22,22 @@ data class PayableBill(
 
 data class VendorPaymentRow(
     val id: String,
+    val type: String,
     val number: String,
     val date: String,
     val amount: String,
     val mode: String
 )
 
+data class VendorOpening(val id:String,val branchId:String,val vendorId:String,val outstanding:String,val date:String)
+
 data class VendorPaymentState(
+    val requestKey:String=UUID.randomUUID().toString(),
+    val type:String="VENDOR_PAYMENT",
+    val allowedTypes:List<String> = emptyList(),
+    val openings:List<VendorOpening> = emptyList(),
+    val openingId:String="",
+    val linkAmount:String="",
     val loading: Boolean = true,
     val saving: Boolean = false,
     val branches: List<SalesOption> = emptyList(),
@@ -40,7 +49,7 @@ data class VendorPaymentState(
     val vendorId: String = "",
     val billId: String = "",
     val amount: String = "",
-    val date: String = java.time.LocalDate.now().toString(),
+    val date: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val mode: String = "BANK",
     val accountId: String = "",
     val reference: String = "",
@@ -50,6 +59,7 @@ data class VendorPaymentState(
 )
 
 class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
+    private var initialBranchApplied=false
     private val api = ApiClient(SecureSession(app))
     private val _state = MutableStateFlow(VendorPaymentState())
     val state: StateFlow<VendorPaymentState> = _state
@@ -59,7 +69,7 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun update(transform: (VendorPaymentState) -> VendorPaymentState) {
-        _state.value = transform(_state.value)
+        if(!_state.value.saving)_state.value = transform(_state.value)
     }
 
     fun refresh() = viewModelScope.launch {
@@ -70,6 +80,8 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
             update {
                 it.copy(
                     loading = false,
+                    allowedTypes=(context["allowedTypes"] as? JsonArray)?.map{it.jsonPrimitive.content}.orEmpty(),
+                    openings=context.array("openings").map{row->VendorOpening(row.str("id"),row.str("branchId"),row.str("partyId"),row.str("outstanding"),row.str("effectiveDate"))},
                     branches = branches,
                     vendors = context.array("vendors").map { vendor -> vendor.option() },
                     accounts = context.array("moneyAccounts").map { account -> account.option() },
@@ -85,6 +97,7 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
                     history = context.array("payments").map { payment ->
                         VendorPaymentRow(
                             payment.str("id"),
+                            payment.str("type").ifBlank { "VENDOR_PAYMENT" },
                             payment.str("settlementNumber"),
                             payment.str("transactionDate").take(10),
                             payment.str("amount"),
@@ -99,10 +112,13 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun initialBranch(branch:String?){if(initialBranchApplied)return;initialBranchApplied=true;if(branch!=null&&_state.value.branchId!=branch&&_state.value.branches.any{it.id==branch})update{it.copy(branchId=branch,vendorId="",billId="",openingId="")}}
+
     fun save() = viewModelScope.launch {
         val current = _state.value
-        if (current.amount.toDoubleOrNull()?.let { it > 0 } != true || current.billId.isBlank()) {
-            update { it.copy(error = "Select a bill and enter a positive amount.") }
+        if(current.saving||current.loading)return@launch
+        if (current.type !in current.allowedTypes || current.amount.toBigDecimalOrNull()?.let { it.signum()>0 && it.scale()<=2 } != true || current.vendorId.isBlank() || (current.type!="VENDOR_ADVANCE" && current.billId.isBlank() && current.openingId.isBlank())) {
+            update { it.copy(error = "Select an available payment type, vendor and target, and enter a positive amount with up to two decimals.") }
             return@launch
         }
 
@@ -110,8 +126,8 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
         try {
             api.createVendorPayment(
                 buildJsonObject {
-                    put("idempotencyKey", UUID.randomUUID().toString())
-                    put("type", "VENDOR_PAYMENT")
+                    put("idempotencyKey", current.requestKey)
+                    put("type", current.type)
                     put("branchId", current.branchId)
                     put("partyId", current.vendorId)
                     put("paymentMode", current.mode)
@@ -121,10 +137,10 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
                     put("reference", current.reference)
                     put("notes", current.notes)
                     putJsonArray("allocations") {
-                        add(
+                        if(current.type!="VENDOR_ADVANCE")add(
                             buildJsonObject {
-                                put("documentId", current.billId)
-                                put("amount", current.amount)
+                                if(current.openingId.isNotBlank())put("openingBalanceId",current.openingId) else put("documentId", current.billId)
+                                put("amount", current.linkAmount.ifBlank{current.amount})
                             }
                         )
                     }
@@ -133,6 +149,8 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
             update {
                 it.copy(
                     saving = false,
+                    requestKey=UUID.randomUUID().toString(),
+                    openingId="",linkAmount="",
                     billId = "",
                     amount = "",
                     message = "Vendor payment posted by the server."
@@ -150,9 +168,9 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
                 loading = false,
                 saving = false,
                 error = if (e is IOException) {
-                    "You're offline. The payment was not posted."
+                    "Connection interrupted. Your inputs and request reference were kept. Retry the same payment when online."
                 } else {
-                    "The server rejected this vendor payment."
+                    (e as? ApiException)?.serverMessage ?: "The server rejected this vendor payment."
                 }
             )
         }

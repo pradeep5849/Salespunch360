@@ -109,7 +109,7 @@ fun AccountAdministrationScreen(
             "payment-reminder-message" -> PaymentReminderMessageView(state.data,vm)
             "service-reminders" -> ServiceReminderView({ navigate("/workspace/account/settings/reminders") })
             "tax-settings" -> TaxPreferencesView(state.data,vm,navigate)
-            "tax-list" -> TaxListView()
+            "tax-list" -> TaxListView(state.data,vm)
             else -> JsonRows(state.data)
         }
     }

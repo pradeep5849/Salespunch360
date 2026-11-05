@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -16,9 +16,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.CustomerReceiptViewModel
 
 @Composable
-fun CustomerReceiptScreen(padding: PaddingValues, initialProjectId:String?=null, requestedType:String?=null, vm: CustomerReceiptViewModel = viewModel()) {
+fun CustomerReceiptScreen(padding: PaddingValues, initialProjectId:String?=null, requestedType:String?=null, initialBranchId:String?=null, vm: CustomerReceiptViewModel = viewModel()) {
+    var preview by remember{mutableStateOf<com.salespunch360.mobile.ReceiptRow?>(null)}
     val state = vm.state.collectAsStateWithLifecycle().value
-    LaunchedEffect(state.loading,initialProjectId,requestedType){vm.initialRoute(initialProjectId,requestedType)}
+    LaunchedEffect(state.loading,initialProjectId,requestedType){vm.initialRoute(initialProjectId,requestedType,initialBranchId)}
     val customers = state.customers.filter { it.branchId == state.branchId }
     val projects = state.projects.filter { it.branchId == state.branchId && state.projectCustomers[it.id] == state.customerId }
     val invoices = state.invoices.filter { it.branchId == state.branchId && it.customerId == state.customerId && it.projectId == state.projectId }
@@ -46,6 +47,8 @@ fun CustomerReceiptScreen(padding: PaddingValues, initialProjectId:String?=null,
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.notes, { value -> vm.update { it.copy(notes = value) } }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth()) }
         item { Button(onClick = vm::save, enabled = !state.saving && !state.loading && state.type in state.allowedTypes && state.customerId.isNotBlank() && (state.type=="CUSTOMER_ADVANCE" || state.invoiceId.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text(if (state.saving) "Posting…" else if(state.type=="APPLY_ADVANCE")"Apply advance" else if(state.type=="CUSTOMER_ADVANCE")"Post advance" else "Post receipt") } }
         item { Text("Recent receipts and advances", style = MaterialTheme.typography.titleLarge) }
-        items(state.history, key = { it.id }) { row -> ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${accountDate(row.date)} · ${row.mode}") }, trailingContent = { Text(accountMoney(row.amount)) }) }
+        items(state.history, key = { it.id }) { row -> ListItem(headlineContent = { Text(row.number) }, supportingContent = { Text("${accountDate(row.date)} · ${row.mode}") }, trailingContent = { TextButton(onClick={preview=row}){Text("Preview / Share")} }) }
     }
+    preview?.let{row->AlertDialog(onDismissRequest={preview=null},title={Text(row.number)},text={Column{com.salespunch360.mobile.ui.account.DocumentPrintActions(row.type,row.id,row.number)}},confirmButton={TextButton(onClick={preview=null}){Text("Close")}})}
+
 }

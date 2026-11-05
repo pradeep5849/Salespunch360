@@ -2,6 +2,8 @@ import {beforeEach,expect,it,vi} from "vitest";
 const m=vi.hoisted(()=>({vendors:vi.fn(),branches:vi.fn(),accounts:vi.fn(),documents:vi.fn(),payments:vi.fn(),outstanding:vi.fn(),detail:vi.fn(),finalize:vi.fn(),write:vi.fn(),post:vi.fn()}));
 vi.mock("@/lib/db",()=>({db:{vendor:{findMany:m.vendors},branch:{findMany:m.branches},moneyAccount:{findMany:m.accounts},commercialDocument:{findMany:m.documents},accountSettlement:{findMany:m.payments}}}));
 vi.mock("@/lib/account/commercial",()=>({commercialDocumentPolicies:{},commercialEditorOptionsForActor:vi.fn(),createCommercialDocumentForActor:vi.fn(),createSettlementForActor:vi.fn(),documentOutstandingsBatch:m.outstanding,getCommercialDocumentForActor:m.detail,listCommercialDocumentsForActor:vi.fn(),postCommercialDocumentForActor:m.post,finalizeNonFinancialDocumentForActor:m.finalize}));
+vi.mock("@/lib/account/modules",()=>({enabledModulesForCompany:async()=>["VENDOR_PAYMENTS","VENDOR_ADVANCES"]}));
+vi.mock("@/lib/account/opening-balances",()=>({listOpeningOutstandings:vi.fn(async()=>[])}));
 vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:m.write}));
 vi.mock("./account-transactions",()=>({mobileAccountActor:(u:Record<string,unknown>)=>{if(!(u.authorizedWorkspaces as string[]).includes("ACCOUNT")||!u.accountRole)throw new Error("MOBILE_FORBIDDEN");return{...u,isActive:true,accountAccessActive:true,salesAccessActive:false}}}));
 import {mobilePurchaseDetail,mobileVendorPaymentContext,mobileConfirmPurchaseOrder} from "./account-purchases";

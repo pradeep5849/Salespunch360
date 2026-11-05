@@ -112,8 +112,8 @@ export async function postCommercialAction(form: FormData) {
 }
 export async function saveSettlementWithFeedback(form: FormData) {
   return accountAction(async () => {
-    await createSettlement(payload(form));
-    return "/workspace/account/transactions";
+    const row=await createSettlement(payload(form));
+    return `/workspace/account/settlements/${row.id}`;
   }, "Payment posted");
 }
 export async function saveSettlementAction(form: FormData) {
@@ -160,4 +160,10 @@ export async function closeRemainingOrderAction(form:FormData){
   await (await import("@/lib/account/orders/lifecycle")).closeRemainingOrderForActor(actor as Parameters<typeof import("@/lib/account/orders/lifecycle").closeRemainingOrderForActor>[0],{documentId:String(form.get("id")),reason:String(form.get("reason")??"")});
   revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
  },"Remaining order closed");
+}
+
+export async function refreshPurchaseItemOptionsAction(){
+ await requirePermissionForMutation("ACCOUNT_PURCHASE_ENTRY");
+ const {commercialEditorOptions}=await import("@/lib/account/commercial");
+ return JSON.parse(JSON.stringify(await commercialEditorOptions()));
 }

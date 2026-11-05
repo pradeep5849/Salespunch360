@@ -1,3 +1,4 @@
+import {calendarDateInput} from "./calendar-date-input";
 import {saleInvoiceIdentity} from "./sale-invoice-identity";
 import {retainedSerialReturnQuantityInTx,assertSaleReturnQuantitiesInTx} from "./sale-return-revisions";
 import {validateOrderFulfilmentInTx} from "./orders/source";
@@ -281,6 +282,7 @@ export function assertAdjustmentWithinSource(
     throw new Error("ADJUSTMENT_EXCEEDS_OUTSTANDING");
 }
 const decimal = z.union([z.string(), z.number()]).transform(String);
+const withholdingRate=decimal.refine(value=>{try{const rate=new D(value);return rate.isFinite()&&rate.gte(0)&&rate.lte(100);}catch{return false;}},"Rate must be between 0 and 100");
 const lineSchema = z.object({
   servicePeriodDays:z.number().int().min(1).max(3650).optional(),
   lineType: z.nativeEnum(CommercialLineType),
@@ -377,8 +379,8 @@ export const commercialDocumentInput = z
     taxCreditTreatment: z
       .enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"])
       .prefault("ELIGIBLE"),
-    tdsRate: decimal.optional(),
-    tcsRate: decimal.optional(),
+    tdsRate: withholdingRate.optional(),
+    tcsRate: withholdingRate.optional(),
     lines: z.array(lineSchema).min(1).max(500),
   })
   .strict()
@@ -929,6 +931,11 @@ export async function createCommercialDocumentForActor(
           }
         }
 
+        const taxPreferences=(settings?.transactionDefaults as {taxPreferences?:{enableTcs?:boolean;enableTds?:boolean}}|null)?.taxPreferences;
+        if(!retainedSale && !d.sourceDocumentId){
+          if(taxPreferences?.enableTcs===false && new D(d.tcsRate??0).gt(0))throw new Error("TCS_DISABLED");
+          if(taxPreferences?.enableTds===false && new D(d.tdsRate??0).gt(0))throw new Error("TDS_DISABLED");
+        }
         if(d.sourceQuotationRevisionId){
           if(!d.idempotencyKey)throw new Error("QUOTATION_CONVERSION_KEY_REQUIRED");
           await requireQuotationSourceInTx(tx,actor,d);
@@ -2564,7 +2571,7 @@ export async function partyOutstanding(
     ...opening.map((x) => x.outstanding),
   ].reduce((n, x) => n.add(x), new D(0));
 }
-const settlementInput = z
+export const settlementInput = z
   .object({
     idempotencyKey: z.string().trim().min(8).max(120),
     type: z.nativeEnum(SettlementType),
@@ -2574,10 +2581,10 @@ const settlementInput = z
     paymentMode: z.nativeEnum(PaymentMode),
     moneyAccountId: z.string().guid().optional(),
     amount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)),
-    transactionDate: z.coerce.date(),
+    transactionDate: calendarDateInput,
     reference: z.string().max(160).optional(),
     chequeNumber: z.string().trim().min(1).max(80).optional(),
-    chequeDate: z.coerce.date().optional(),
+    chequeDate: calendarDateInput.optional(),
     notes: z.string().max(5000).optional(),
     allocations: z
       .array(
@@ -3233,6 +3240,17 @@ export async function setPaymentReminderStatus(raw: unknown) {
     return updated;
   });
 }
+export async function listCommercialDocumentsPageForActor(actor:Actor,raw:{cursor?:string;type?:string;q?:string;branchId?:string}={}) {
+ const input=z.object({cursor:z.string().uuid().optional(),type:z.nativeEnum(CommercialDocumentType).optional(),q:z.string().trim().max(100).optional(),branchId:z.string().uuid().optional()}).parse(Object.fromEntries(Object.entries(raw).filter(([,value])=>value!=="" && value!==undefined)));
+ if(input.branchId && actor.branchAccessScope==="SELECTED_BRANCHES" && !actor.branchIds?.includes(input.branchId))throw new AuthorizationError();
+ const rows=await db.commercialDocument.findMany({where:{companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(input.type?{type:input.type}:{}),NOT:{type:"SALES_INVOICE",status:"DRAFT"},...(input.q?{OR:[{documentNumber:{contains:input.q,mode:"insensitive"}},{partyName:{contains:input.q,mode:"insensitive"}}]}:{})},orderBy:[{createdAt:"desc"},{id:"desc"}],take:51,...(input.cursor?{cursor:{id:input.cursor},skip:1}:{})});
+ const visible=rows.slice(0,50);
+ const outstanding=await documentOutstandingsBatch(actor.companyId,visible.filter(row=>row.status==="POSTED" && ["SALES_INVOICE","PURCHASE_BILL"].includes(row.type)));
+ return {rows:visible.map(row=>({...row,outstanding:outstanding.get(row.id)??row.balanceDue})),nextCursor:rows.length>50?visible[visible.length-1].id:undefined};
+}
+export async function listCommercialDocumentsPage(raw:{cursor?:string;type?:string;q?:string;branchId?:string}={}) {
+ return listCommercialDocumentsPageForActor((await requirePermission("ACCOUNT_LEDGER_VIEW")) as Actor,raw);
+}
 export async function listCommercialDocumentsForActor(actor: Actor) {
   return db.commercialDocument.findMany({
     where: { companyId: actor.companyId, ...scope(actor) },
@@ -3517,6 +3535,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
       },
     }),
     invoiceCustomFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId,entityType:{in:["SALES_INVOICE","PURCHASE_BILL"]},isActive:true},orderBy:{position:"asc"}}),
+    canCreateItems:canUsePermission(actor,company.productEdition,"ACCOUNT_ACCOUNTS")&&enabledModules.includes("INVENTORY")&&resolveItemSettings(editorSettings?.itemSettings).enabled,
     accountSettings: editorSettings,
     partySettings: resolvePartySettings(editorSettings?.transactionDefaults),
     numberingSeries: await safeSalesInvoiceNumberingSeriesOptions(
@@ -3742,7 +3761,8 @@ export async function createSettlement(raw: unknown) {
   const actor = (await requirePermissionForMutation(
     "ACCOUNT_SETTLEMENT_ENTRY",
   )) as Actor;
-  return createSettlementForActor(actor, raw);
+  const {createAllocatedPaymentForActor}=await import("./allocated-payment");
+  return createAllocatedPaymentForActor(actor, raw);
 }
 export async function listCommercialDocuments() {
   return listCommercialDocumentsForActor(

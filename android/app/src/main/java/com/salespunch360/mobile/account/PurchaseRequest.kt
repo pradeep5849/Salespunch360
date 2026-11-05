@@ -19,6 +19,7 @@ fun purchaseSourceLine(source: JsonObject) = SalesLineDraft(
 )
 
 fun purchaseValidation(draft: PurchaseDraft, state: PurchaseState): String? {
+    if(draft.lines.any{it.quotationUnitReviewRequired})return "Confirm copied quantities and rates use the current item units."
     fun number(value: String) = value.toBigDecimalOrNull()?.takeIf { it.precision() <= 24 && it.scale() <= 6 }
     fun validDate(value: String) = runCatching { LocalDate.parse(value) }.isSuccess
     if (draft.type !in state.types) return "This purchase type is unavailable."

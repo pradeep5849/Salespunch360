@@ -19,7 +19,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable enum class AccountRole{ACCOUNT_ADMIN,ACCOUNTANT,PROJECT_MANAGER,DATA_ENTRY}
 @Serializable enum class ProductEdition{SALESPUNCH360,SALESPUNCH360_ACCOUNT,SALESPUNCH360_PLUS}
 @Serializable enum class Workspace{SALES,ACCOUNT}
-@Serializable data class AccountBootstrap(val user:AccountBootstrapUser,val company:AccountBootstrapCompany,val productEdition:ProductEdition,val enabledModules:List<String> = emptyList(),val effectivePermissions:List<String> = emptyList(),val itemSettings:JsonObject=buildJsonObject{},val displayPreferences:JsonObject=buildJsonObject{},val canSwitchWorkspace:Boolean=false,val branch:AccountBranchContext,val availableBranches:List<AccountBranch> = emptyList(),val canConsolidate:Boolean=false,val entitlement:AccountEntitlement,val notifications:AccountNotifications=AccountNotifications(),val navigation:List<AccountNavigationGroup> = emptyList())
+@Serializable data class AccountBootstrap(val user:AccountBootstrapUser,val company:AccountBootstrapCompany,val productEdition:ProductEdition,val enabledModules:List<String> = emptyList(),val effectivePermissions:List<String> = emptyList(),val transactionLauncher:List<AccountLauncherGroup> = emptyList(),val itemSettings:JsonObject=buildJsonObject{},val displayPreferences:JsonObject=buildJsonObject{},val canSwitchWorkspace:Boolean=false,val branch:AccountBranchContext,val availableBranches:List<AccountBranch> = emptyList(),val canConsolidate:Boolean=false,val entitlement:AccountEntitlement,val notifications:AccountNotifications=AccountNotifications(),val navigation:List<AccountNavigationGroup> = emptyList())
 @Serializable data class AccountBootstrapUser(val id:String,val name:String,val accountRole:AccountRole)
 @Serializable data class AccountBootstrapCompany(val name:String)
 @Serializable data class AccountBranchContext(val mode:String,val branchId:String?=null,val branchName:String?=null)
@@ -143,3 +143,6 @@ internal fun visiblePricingRoles(structure:TeamStructure)=if(structure==TeamStru
 @Serializable data class AccountLowStockPreview(val productId:String,val name:String,val warehouse:String,val quantity:String)
 
 @Serializable data class UnitAssignmentPage(val items:List<AccountMasterRecord> = emptyList(),val offset:Int=0,val nextOffset:Int?=null)
+
+@Serializable data class AccountLauncherGroup(val title:String,val actions:List<AccountLauncherAction> = emptyList())
+@Serializable data class AccountLauncherAction(val label:String,val href:String?=null,val disabled:Boolean=false)

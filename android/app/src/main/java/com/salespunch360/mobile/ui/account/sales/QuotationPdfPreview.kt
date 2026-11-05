@@ -58,7 +58,7 @@ fun QuotationPdfThumbnail(bytes:ByteArray,modifier:Modifier=Modifier){
 
 /** Renders the exact authorized customer PDF; never reconstructs a private detail DTO. */
 @Composable
-fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,documentName:String="Quotation"){
+fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,documentName:String="Quotation",previewLabel:String="Quotation print preview"){
  val context=LocalContext.current
  var printError by remember(bytes){mutableStateOf<String?>(null)}
  var number by remember(bytes){mutableIntStateOf(0)}
@@ -69,7 +69,7 @@ fun QuotationPdfPreview(bytes:ByteArray,onClose:()->Unit,onShare:()->Unit,docume
  Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)){
   Surface(Modifier.fillMaxSize()){
    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-    Text("Quotation print preview",style=MaterialTheme.typography.titleLarge)
+    Text(previewLabel,style=MaterialTheme.typography.titleLarge)
     when{
      page==null->Box(Modifier.weight(1f).fillMaxWidth()){CircularProgressIndicator()}
      page!!.isFailure->Box(Modifier.weight(1f).fillMaxWidth()){Text("Could not display this PDF. You can share it or try again.",color=MaterialTheme.colorScheme.error)}

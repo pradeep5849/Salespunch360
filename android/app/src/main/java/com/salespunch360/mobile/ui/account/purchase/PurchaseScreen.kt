@@ -21,7 +21,7 @@ import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
 @Composable
-fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null,initialOrderId:String?=null,navigate:(String)->Unit={}, vm: AccountPurchaseViewModel = viewModel()) {
+fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null,initialOrderId:String?=null,initialBranchId:String?=null,navigate:(String)->Unit={}, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
@@ -29,7 +29,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
     LaunchedEffect(initialType, initialProjectId,initialOrderId, state.loading) {
         if (!initialEditorOpened && initialType != null && !state.loading && state.types.isNotEmpty()) {
             initialEditorOpened = true
-            if(initialOrderId!=null)vm.prepareOrder(initialOrderId)else vm.create(initialType, initialProjectId)
+            if(initialOrderId!=null)vm.prepareOrder(initialOrderId)else vm.create(initialType, initialProjectId,initialBranchId)
         }
     }
     DisposableEffect(initialOrderId){onDispose{vm.cancelOrderPreparation()}}
@@ -63,7 +63,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
         }
     }
     state.draft?.let { PurchaseEditor(it, state, vm) }
-    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate) }
+    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate,canDuplicate="PURCHASE_BILL" in state.types,onDuplicate=vm::duplicatePurchase) }
     state.posting?.let {
         AlertDialog(
             onDismissRequest = vm::cancelPost,

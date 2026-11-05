@@ -13,6 +13,11 @@ import com.salespunch360.mobile.ui.account.sales.InvoiceCustomFields
 import com.salespunch360.mobile.ui.account.sales.invoiceCustomFieldsValid
 import com.salespunch360.mobile.ui.account.sales.SelectField
 import kotlinx.serialization.json.JsonObject
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.AccountAddItemViewModel
+import com.salespunch360.mobile.ui.account.inventory.AddItemScreen
 
 @Composable
 fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurchaseViewModel) {
@@ -26,7 +31,7 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
         onDismissRequest = vm::closeDraft,
         title = { Text("New ${draft.type.replace('_', ' ')}") },
         confirmButton = {
-            Button(enabled = !state.saving && invoiceCustomFieldsValid(state.invoiceCustomFields,draft.type,draft.customFields), onClick = vm::save) { Text(if (state.saving) "Saving…" else "Create draft") }
+            Button(enabled = !state.saving && draft.lines.none{it.quotationUnitReviewRequired} && invoiceCustomFieldsValid(state.invoiceCustomFields,draft.type,draft.customFields), onClick = vm::save) { Text(if (state.saving) "Saving…" else "Create draft") }
         },
         dismissButton = { TextButton(enabled = !state.saving, onClick = vm::closeDraft) { Text("Cancel") } },
         text = {
@@ -77,6 +82,9 @@ fun PurchaseEditor(draft: PurchaseDraft, state: PurchaseState, vm: AccountPurcha
 
 @Composable
 private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft, state: PurchaseState, sourceLines: List<JsonObject>, vm: AccountPurchaseViewModel) {
+    var itemDialog by remember { mutableStateOf<Pair<Int,String>?>(null) }
+    var queries by remember { mutableStateOf<Map<Int,String>>(emptyMap()) }
+
     val masters = when (line.lineType) {
         "MATERIAL" -> state.products
         "SERVICE" -> state.services
@@ -115,10 +123,12 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
             if(line.sourceOrderLineId.isNotBlank())Text("Order item: ${line.itemName}")else if (line.lineType == "CUSTOM") {
                 OutlinedTextField(line.itemName, { vm.line(index, line.copy(itemName = it)) }, label = { Text("Name") })
             } else {
-                SelectField("Item", line.sourceId, masters.map { it.id to it.name }) { id ->
+                OutlinedTextField(queries[index].orEmpty(),{queries=queries+(index to it)},label={Text("Search company items")})
+                SelectField("Item", line.sourceId, masters.filter{it.id==line.sourceId||it.name.contains(queries[index].orEmpty(),true)}.map { it.id to it.name }) { id ->
                     val master = masters.first { it.id == id }
                     vm.line(index, purchaseMasterLine(line,master,draft.taxMode))
                 }
+                if(state.canCreateItems&&line.sourceOrderLineId.isBlank()&&line.lineType in listOf("MATERIAL","PRODUCT","SERVICE"))TextButton(onClick={itemDialog=index to queries[index].orEmpty()}){Text("Add New Item")}
             }
             val master=masters.firstOrNull{it.id==line.sourceId}
             if((draft.type=="DEBIT_NOTE"&&line.sourceCommercialLineId.isNotBlank())||line.sourceOrderLineId.isNotBlank())Text("Original unit: "+line.unitName.ifBlank{"Primary unit"})
@@ -128,6 +138,7 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
                 }
             }
             unitError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+            if(line.quotationUnitReviewRequired)Row{Checkbox(false,{vm.line(index,line.copy(quotationUnitReviewRequired=false))});Text("I confirm this quantity and rate use the current item unit.")}
             Row {
                 OutlinedTextField(line.quantity, { vm.line(index, line.copy(quantity = it)) }, label = { Text("Qty") }, modifier = Modifier.weight(1f))
                 OutlinedTextField(line.rate, { vm.line(index, line.copy(rate = it)) }, label = { Text("Rate") }, modifier = Modifier.weight(1f))
@@ -143,4 +154,12 @@ private fun PurchaseLine(index: Int, line: SalesLineDraft, draft: PurchaseDraft,
             if (draft.lines.size > 1) TextButton(onClick = { vm.remove(index) }) { Text("Remove") }
         }
     }
+    itemDialog?.let{(index,name)->
+        val itemVm:AccountAddItemViewModel=viewModel(key="purchase-item-$index-$name")
+        LaunchedEffect(itemDialog){itemVm.beginCreate()}
+        Dialog(onDismissRequest={if(!itemVm.state.value.saving&&!state.itemReturnPending)itemDialog=null},properties=DialogProperties(usePlatformDefaultWidth=false,dismissOnBackPress=false)){
+            Surface(Modifier.fillMaxSize()){AddItemScreen(back={if(!itemVm.state.value.saving)itemDialog=null},navigate={},vm=itemVm,initialService=draft.lines[index].lineType=="SERVICE",initialName=name,returnLabel="purchase",returnPending=state.itemReturnPending,returnError=state.itemReturnError,onCreated={id,kind->vm.selectCreatedPurchaseItem(index,id,kind){itemDialog=null}})}
+        }
+    }
+
 }

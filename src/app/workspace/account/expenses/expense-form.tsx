@@ -12,16 +12,19 @@ export function ExpenseForm({
   action,
   formKey = "new",
   backHref,
+  initialType,
 }: {
   options: Awaited<ReturnType<typeof expenseOptions>>;
   expense?: unknown;
   action: (fd: FormData) => Promise<AccountActionResult>;
   formKey?: string;
   backHref?: string;
+  initialType?: string;
 }) {
   return (
     <ExpenseEditor
       key={formKey}
+      initialType={initialType}
       backHref={backHref}
       options={
         JSON.parse(

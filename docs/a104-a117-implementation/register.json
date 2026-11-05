@@ -1,0 +1,377 @@
+{
+  "scope": "A104\u2013A117",
+  "date": "2026-11-05",
+  "status": "IN PROGRESS",
+  "findings": [
+    {
+      "finding_id": "A104-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A104-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A104-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A104-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A105-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A105-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A105-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A105-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A105-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A105-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A106-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A106-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A106-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A106-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A106-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A106-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A107-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A107-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A107-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A107-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A107-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A107-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F07",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A108-F08",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A109-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A109-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A109-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A109-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A109-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A109-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A110-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A110-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A110-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A110-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A110-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A111-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A111-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A111-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A111-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A111-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A112-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A112-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A112-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A112-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A113-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A113-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A113-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A113-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A113-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A113-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A114-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A114-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A114-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A114-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A114-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A115-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A115-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A115-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A115-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A115-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A115-F06",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A116-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A116-F02",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A116-F03",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A116-F04",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A116-F05",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A117-F01",
+      "status": "PENDING",
+      "verification": []
+    },
+    {
+      "finding_id": "A117-F02",
+      "status": "PENDING",
+      "verification": []
+    }
+  ]
+}

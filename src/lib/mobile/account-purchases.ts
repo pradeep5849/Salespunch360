@@ -6,7 +6,6 @@ import {
   commercialDocumentPolicies,
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
-  createSettlementForActor,
   documentOutstandingsBatch,
   getCommercialDocumentForActor,
   listCommercialDocumentsForActor,
@@ -97,9 +96,10 @@ export async function mobileVendorPayment(
   raw: unknown,
 ) {
   await assertOperationalWrite(u.companyId);
-  if ((raw as { type?: string }).type !== "VENDOR_PAYMENT")
+  if (!["VENDOR_PAYMENT","VENDOR_ADVANCE"].includes(String((raw as { type?: string }).type)))
     throw new Error("INVALID_INPUT");
-  return createSettlementForActor(
+  const {createAllocatedPaymentForActor}=await import("@/lib/account/allocated-payment");
+  return createAllocatedPaymentForActor(
     permit(u, "ACCOUNT_SETTLEMENT_ENTRY"),
     raw,
   );
@@ -159,11 +159,12 @@ export async function mobileVendorPaymentContext(u: MobileAppPrincipal) {
         orderBy: { issueDate: "desc" },
       }),
       db.accountSettlement.findMany({
-        where: { companyId: a.companyId, type: "VENDOR_PAYMENT", ...scope },
+        where: { companyId: a.companyId, type: {in:["VENDOR_PAYMENT","VENDOR_ADVANCE"]}, ...scope },
         select: {
           id: true,
           branchId: true,
           vendorId: true,
+          type:true,
           settlementNumber: true,
           transactionDate: true,
           amount: true,
@@ -175,7 +176,13 @@ export async function mobileVendorPaymentContext(u: MobileAppPrincipal) {
       }),
     ]),
     outstanding = await documentOutstandingsBatch(a.companyId, documents);
+  const {enabledModulesForCompany}=await import("@/lib/account/modules");
+  const {listOpeningOutstandings}=await import("@/lib/account/opening-balances");
+  const enabled=await enabledModulesForCompany(a.companyId);
+  const openings=await listOpeningOutstandings({companyId:a.companyId,partyType:"VENDOR",branchIds:a.branchAccessScope==="SELECTED_BRANCHES"?a.branchIds??[]:undefined});
   return {
+    allowedTypes:[...(enabled.includes("VENDOR_PAYMENTS")?["VENDOR_PAYMENT"]:[]),...(enabled.includes("VENDOR_ADVANCES")?["VENDOR_ADVANCE"]:[])],
+    openings:openings.map(row=>({id:row.id,branchId:row.branchId,partyId:row.partyId,outstanding:row.outstanding.toString(),effectiveDate:row.effectiveDate.toISOString().slice(0,10)})),
     vendors,
     branches,
     moneyAccounts,

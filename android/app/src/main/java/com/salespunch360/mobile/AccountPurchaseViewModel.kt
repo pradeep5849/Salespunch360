@@ -55,6 +55,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                 if (generation != refreshGeneration) return@launch
                 _state.value = _state.value.copy(
                     loading = false,
+                    canCreateItems=options["canCreateItems"]?.jsonPrimitive?.booleanOrNull==true,
                     invoiceCustomFields=options.array("invoiceCustomFields"),
                     accountSettings=options["accountSettings"] as? JsonObject?:JsonObject(emptyMap()),
                     rows = rows,
@@ -91,7 +92,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
-    fun create(type: String, projectId:String?=null) {
+    fun create(type: String, projectId:String?=null, initialBranchId:String?=null) {
         if (_state.value.saving || type !in _state.value.types) return
         val project = _state.value.projects.firstOrNull { it.id == projectId }
         if (!projectId.isNullOrBlank() && project == null) {
@@ -103,7 +104,7 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
             draft = PurchaseDraft(
                 type = type,
                 taxMode=purchaseInitialTaxMode(_state.value.accountSettings),
-                branchId = project?.branchId ?: _state.value.branches.firstOrNull()?.id.orEmpty(),
+                branchId = project?.branchId ?: _state.value.branches.firstOrNull{it.id==initialBranchId}?.id ?: _state.value.branches.firstOrNull()?.id.orEmpty(),
                 purpose=if(projectId.isNullOrBlank())"INVENTORY_SALES" else "PROJECT",
                 projectId=projectId.orEmpty(),
                 notes=purchaseDefaultTerms(_state.value.accountSettings,type,!projectId.isNullOrBlank())
@@ -168,6 +169,35 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
                 fail(e)
             }
         }
+    }
+
+    fun selectCreatedPurchaseItem(index:Int,id:String,kind:String,done:()->Unit){
+        val original=_state.value.draft?:return
+        if(_state.value.itemReturnPending)return
+        _state.value=_state.value.copy(itemReturnPending=true,itemReturnError=null)
+        viewModelScope.launch{
+            try{
+                val options=api.purchaseOptions()
+                val products=options.array("products").map{it.option("costPrice")};val services=options.array("services").map{it.option("estimatedCost")}
+                val master=(if(kind=="services")services else products).firstOrNull{it.id==id}?:throw IllegalStateException("The saved item is not available in this company catalogue.")
+                val current=_state.value;val draft=current.draft
+                if(draft==null||draft.branchId!=original.branchId||draft.vendorId!=original.vendorId)throw IllegalStateException("The purchase context changed. Review the saved item from the catalogue.")
+                val lines=draft.lines.mapIndexed{i,line->if(i==index)purchaseMasterLine(line.copy(lineType=if(kind=="services")"SERVICE" else "MATERIAL"),master,draft.taxMode) else line}
+                _state.value=current.copy(draft=draft.copy(lines=lines),products=products,services=services,units=options.array("units").map{it.option()},itemReturnPending=false,itemReturnError=null)
+                done()
+            }catch(error:Exception){_state.value=_state.value.copy(itemReturnPending=false,itemReturnError="Item saved. Returning to the purchase failed; retry returning without creating it again.")}
+        }
+    }
+
+    fun duplicatePurchase(){
+        val source=_state.value.detail?:return
+        if(source.str("type")!="PURCHASE_BILL"||"PURCHASE_BILL" !in _state.value.types)return
+        val lines=source.array("lines").map{line->
+            val snapshot=line["unitConversionSnapshot"] as? JsonObject
+            SalesLineDraft(lineType=line.str("lineType"),sourceId=line.str("productId").ifBlank{line.str("serviceId").ifBlank{line.str("workPackageId")}},itemName=line.str("itemName"),quantity=line.str("quantity"),rate=line.str("rate"),taxRate=line.str("taxRate"),unitName=line.str("unitName"),unitSymbol=line.str("unitSymbol"),unitSelection=snapshot?.str("selection").orEmpty().ifBlank{"PRIMARY"},quotationUnitReviewRequired=line.str("lineType")!="CUSTOM",discountType=line.str("discountType"),discountValue=line.str("discountValue").ifBlank{"0"})
+        }
+        creationIdentity.reset()
+        _state.value=_state.value.copy(detail=null,draft=PurchaseDraft(branchId=source.str("branchId"),vendorId=source.str("vendorId"),taxMode=source.str("taxMode"),notes=source.str("notes"),lines=lines),message="Independent purchase prepared. Review current units, supplier bill identity and allocations. Nothing was saved or posted.")
     }
 
     fun open(id: String) = viewModelScope.launch {

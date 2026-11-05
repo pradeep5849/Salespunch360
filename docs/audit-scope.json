@@ -1,6 +1,6 @@
 {
   "date": "2026-11-04",
-  "active_scope": "AUDIT_ONLY",
+  "active_scope": "IMPLEMENT_A104_THROUGH_A117",
   "allowed_work": [
     "Inspect source and supplied reference images",
     "Run read-only or synthetic/mocked audit checks",
@@ -29,5 +29,21 @@
     "findings": 46,
     "all_recorded_status": "NOT STARTED",
     "note": "PR #172 is the historical Utilities/Backup implementation exception. It does not close the numbered A104\u2013A111 findings."
+  },
+  "current_authorization": {
+    "request": "Impliment now from 104 to 116 then we start aduit fresh from 117 if 117 done do upto thier",
+    "range": [
+      "A104",
+      "A117"
+    ],
+    "resume_audit_at": "A118",
+    "production_merge_or_deployment": "Not authorized by this implementation request; prepare reviewable changes first.",
+    "unresolved_destructive_policy": "Close Books Start Fresh remains pending; restore replacement policy is confirmed.",
+    "restore_policy": {
+      "mode": "REPLACE_EXISTING_COMPANY",
+      "state": "OWNER_CONFIRMED",
+      "behavior": "Restore the existing company to the exact saved backup state; remove later business entries and changes after explicit warning and confirmation. No new company.",
+      "source": "User clarified and confirmed on 2026-11-05."
+    }
   }
 }

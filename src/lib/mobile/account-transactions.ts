@@ -17,7 +17,6 @@ import {
   commercialDocumentControlsForActor,
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
-  createSettlementForActor,
   documentOutstandingsBatch,
   getCommercialDocumentForActor,
   listCommercialDocumentsForActor,
@@ -195,7 +194,8 @@ export async function mobileCustomerReceipt(
     )
   )
     throw new Error("INVALID_INPUT");
-  return createSettlementForActor(actor, raw);
+  const {createAllocatedPaymentForActor}=await import("@/lib/account/allocated-payment");
+  return createAllocatedPaymentForActor(actor, raw);
 }
 export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
   const actor = permit(user, "ACCOUNT_SETTLEMENT_ENTRY"),

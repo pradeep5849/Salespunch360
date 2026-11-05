@@ -21,7 +21,7 @@ data class ReceiptInvoice(
     val outstanding: String
 )
 
-data class ReceiptRow(val id: String, val number: String, val date: String, val amount: String, val mode: String)
+data class ReceiptRow(val id: String, val number: String, val date: String, val amount: String, val mode: String,val type:String="CUSTOMER_RECEIPT")
 
 data class ReceiptAdvance(val id:String,val number:String,val branchId:String,val customerId:String,val projectId:String,val remaining:String)
 data class ReceiptState(
@@ -46,7 +46,7 @@ data class ReceiptState(
     val amount: String = "",
     val discountAmount:String="",
     val discountEnabled:Boolean=false,
-    val date: String = java.time.LocalDate.now().toString(),
+    val date: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val mode: String = "BANK",
     val moneyAccountId: String = "",
     val reference: String = "",
@@ -89,7 +89,8 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
                     it.str("settlementNumber"),
                     it.str("transactionDate").take(10),
                     it.str("amount"),
-                    it.str("paymentMode")
+                    it.str("paymentMode"),
+                    it.str("type").ifBlank{"CUSTOMER_RECEIPT"}
                 )
             }
             _state.value = _state.value.copy(
@@ -111,10 +112,10 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun initialRoute(projectId:String?,requestedType:String?){
+    fun initialRoute(projectId:String?,requestedType:String?,branchId:String?=null){
         val s=_state.value;if(s.loading||initialRouteApplied)return;initialRouteApplied=true
         val project=s.projects.find{it.id==projectId}
-        _state.value=s.copy(type=requestedType?.takeIf{it in s.allowedTypes}?:s.type.takeIf{it in s.allowedTypes}?:s.allowedTypes.firstOrNull().orEmpty(),projectId=project?.id.orEmpty(),branchId=project?.branchId?:s.branchId,customerId=project?.let{s.projectCustomers[it.id]}.orEmpty())
+        _state.value=s.copy(type=requestedType?.takeIf{it in s.allowedTypes}?:s.type.takeIf{it in s.allowedTypes}?:s.allowedTypes.firstOrNull().orEmpty(),projectId=project?.id.orEmpty(),branchId=project?.branchId?:s.branches.find{it.id==branchId}?.id?:s.branchId,customerId=project?.let{s.projectCustomers[it.id]}.orEmpty())
     }
     fun update(transform: (ReceiptState) -> ReceiptState) {
         if(!_state.value.saving)_state.value = transform(_state.value).copy(requestKey=UUID.randomUUID().toString(),error=null,message=null)
