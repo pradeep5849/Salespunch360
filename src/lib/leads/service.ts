@@ -54,7 +54,7 @@ async function selectedPendingWhere(a:Awaited<ReturnType<typeof leadActor>>,sele
  const search=q?{OR:[{contactName:{contains:q,mode:"insensitive" as const}},{contactPhone:{contains:q,mode:"insensitive" as const}},{customer:{name:{contains:q,mode:"insensitive" as const}}}]}:{};
  return{AND:[base,selected,search]};
 }
-export async function listPendingVisitsScopedForActor(a:Awaited<ReturnType<typeof leadActor>>,selectedUserId?:string,q?:string){const branches=await operationalBranchContext(a);return db.customerVisit.findMany({where:{AND:[await selectedPendingWhere(a,selectedUserId,q),{branchId:branches.branchId}]},include:{user:{select:{id:true,name:true}},customer:{select:{name:true}},photo:{select:{id:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],take:200});}
+export async function listPendingVisitsScopedForActor(a:Awaited<ReturnType<typeof leadActor>>,selectedUserId?:string,q?:string){const branches=await operationalBranchContext(a);return db.customerVisit.findMany({where:{AND:[await selectedPendingWhere(a,selectedUserId,q),{branchId:branches.branchId}]},include:{user:{select:{id:true,name:true,managerId:true}},customer:{select:{name:true}},photo:{select:{id:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],take:200});}
 export async function pendingVisitCountScopedForActor(a:Awaited<ReturnType<typeof leadActor>>,selectedUserId?:string,q?:string){const branches=await operationalBranchContext(a);return db.customerVisit.count({where:{AND:[await selectedPendingWhere(a,selectedUserId,q),{branchId:branches.branchId}]}});}
 
 export async function listLeadsPageForActor(a:Awaited<ReturnType<typeof leadActor>>,raw:unknown={}){return pageResult(await loadLeadsForActor(a,raw),raw)}
