@@ -39,3 +39,7 @@ No passwords or private credentials are required for these source changes. Exist
 Targeted tests cover structured data, social-link validation, robots/Markdown content, sitemap coverage and publication filters, canonical redirects, RSC negotiation and private-route CSP behavior. The full production build uses temporary local fixture configuration and does not query production data.
 
 This PR does not deploy. Merging main automatically updates the existing production app, so deployment requires owner approval. After deployment, clear the website/CDN cache through Hostinger, rerun agent readiness, and rerun both Lighthouse audits after browser access is resolved.
+
+## Follow-up origin-log evidence
+
+The owner reports that Hostinger support found GET / and assets returning 200 during 14:15:55–14:16:30 UTC, no matching origin 403, WAF disabled, and no configured IP/country deny rules, JavaScript challenge or CAPTCHA. These records do not establish an application-level cause or a WAF cause. Capture the actual failing browser document response, request ID and service-worker/cache provenance before attributing the 403 to any particular layer. The updated audit saves DevTools network logs and prints selected non-cookie response headers for that purpose.
