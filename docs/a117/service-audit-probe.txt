@@ -1,0 +1,15 @@
+import {createElement} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {beforeEach,it,expect,vi} from "vitest";
+const m=vi.hoisted(()=>({permission:vi.fn()}));
+vi.mock("@/lib/auth/authorization",()=>({requirePermission:m.permission}));
+vi.mock("@/components/account/account-shell",()=>({AccountPageHeader:({title}:{title:string})=>createElement("h1",null,title)}));
+import Page from "@/app/workspace/account/utilities/page";
+import {canUsePermission} from "./../auth/permissions";
+import {buildAccountNavigation} from "./navigation";
+const base={id:"synthetic-reader",companyId:"company-a",role:"COMPANY_ADMIN",isActive:true,managerType:null,salesRole:null,accountAccessActive:true,salesAccessActive:false,branchAccessScope:"ALL_BRANCHES",branchIds:[],accountRole:"ACCOUNT_ADMIN"} as const;
+beforeEach(()=>vi.clearAllMocks());
+it("captures the legacy hub exposing eight links instead of the approved six-entry Utilities menu",async()=>{m.permission.mockResolvedValue(base);const html=renderToStaticMarkup(await Page());const nav=buildAccountNavigation(base as never,"SALESPUNCH360_ACCOUNT",["INVENTORY"]);expect(nav.find(g=>g.label==="Utilities")?.items).toHaveLength(6);expect((html.match(/class="account-card account-utility"/g)??[]).length).toBe(8);expect(html).toContain("Backup &amp; Recovery");expect(html).toContain("Period Locks");console.log("A117_HUB_POLICY",JSON.stringify({approvedUtilitiesEntries:6,legacyHubCards:8,backupStillInLegacyHub:true}))});
+it("captures Project Manager links whose destinations require denied permissions",async()=>{const actor={...base,accountRole:"PROJECT_MANAGER" as const};expect(canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_REPORTS")).toBe(true);expect(canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_ACCOUNTS")).toBe(false);expect(canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTINGS")).toBe(false);m.permission.mockResolvedValue(actor);const html=renderToStaticMarkup(await Page());expect(html).toContain('href="/workspace/account/utilities/import"');expect(html).toContain('href="/workspace/account/utilities/verification"');console.log("A117_PROJECT_MANAGER_LINKS",JSON.stringify({rootReportsAllowed:true,importLinkedButPermissionDenied:true,verificationLinkedButPermissionDenied:true}))});
+it("captures the Accountant verification link despite denied Settings permission",async()=>{const actor={...base,accountRole:"ACCOUNTANT" as const};expect(canUsePermission(actor,"SALESPUNCH360_ACCOUNT","ACCOUNT_SETTINGS")).toBe(false);m.permission.mockResolvedValue(actor);const html=renderToStaticMarkup(await Page());expect(html).toContain('href="/workspace/account/utilities/verification"')});
+it("keeps explicitly admin-tagged cards hidden from a non-admin",async()=>{m.permission.mockResolvedValue({...base,accountRole:"PROJECT_MANAGER"});const html=renderToStaticMarkup(await Page());expect(html).not.toContain('href="/workspace/account/utilities/backup"');expect(html).not.toContain('href="/workspace/account/utilities/financial-year"');expect(html).not.toContain('href="/workspace/account/utilities/period-locks"')});

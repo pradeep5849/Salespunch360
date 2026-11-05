@@ -1,0 +1,60 @@
+{
+  "page_id": "A117",
+  "page_name": "Account utilities / Data management",
+  "route": "/workspace/account/utilities",
+  "inventory_label": "Data management and financial safety in one place.",
+  "audit_status": "AUDIT COMPLETE \u2014 source/SSR scope only",
+  "reference_status": "Owner-approved Utilities dropdown with six selected entries and separate Backup/Restore is the applicable navigation reference. Do not recreate the older eight-card hub merely to match inventory.",
+  "findings": [
+    {
+      "finding_id": "A117-F01",
+      "severity": "Low",
+      "classification": "Legacy hub diverges from the approved navigation structure",
+      "current_behavior": "The retained /utilities Web route shows eight cards including Audit History, Period Locks and Backup & Recovery. The approved Utilities dropdown contains six selected entries and Backup/Restore is separate. The current main menu no longer links the generic hub.",
+      "required_correction": "Explicitly retire/redirect the legacy hub or align its role with the canonical navigation. Preserve the owner-selected six-item dropdown and separate backup group; do not reintroduce rejected or unrequested menu entries.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual SSR showed eight hub cards while buildAccountNavigation returned six Utilities entries. Source inspection establishes lack of a direct generic hub menu entry; live bookmark reachability was not exercised."
+    },
+    {
+      "finding_id": "A117-F02",
+      "severity": "Medium",
+      "classification": "Hub cards do not honor destination read permissions",
+      "current_behavior": "Root requires ACCOUNT_REPORTS and filters cards only with admin flags. A Project Manager can enter the root but is shown Import (ACCOUNT_ACCOUNTS denied) and Data Verification (ACCOUNT_SETTINGS denied). An Accountant is also shown Verification despite denied Settings permission.",
+      "required_correction": "Use shared destination capability filtering and consistent permission-derived links, without broadening read/write authorization to make a dead link work. Reuse the canonical navigation policy if the hub is retained.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual hub SSR with synthetic Project Manager/Accountant actors and direct canUsePermission evaluation. Destination headers enforce their separate permissions by source review. No unauthorized live read or mutation was tested."
+    }
+  ],
+  "shared_findings": [
+    {
+      "finding_id": "A111-F01",
+      "impact": "Exact native /utilities root has no dedicated route and falls through to NativeDestinationNotice. Keep the owner-approved menu structure rather than treating this as an instruction to expose Audit History."
+    },
+    {
+      "finding_id": "A113-F04",
+      "impact": "Generic import/export destinations retain Inventory/item-gate policy inconsistencies; not re-counted as a new A117 finding."
+    }
+  ],
+  "verified_existing_controls": [
+    "Explicitly admin-tagged Backup, Financial Year and Period Locks cards were hidden from the Project Manager SSR fixture.",
+    "Root read still requires ACCOUNT_REPORTS. Destination authorization is not bypassed by displaying a link.",
+    "Canonical menu tests still preserve six Utilities entries and separate four-option Backup/Restore."
+  ],
+  "verification": {
+    "date": "2026-11-05",
+    "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "passed": 16,
+    "failed": 0,
+    "files": 3,
+    "test_report": "docs/a117/focused-test-evidence.json",
+    "scope": "Source/SSR/pure permissions only; no live deployment, browser or native tap test."
+  },
+  "implementation_changes": "NONE \u2014 audit documents/evidence only",
+  "next_page": {
+    "id": "A118",
+    "page_name": "Period Locks",
+    "route": "/workspace/account/utilities/period-locks",
+    "status": "NOT STARTED",
+    "expected_behavior_from_inventory": "Normal Account UI can only advance a lock. Closed years cannot be reopened."
+  }
+}

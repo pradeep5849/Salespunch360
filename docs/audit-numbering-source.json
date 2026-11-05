@@ -47,6 +47,12 @@
       "inventory_label": "Data management and financial safety in one place.",
       "route": "/workspace/account/utilities",
       "source_title": "Account utilities"
+    },
+    {
+      "id": "A118",
+      "inventory_label": "Normal Account UI can only advance a lock. Closed years cannot be reopened.",
+      "route": "/workspace/account/utilities/period-locks",
+      "source_title": "Period locks"
     }
   ]
 }
