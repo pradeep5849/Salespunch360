@@ -1,3 +1,4 @@
+import { prefersMarkdown } from "./lib/public-site/discovery";
 import { randomBytes } from "node:crypto";
 import { contentSecurityPolicy } from "./lib/security/headers";
 import { NextResponse, type NextRequest } from "next/server";
@@ -22,6 +23,13 @@ function requestHost(request: NextRequest) {
   return normalizeHost(forwarded) ?? direct;
 }
 function passThrough(request: NextRequest) {
+  if (request.nextUrl.pathname === "/" && (request.method === "GET" || request.method === "HEAD")) {
+    const response = request.headers.get("rsc") !== "1" && prefersMarkdown(request.headers.get("accept"))
+      ? NextResponse.rewrite(new URL("/site.md",request.url))
+      : NextResponse.next();
+    response.headers.set("Vary", "Accept, RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Next-Url");
+    return response;
+  }
   if (
     !/^\/(workspace|admin)(\/|$)|^\/(sign-in|register)(\/|$)/.test(
       request.nextUrl.pathname,
