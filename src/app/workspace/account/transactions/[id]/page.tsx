@@ -32,6 +32,7 @@ export default async function Page({
 
   return (
     <main>
+      <nav aria-label="Transaction actions"><Link href={`/workspace/account/transactions/${x.id}/preview`}>Preview / Share PDF or images</Link><a href={`sms:?body=${encodeURIComponent(`${x.type.replaceAll("_"," ")} ${x.documentNumber} · ${x.partyName} · ${x.grandTotal.toString()}`)}`}>Compose SMS summary</a>{controls.canEditTransactionSettings&&<Link href="/workspace/account/settings/transactions">Transaction settings</Link>}{controls.canDuplicatePurchase&&<Link href={`/workspace/account/transactions/new?type=PURCHASE_BILL&duplicateId=${x.id}`}>Duplicate purchase</Link>}{x.type==="PURCHASE_BILL"&&x.status==="POSTED"&&<p>Posted bills retain their journal, payments and stock history. Use a purchase return/debit note to correct the original bill. {controls.canCorrectPurchase&&<Link href={`/workspace/account/transactions/new?type=DEBIT_NOTE&sourceId=${x.id}`}>Prepare correction / purchase return</Link>}</p>}</nav>
       <h1>
         {x.type} {x.documentNumber}
       </h1>

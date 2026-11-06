@@ -48,7 +48,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountBootstrap(branchId:String?=null,companyWide:Boolean=false):AccountBootstrap{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/bootstrap$query"))}
  suspend fun accountDashboard(branchId:String?=null,companyWide:Boolean=false):AccountDashboard{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/dashboard$query"))}
  suspend fun accountHome(q:String="",types:Set<String> = emptySet(),branchId:String?=null,companyWide:Boolean=false):AccountHome{val query=buildList{add("homeVersion=2");if(companyWide)add("scope=all") else branchId?.let{add("branchId=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}");types.forEach{add("type=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty();return json.decodeFromString(call("api/v1/mobile/account/home$query"))}
- suspend fun accountDocumentPdf(type:String,id:String)=download("api/v1/mobile/account/print/${enc(type)}/${enc(id)}")
+ suspend fun accountDocumentPdf(type:String,id:String,theme:String="",color:String="")=download("api/v1/mobile/account/print/${enc(type)}/${enc(id)}"+listOfNotNull(theme.takeIf{it.isNotBlank()}?.let{"theme=${enc(it)}"},color.takeIf{it.isNotBlank()}?.let{"color=${enc(it)}"}).joinToString("&").let{if(it.isBlank())""else"?$it"})
  suspend fun accountMasterList(kind:String,q:String="",active:String="true",branchId:String?=null,offset:Int=0):List<AccountMasterRecord>{val query=buildList{if(q.isNotBlank())add("q=${enc(q)}");add("active=${enc(active)}");add("offset=$offset");branchId?.let{add("branchId=${enc(it)}")}}.joinToString("&",prefix="?");return json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}$query"))}
  suspend fun accountMasterOptions(kind:String="customers"):AccountMasterOptions=json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}?view=options"))
  suspend fun setAccountItemsActive(kind:String,ids:List<String>,active:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/item-management","POST",buildJsonObject{put("action","SET_ACTIVE");put("kind",kind);put("isActive",active);putJsonArray("ids"){ids.forEach{add(kotlinx.serialization.json.JsonPrimitive(it))}}}.toString())).jsonObject
@@ -61,6 +61,9 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun updateOwnerIdentity(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/money/owner-setup/${enc(id)}","PATCH",payload.toString())).jsonObject
  suspend fun saveQuickItemSetting(key:String,value:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/settings/item-settings-quick","POST",buildJsonObject{put("key",key);put("value",value)}.toString())).jsonObject
  suspend fun saveSalesInvoicePrefix(branchId:String,prefix:String)=json.parseToJsonElement(call("api/v1/mobile/account/settings/sales-invoice-prefix","POST",buildJsonObject{put("branchId",branchId);put("prefix",prefix)}.toString())).jsonObject
+ suspend fun accountSettlement(id:String,duplicate:Boolean=false)=json.parseToJsonElement(call("api/v1/mobile/account/settlements/${enc(id)}"+if(duplicate)"?duplicate=1"else "")).jsonObject
+ suspend fun accountSalesPage(type:String?=null,q:String="",cursor:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/transactions?page=1"+listOfNotNull(type?.let{"type=${enc(it)}"},q.takeIf{it.isNotBlank()}?.let{"q=${enc(it)}"},cursor?.let{"cursor=${enc(it)}"}).joinToString("&",prefix="&"))).jsonObject
+ suspend fun purchasesPage(type:String?=null,q:String="",cursor:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/purchases?page=1"+listOfNotNull(type?.let{"type=${enc(it)}"},q.takeIf{it.isNotBlank()}?.let{"q=${enc(it)}"},cursor?.let{"cursor=${enc(it)}"}).joinToString("&",prefix="&"))).jsonObject
  suspend fun accountSalesDocuments(type:String?=null,q:String="")=json.parseToJsonElement(call("api/v1/mobile/account/transactions"+buildList{type?.let{add("type=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}")}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
  suspend fun salePriceProposals(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}/sale-price")).jsonArray
  suspend fun confirmSalePrice(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/transactions/${enc(id)}/sale-price","POST",payload.toString())).jsonObject
@@ -115,6 +118,18 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
    json.parseToJsonElement(raw).jsonObject
   }
  }
+ suspend fun createPaymentWithAttachments(payload:JsonObject,files:List<SaleCreationAttachment>)=withContext(Dispatchers.IO){
+  require(validSaleCreationAttachments(files)){"Choose PDF, PNG or JPEG evidence, up to 50 files and 10 MB combined."}
+  val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("payload",payload.toString()).apply{files.forEach{file->addFormDataPart("attachments",file.name,file.bytes.toRequestBody(file.mime.toMediaType()))}}.build()
+  val requestToken=session.token()
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/payments/with-attachments").apply{requestToken?.let{header("Authorization","Bearer $it")}}.post(body).build()
+  http.newCall(request).awaitResponse().use{response->
+   val raw=response.body?.string()?:"{}"
+   if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(requestToken);val code=runCatching{val value=json.parseToJsonElement(raw).jsonObject;(value["error"]?:value["errorCode"])?.jsonPrimitive?.content}.getOrNull();throw ApiException(response.code,code)}
+   json.parseToJsonElement(raw).jsonObject
+  }
+ }
+ suspend fun paymentAttachment(id:String)=download("api/v1/mobile/account/payment-attachments/${enc(id)}")
  suspend fun editSaleWithAttachments(id:String,payload:JsonObject,files:List<SaleCreationAttachment>,filesOnly:Boolean)=withContext(Dispatchers.IO){
   require(validSaleCreationAttachments(files)&&files.isNotEmpty()){ "Choose PDF, PNG or JPEG files, up to 50 files and 10 MB combined." }
   val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{
@@ -218,6 +233,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun journal(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals/${enc(id)}")).jsonObject
  suspend fun reverseJournal(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals/${enc(id)}/reverse","POST",payload.toString())).jsonObject
  suspend fun createFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years","POST",payload.toString())).jsonObject
+ suspend fun previewCloseFinancialYear(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years/preview-close?financialYearId=${enc(id)}")).jsonObject
  suspend fun closeFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years/close","POST",payload.toString())).jsonObject
  suspend fun assetsPage(q:String="",status:String?=null,offset:Int=0)=json.parseToJsonElement(call("api/v1/mobile/account/assets?paged=1&offset=$offset&limit=50"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="&").takeIf{it!="&"}.orEmpty())).jsonObject
  suspend fun assets(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/assets"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
@@ -243,6 +259,13 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}")).jsonObject
  suspend fun executeAccountImport(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/imports/${enc(id)}/execute","POST")).jsonObject
  suspend fun accountMasterExport(type:String,format:String)=download("api/v1/mobile/account/exports/${enc(type)}/${enc(format)}")
+ suspend fun prepareCompanyRestore(file:java.io.File):JsonObject=withContext(Dispatchers.IO){
+  val token=pinnedToken?:session.token()
+  val body=object:okhttp3.RequestBody(){override fun contentType()="application/octet-stream".toMediaType();override fun contentLength()=file.length();override fun writeTo(sink:okio.BufferedSink){file.inputStream().use{source->val buffer=ByteArray(32768);while(true){val count=source.read(buffer);if(count<0)break;sink.write(buffer,0,count)}}}}
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/restore?mode=preview").apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build()
+  http.newCall(request).awaitResponse().use{response->val raw=response.body?.string()?:"{}";if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(token);val error=runCatching{json.parseToJsonElement(raw).jsonObject}.getOrNull();throw ApiException(response.code,error?.get("error")?.jsonPrimitive?.contentOrNull,null,error?.get("message")?.jsonPrimitive?.contentOrNull)};json.parseToJsonElement(raw).jsonObject}
+ }
+ suspend fun executeCompanyRestore(id:String,name:String)=json.parseToJsonElement(call("api/v1/mobile/account/restore","POST",buildJsonObject{put("reviewId",id);put("companyName",name);put("confirmed",true)}.toString())).jsonObject
  suspend fun accountBackup(includePrivateFiles:Boolean=false)=download("api/v1/mobile/account/backup"+(if(includePrivateFiles)"?includeFiles=true" else ""),true)
  suspend fun restoreAccountRecycle(id:String)=call("api/v1/mobile/account/recycle-bin/${enc(id)}/restore","POST")
  private suspend fun multipart(path:String,field:String,name:String,mime:String,bytes:ByteArray,fields:Map<String,String>)=withContext(Dispatchers.IO){val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{fields.forEach{(k,v)->addFormDataPart(k,v)}}.addFormDataPart(field,name,bytes.toRequestBody(mime.toMediaType())).build();val token=session.token();val request=Request.Builder().url(BuildConfig.API_BASE_URL+path).apply{token?.let{header("Authorization","Bearer $it")}}.post(body).build();http.newCall(request).awaitResponse().use{val raw=it.body?.string()?: "{}";if(!it.isSuccessful)throw ApiException(it.code,runCatching{json.parseToJsonElement(raw).jsonObject["error"]?.jsonPrimitive?.content}.getOrNull());raw}}
@@ -252,6 +275,10 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun saveAccountAdministration(section:String,action:String,payload:kotlinx.serialization.json.JsonElement)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}/${enc(action)}","POST",payload.toString()))
  suspend fun accountTax(filters:Map<String,String> = emptyMap())=json.parseToJsonElement(call("api/v1/mobile/account/tax"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
  suspend fun saveAccountTax(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/tax","POST",payload.toString()))
+ suspend fun numberingRestartOptions()=json.decodeFromString<List<NumberingRestartOption>>(call("api/v1/mobile/account/numbering-restart"))
+ suspend fun previewNumberingRestart(seriesId:String,prefix:String,reason:String)=json.decodeFromString<NumberingRestartReview>(call("api/v1/mobile/account/numbering-restart","POST",json.encodeToString(buildJsonObject{put("action","PREVIEW");put("input",buildJsonObject{put("seriesId",seriesId);put("prefix",prefix);put("reason",reason)})})))
+ suspend fun confirmNumberingRestart(token:String)=call("api/v1/mobile/account/numbering-restart","POST",json.encodeToString(buildJsonObject{put("action","CONFIRM");put("input",buildJsonObject{put("token",token);put("confirmed",true)})}))
+ suspend fun accountAuditHistory(query:String="")=json.decodeFromString<AccountAuditPage>(call("api/v1/mobile/account/utilities/audit"+(if(query.isBlank())""else"?$query")))
  suspend fun accountUtility(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}")).jsonArray
  suspend fun setAccountReportFavourite(reportKey:String,favourite:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/reports/favourites","POST",buildJsonObject{put("reportKey",reportKey);put("favourite",favourite)}.toString())).jsonObject
  suspend fun accountReportOptions()=json.parseToJsonElement(call("api/v1/mobile/account/reports/options")).jsonObject

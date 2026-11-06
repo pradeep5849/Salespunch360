@@ -1,0 +1,16 @@
+import type {AccountModule,AccountRole} from "@prisma/client";
+import {ACCOUNT_ROLE_PERMISSIONS,type Permission} from "@/lib/auth/permissions";
+type Entry={label:string;href?:string;disabled?:boolean;permission:Permission;modules:AccountModule[];financial?:boolean};
+const document=(label:string,type:string,purchase=false):Entry=>({label,href:`/workspace/account/transactions/new?type=${type}`,permission:purchase?"ACCOUNT_PURCHASE_ENTRY":"ACCOUNT_SALES_ENTRY",modules:[purchase?"PURCHASES":"SALES",type==="PURCHASE_BILL"?"PURCHASE_BILLS":type==="PURCHASE_ORDER"?"PURCHASE_ORDER":type==="CREDIT_NOTE"?"CREDIT_NOTE":type==="DEBIT_NOTE"?"DEBIT_NOTE":type==="PROFORMA_INVOICE"?"PROFORMA_INVOICE":type==="SALES_ORDER"?"SALES_ORDER":type==="DELIVERY_CHALLAN"?"DELIVERY_CHALLAN":"SALES"]});
+export const TRANSACTION_LAUNCHER:{title:string;actions:Entry[]}[]=[
+ {title:"Sale transactions",actions:[{label:"Payment-In",href:"/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",permission:"ACCOUNT_SETTLEMENT_ENTRY",modules:["CUSTOMER_RECEIPTS"],financial:true},document("Sale Return","CREDIT_NOTE"),document("Delivery Challan","DELIVERY_CHALLAN"),{label:"Estimate / Quotation",href:"/workspace/account/quotations/new",permission:"ACCOUNT_QUOTATION_EDIT",modules:["QUOTATIONS_BOQ"]},document("Proforma Invoice","PROFORMA_INVOICE"),document("Sale Order","SALES_ORDER"),document("Sale Invoice","SALES_INVOICE"),{label:"Mobile POS",disabled:true,permission:"ACCOUNT_SALES_ENTRY",modules:["SALES"]},{label:"Sale Assets",href:"/workspace/account/assets",permission:"ACCOUNT_ACCOUNTS",modules:["ASSETS"],financial:true}]},
+ {title:"Purchase transactions",actions:[document("Purchase","PURCHASE_BILL",true),{label:"Payment-Out",href:"/workspace/account/transactions/money?type=VENDOR_PAYMENT",permission:"ACCOUNT_SETTLEMENT_ENTRY",modules:["VENDOR_PAYMENTS"],financial:true},document("Purchase Return","DEBIT_NOTE",true),document("Purchase Order","PURCHASE_ORDER",true),{label:"Purchase Assets",href:"/workspace/account/assets/new",permission:"ACCOUNT_ACCOUNTS",modules:["ASSETS"],financial:true}]},
+ {title:"Other transactions",actions:[{label:"Expenses",href:"/workspace/account/expenses/new",permission:"ACCOUNT_EXPENSE_ENTRY",modules:["EXPENSES"]},{label:"P2P Transfer",href:"/workspace/account/money/party-transfers",permission:"ACCOUNT_MONEY_ENTRY",modules:[],financial:true},{label:"Other Income",href:"/workspace/account/expenses/new?type=OTHER_INCOME",permission:"ACCOUNT_EXPENSE_ENTRY",modules:["EXPENSES"],financial:true}]},
+];
+export function transactionLauncherForRole(role:AccountRole|null,modules:readonly AccountModule[],branchId?:string|null){
+ const permissions=new Set(role?ACCOUNT_ROLE_PERMISSIONS[role]:[]);
+ return TRANSACTION_LAUNCHER.map(group=>({title:group.title,actions:group.actions.filter(entry=>permissions.has(entry.permission)&&entry.modules.every(module=>modules.includes(module))&&(!entry.financial||role==="ACCOUNT_ADMIN"||role==="ACCOUNTANT")).map(entry=>{
+  const href=entry.href?new URL(entry.href,"https://launcher.invalid"):undefined;if(href&&branchId)href.searchParams.set("branchId",branchId);
+  return {label:entry.label,...(href?{href:href.pathname+href.search}:{}),...(entry.disabled?{disabled:true}:{})};
+ })})).filter(group=>group.actions.length);
+}

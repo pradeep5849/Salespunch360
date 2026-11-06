@@ -7,6 +7,7 @@ import { canUsePermission } from "@/lib/auth/permissions";
 import { reverseJournalInTx } from "@/lib/accounting/service";
 import { parseIndiaBusinessDate } from "@/lib/follow-up-tasks/date";
 import { createSettlementForActor } from "./commercial";
+import {commitPendingPaymentPlan,copyPendingPaymentPlan} from "./allocated-payment";
 import { retrySerializable } from "./transaction-retry";
 import type { ProjectActor } from "./projects";
 
@@ -158,7 +159,7 @@ export async function completeLegacyChequeSourceForActor(
           });
           return updated;
         },
-        { isolationLevel: "Serializable" },
+        { isolationLevel: "Serializable", timeout:30000 },
       ),
     4,
   );
@@ -228,10 +229,12 @@ async function sourceRequest(
     moneyAccountId: bankId,
     transactionDate: date,
     reference: source.reference ?? undefined,
+    billingName:source.billingName??undefined,
+    billingAddress:source.billingAddress??undefined,
     notes: source.notes ?? undefined,
     chequeNumber: row.chequeNumber,
     chequeDate: row.chequeDate,
-    allocations: [
+    allocations: source.type.endsWith("ADVANCE") ? [] : [
       ...allocations.map((x) => ({
         documentId: x.documentId,
         amount: x.amount.toFixed(2),
@@ -272,6 +275,13 @@ async function reverseSettlementInTx(
       { journalEntryId: application.journalEntryId, entryDate: date, reason },
       { advanceApplicationId: application.id },
     );
+  }
+  const openingApplications=await tx.accountOperationalAudit.findMany({where:{companyId:a.companyId,entityType:"OPENING_ADVANCE_APPLICATION",metadata:{path:["advanceId"],equals:source.id}}});
+  for(const application of openingApplications){
+    const journalId=(application.metadata as {journalEntryId?:string}|null)?.journalEntryId;
+    if(!journalId)throw new Error("INVALID_OPENING_APPLICATION_JOURNAL");
+    const journal=await tx.journalEntry.findFirst({where:{id:journalId,companyId:a.companyId,status:"POSTED"},select:{id:true}});
+    if(journal)await reverseJournalInTx(tx,a,{journalEntryId:journal.id,entryDate:date,reason},{advanceApplicationId:application.entityId});
   }
   await reverseJournalInTx(
     tx,
@@ -347,6 +357,7 @@ export async function chequeFinancialActionForActor(
             if (date < row.chequeDate) throw new Error("CHEQUE_NOT_DUE");
             const bankId = input.moneyAccountId ?? row.moneyAccountId;
             if (source.status === "REVERSED") {
+              const previousSourceId=source.id;
               source = await createSettlementForActor(
                 a,
                 await sourceRequest(
@@ -360,6 +371,13 @@ export async function chequeFinancialActionForActor(
                 tx,
                 { reuseChequeId: id },
               );
+              await copyPendingPaymentPlan(tx,a,previousSourceId,source.id);
+              const evidence=await tx.paymentAttachment.findMany({where:{companyId:a.companyId,settlementId:previousSourceId},orderBy:{position:"asc"}});
+              if(evidence.length){
+                await tx.$executeRaw`SELECT set_config('app.payment_attachment_save_id',${source.id},true)`;
+                await tx.paymentAttachment.createMany({data:evidence.map(file=>({...file,id:crypto.randomUUID(),settlementId:source!.id}))});
+                await tx.accountOperationalAudit.create({data:{companyId:a.companyId,actorUserId:a.id,eventType:"PAYMENT_EVIDENCE_CARRIED",entityType:"ACCOUNT_SETTLEMENT",entityId:source.id,metadata:{fromSettlementId:previousSourceId,count:evidence.length}}});
+              }
               row = { ...row, settlementId: source.id };
             }
             if (source.status !== "PENDING_CHEQUE")
@@ -379,6 +397,7 @@ export async function chequeFinancialActionForActor(
             );
             if (!posted.journalEntryId || posted.status !== "POSTED")
               throw new Error("INVALID_CHEQUE_SOURCE");
+            await commitPendingPaymentPlan(tx,a,posted.id,date);
             status = "CLEARED";
             await tx.cheque.update({
               where: { id },
@@ -447,7 +466,7 @@ export async function chequeFinancialActionForActor(
           });
           return updated;
         },
-        { isolationLevel: "Serializable" },
+        { isolationLevel: "Serializable", timeout:30000 },
       ),
     4,
   );

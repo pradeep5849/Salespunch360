@@ -1,0 +1,147 @@
+{
+  "page_id": "A114",
+  "page_name": "Close Financial Year / Close books",
+  "route": "/workspace/account/utilities/financial-year",
+  "inventory_label": "Close only after verification. Closing preserves history and locks posting.",
+  "audit_status": "AUDIT COMPLETE \u2014 reference/source/synthetic scope only",
+  "reference_status": "Three owner screenshots received: close-books mode chooser, transaction-prefix form, and backup-filename/progress sheet.",
+  "reference_observations": {
+    "mode_1": {
+      "label": "Restart Transaction Numbers",
+      "effect_stated_in_reference": "Retains all current company data while changing transaction prefixes and starting fresh sequences for a new financial year.",
+      "action": "Change Prefixes",
+      "prefix_fields": [
+        "Invoice",
+        "Estimate",
+        "Proforma Invoice",
+        "Delivery Challan",
+        "Payment In",
+        "Sale Order",
+        "Purchase Order",
+        "Credit Note"
+      ],
+      "prefix_preview": "A corresponding preview field is shown for each type.",
+      "rules_visible": "Invoice prefix is marked required; the notice disallows leading zero and specified special characters. This is reference restart-mode guidance, not approval to change every existing prefix policy."
+    },
+    "mode_2": {
+      "label": "Backup all data and start fresh",
+      "effect_stated_in_reference": "Transaction data up to the chosen closing date is backed up and removed from the current company.",
+      "closing_date_shown": "2026-10-31",
+      "action": "Start Fresh",
+      "first_step": "Backup to your phone",
+      "backup_prompt": {
+        "filename_editable": true,
+        "shown_default": "vyapar_backup",
+        "shown_location": "Vyapar/Close_books/",
+        "actions": [
+          "Cancel",
+          "OK"
+        ]
+      },
+      "progress_labels": [
+        "Party",
+        "Item",
+        "Bank",
+        "Cash in Hand",
+        "Loans",
+        "Cheque",
+        "Transaction"
+      ],
+      "brand_note": "These names/paths describe the reference product. They are not a requirement to use Vyapar branding, its proprietary backup format, or the literal folder name in SalesPunch360."
+    },
+    "not_established_by_images": [
+      "Actual deletion/carry-forward algorithms, balance migration and reconciliation behavior",
+      "Restore completeness or how historical records are accessed after Start Fresh",
+      "Failure, cancellation and crash recovery after processing begins",
+      "Permission policy for a destructive start-fresh operation"
+    ]
+  },
+  "current_source_behavior": "Web lists financial years and offers an early-close reason plus a single close form. Native lists years and provides a confirm dialog. The shared service checks integrity, marks the selected year CLOSED/inactive/non-current, locks through that year end and adds a close audit event. It preserves transaction history; it neither invokes backup nor implements the reference Start Fresh deletion workflow.",
+  "findings": [
+    {
+      "finding_id": "A114-F01",
+      "severity": "Medium",
+      "classification": "Web close preview, confirmation and actionable feedback",
+      "current_behavior": "Web exposes Verify & close Financial Year as a direct Server Action form. It does not show the verification results before the permanent close or offer the native warning/confirmation dialog. Early-close and integrity errors are thrown without a close-specific inline result. Native has a permanent-lock warning, but neither platform has the reference multi-stage close-books workflow.",
+      "required_correction": "Provide an explicit server-derived close preview (target company/year/lock date, checks and blockers), confirmation and accessible actionable results. Keep read-only verification separate from the final mutation and prevent repeated pending submissions. Do not introduce deletion as a confirmation-flow fix.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual SSR of the year-list page plus Web action source; native FinancialDialog source has a warning and confirmation. No form action or device dialog was executed."
+    },
+    {
+      "finding_id": "A114-F02",
+      "severity": "High",
+      "classification": "Integrity verification/close/posting serialization boundary",
+      "current_behavior": "Eleven integrity queries execute before the close transaction. Closing locks a financial_years row, whereas journal posting/period-lock operations acquire a companies row lock before checking context. Closing does not acquire that shared company lock. The outside-transaction verification can be stale and the source does not establish one ordering boundary with concurrent posting.",
+      "required_correction": "Use a common documented close/post/lock serialization protocol and revalidate required invariants at the mutation boundary. Add real PostgreSQL tests for posting versus close, close versus lock advancement, rollback and duplicate close. Resolve locking order before claiming concurrency safety.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual synthetic trace placed all 11 verification reads outside the close transaction and observed only financial_years SQL. Posting/period-lock source inspected at accounting/service.ts lockCompany/validateContext. No real database race, trigger/FK timing or actual late posting was reproduced; High is the financial-integrity risk priority, not proof of a production incident."
+    },
+    {
+      "finding_id": "A114-F03",
+      "severity": "Medium",
+      "classification": "Close payload validation and safe error mapping",
+      "current_behavior": "The shared close service accepts a TypeScript-shaped input without runtime schema parsing; mobile casts raw unknown JSON into it. A numeric earlyCloseReason reaches .trim() and throws after verification reads. Malformed IDs reach SQL UUID casts. Early-close/integrity errors lack dedicated safe response mappings.",
+      "required_correction": "Parse a strict close input schema before reads, bound and validate reason text and target ID, then return consistent field/domain errors on Web/mobile. Keep actor company/admin identity server-derived.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual synthetic call with earlyCloseReason:7 threw a trim-type error after reads and before writes. Source mobile/account-accounting.ts:182\u2013190 casts raw input. Invalid-ID SQL-cast and API response behavior are source-inferred, not live HTTP tests."
+    },
+    {
+      "finding_id": "A114-F04",
+      "severity": "Medium",
+      "classification": "Company-wide prechecks and already-closed replay",
+      "current_behavior": "Integrity queries are company-wide, without the selected financial-year/date filter. They run before the target year is fetched and before the already-CLOSED no-op check. A later/different-period synthetic integrity failure therefore prevents even reading an already-closed target on replay.",
+      "required_correction": "Define closing-year checks versus shared company integrity checks explicitly, show their scope, and handle an authorized already-closed target deterministically. A missing/foreign target should not trigger a complete company scan. Preserve deliberate company-wide safeguards rather than blindly narrowing every check.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual synthetic replay with a CLOSED target and a different-period bad journal failed company verification before the target-year read. Service verification selects no financialYearId for the checked journal/document rows."
+    },
+    {
+      "finding_id": "A114-F05",
+      "severity": "Medium",
+      "classification": "Reference close-books modes and restart semantics absent",
+      "current_behavior": "There is no two-mode chooser, reference closing-date workflow, backup filename/save stage or Start Fresh implementation. General transaction settings have the eight corresponding prefix types, but update existing prefixes without restarting nextSequence or offering close-books previews. A synthetic 0#@ prefix is accepted there; this is not a reference-specific restart validator.",
+      "required_correction": "First decide which reference close-books operations SalesPunch360 should expose and how they relate to the existing history-preserving year close. If restart is approved, design a dedicated collision-safe, audited numbering transition and its own prefix validation/preview while preserving historical document numbers. If Start Fresh is approved, specify verified backup/restore, balance treatment, cancellation/recovery and explicit destructive-action consent before any implementation or execution.",
+      "implementation_status": "BLOCKED \u2014 OWNER SCOPE/POLICY DECISION",
+      "evidence": "Owner screenshots compared with actual SSR, general settings source and actual synthetic prefix update (only prefix changed, nextSequence stayed 42 in the mock). No numbering sequence was reset and no production data was deleted."
+    }
+  ],
+  "verified_existing_controls": [
+    "Non-admin close was rejected before integrity reads.",
+    "Integrity ERROR blocked close writes in the synthetic service execution.",
+    "A future-ended year required a nonempty early-close reason; the existing explicit reason policy was accepted.",
+    "The target year read was scoped to the actor company.",
+    "The existing close path sets CLOSED/inactive/non-current, upserts the lock to year.endDate and records FINANCIAL_YEAR_CLOSED. These were mocked writes only."
+  ],
+  "owner_decisions": [
+    {
+      "id": "A114-D01",
+      "subject": "Which close-books operations to implement",
+      "status": "PENDING",
+      "options": [
+        "Keep the existing history-preserving financial-year close",
+        "Add a dedicated non-destructive transaction-number restart mode",
+        "Also design a backup-and-Start-Fresh workflow as a separately approved destructive feature"
+      ],
+      "authorization_boundary": "Reference screenshots are comparison evidence. They do not authorize deletion, resetting live numbering, closing production books or selecting a new closing/carry-forward policy."
+    }
+  ],
+  "verification": {
+    "date": "2026-11-04",
+    "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "prior_audit_checkpoint": "0f3c85114d9aaee8b935b57ff12d02acb3067825",
+    "focused_passed": 49,
+    "focused_failed": 0,
+    "skipped": 0,
+    "files": 7,
+    "audit_probes": 11,
+    "test_report": "docs/a114/focused-test-evidence.json",
+    "scope": "11 actual-function/SSR audit probes plus 38 existing focused unit/runtime/source-contract checks. Database, closing writes and locks were mocked; no real close, delete, backup, Google upload or concurrent database transaction executed."
+  },
+  "implementation_changes": "NONE \u2014 audit documents only; all findings remain open.",
+  "next_page": {
+    "id": "A115",
+    "page_name": "Import preview / job detail",
+    "route": "/workspace/account/utilities/import/[id]",
+    "status": "REFERENCE PENDING",
+    "reference_needed": "Reference Import Items flow after file selection/validation: preview, row errors, update-existing choice and confirmation if available. Its upload entry screen will also support A116."
+  }
+}

@@ -1,11 +1,18 @@
-import {submitSaleForActor} from "@/lib/account/sale-submit";
+import { submitSaleForActor } from "@/lib/account/sale-submit";
 import { saleDetailForActor } from "@/lib/account/sale-detail";
 import { EFFECTIVE_SETTLEMENT } from "@/lib/account/settlement-policy";
 import { chequePaymentDetails } from "@/lib/account/cheque-payment-input";
-import { replacePostedSaleForActor, reversePostedSaleForActor } from "@/lib/account/sale-amendments";
-import {invoiceShareUrl} from "@/lib/account/invoice-share";
-import {resolveTransactionMessaging} from "@/lib/account/transaction-messaging";
-import {formatMoney,formatCalendarDate,resolveDisplayPreferences} from "@/lib/account/display-preferences";
+import {
+  replacePostedSaleForActor,
+  reversePostedSaleForActor,
+} from "@/lib/account/sale-amendments";
+import { invoiceShareUrl } from "@/lib/account/invoice-share";
+import { resolveTransactionMessaging } from "@/lib/account/transaction-messaging";
+import {
+  formatMoney,
+  formatCalendarDate,
+  resolveDisplayPreferences,
+} from "@/lib/account/display-preferences";
 import { listOpenProjectOptionsForActor } from "@/lib/account/projects";
 import { enabledModulesForCompany } from "@/lib/account/modules";
 import { applyAdvanceForActor } from "@/lib/account/commercial";
@@ -17,10 +24,9 @@ import {
   commercialDocumentControlsForActor,
   commercialEditorOptionsForActor,
   createCommercialDocumentForActor,
-  createSettlementForActor,
   documentOutstandingsBatch,
   getCommercialDocumentForActor,
-  listCommercialDocumentsForActor,
+  listCommercialDocumentsPageForActor,
   postCommercialDocumentForActor,
 } from "@/lib/account/commercial";
 import { db } from "@/lib/db";
@@ -71,61 +77,128 @@ export async function mobileSalesOptions(user: MobileAppPrincipal) {
     ),
   };
 }
+export async function mobileSalesPage(
+  user: MobileAppPrincipal,
+  type?: string | null,
+  q?: string | null,
+  cursor?: string | null,
+  branchId?: string | null,
+) {
+  const actor = permit(user, "ACCOUNT_LEDGER_VIEW");
+  const page = await listCommercialDocumentsPageForActor(
+    actor,
+    {
+      type: type ?? undefined,
+      q: q ?? undefined,
+      cursor: cursor ?? undefined,
+      branchId: branchId ?? undefined,
+    },
+    [...SALES_TYPES],
+  );
+  return {
+    ...page,
+    rows: page.rows.map((row) => {
+      const base = row.payableAmount ?? row.grandTotal,
+        balance = row.outstanding;
+      return {
+        ...row,
+        outstanding: row.status === "CANCELLED" ? "0" : balance.toString(),
+        paymentStatus:
+          row.status === "CANCELLED"
+            ? "CANCELLED"
+            : row.type === "SALES_INVOICE" && row.status === "POSTED"
+              ? balance.isZero()
+                ? "PAID"
+                : balance.eq(base)
+                  ? "UNPAID"
+                  : "PARTIALLY_PAID"
+              : row.status,
+      };
+    }),
+  };
+}
 export async function mobileSalesList(
   user: MobileAppPrincipal,
   type?: string | null,
   q?: string | null,
 ) {
-  const actor = permit(user, "ACCOUNT_LEDGER_VIEW"),
-    rows = await listCommercialDocumentsForActor(actor),
-    visible = rows
-      .filter(
-        (row) =>
-          SALES_TYPES.has(row.type) &&
-          !(row.type === "SALES_INVOICE" && row.status === "DRAFT") &&
-          (!type || row.type === type) &&
-          (!q ||
-            row.documentNumber.toLowerCase().includes(q.toLowerCase()) ||
-            row.partyName.toLowerCase().includes(q.toLowerCase())),
-      )
-      .slice(0, 200),
-    sales = visible.filter(
-      (row) => row.type === "SALES_INVOICE" && row.status === "POSTED",
-    ),
-    outstanding = await documentOutstandingsBatch(actor.companyId, sales);
-  return visible.map((row) => {
-    const balance = outstanding.get(row.id),
-      base = row.payableAmount ?? row.grandTotal,
-      paymentStatus =
-        row.type === "SALES_INVOICE" && balance
-          ? balance.isZero()
-            ? "PAID"
-            : balance.eq(base)
-              ? "UNPAID"
-              : "PARTIALLY_PAID"
-          : undefined;
-    return {
-      ...row,
-      outstanding:
-        balance?.toString() ??
-        (row.type === "SALES_INVOICE" ? row.grandTotal.toString() : undefined),
-      paymentStatus,
-    };
-  });
+  return (await mobileSalesPage(user, type, q)).rows;
 }
 export async function mobileSalesDetail(user: MobileAppPrincipal, id: string) {
   const actor = permit(user, "ACCOUNT_LEDGER_VIEW");
-  const header = await db.commercialDocument.findFirst({where:{id,companyId:actor.companyId,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{branchId:{in:actor.branchIds??[]}}:{})},select:{type:true}});
-  if(!header)throw new Error("NOT_FOUND");
-  if(!SALES_TYPES.has(header.type))throw new Error("MOBILE_FORBIDDEN");
-  if(header.type!=="SALES_INVOICE"){const [document,controls]=await Promise.all([getCommercialDocumentForActor(actor,id),commercialDocumentControlsForActor(actor,id)]);return {...document,capabilities:{canConfirmSalesOrder:controls.canConfirmSalesOrder}};}
-  const row = await saleDetailForActor(actor,id);
+  const header = await db.commercialDocument.findFirst({
+    where: {
+      id,
+      companyId: actor.companyId,
+      ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+        ? { branchId: { in: actor.branchIds ?? [] } }
+        : {}),
+    },
+    select: { type: true },
+  });
+  if (!header) throw new Error("NOT_FOUND");
+  if (!SALES_TYPES.has(header.type)) throw new Error("MOBILE_FORBIDDEN");
+  if (header.type !== "SALES_INVOICE") {
+    const [document, controls] = await Promise.all([
+      getCommercialDocumentForActor(actor, id),
+      commercialDocumentControlsForActor(actor, id),
+    ]);
+    return {
+      ...document,
+      capabilities: { canConfirmSalesOrder: controls.canConfirmSalesOrder },
+    };
+  }
+  const row = await saleDetailForActor(actor, id);
   if (!SALES_TYPES.has(row.type)) throw new Error("MOBILE_FORBIDDEN");
-  if(row.type!=="SALES_INVOICE")return row;
-  const [settings,customer,company]=await Promise.all([db.accountSettings.findUnique({where:{companyId:row.companyId}}),row.customerId?db.customer.findFirst({where:{companyId:row.companyId,id:row.customerId},select:{phone:true}}):null,db.company.findUnique({where:{id:row.companyId},select:{primaryPhone:true}})]);
-  const preferences=resolveTransactionMessaging(settings?.transactionDefaults),display=resolveDisplayPreferences(settings);
-  const message=`Hi ${row.partyName}, invoice ${row.documentNumber} dated ${formatCalendarDate(row.issueDate,display)} totals ${formatMoney(row.payableAmount??row.grandTotal,display)}.${preferences.includeInvoiceLink&&row.status==="POSTED"?`\n${invoiceShareUrl(row)}`:""}`;
-  return {...row,shareAs:((settings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences as Record<string,unknown>|undefined)?.shareAs==="PDF"?"PDF":"ASK",preparedMessages:[...(preferences.sendToParty?[{label:"Message to party",message,phone:customer?.phone??null}]:[]),...(preferences.copyToSelf?[{label:"Copy to Self",message,phone:company?.primaryPhone??null}]:[])]};
+  if (row.type !== "SALES_INVOICE") return row;
+  const [settings, customer, company] = await Promise.all([
+    db.accountSettings.findUnique({ where: { companyId: row.companyId } }),
+    row.customerId
+      ? db.customer.findFirst({
+          where: { companyId: row.companyId, id: row.customerId },
+          select: { phone: true },
+        })
+      : null,
+    db.company.findUnique({
+      where: { id: row.companyId },
+      select: { primaryPhone: true },
+    }),
+  ]);
+  const preferences = resolveTransactionMessaging(
+      settings?.transactionDefaults,
+    ),
+    display = resolveDisplayPreferences(settings);
+  const message = `Hi ${row.partyName}, invoice ${row.documentNumber} dated ${formatCalendarDate(row.issueDate, display)} totals ${formatMoney(row.payableAmount ?? row.grandTotal, display)}.${preferences.includeInvoiceLink && row.status === "POSTED" ? `\n${invoiceShareUrl(row)}` : ""}`;
+  return {
+    ...row,
+    shareAs:
+      (
+        (settings?.transactionDefaults as Record<string, unknown> | null)
+          ?.transactionPreferences as Record<string, unknown> | undefined
+      )?.shareAs === "PDF"
+        ? "PDF"
+        : "ASK",
+    preparedMessages: [
+      ...(preferences.sendToParty
+        ? [
+            {
+              label: "Message to party",
+              message,
+              phone: customer?.phone ?? null,
+            },
+          ]
+        : []),
+      ...(preferences.copyToSelf
+        ? [
+            {
+              label: "Copy to Self",
+              message,
+              phone: company?.primaryPhone ?? null,
+            },
+          ]
+        : []),
+    ],
+  };
 }
 export async function mobileCreateSales(
   user: MobileAppPrincipal,
@@ -149,16 +222,40 @@ export async function mobileCreateSales(
   const requestedReceived = Number(source.receivedAmount ?? 0),
     paymentType = String(source.paymentType ?? "CASH"),
     documentPayload = { ...source };
-  if (paymentType === "CHEQUE" && (source.receivedInFull === true || requestedReceived > 0)) chequePaymentDetails.parse(source);
+  if (
+    paymentType === "CHEQUE" &&
+    (source.receivedInFull === true || requestedReceived > 0)
+  )
+    chequePaymentDetails.parse(source);
   delete documentPayload.receivedAmount;
   delete documentPayload.receivedInFull;
   delete documentPayload.paymentType;
-  for (const key of ["chequeNumber", "chequeDate", "moneyAccountId", "paymentReference"]) delete documentPayload[key];
-  const actor=permit(user,"ACCOUNT_JOURNAL_POST");
-  const row=await submitSaleForActor(actor,documentPayload,{
-    receivedAmount:source.receivedAmount??"0",receivedInFull:source.receivedInFull===true,paymentType,
-    ...(source.moneyAccountId?{moneyAccountId:source.moneyAccountId}:{}),...(source.chequeNumber?{chequeNumber:source.chequeNumber}:{}),...(source.chequeDate?{chequeDate:source.chequeDate}:{}),...(source.paymentReference?{reference:source.paymentReference}:{}),
-  },"mobile-sale-receipt");
+  for (const key of [
+    "chequeNumber",
+    "chequeDate",
+    "moneyAccountId",
+    "paymentReference",
+  ])
+    delete documentPayload[key];
+  const actor = permit(user, "ACCOUNT_JOURNAL_POST");
+  const row = await submitSaleForActor(
+    actor,
+    documentPayload,
+    {
+      receivedAmount: source.receivedAmount ?? "0",
+      receivedInFull: source.receivedInFull === true,
+      paymentType,
+      ...(source.moneyAccountId
+        ? { moneyAccountId: source.moneyAccountId }
+        : {}),
+      ...(source.chequeNumber ? { chequeNumber: source.chequeNumber } : {}),
+      ...(source.chequeDate ? { chequeDate: source.chequeDate } : {}),
+      ...(source.paymentReference
+        ? { reference: source.paymentReference }
+        : {}),
+    },
+    "mobile-sale-receipt",
+  );
   return getCommercialDocumentForActor(actor, row.id);
 }
 export async function mobilePostSales(user: MobileAppPrincipal, id: string) {
@@ -171,14 +268,18 @@ export async function mobilePostSales(user: MobileAppPrincipal, id: string) {
 
 export async function mobileDeleteSale(user: MobileAppPrincipal, id: string) {
   await assertOperationalWrite(user.companyId);
-  await reversePostedSaleForActor(permit(user,"ACCOUNT_JOURNAL_POST"),id);
-  return {ok:true};
+  await reversePostedSaleForActor(permit(user, "ACCOUNT_JOURNAL_POST"), id);
+  return { ok: true };
 }
-export async function mobileReplaceSale(user:MobileAppPrincipal,id:string,raw:unknown){
+export async function mobileReplaceSale(
+  user: MobileAppPrincipal,
+  id: string,
+  raw: unknown,
+) {
   await assertOperationalWrite(user.companyId);
-  const actor=permit(user,"ACCOUNT_JOURNAL_POST");
-  const replacement=await replacePostedSaleForActor(actor,id,raw);
-  return mobileSalesDetail(user,replacement.id);
+  const actor = permit(user, "ACCOUNT_JOURNAL_POST");
+  const replacement = await replacePostedSaleForActor(actor, id, raw);
+  return mobileSalesDetail(user, replacement.id);
 }
 
 export async function mobileCustomerReceipt(
@@ -195,7 +296,9 @@ export async function mobileCustomerReceipt(
     )
   )
     throw new Error("INVALID_INPUT");
-  return createSettlementForActor(actor, raw);
+  const { createAllocatedPaymentForActor } =
+    await import("@/lib/account/allocated-payment");
+  return createAllocatedPaymentForActor(actor, raw);
 }
 export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
   const actor = permit(user, "ACCOUNT_SETTLEMENT_ENTRY"),
@@ -317,6 +420,16 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
       }))
       .filter((x) => x.outstanding !== "0"),
     receipts,
-    discountDuringPayment:((await db.accountSettings.findUnique({where:{companyId:actor.companyId},select:{transactionDefaults:true}}))?.transactionDefaults as {transactionPreferences?:{discountDuringPayment?:boolean}}|null)?.transactionPreferences?.discountDuringPayment===true,
+    discountDuringPayment:
+      (
+        (
+          await db.accountSettings.findUnique({
+            where: { companyId: actor.companyId },
+            select: { transactionDefaults: true },
+          })
+        )?.transactionDefaults as {
+          transactionPreferences?: { discountDuringPayment?: boolean };
+        } | null
+      )?.transactionPreferences?.discountDuringPayment === true,
   };
 }

@@ -831,6 +831,7 @@ model Company {
   quotationRevisions                  QuotationRevision[]
   quotationAttachments                QuotationAttachment[]
   commercialAttachments               CommercialAttachment[]
+  paymentAttachments                  PaymentAttachment[]
   quotationLines                      QuotationLine[]
   quotationAdjustments                QuotationAdjustment[]
   quotationPaymentSchedules           QuotationPaymentSchedule[]
@@ -931,6 +932,7 @@ model User {
   quotationAuditEvents       QuotationAuditEvent[]    @relation("QuotationAuditActor")
   quotationAttachments      QuotationAttachment[]
   commercialAttachments     CommercialAttachment[]
+  paymentAttachments        PaymentAttachment[]
   commercialDocuments        CommercialDocument[]     @relation("CommercialDocumentCreator")
   settlements                AccountSettlement[]      @relation("SettlementCreator")
   commercialAudits           CommercialAuditEvent[]   @relation("CommercialAuditActor")
@@ -2687,6 +2689,9 @@ model AccountSettlement {
   remainingAmount  Decimal                @default(0) @db.Decimal(18, 2)
   transactionDate  DateTime               @db.Date
   reference        String?                @db.VarChar(160)
+  billingName      String?                @db.VarChar(240)
+  billingAddress   String?                @db.VarChar(2000)
+  attachments      PaymentAttachment[]
   notes            String?
   journalEntryId   String?                @db.Uuid
   createdById      String                 @db.Uuid
@@ -2712,6 +2717,27 @@ model AccountSettlement {
   @@unique([companyId, idempotencyKey])
   @@index([companyId, partyId, transactionDate])
   @@map("account_settlements")
+}
+
+model PaymentAttachment {
+  id           String @id @default(uuid()) @db.Uuid
+  companyId    String @db.Uuid
+  settlementId String @db.Uuid
+  position     Int
+  displayName  String @db.VarChar(240)
+  mimeType     String @db.VarChar(120)
+  sizeBytes    Int
+  contentHash  String @db.Char(64)
+  storageKey   String @db.VarChar(512)
+  uploadedById String @db.Uuid
+  createdAt    DateTime @default(now())
+  company      Company @relation(fields: [companyId], references: [id], onDelete: NoAction, onUpdate: Restrict)
+  settlement   AccountSettlement @relation(fields: [companyId, settlementId], references: [companyId, id], onDelete: NoAction, onUpdate: Restrict)
+  uploadedBy   User @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: NoAction, onUpdate: Restrict)
+
+  @@unique([companyId, settlementId, position])
+  @@index([companyId, storageKey])
+  @@map("payment_attachments")
 }
 
 model SettlementAllocation {

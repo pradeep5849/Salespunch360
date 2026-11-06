@@ -17,11 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.account.bool
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
 @Composable
-fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null,initialOrderId:String?=null,navigate:(String)->Unit={}, vm: AccountPurchaseViewModel = viewModel()) {
+fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectId:String?=null, initialDocumentId:String?=null,initialOrderId:String?=null,initialBranchId:String?=null,navigate:(String)->Unit={}, vm: AccountPurchaseViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
     LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType) { if (initialType != null) vm.filter(initialType) }
@@ -29,7 +30,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
     LaunchedEffect(initialType, initialProjectId,initialOrderId, state.loading) {
         if (!initialEditorOpened && initialType != null && !state.loading && state.types.isNotEmpty()) {
             initialEditorOpened = true
-            if(initialOrderId!=null)vm.prepareOrder(initialOrderId)else vm.create(initialType, initialProjectId)
+            if(initialOrderId!=null)vm.prepareOrder(initialOrderId)else vm.create(initialType, initialProjectId,initialBranchId)
         }
     }
     DisposableEffect(initialOrderId){onDispose{vm.cancelOrderPreparation()}}
@@ -52,18 +53,19 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
             }
         }
         LazyColumn(Modifier.fillMaxSize()) {
+            if(state.nextCursor!=null)item{TextButton(onClick=vm::loadMore,enabled=!state.loading){Text("Load older purchases")}}
             items(state.rows, key = { it.id }) { row ->
                 ListItem(
                     headlineContent = { Text(row.number, fontWeight = FontWeight.Bold) },
                     supportingContent = { Text("${row.party} · ${accountDate(row.date)} · ${row.type.replace('_', ' ')}") },
-                    trailingContent = { Column { Text(accountMoney(row.total)); Text(row.status) } },
+                    trailingContent = { Column { Text(accountMoney(row.total)); Text(row.paymentStatus.ifBlank{row.status}); if(row.balance.isNotBlank())Text("Balance ${accountMoney(row.balance)}") } },
                     modifier = Modifier.clickable { vm.open(row.id) }
                 )
             }
         }
     }
     state.draft?.let { PurchaseEditor(it, state, vm) }
-    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate) }
+    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate,canDuplicate="PURCHASE_BILL" in state.types&&it.bool("canDuplicatePurchase"),onDuplicate=vm::duplicatePurchase,canCorrect="DEBIT_NOTE" in state.types&&it.bool("canCorrectPurchase"),onCorrect=vm::correctPurchase) }
     state.posting?.let {
         AlertDialog(
             onDismissRequest = vm::cancelPost,

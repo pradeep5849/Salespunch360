@@ -30,3 +30,10 @@ describe("A088 bounded private-file recovery bundles",()=>{
 });
 
 it("rejects private transfer evidence whose bytes no longer match its immutable source hash",async()=>{const key="companies/a/party-transfers/source/photo.webp",data={partyTransferPhotos:[{photoObjectKey:key,expectedSha256:createHash("sha256").update("original").digest("hex")}]};await expect(collectBackupPrivateFiles("a",data,{get:async()=>Buffer.from("changed")})).rejects.toThrow("BACKUP_FILE_INTEGRITY_INVALID");const correct=await collectBackupPrivateFiles("a",data,{get:async()=>Buffer.from("original")});expect(verifyBackupPrivateFiles("a",data,correct)).toEqual({files:1,bytes:8});const changedData={partyTransferPhotos:[{photoObjectKey:key,expectedSha256:"0".repeat(64)}]};expect(()=>verifyBackupPrivateFiles("a",changedData,correct)).toThrow("BACKUP_FILE_INTEGRITY_INVALID")});
+it("checks live payment evidence hashes even if a replacement bundle manifest is internally consistent",async()=>{
+ const data={PaymentAttachment:[{storageKey:"companies/a/payment-files/proof",contentHash:createHash("sha256").update("original").digest("hex")}]};
+ await expect(collectBackupPrivateFiles("a",data,{get:async()=>Buffer.from("changed")})).rejects.toThrow("BACKUP_FILE_INTEGRITY_INVALID");
+ const files=await collectBackupPrivateFiles("a",data,{get:async()=>Buffer.from("original")});
+ const bytes=Buffer.from("changed");
+ expect(()=>verifyBackupPrivateFiles("a",data,[{...files[0],size:bytes.length,data:bytes.toString("base64"),sha256:createHash("sha256").update(bytes).digest("hex")}])).toThrow("BACKUP_FILE_INTEGRITY_INVALID");
+});

@@ -1,3 +1,5 @@
+import {transactionLauncherForRole} from "@/lib/account/transaction-launcher";
+import {enabledModulesForCompany} from "@/lib/account/modules";
 import {db} from "@/lib/db";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { AccountMobileHome } from "@/components/account/account-mobile-home";
@@ -36,6 +38,7 @@ export default async function Page({
   const defaults=settings?.transactionDefaults as {transactionPreferences?:{shareAs?:unknown}}|null;
   return (
     <AccountMobileHome
+      launcherGroups={transactionLauncherForRole(actor.accountRole,await enabledModulesForCompany(actor.companyId!),resolved.context.mode==="BRANCH"?resolved.context.branchId:undefined)}
       shareAs={defaults?.transactionPreferences?.shareAs==="PDF"?"PDF":"ASK"}
       tab={tab}
       unavailableFilters={data.unavailableFilters}

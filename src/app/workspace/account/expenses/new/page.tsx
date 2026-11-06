@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/authorization";
 import { resolveAccountBranchContext } from "@/lib/account/branch-context";
 import { ExpenseForm } from "../expense-form";
-type Query = { saved?: string; branchId?: string; scope?: string };
+type Query = { type?:string; saved?: string; branchId?: string; scope?: string };
 async function load(query: Query) {
   try {
     const authenticated = await requirePermission("ACCOUNT_EXPENSE_ENTRY");
@@ -60,6 +60,7 @@ export default async function Page({
     <div className="employees-shell">
       <section className="employees-content">
         <ExpenseForm
+          initialType={query.type}
           backHref={result.backHref}
           options={result.options}
           action={createExpenseAction}

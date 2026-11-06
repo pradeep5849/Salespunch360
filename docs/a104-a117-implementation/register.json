@@ -1,0 +1,610 @@
+{
+  "scope": "A104\u2013A117",
+  "date": "2026-11-06",
+  "status": "IMPLEMENTED; AUTOMATED VALIDATION COMPLETED; FINAL FOLLOW-UP CI AND REVIEW PENDING",
+  "findings": [
+    {
+      "finding_id": "A104-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
+    },
+    {
+      "finding_id": "A104-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
+    },
+    {
+      "finding_id": "A104-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
+    },
+    {
+      "finding_id": "A104-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Legacy GST destinations now reuse canonical party GST report; existing report sharing path retained. Final parity review pending."
+      ]
+    },
+    {
+      "finding_id": "A105-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending.",
+        "Concurrent preference/catalogue writes and capacity overflow were verified on real PostgreSQL, with no eviction or unrelated-settings loss."
+      ]
+    },
+    {
+      "finding_id": "A105-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending.",
+        "Concurrent preference/catalogue writes and capacity overflow were verified on real PostgreSQL, with no eviction or unrelated-settings loss."
+      ]
+    },
+    {
+      "finding_id": "A105-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending.",
+        "Concurrent preference/catalogue writes and capacity overflow were verified on real PostgreSQL, with no eviction or unrelated-settings loss."
+      ]
+    },
+    {
+      "finding_id": "A105-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending.",
+        "Concurrent preference/catalogue writes and capacity overflow were verified on real PostgreSQL, with no eviction or unrelated-settings loss."
+      ]
+    },
+    {
+      "finding_id": "A105-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending.",
+        "Concurrent preference/catalogue writes and capacity overflow were verified on real PostgreSQL, with no eviction or unrelated-settings loss."
+      ]
+    },
+    {
+      "finding_id": "A105-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared locked tax catalogue, strict rates/splits, refresh/search and native custom-entry controls implemented; platform review pending.",
+        "Concurrent preference/catalogue writes and capacity overflow were verified on real PostgreSQL, with no eviction or unrelated-settings loss."
+      ]
+    },
+    {
+      "finding_id": "A106-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review.",
+        "Real database tests verified atomic preference/catalogue saves, required composition category and server-side TCS/TDS disable enforcement."
+      ]
+    },
+    {
+      "finding_id": "A106-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review.",
+        "Real database tests verified atomic preference/catalogue saves, required composition category and server-side TCS/TDS disable enforcement."
+      ]
+    },
+    {
+      "finding_id": "A106-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review.",
+        "Real database tests verified atomic preference/catalogue saves, required composition category and server-side TCS/TDS disable enforcement."
+      ]
+    },
+    {
+      "finding_id": "A106-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review.",
+        "Real database tests verified atomic preference/catalogue saves, required composition category and server-side TCS/TDS disable enforcement."
+      ]
+    },
+    {
+      "finding_id": "A106-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review.",
+        "Real database tests verified atomic preference/catalogue saves, required composition category and server-side TCS/TDS disable enforcement."
+      ]
+    },
+    {
+      "finding_id": "A106-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Shared atomic tax preferences and GST report aliases implemented; consumers and native validation remain under review.",
+        "Real database tests verified atomic preference/catalogue saves, required composition category and server-side TCS/TDS disable enforcement."
+      ]
+    },
+    {
+      "finding_id": "A107-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Source-bound correction preparation preserves the original posted bill, allocations and cash. Dedicated purchase action capabilities are shared with mobile. Preview/PDF/images/default sharing/SMS composition use existing authorized helpers."
+      ]
+    },
+    {
+      "finding_id": "A107-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Web/native correction now prepares source-bound debit-note review through existing lifecycle. No hard deletion or silent cancellation of posted bill history. Validation pending.",
+        "Source-bound correction preparation preserves the original posted bill, allocations and cash. Dedicated purchase action capabilities are shared with mobile. Preview/PDF/images/default sharing/SMS composition use existing authorized helpers."
+      ]
+    },
+    {
+      "finding_id": "A107-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Source-bound correction preparation preserves the original posted bill, allocations and cash. Dedicated purchase action capabilities are shared with mobile. Preview/PDF/images/default sharing/SMS composition use existing authorized helpers."
+      ]
+    },
+    {
+      "finding_id": "A107-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Source-bound correction preparation preserves the original posted bill, allocations and cash. Dedicated purchase action capabilities are shared with mobile. Preview/PDF/images/default sharing/SMS composition use existing authorized helpers."
+      ]
+    },
+    {
+      "finding_id": "A107-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Source-bound correction preparation preserves the original posted bill, allocations and cash. Dedicated purchase action capabilities are shared with mobile. Preview/PDF/images/default sharing/SMS composition use existing authorized helpers."
+      ]
+    },
+    {
+      "finding_id": "A107-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Source-bound correction preparation preserves the original posted bill, allocations and cash. Dedicated purchase action capabilities are shared with mobile. Preview/PDF/images/default sharing/SMS composition use existing authorized helpers."
+      ]
+    },
+    {
+      "finding_id": "A108-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Partial opening-debt and pending cheque plans implemented. Atomic clearance/reversal/re-clearance and historical opening balances pass four allocation database tests; all 37 existing cheque regressions pass.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F07",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A108-F08",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Billing identity and private evidence now save atomically with the payment; retries bind the file manifest, failures roll back cash, and cheque re-clearance retains evidence. Four evidence safety tests and five payment/correction tests passed; final Android follow-up pending."
+      ]
+    },
+    {
+      "finding_id": "A109-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
+    },
+    {
+      "finding_id": "A109-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
+    },
+    {
+      "finding_id": "A109-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
+    },
+    {
+      "finding_id": "A109-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
+    },
+    {
+      "finding_id": "A109-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
+    },
+    {
+      "finding_id": "A109-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Capability-aware launcher, branch handoff, keyboard focus, inline item creation and explicit draft-first footer actions implemented; latest Android verification pending."
+      ]
+    },
+    {
+      "finding_id": "A110-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "Nonfinancial balances hidden/zeroed; Web uses authorized PDF handoff with cancellation/error states; native Print/Share uses shared PDF preview rather than opening detail. Platform verification pending.",
+        "101 timestamp-tied documents paginated exactly once with at most three queries per page. Nonfinancial balances are hidden/zero. Permission-aware card actions reuse the document sharing flow."
+      ]
+    },
+    {
+      "finding_id": "A110-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "101 timestamp-tied documents paginated exactly once with at most three queries per page. Nonfinancial balances are hidden/zero. Permission-aware card actions reuse the document sharing flow."
+      ]
+    },
+    {
+      "finding_id": "A110-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "101 timestamp-tied documents paginated exactly once with at most three queries per page. Nonfinancial balances are hidden/zero. Permission-aware card actions reuse the document sharing flow."
+      ]
+    },
+    {
+      "finding_id": "A110-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "101 timestamp-tied documents paginated exactly once with at most three queries per page. Nonfinancial balances are hidden/zero. Permission-aware card actions reuse the document sharing flow."
+      ]
+    },
+    {
+      "finding_id": "A110-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "Nonfinancial balances hidden/zeroed; Web uses authorized PDF handoff with cancellation/error states; native Print/Share uses shared PDF preview rather than opening detail. Platform verification pending.",
+        "101 timestamp-tied documents paginated exactly once with at most three queries per page. Nonfinancial balances are hidden/zero. Permission-aware card actions reuse the document sharing flow."
+      ]
+    },
+    {
+      "finding_id": "A111-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending.",
+        "Owner-confirmed active all-branch Account Admin policy is enforced from the current user row on both Web/mobile. Eleven audit/redaction tests and mobile/desktop browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A111-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending.",
+        "Owner-confirmed active all-branch Account Admin policy is enforced from the current user row on both Web/mobile. Eleven audit/redaction tests and mobile/desktop browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A111-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending.",
+        "Owner-confirmed active all-branch Account Admin policy is enforced from the current user row on both Web/mobile. Eleven audit/redaction tests and mobile/desktop browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A111-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending.",
+        "Owner-confirmed active all-branch Account Admin policy is enforced from the current user row on both Web/mobile. Eleven audit/redaction tests and mobile/desktop browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A111-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending.",
+        "Owner-confirmed active all-branch Account Admin policy is enforced from the current user row on both Web/mobile. Eleven audit/redaction tests and mobile/desktop browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A112-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained.",
+        "Exact-company restore and evidence snapshots passed in the combined 30-test safety run. Private evidence source hashes are checked independently of the bundle manifest. Authentication/access/recovery records remain excluded from replacement."
+      ]
+    },
+    {
+      "finding_id": "A112-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained.",
+        "Exact-company restore and evidence snapshots passed in the combined 30-test safety run. Private evidence source hashes are checked independently of the bundle manifest. Authentication/access/recovery records remain excluded from replacement."
+      ]
+    },
+    {
+      "finding_id": "A112-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained.",
+        "Exact-company restore and evidence snapshots passed in the combined 30-test safety run. Private evidence source hashes are checked independently of the bundle manifest. Authentication/access/recovery records remain excluded from replacement."
+      ]
+    },
+    {
+      "finding_id": "A112-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Existing-company restore with safety backup, checksums, atomic replacement and file cleanup coordination implemented. Google Drive-only auto backup and manual-save confirmation retained.",
+        "Exact-company restore and evidence snapshots passed in the combined 30-test safety run. Private evidence source hashes are checked independently of the bundle manifest. Authentication/access/recovery records remain excluded from replacement."
+      ]
+    },
+    {
+      "finding_id": "A113-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Native and Web menus share the server role/module export policy. Project Managers can export assigned projects only; master exports require Admin/Accountant. Reporting portability is explicitly labeled; import templates remain separate."
+      ]
+    },
+    {
+      "finding_id": "A113-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Native and Web menus share the server role/module export policy. Project Managers can export assigned projects only; master exports require Admin/Accountant. Reporting portability is explicitly labeled; import templates remain separate."
+      ]
+    },
+    {
+      "finding_id": "A113-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Export UI labels reporting portability limits; native export choices are loaded from the same server feature policy. Endpoint enforcement retained; platform verification pending.",
+        "Native and Web menus share the server role/module export policy. Project Managers can export assigned projects only; master exports require Admin/Accountant. Reporting portability is explicitly labeled; import templates remain separate."
+      ]
+    },
+    {
+      "finding_id": "A113-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Export UI labels reporting portability limits; native export choices are loaded from the same server feature policy. Endpoint enforcement retained; platform verification pending.",
+        "Native and Web menus share the server role/module export policy. Project Managers can export assigned projects only; master exports require Admin/Accountant. Reporting portability is explicitly labeled; import templates remain separate."
+      ]
+    },
+    {
+      "finding_id": "A113-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Native and Web menus share the server role/module export policy. Project Managers can export assigned projects only; master exports require Admin/Accountant. Reporting portability is explicitly labeled; import templates remain separate."
+      ]
+    },
+    {
+      "finding_id": "A113-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Native and Web menus share the server role/module export policy. Project Managers can export assigned projects only; master exports require Admin/Accountant. Reporting portability is explicitly labeled; import templates remain separate."
+      ]
+    },
+    {
+      "finding_id": "A114-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending.",
+        "Owner approved history-preserving close plus numbering restart, excluding Start Fresh. Eight close/numbering safety tests cover posting/lock races, signed confirmation, idempotency, current authority and case-insensitive collisions; browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A114-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending.",
+        "Owner approved history-preserving close plus numbering restart, excluding Start Fresh. Eight close/numbering safety tests cover posting/lock races, signed confirmation, idempotency, current authority and case-insensitive collisions; browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A114-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending.",
+        "Owner approved history-preserving close plus numbering restart, excluding Start Fresh. Eight close/numbering safety tests cover posting/lock races, signed confirmation, idempotency, current authority and case-insensitive collisions; browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A114-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending.",
+        "Owner approved history-preserving close plus numbering restart, excluding Start Fresh. Eight close/numbering safety tests cover posting/lock races, signed confirmation, idempotency, current authority and case-insensitive collisions; browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A114-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending.",
+        "Owner approved history-preserving close plus numbering restart, excluding Start Fresh. Eight close/numbering safety tests cover posting/lock races, signed confirmation, idempotency, current authority and case-insensitive collisions; browser review passed."
+      ]
+    },
+    {
+      "finding_id": "A115-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass.",
+        "Before/after review now includes a target version. Changed records reject confirmation and require a fresh review; the real import integration and runtime suites passed 13 tests."
+      ]
+    },
+    {
+      "finding_id": "A115-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass.",
+        "Before/after review now includes a target version. Changed records reject confirmation and require a fresh review; the real import integration and runtime suites passed 13 tests."
+      ]
+    },
+    {
+      "finding_id": "A115-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass.",
+        "Before/after review now includes a target version. Changed records reject confirmation and require a fresh review; the real import integration and runtime suites passed 13 tests."
+      ]
+    },
+    {
+      "finding_id": "A115-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass.",
+        "Before/after review now includes a target version. Changed records reject confirmation and require a fresh review; the real import integration and runtime suites passed 13 tests."
+      ]
+    },
+    {
+      "finding_id": "A115-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass.",
+        "Before/after review now includes a target version. Changed records reject confirmation and require a fresh review; the real import integration and runtime suites passed 13 tests."
+      ]
+    },
+    {
+      "finding_id": "A115-F06",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Preview-plan identity, current scope/reference checks, locked exactly-once confirmation and readable result counts implemented; PostgreSQL concurrency/replay/scope tests pass.",
+        "Before/after review now includes a target version. Changed records reject confirmation and require a fresh review; the real import integration and runtime suites passed 13 tests."
+      ]
+    },
+    {
+      "finding_id": "A116-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
+    },
+    {
+      "finding_id": "A116-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
+    },
+    {
+      "finding_id": "A116-F03",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
+    },
+    {
+      "finding_id": "A116-F04",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
+    },
+    {
+      "finding_id": "A116-F05",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Dynamic template, upload limits, native update intent, row validation and actual XLS/XLSX parsing implemented; final device review pending."
+      ]
+    },
+    {
+      "finding_id": "A117-F01",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Legacy utility hub redirects to canonical approved menu on Web/native; final reachability review pending."
+      ]
+    },
+    {
+      "finding_id": "A117-F02",
+      "status": "IMPLEMENTED_PENDING_FINAL_VALIDATION",
+      "verification": [
+        "Legacy utility hub redirects to canonical approved menu on Web/native; final reachability review pending."
+      ]
+    }
+  ],
+  "latest_checkpoint": "Implementation branch only; no merge, deployment or production restore. First Web/Android checkpoint passed; follow-up validation pending.",
+  "validation": {
+    "local_unit_tests_passed": 3935,
+    "isolated_database_tests_passed_before_security_followup": 30,
+    "browser_reviews_passed": 8,
+    "cheque_regressions_passed": 37,
+    "reconciled_ci_run": 42195076507,
+    "reconciled_ci": "Web, migration and Android passed",
+    "security_followup": "Payment evidence 5 tests and company restore 4 tests passed; RLS enabled without browser policies; final CI pending",
+    "production": "Not merged, migrated or deployed",
+    "public_lighthouse": "HTTP 403; separate live-site follow-up"
+  }
+}

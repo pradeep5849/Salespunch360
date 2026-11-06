@@ -1,3 +1,4 @@
+import {calendarDateInput} from "./calendar-date-input";
 import {saleInvoiceIdentity} from "./sale-invoice-identity";
 import {retainedSerialReturnQuantityInTx,assertSaleReturnQuantitiesInTx} from "./sale-return-revisions";
 import {validateOrderFulfilmentInTx} from "./orders/source";
@@ -281,6 +282,7 @@ export function assertAdjustmentWithinSource(
     throw new Error("ADJUSTMENT_EXCEEDS_OUTSTANDING");
 }
 const decimal = z.union([z.string(), z.number()]).transform(String);
+const withholdingRate=decimal.refine(value=>{try{const rate=new D(value);return rate.isFinite()&&rate.gte(0)&&rate.lte(100);}catch{return false;}},"Rate must be between 0 and 100");
 const lineSchema = z.object({
   servicePeriodDays:z.number().int().min(1).max(3650).optional(),
   lineType: z.nativeEnum(CommercialLineType),
@@ -377,8 +379,8 @@ export const commercialDocumentInput = z
     taxCreditTreatment: z
       .enum(["ELIGIBLE", "INELIGIBLE", "BLOCKED"])
       .prefault("ELIGIBLE"),
-    tdsRate: decimal.optional(),
-    tcsRate: decimal.optional(),
+    tdsRate: withholdingRate.optional(),
+    tcsRate: withholdingRate.optional(),
     lines: z.array(lineSchema).min(1).max(500),
   })
   .strict()
@@ -929,6 +931,11 @@ export async function createCommercialDocumentForActor(
           }
         }
 
+        const taxPreferences=(settings?.transactionDefaults as {taxPreferences?:{enableTcs?:boolean;enableTds?:boolean}}|null)?.taxPreferences;
+        if(!retainedSale && !d.sourceDocumentId){
+          if(taxPreferences?.enableTcs===false && new D(d.tcsRate??0).gt(0))throw new Error("TCS_DISABLED");
+          if(taxPreferences?.enableTds===false && new D(d.tdsRate??0).gt(0))throw new Error("TDS_DISABLED");
+        }
         if(d.sourceQuotationRevisionId){
           if(!d.idempotencyKey)throw new Error("QUOTATION_CONVERSION_KEY_REQUIRED");
           await requireQuotationSourceInTx(tx,actor,d);
@@ -2564,7 +2571,7 @@ export async function partyOutstanding(
     ...opening.map((x) => x.outstanding),
   ].reduce((n, x) => n.add(x), new D(0));
 }
-const settlementInput = z
+export const settlementInput = z
   .object({
     idempotencyKey: z.string().trim().min(8).max(120),
     type: z.nativeEnum(SettlementType),
@@ -2574,10 +2581,12 @@ const settlementInput = z
     paymentMode: z.nativeEnum(PaymentMode),
     moneyAccountId: z.string().guid().optional(),
     amount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)),
-    transactionDate: z.coerce.date(),
+    transactionDate: calendarDateInput,
     reference: z.string().max(160).optional(),
+    billingName:z.string().trim().max(240).optional(),
+    billingAddress:z.string().trim().max(2000).optional(),
     chequeNumber: z.string().trim().min(1).max(80).optional(),
-    chequeDate: z.coerce.date().optional(),
+    chequeDate: calendarDateInput.optional(),
     notes: z.string().max(5000).optional(),
     allocations: z
       .array(
@@ -2593,6 +2602,7 @@ const settlementInput = z
             "Exactly one allocation target is required",
           ),
       )
+      .max(100)
       .prefault([]),
   })
   .strict();
@@ -2852,7 +2862,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown, trans
             companyId: actor.companyId, branchId: d.branchId, type: d.type, status: "PENDING_CHEQUE", settlementNumber: number,
             partyId: d.partyId, customerId: p.party === "customer" ? d.partyId : null, vendorId: p.party === "vendor" ? d.partyId : null,
             idempotencyKey: d.idempotencyKey, creationRequestHash: requestHash, paymentMode: "CHEQUE", moneyAccountId: bank.id, projectId: settlementProject?.id,
-            amount, discountAmount, remainingAmount: 0, transactionDate: d.transactionDate, reference: d.reference, notes: d.notes, createdById: actor.id,
+            amount, discountAmount, remainingAmount: 0, transactionDate: d.transactionDate, reference: d.reference, billingName:d.billingName, billingAddress:d.billingAddress, notes: d.notes, createdById: actor.id,
             allocations: { create: d.allocations.filter(row => row.documentId).map(row => ({ documentId: row.documentId!, amount: row.amount, discountAmount: row.discountAmount })) },
           } });
           if (d.allocations.some(row => row.openingBalanceId)) await tx.openingBalanceAllocation.createMany({ data: d.allocations.filter(row => row.openingBalanceId).map(row => ({ companyId: actor.companyId, settlementId: pending.id, openingBalanceId: row.openingBalanceId!, amount: row.amount })) });
@@ -2957,6 +2967,8 @@ export async function createSettlementForActor(actor: Actor, raw: unknown, trans
               remainingAmount: p.advance ? amount : 0,
               transactionDate: d.transactionDate,
               reference: d.reference,
+              billingName:d.billingName,
+              billingAddress:d.billingAddress,
               notes: d.notes,
               journalEntryId: journal.id,
               createdById: actor.id,
@@ -3144,6 +3156,32 @@ export async function applyAdvanceForActor(actor: Actor, raw: unknown, transacti
       },
   );
 }
+/** Applies existing advance cash to a registered opening debt; never records cash twice. */
+export async function applyAdvanceToOpeningForActor(actor:Actor,raw:unknown,transaction?:Prisma.TransactionClient){
+ financialRole(actor);
+ const d=z.object({advanceId:z.string().guid(),openingBalanceId:z.string().guid(),amount:decimal,applicationDate:calendarDateInput,idempotencyKey:z.string().min(8).max(120)}).strict().parse(raw);
+ const amount=new D(d.amount);if(amount.lte(0))throw new Error("INVALID_AMOUNT");
+ return inAccountTransaction(transaction,async tx=>{
+  await tx.$queryRaw`SELECT 1::int AS locked FROM account_settlements WHERE id=${d.advanceId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  await tx.$queryRaw`SELECT 1::int AS locked FROM party_opening_balances WHERE id=${d.openingBalanceId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  const advance=await tx.accountSettlement.findFirst({where:{id:d.advanceId,companyId:actor.companyId,...EFFECTIVE_SETTLEMENT,type:{in:["CUSTOMER_ADVANCE","VENDOR_ADVANCE"]}}});
+  const opening=await tx.partyOpeningBalance.findFirst({where:{id:d.openingBalanceId,companyId:actor.companyId,journalEntry:{is:{status:"POSTED"}}}});
+  if(!advance||!opening||advance.projectId||opening.branchId!==advance.branchId||opening.partyId!==advance.partyId||opening.partyType!==(advance.type==="CUSTOMER_ADVANCE"?"CUSTOMER":"VENDOR"))throw new Error("INVALID_OPENING_ALLOCATION");
+  assertBranch(actor,opening.branchId);await requireAccountModules(actor,...settlementPolicy[advance.type].modules);
+  if(d.applicationDate.getTime()!==advance.transactionDate.getTime()||d.applicationDate<opening.effectiveDate)throw new Error("INVALID_APPLICATION_DATE");
+  const prior=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,entityType:"OPENING_ADVANCE_APPLICATION",metadata:{path:["idempotencyKey"],equals:d.idempotencyKey}}});
+  if(prior){const metadata=prior.metadata as {advanceId:string;openingBalanceId:string;amount:string;applicationDate:string};if(metadata.advanceId!==advance.id||metadata.openingBalanceId!==opening.id||!new D(metadata.amount).eq(amount)||metadata.applicationDate!==d.applicationDate.toISOString().slice(0,10))throw new Error("IDEMPOTENCY_KEY_REUSED");return tx.openingBalanceAllocation.findUniqueOrThrow({where:{id:prior.entityId}})}
+  const used=await tx.openingBalanceAllocation.aggregate({where:{companyId:actor.companyId,openingBalanceId:opening.id,...EFFECTIVE_SETTLEMENT_ALLOCATION},_sum:{amount:true}});
+  if(amount.gt(advance.remainingAmount)||amount.add(used._sum.amount??0).gt(opening.amount))throw new Error("ALLOCATION_EXCEEDS_OUTSTANDING");
+  const customer=advance.type==="CUSTOMER_ADVANCE",keys=customer?["CUSTOMER_ADVANCES","ACCOUNTS_RECEIVABLE"]:["ACCOUNTS_PAYABLE","ADVANCES"],ctx=await systemContext(tx,actor,d.applicationDate,keys),id=crypto.randomUUID();
+  const journal=await postJournalInTx(tx,actor,{financialYearId:ctx.fy.id,branchId:opening.branchId,entryDate:d.applicationDate,sourceType:"ADVANCE_APPLICATION",sourceId:id,postingPurpose:"PRIMARY",lines:[{ledgerAccountId:ctx.account(keys[0]),debit:amount.toFixed(2),credit:"0"},{ledgerAccountId:ctx.account(keys[1]),debit:"0",credit:amount.toFixed(2)}]});
+  const allocation=await tx.openingBalanceAllocation.create({data:{id,companyId:actor.companyId,settlementId:advance.id,openingBalanceId:opening.id,amount}});
+  await tx.accountSettlement.update({where:{id:advance.id},data:{remainingAmount:{decrement:amount}}});
+  await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"ADVANCE_APPLIED_TO_OPENING",entityType:"OPENING_ADVANCE_APPLICATION",entityId:id,metadata:{advanceId:advance.id,openingBalanceId:opening.id,amount:amount.toFixed(2),applicationDate:d.applicationDate.toISOString().slice(0,10),idempotencyKey:d.idempotencyKey,journalEntryId:journal.id}}});
+  return allocation;
+ });
+}
+
 export async function applyAdvance(raw: unknown) {
   return applyAdvanceForActor(
     (await requirePermissionForMutation("ACCOUNT_SETTLEMENT_ENTRY")) as Actor,
@@ -3232,6 +3270,19 @@ export async function setPaymentReminderStatus(raw: unknown) {
     );
     return updated;
   });
+}
+export async function listCommercialDocumentsPageForActor(actor:Actor,raw:{cursor?:string;type?:string;q?:string;branchId?:string}={},allowedTypes?:CommercialDocumentType[]) {
+ const input=z.object({cursor:z.string().uuid().optional(),type:z.nativeEnum(CommercialDocumentType).optional(),q:z.string().trim().max(100).optional(),branchId:z.string().uuid().optional()}).parse(Object.fromEntries(Object.entries(raw).filter(([,value])=>value!=="" && value!==undefined)));
+ if(input.type && allowedTypes && !allowedTypes.includes(input.type))throw new AuthorizationError();
+ if(input.branchId && actor.branchAccessScope==="SELECTED_BRANCHES" && !actor.branchIds?.includes(input.branchId))throw new AuthorizationError();
+ if(input.cursor && !await db.commercialDocument.findFirst({where:{id:input.cursor,companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(allowedTypes?{type:{in:allowedTypes}}:{})},select:{id:true}}))throw new AuthorizationError();
+ const rows=await db.commercialDocument.findMany({where:{companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(input.type?{type:input.type}:allowedTypes?{type:{in:allowedTypes}}:{}),NOT:{type:"SALES_INVOICE",status:"DRAFT"},...(input.q?{OR:[{documentNumber:{contains:input.q,mode:"insensitive"}},{partyName:{contains:input.q,mode:"insensitive"}}]}:{})},orderBy:[{createdAt:"desc"},{id:"desc"}],take:51,...(input.cursor?{cursor:{id:input.cursor},skip:1}:{})});
+ const visible=rows.slice(0,50);
+ const outstanding=await documentOutstandingsBatch(actor.companyId,visible.filter(row=>row.status==="POSTED" && ["SALES_INVOICE","PURCHASE_BILL"].includes(row.type)));
+ return {rows:visible.map(row=>({...row,showBalance:row.status==="POSTED"&&["SALES_INVOICE","PURCHASE_BILL"].includes(row.type),outstanding:outstanding.get(row.id)??new D(0)})),nextCursor:rows.length>50?visible[visible.length-1].id:undefined};
+}
+export async function listCommercialDocumentsPage(raw:{cursor?:string;type?:string;q?:string;branchId?:string}={}) {
+ return listCommercialDocumentsPageForActor((await requirePermission("ACCOUNT_LEDGER_VIEW")) as Actor,raw);
 }
 export async function listCommercialDocumentsForActor(actor: Actor) {
   return db.commercialDocument.findMany({
@@ -3517,6 +3568,7 @@ export async function commercialEditorOptionsForActor(actor: Actor) {
       },
     }),
     invoiceCustomFields:await db.customFieldDefinition.findMany({where:{companyId:actor.companyId,entityType:{in:["SALES_INVOICE","PURCHASE_BILL"]},isActive:true},orderBy:{position:"asc"}}),
+    canCreateItems:canUsePermission(actor,company.productEdition,"ACCOUNT_ACCOUNTS")&&enabledModules.includes("INVENTORY")&&resolveItemSettings(editorSettings?.itemSettings).enabled,
     accountSettings: editorSettings,
     partySettings: resolvePartySettings(editorSettings?.transactionDefaults),
     numberingSeries: await safeSalesInvoiceNumberingSeriesOptions(
@@ -3561,14 +3613,14 @@ export async function commercialDocumentControlsForActor(actor:Actor,documentId:
     });
   if (!document)
     return {
-      canPost:false,canConfirmPurchaseOrder:false,canConfirmSalesOrder: false,
+      shareAs:"ASK" as const,canPost:false,canDuplicatePurchase:false,canCorrectPurchase:false,canEditTransactionSettings:false,canConfirmPurchaseOrder:false,canConfirmSalesOrder: false,
       canManage: false,
       canRemind: false,
       advances: [],
       enabledModules: [] as ModuleKey[],
     };
   const enabledModules = await enabledModulesForCompany(actor.companyId),
-    company=await db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true}}),
+    company=await db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true,accountSettings:{select:{transactionDefaults:true}}}}),
     canConfirmSalesOrder=document.status==="DRAFT"&&document.type==="SALES_ORDER"&&enabledModules.includes("SALES")&&enabledModules.includes("SALES_ORDER")&&canUsePermission(actor,company.productEdition,"ACCOUNT_SALES_ENTRY")&&(!document.sourceQuotationRevisionId||(enabledModules.includes("QUOTATIONS_BOQ")&&canUsePermission(actor,company.productEdition,"ACCOUNT_QUOTATION_VIEW"))),
     canManage =
       document.status==="POSTED"&&(actor.accountRole === "ACCOUNT_ADMIN" ||
@@ -3592,7 +3644,12 @@ export async function commercialDocumentControlsForActor(actor:Actor,documentId:
             select: { id: true, settlementNumber: true, remainingAmount: true },
           })
         : [];
+  const purchaseWriter=(actor.accountRole==="ACCOUNT_ADMIN"||actor.accountRole==="ACCOUNTANT")&&canUsePermission(actor,company.productEdition,"ACCOUNT_PURCHASE_ENTRY");
   return {
+    shareAs:normalizeTransactionPreferences((company.accountSettings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences).shareAs,
+    canEditTransactionSettings:canUsePermission(actor,company.productEdition,"ACCOUNT_SETTINGS"),
+    canDuplicatePurchase:document.type==="PURCHASE_BILL"&&purchaseWriter&&policies.PURCHASE_BILL.modules.every(module=>enabledModules.includes(module)),
+    canCorrectPurchase:document.type==="PURCHASE_BILL"&&document.status==="POSTED"&&purchaseWriter&&policies.DEBIT_NOTE.modules.every(module=>enabledModules.includes(module))&&canUsePermission(actor,company.productEdition,"ACCOUNT_JOURNAL_POST"),
     canPost:document.status==="DRAFT"&&policies[document.type].financial&&policies[document.type].modules.every(module=>enabledModules.includes(module))&&canUsePermission(actor,company.productEdition,"ACCOUNT_JOURNAL_POST"),
     canConfirmPurchaseOrder:document.status==="DRAFT"&&document.type==="PURCHASE_ORDER"&&enabledModules.includes("PURCHASES")&&enabledModules.includes("PURCHASE_ORDER")&&canUsePermission(actor,company.productEdition,"ACCOUNT_PURCHASE_ENTRY"),
     canConfirmSalesOrder,
@@ -3742,7 +3799,8 @@ export async function createSettlement(raw: unknown) {
   const actor = (await requirePermissionForMutation(
     "ACCOUNT_SETTLEMENT_ENTRY",
   )) as Actor;
-  return createSettlementForActor(actor, raw);
+  const {createAllocatedPaymentForActor}=await import("./allocated-payment");
+  return createAllocatedPaymentForActor(actor, raw);
 }
 export async function listCommercialDocuments() {
   return listCommercialDocumentsForActor(

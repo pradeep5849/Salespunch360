@@ -67,12 +67,14 @@ export type ExpenseEditorOptions = {
 };
 export function ExpenseEditor({
   options: o,
+  initialType,
   expense: x,
   action,
   requestKey,
   backHref = "/workspace/account/expenses",
 }: {
   options: ExpenseEditorOptions;
+  initialType?: string;
   expense?: ExpenseValue;
   action: (f: FormData) => Promise<AccountActionResult>;
   requestKey: string;
@@ -82,7 +84,7 @@ export function ExpenseEditor({
   const [stableKey] = useState(requestKey),
     [branch, setBranch] = useState(x?.branchId ?? o.branches[0]?.id ?? ""),
     [type, setType] = useState(
-      x?.type ?? o.allowedTypes[0] ?? "OFFICE_EXPENSE",
+      x?.type ?? (initialType&&o.allowedTypes.includes(initialType)?initialType:o.allowedTypes[0]) ?? "OFFICE_EXPENSE",
     ),
     [category, setCategory] = useState(x?.categoryId ?? ""),
     [newCategoryName, setNewCategoryName] = useState(""),

@@ -23,6 +23,36 @@
       "id": "A113",
       "inventory_label": "Queries are rerun on the server with your Company and Branch scope.",
       "route": "/workspace/account/utilities/export"
+    },
+    {
+      "id": "A114",
+      "inventory_label": "Close only after verification. Closing preserves history and locks posting.",
+      "route": "/workspace/account/utilities/financial-year",
+      "source_title": "Financial Years"
+    },
+    {
+      "id": "A115",
+      "inventory_label": "workspace /account /utilities /import /[id]",
+      "route": "/workspace/account/utilities/import/[id]",
+      "source_title": "Import preview / job detail"
+    },
+    {
+      "id": "A116",
+      "inventory_label": "Upload \u2192 validate \u2192 preview \u2192 confirm. No rows are written during preview.",
+      "route": "/workspace/account/utilities/import",
+      "source_title": "Import Account data"
+    },
+    {
+      "id": "A117",
+      "inventory_label": "Data management and financial safety in one place.",
+      "route": "/workspace/account/utilities",
+      "source_title": "Account utilities"
+    },
+    {
+      "id": "A118",
+      "inventory_label": "Normal Account UI can only advance a lock. Closed years cannot be reopened.",
+      "route": "/workspace/account/utilities/period-locks",
+      "source_title": "Period locks"
     }
   ]
 }

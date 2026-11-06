@@ -1,6 +1,10 @@
 import { ZodError } from "zod";
 
 const messages: Record<string, string> = {
+ PARTIAL_OPENING_ALLOCATION_UNAVAILABLE:"Opening-balance payments must match their allocations exactly. Use an unallocated advance separately for the remaining amount.",
+ PARTIAL_CHEQUE_ALLOCATION_UNAVAILABLE:"Record an unallocated cheque advance, then apply it after the cheque clears.",
+ TCS_DISABLED:"Enable TCS in Taxes & GST before applying it to a new transaction.",
+ TDS_DISABLED:"Enable TDS in Taxes & GST before applying it to a new transaction.",
   SALE_ALREADY_REVISED: "This Sale already has a saved revision or cancellation. Open its latest history before continuing." ,
   SALE_MUST_COVER_POSTED_RETURNS: "Keep every returned item and at least its already returned quantity on the corrected Sale." ,
   RETURN_REVISION_ITEM_UNIT_MISMATCH: "Keep the original item, unit, warehouse, batch and serial for items with posted returns." ,

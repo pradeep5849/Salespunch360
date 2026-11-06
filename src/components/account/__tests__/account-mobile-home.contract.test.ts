@@ -24,11 +24,11 @@ describe("account home contexts",()=>{
   });
   it("exposes the exact grouped launcher order and disabled Mobile POS",()=>{
     expect(ADD_GROUPS.map(group=>[group.title,group.actions.map(action=>action.label)])).toEqual([
-      ["Sale transactions",["Payment-In","Sale Return","Delivery Challan","Estimate / Quotation","Proforma Invoice","Sale Order","Sale Invoice","Mobile POS"]],
-      ["Purchase transactions",["Purchase","Payment-Out","Purchase Return","Purchase Order"]],
-      ["Other transactions",["Expenses","P2P Transfer"]],
+      ["Sale transactions",["Payment-In","Sale Return","Delivery Challan","Estimate / Quotation","Proforma Invoice","Sale Order","Sale Invoice","Mobile POS","Sale Assets"]],
+      ["Purchase transactions",["Purchase","Payment-Out","Purchase Return","Purchase Order","Purchase Assets"]],
+      ["Other transactions",["Expenses","P2P Transfer","Other Income"]],
     ]);
-    expect(ADD_GROUPS[0].actions.at(-1)).toMatchObject({label:"Mobile POS",disabled:true});
+    expect(ADD_GROUPS[0].actions.find(action=>action.label==="Mobile POS")).toMatchObject({label:"Mobile POS",disabled:true});
   });
   it("keeps transaction and party More Options independently selected",()=>{
     const source=readFileSync("src/components/account/account-mobile-home.tsx","utf8");

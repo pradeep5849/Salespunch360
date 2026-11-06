@@ -24,7 +24,7 @@ import {
   updateAssetForActor,
 } from "@/lib/account/assets";
 import { createFinancialYearForActor } from "@/lib/account/service";
-import { closeFinancialYearForActor } from "@/lib/account/utilities";
+import { closeFinancialYearForActor,previewFinancialYearCloseForActor } from "@/lib/account/utilities";
 import { db } from "@/lib/db";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
@@ -188,6 +188,9 @@ export async function mobileFinancialYearClose(
     permit(u, "ACCOUNT_PERIOD_LOCK"),
     raw as { financialYearId: string; earlyCloseReason?: string },
   );
+}
+export async function mobileFinancialYearClosePreview(u:MobileAppPrincipal,id:string){
+  return previewFinancialYearCloseForActor(permit(u,"ACCOUNT_PERIOD_LOCK"),id);
 }
 
 export async function mobileJournalHistory(

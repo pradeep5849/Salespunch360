@@ -1,3 +1,4 @@
+import {isCompanyRestoreOwner} from "./restore-owner";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -122,6 +123,7 @@ export async function runGoogleDriveBackup(
       true,
       "GOOGLE_DRIVE",
       reservation.id,
+      await isCompanyRestoreOwner(actor),
     );
     manifest = backup.manifest;
     const delivery = await uploadGoogleBackup(actor.companyId, backup);
@@ -226,7 +228,7 @@ export async function backupReminderDue(companyId: string, now = new Date()) {
       where: {
         companyId,
         OR: [
-          { manifest: { path: ["provider"], equals: Prisma.AnyNull } },
+          { manifest: { path: ["savedAt"], not: Prisma.AnyNull } },
           { manifest: { path: ["uploadedAt"], not: Prisma.AnyNull } },
         ],
       },
@@ -243,4 +245,21 @@ export async function backupReminderDue(companyId: string, now = new Date()) {
       (latest?.generatedAt ?? config?.createdAt ?? now).getTime() >=
     settings.manualReminderDays * 86400000
   );
+}
+
+/** Generation and opening a share sheet do not prove a recoverable copy was saved. */
+export async function confirmManualBackupSaved(actor:{id:string;companyId:string|null;accountRole?:string|null},raw:unknown) {
+  if(!actor.companyId||actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
+  const {checksum}=z.object({checksum:z.string().regex(/^[a-f0-9]{64}$/)}).strict().parse(raw);
+  return db.$transaction(async tx=>{
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${actor.companyId!+":manual-backup-delivery"}))`;
+    const record=await tx.accountBackupRecord.findFirst({where:{companyId:actor.companyId!,checksum},orderBy:[{generatedAt:"desc"},{id:"desc"}]});
+    if(!record)throw new Error("BACKUP_NOT_FOUND");
+    const manifest=record.manifest as Record<string,unknown>;
+    if(manifest.provider)throw new Error("INVALID_BACKUP_DELIVERY");
+    if(manifest.savedAt)return {confirmed:true};
+    await tx.accountBackupRecord.update({where:{id:record.id,companyId:actor.companyId!},data:{manifest:{...manifest,savedAt:new Date().toISOString(),saveConfirmation:"USER_CONFIRMED",confirmedById:actor.id} as Prisma.InputJsonValue}});
+    await tx.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"BACKUP_GENERATED",entityType:"ACCOUNT_BACKUP_DELIVERY",entityId:record.id,metadata:{phase:"MANUAL_SAVE_CONFIRMED",checksum}}});
+    return {confirmed:true};
+  });
 }

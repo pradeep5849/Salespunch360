@@ -43,6 +43,8 @@ fun AddItemScreen(
     navigate:(String)->Unit,
     vm:AccountAddItemViewModel=viewModel(),
     initialService:Boolean=false,
+    initialName:String="",
+    returnLabel:String="quotation",
     onCreated:((String,String)->Unit)?=null,
     returnPending:Boolean=false,
     returnError:String?=null
@@ -52,8 +54,8 @@ fun AddItemScreen(
     if(onCreated!=null&&s.createdItemId!=null&&!s.photoPending){
         Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text("Item saved",style=MaterialTheme.typography.headlineSmall)
-            Text(returnError?:"Returning to the quotation…")
-            Button(enabled=!returnPending,onClick=finish){Text(if(returnPending)"Returning…"else "Return to quotation")}
+            Text(returnError?:"Returning to the $returnLabel…")
+            Button(enabled=!returnPending,onClick=finish){Text(if(returnPending)"Returning…"else "Return to $returnLabel")}
         };return
     }
     val context=LocalContext.current
@@ -67,7 +69,7 @@ fun AddItemScreen(
     }}}
     if(s.photoPending){Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Item saved",style=MaterialTheme.typography.headlineSmall);Text(s.error?:"Uploading item photo…");photoError?.let{Text(it,color=MaterialTheme.colorScheme.error)};TextButton(enabled=!s.saving&&!photoLoading,onClick={photoPicker.launch("image/*")}){Text("Choose replacement photo")};Button(enabled=!s.saving,onClick={vm.retryPhoto(finish,photoBytes?.let{photoMime to it})}){Text("Retry photo upload")};TextButton(enabled=!s.saving,onClick=finish){Text("Continue without photo")}};return}
     var service by remember(initialService){mutableStateOf(initialService)}
-    var name by remember{mutableStateOf("")}
+    var name by remember{mutableStateOf(initialName)}
     var customValues by remember(service){mutableStateOf<Map<String,String>>(emptyMap())}
     fun enabled(key:String)=s.itemSettings[key]?.jsonPrimitive?.booleanOrNull!=false
     val itemType=s.itemSettings["itemType"]?.jsonPrimitive?.contentOrNull?:"BOTH"

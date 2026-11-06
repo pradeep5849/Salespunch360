@@ -1,2 +1,11 @@
-import Link from "next/link"; import { AccountCard, AccountPageHeader } from "@/components/account/account-shell"; import { uploadAccountImport } from "@/app/actions/account-finalization"; import { requirePermission } from "@/lib/auth/authorization";
-export default async function Page({searchParams}:{searchParams:Promise<{type?:string}>}) { await requirePermission("ACCOUNT_ACCOUNTS"); const requested=(await searchParams).type; const initialType=requested&&["CUSTOMERS","VENDORS","ITEMS","PROJECTS","OPENING_BALANCES"].includes(requested)?requested:"CUSTOMERS"; return <><AccountPageHeader title="Import data" subtitle="Upload → validate → preview → confirm. No rows are written during preview."/><AccountCard><form action={uploadAccountImport} className="account-form"><label>Import type<select name="type" required defaultValue={initialType}><option value="CUSTOMERS">Customers</option><option value="VENDORS">Vendors</option><option value="ITEMS">Items</option><option value="PROJECTS">Ongoing Projects</option><option value="OPENING_BALANCES">Opening balances</option></select></label><label>CSV or XLSX file<input name="file" type="file" accept=".csv,.xlsx" required/></label><label className="account-check-label"><input name="updateExisting" type="checkbox"/> Explicitly update deterministic matches</label><button className="account-primary">Validate & preview</button></form><p><Link href="/api/account/utilities/templates/CUSTOMERS?format=xlsx">Download templates</Link></p></AccountCard></>; }
+import {availableTransferTypes} from "@/lib/account/transfer-access";
+import { AccountCard, AccountPageHeader } from "@/components/account/account-shell";
+import { ImportUploadForm } from "@/components/account/import-upload-form";
+import { requirePermission } from "@/lib/auth/authorization";
+export default async function Page({searchParams}:{searchParams:Promise<{type?:string}>}) {
+  const actor=await requirePermission("ACCOUNT_ACCOUNTS");
+  const types=(await availableTransferTypes(actor,"IMPORT")).filter(type=>type!=="chart-of-accounts").map(type=>type.toUpperCase()).concat(actor.accountRole==="ACCOUNT_ADMIN"?["OPENING_BALANCES"]:[]);
+  const requested=(await searchParams).type;
+  const initialType=requested&&types.includes(requested)?requested:"CUSTOMERS";
+  return <><AccountPageHeader title="Import data" subtitle="Upload → validate → preview → confirm. No business records change during preview."/><AccountCard><ImportUploadForm initialType={initialType} types={types}/></AccountCard></>;
+}

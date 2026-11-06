@@ -1,5 +1,7 @@
+import { assertTransferAvailable } from "./transfer-access";
 import { createHash } from "node:crypto";
-import ExcelJS from "exceljs";
+import * as XLSX from "@e965/xlsx";
+import { decodeCsvRecord } from "./tabular-transfer";
 import { Prisma, type AccountImportStatus } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -20,6 +22,7 @@ export type ImportPreviewRow = {
   rowNumber: number;
   action: ImportAction;
   values: Record<string, string>;
+  before?:Record<string,string>;
   resolved: Record<string, string>;
   warnings: string[];
   errors: string[];
@@ -72,24 +75,54 @@ export function parseCsv(text: string): string[][] {
 
 export async function parseImportFile(fileName: string, bytes: Uint8Array) {
   const extension = fileName.toLowerCase().split(".").pop();
+  if (!["csv", "xlsx", "xls"].includes(extension ?? ""))
+    throw new Error("UNSUPPORTED_IMPORT_FORMAT");
+  if (!bytes.length || bytes.length > 10 * 1024 * 1024)
+    throw new Error("INVALID_IMPORT_FILE");
   let matrix: string[][];
   if (extension === "csv") matrix = parseCsv(new TextDecoder().decode(bytes));
-  else if (extension === "xlsx") {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(bytes.buffer as ArrayBuffer);
-    const sheet = workbook.worksheets[0];
+  else if (extension === "xlsx" || extension === "xls") {
+    const workbook = XLSX.read(bytes, {
+      type: "array",
+      cellDates: true,
+      dateNF: "yyyy-mm-dd",
+      sheetRows: 20002,
+    });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
     if (!sheet) throw new Error("EMPTY_WORKBOOK");
-    matrix = [];
-    sheet.eachRow({ includeEmpty: false }, (r) =>
-      matrix.push((r.values as unknown[]).slice(1).map(normalize)),
-    );
+    if (
+      Object.values(sheet).some(
+        (cell) => cell && typeof cell === "object" && "f" in cell,
+      )
+    )
+      throw new Error("IMPORT_FORMULAS_NOT_ALLOWED");
+    matrix = XLSX.utils.sheet_to_json<string[]>(sheet, {
+      header: 1,
+      raw: false,
+      defval: "",
+      blankrows: false,
+      dateNF: "yyyy-mm-dd",
+    });
   } else throw new Error("UNSUPPORTED_IMPORT_FORMAT");
+  if (matrix.length > 20001 || matrix.some((row) => row.length > 200))
+    throw new Error("IMPORT_TOO_LARGE");
   if (matrix.length < 2) throw new Error("IMPORT_HAS_NO_DATA_ROWS");
-  const headers = matrix[0].map((h) =>
-    normalize(h)
-      .toLowerCase()
-      .replace(/[ /-]+/g, "_"),
-  );
+  const aliases: Record<string, string> = {
+    item_name: "name",
+    item_code: "code",
+    sale_price: "sale_rate",
+    purchase_price: "purchase_rate",
+    hsn_sac_code: "hsn",
+    hsn_code: "hsn",
+    item_category: "category",
+  };
+  const headers = matrix[0]
+    .map((h) =>
+      normalize(h)
+        .toLowerCase()
+        .replace(/[ /-]+/g, "_"),
+    )
+    .map((h) => aliases[h] ?? h);
   if (new Set(headers).size !== headers.length || headers.some((h) => !h))
     throw new Error("INVALID_IMPORT_HEADERS");
   return {
@@ -97,7 +130,9 @@ export async function parseImportFile(fileName: string, bytes: Uint8Array) {
     records: matrix
       .slice(1)
       .map((cells) =>
-        Object.fromEntries(headers.map((h, i) => [h, normalize(cells[i])])),
+        decodeCsvRecord(
+          Object.fromEntries(headers.map((h, i) => [h, normalize(cells[i])])),
+        ),
       ),
     fileHash: createHash("sha256").update(bytes).digest("hex"),
   };
@@ -119,12 +154,28 @@ const requiredHeaders: Record<AccountImportType, string[]> = {
 };
 export const IMPORT_TEMPLATES = requiredHeaders;
 
+export function assertImportPreviewScope(
+  actor: { branchAccessScope?: string; branchIds?: string[] },
+  preview: ImportPreview,
+) {
+  if (
+    actor.branchAccessScope === "SELECTED_BRANCHES" &&
+    preview.rows.some(
+      (row) =>
+        row.resolved.branchId &&
+        !(actor.branchIds ?? []).includes(row.resolved.branchId),
+    )
+  )
+    throw new Error("IMPORT_BRANCH_OUTSIDE_SCOPE");
+}
+
 export async function previewAccountImportForActor(
   actor: {
     id: string;
     companyId: string;
     accountRole: string | null;
     branchIds?: string[];
+    branchAccessScope?: string;
   },
   input: {
     type: AccountImportType;
@@ -133,8 +184,9 @@ export async function previewAccountImportForActor(
     updateExisting?: boolean;
   },
 ): Promise<ImportPreview> {
-  const type = typeSchema.parse(input.type),
-    parsed = await parseImportFile(input.fileName, input.bytes);
+  const type = typeSchema.parse(input.type);
+  await assertTransferAvailable(actor, type);
+  const parsed = await parseImportFile(input.fileName, input.bytes);
   const missing = requiredHeaders[type].filter(
     (h) => !parsed.headers.includes(h),
   );
@@ -143,7 +195,9 @@ export async function previewAccountImportForActor(
     where: {
       companyId: actor.companyId!,
       isActive: true,
-      id: { in: actor.branchIds },
+      ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+        ? { id: { in: actor.branchIds ?? [] } }
+        : {}),
     },
     select: { id: true, name: true, code: true },
   });
@@ -156,16 +210,21 @@ export async function previewAccountImportForActor(
   const [customers, vendors, products, units, categories, ledgers, years] =
     await Promise.all([
       db.customer.findMany({
-        where: { companyId: actor.companyId! },
-        select: { id: true, name: true, gstin: true, phone: true, email: true },
+        where: {
+          companyId: actor.companyId!,
+          ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+            ? { branchId: { in: actor.branchIds ?? [] } }
+            : {}),
+        },
+        select: { id: true, name: true, gstin: true, phone: true, email: true,address:true,stateCode:true,isActive:true,branchId:true,updatedAt:true },
       }),
       db.vendor.findMany({
         where: { companyId: actor.companyId! },
-        select: { id: true, name: true, gstin: true, phone: true, email: true },
+        select: { id: true, name: true, gstin: true, phone: true, email: true,address:true,stateCode:true,isActive:true,updatedAt:true },
       }),
       db.accountProduct.findMany({
         where: { companyId: actor.companyId! },
-        select: { id: true, name: true, code: true, barcode: true },
+        select: { id: true, name: true, code: true, barcode: true,unitId:true,categoryId:true,salePrice:true,costPrice:true,taxRate:true,hsnCode:true,trackInventory:true,isActive:true,updatedAt:true },
       }),
       db.accountUnit.findMany({
         where: { companyId: actor.companyId!, isActive: true },
@@ -194,11 +253,83 @@ export async function previewAccountImportForActor(
         },
       }),
     ]);
+  const seen = new Map<string, number>();
   const rows = parsed.records.map((values, index): ImportPreviewRow => {
     const errors: string[] = [],
       warnings: string[] = [],
       resolved: Record<string, string> = {};
-    let action: ImportAction = "CREATE";
+    let action: ImportAction = "CREATE",before:Record<string,string>|undefined;
+    const supported: Record<AccountImportType, string[]> = {
+      CUSTOMERS: [
+        "name",
+        "branch",
+        "phone",
+        "email",
+        "address",
+        "gstin",
+        "state_code",
+        "is_active",
+      ],
+      VENDORS: [
+        "name",
+        "phone",
+        "email",
+        "address",
+        "gstin",
+        "state_code",
+        "is_active",
+      ],
+      ITEMS: [
+        "name",
+        "unit",
+        "category",
+        "code",
+        "barcode",
+        "sale_rate",
+        "purchase_rate",
+        "tax_rate",
+        "hsn",
+        "track_inventory",
+        "is_active",
+        "price_type",
+        "tier_rate",
+        "customer",
+        "customer_gstin",
+        "effective_from",
+        "effective_to",
+        "price_active",
+      ],
+      PROJECTS: ["name", "customer", "branch", "site", "project_value"],
+      OPENING_BALANCES: requiredHeaders.OPENING_BALANCES,
+    };
+    for (const [field, value] of Object.entries(values))
+      if (value && !supported[type].includes(field))
+        errors.push(
+          `Unsupported column ${field}: its value would not be imported. Remove it or use the relevant workflow.`,
+        );
+    for (const field of ["is_active", "track_inventory", "price_active"])
+      if (
+        values[field] &&
+        !["true", "false"].includes(values[field].toLowerCase())
+      )
+        errors.push(`${field} must be true or false`);
+    for (const field of ["effective_from", "effective_to"])
+      if (values[field]) {
+        const date = new Date(`${values[field]}T00:00:00.000Z`);
+        if (
+          !/^\d{4}-\d{2}-\d{2}$/.test(values[field]) ||
+          !Number.isFinite(date.getTime()) ||
+          date.toISOString().slice(0, 10) !== values[field]
+        )
+          errors.push(`${field} must be a real YYYY-MM-DD date`);
+      }
+    if (
+      values.effective_from &&
+      values.effective_to &&
+      values.effective_from > values.effective_to
+    )
+      errors.push("Price start date must not follow end date");
+
     if (!values.name && type !== "OPENING_BALANCES")
       errors.push("Name is required");
     const branch = values.branch
@@ -236,12 +367,58 @@ export async function previewAccountImportForActor(
     if (duplicate.length > 1) errors.push("Ambiguous duplicate match");
     else if (duplicate.length === 1) {
       resolved.existingId = duplicate[0].id;
+      const target=duplicate[0] as unknown as Record<string,unknown>;
+      if(target.updatedAt instanceof Date)resolved.targetVersion=target.updatedAt.toISOString();
+      const fieldMap:Record<string,string>={name:"name",phone:"phone",email:"email",address:"address",gstin:"gstin",state_code:"stateCode",is_active:"isActive",code:"code",barcode:"barcode",sale_rate:"salePrice",purchase_rate:"costPrice",tax_rate:"taxRate",hsn:"hsnCode",track_inventory:"trackInventory"};
+      before=Object.fromEntries(Object.entries(fieldMap).filter(([,field])=>field in target).map(([column,field])=>[column,target[field]==null?"":String(target[field])]));
+      if(type==="CUSTOMERS")before.branch=branches.find(branch=>branch.id===target.branchId)?.code??String(target.branchId??"");
+      if(type==="ITEMS"){before.unit=units.find(unit=>unit.id===target.unitId)?.name??"";before.category=categories.find(category=>category.id===target.categoryId)?.name??"";}
       action = input.updateExisting ? "UPDATE" : "SKIP";
       warnings.push(
         input.updateExisting
           ? "Existing record will be updated"
           : "Create-only mode skips existing records",
       );
+    }
+    // A second row must never silently overwrite or recreate an earlier row.
+    if (type !== "OPENING_BALANCES") {
+      const identifiers =
+        type === "ITEMS"
+          ? ["code", "barcode"]
+          : type === "PROJECTS"
+            ? ["name"]
+            : ["gstin", "phone", "email"];
+      for (const key of identifiers) {
+        if (!values[key]) continue;
+        const identity = `${key}:${values[key].toLowerCase()}`;
+        const prior = seen.get(identity);
+        if (prior) errors.push(`Duplicate ${key} in file (row ${prior})`);
+        else seen.set(identity, index + 2);
+      }
+    }
+    const decimalFields =
+      type === "ITEMS"
+        ? ["sale_rate", "purchase_rate", "tax_rate", "tier_rate"]
+        : type === "PROJECTS"
+          ? ["project_value"]
+          : [];
+    for (const field of decimalFields) {
+      if (!values[field]) continue;
+      try {
+        const amount = new Prisma.Decimal(values[field]);
+        if (
+          !amount.isFinite() ||
+          amount.isNegative() ||
+          amount.decimalPlaces() > 2 ||
+          amount.gte("10000000000000000") ||
+          (field === "tax_rate" && amount.gt(100))
+        )
+          errors.push(
+            `${field} must be a finite non-negative amount with at most two decimals${field === "tax_rate" ? " between 0 and 100" : ""}`,
+          );
+      } catch {
+        errors.push(`Invalid ${field}`);
+      }
     }
     if (type === "ITEMS") {
       const unit = units.find(
@@ -311,6 +488,7 @@ export async function previewAccountImportForActor(
         const date = new Date(`${values.effective_date}T00:00:00.000Z`);
         if (
           Number.isNaN(date.valueOf()) ||
+          date.toISOString().slice(0, 10) !== values.effective_date ||
           date < year.startDate ||
           date > year.endDate
         )
@@ -319,16 +497,45 @@ export async function previewAccountImportForActor(
       try {
         const d = new Prisma.Decimal(values.debit || 0),
           c = new Prisma.Decimal(values.credit || 0);
-        if (d.isNegative() || c.isNegative() || d.gt(0) === c.gt(0))
+        if (
+          !d.isFinite() ||
+          !c.isFinite() ||
+          d.decimalPlaces() > 2 ||
+          c.decimalPlaces() > 2 ||
+          d.isNegative() ||
+          c.isNegative() ||
+          d.gt(0) === c.gt(0)
+        )
           errors.push("Exactly one non-negative debit or credit is required");
       } catch {
         errors.push("Invalid Decimal amount");
       }
     }
     if (errors.length) action = "ERROR";
-    return { rowNumber: index + 2, action, values, resolved, warnings, errors };
+    return { rowNumber: index + 2, action, values, ...(before?{before}:{}), resolved, warnings, errors };
   });
   if (type === "OPENING_BALANCES") {
+    const contexts = new Set(
+      rows.map((row) =>
+        JSON.stringify([
+          row.resolved.branchId,
+          row.resolved.financialYearId,
+          row.values.effective_date,
+        ]),
+      ),
+    );
+    if (contexts.size !== 1)
+      rows.forEach((row) => {
+        row.action = "ERROR";
+        row.errors.push(
+          "All opening rows must use the same branch, financial year and effective date",
+        );
+      });
+  }
+  if (
+    type === "OPENING_BALANCES" &&
+    rows.every((row) => row.action !== "ERROR")
+  ) {
     const debit = rows.reduce(
         (sum, r) => sum.plus(r.values.debit || 0),
         new Prisma.Decimal(0),
@@ -360,19 +567,28 @@ export async function saveImportPreviewForActor(
   actor: { id: string; companyId: string },
   preview: ImportPreview,
 ) {
+  const planHash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        type: preview.type,
+        fileHash: preview.fileHash,
+        rows: preview.rows,
+      }),
+    )
+    .digest("hex");
   return db.accountImportJob.upsert({
     where: {
       companyId_importType_fileHash: {
         companyId: actor.companyId!,
         importType: preview.type,
-        fileHash: preview.fileHash,
+        fileHash: planHash,
       },
     },
     create: {
       companyId: actor.companyId!,
       importType: preview.type,
       fileName: preview.fileName,
-      fileHash: preview.fileHash,
+      fileHash: planHash,
       status: preview.invalidCount ? "VALIDATED" : "READY",
       rowCount: preview.rows.length,
       validCount: preview.validCount,
@@ -386,20 +602,164 @@ export async function saveImportPreviewForActor(
 }
 
 export async function executeAccountImportForActor(
-  actor: { id: string; companyId: string; accountRole: string | null },
+  actor: {
+    id: string;
+    companyId: string;
+    accountRole: string | null;
+    branchAccessScope?: string;
+    branchIds?: string[];
+  },
   jobId: string,
 ) {
-  const job = await db.accountImportJob.findFirst({
-    where: { id: jobId, companyId: actor.companyId! },
-    select: { id: true, status: true, importType: true, metadata: true },
-  });
-  if (!job) throw new Error("IMPORT_JOB_NOT_FOUND");
-  if (job.status === "COMPLETED" || job.status === "PARTIAL")
-    return { id: job.id, status: job.status, idempotent: true };
-  const preview = job.metadata as unknown as ImportPreview;
-  if (preview.invalidCount || preview.rows.some((r) => r.action === "ERROR"))
-    throw new Error("IMPORT_HAS_BLOCKING_ERRORS");
+  z.string().uuid().parse(jobId);
+  if (
+    !["ACCOUNT_ADMIN", "ACCOUNTANT", "DATA_ENTRY"].includes(
+      actor.accountRole ?? "",
+    )
+  )
+    throw new Error("UNAUTHORIZED");
   const outcome = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM companies WHERE id = ${actor.companyId}::uuid FOR UPDATE`;
+    const job = await tx.accountImportJob.findFirst({
+      where: { id: jobId, companyId: actor.companyId },
+      select: { id: true, status: true, importType: true, metadata: true },
+    });
+    if (!job) throw new Error("IMPORT_JOB_NOT_FOUND");
+    assertImportPreviewScope(actor, job.metadata as unknown as ImportPreview);
+    if (job.status === "COMPLETED" || job.status === "PARTIAL") {
+      const previous = job.metadata as unknown as ImportPreview & {
+        result?: { created: number; updated: number; skipped: number };
+      };
+      return {
+        id: job.id,
+        status: job.status,
+        ...previous.result,
+        idempotent: true,
+      };
+    }
+    if (job.status !== "READY") throw new Error("IMPORT_NOT_READY");
+    const preview = job.metadata as unknown as ImportPreview;
+    // Recheck the current feature policy without opening a nested database transaction.
+    if (preview.type === "ITEMS") {
+      const settings = await tx.accountSettings.findUnique({
+        where: { companyId: actor.companyId },
+        select: { itemSettings: true },
+      });
+      if (
+        settings?.itemSettings &&
+        typeof settings.itemSettings === "object" &&
+        !Array.isArray(settings.itemSettings) &&
+        settings.itemSettings.enabled === false
+      )
+        throw new Error("ITEMS_DISABLED");
+    }
+    if (preview.type === "PROJECTS") {
+      const settings = await tx.accountSettings.findUnique({
+        where: { companyId: actor.companyId },
+        select: { enabledModules: true },
+      });
+      if (settings && !settings.enabledModules.includes("PROJECTS"))
+        throw new Error("MODULE_DISABLED:PROJECTS");
+    }
+    if (
+      preview.type !== job.importType ||
+      !preview.rows.length ||
+      preview.invalidCount ||
+      preview.rows.some((r) => r.action === "ERROR")
+    )
+      throw new Error("IMPORT_HAS_BLOCKING_ERRORS");
+    if (
+      preview.type === "OPENING_BALANCES" &&
+      new Set(
+        preview.rows.map((row) =>
+          JSON.stringify([
+            row.resolved.branchId,
+            row.resolved.financialYearId,
+            row.values.effective_date,
+          ]),
+        ),
+      ).size !== 1
+    )
+      throw new Error("IMPORT_MIXED_OPENING_CONTEXT");
+    const previouslyApplied = await tx.$queryRaw<
+      Array<{ id: string }>
+    >`SELECT id FROM account_import_jobs
+      WHERE "companyId"=${actor.companyId}::uuid AND "importType"=${preview.type}
+      AND id<>${job.id}::uuid AND status IN ('COMPLETED','PARTIAL')
+      AND ("fileHash"=${preview.fileHash} OR metadata->>'fileHash'=${preview.fileHash})
+      AND (metadata->'result'->>'created' IS NULL OR metadata->'result'->>'updated' IS NULL
+        OR (metadata->'result'->>'created')::numeric>0 OR (metadata->'result'->>'updated')::numeric>0)
+      LIMIT 1`;
+    if (previouslyApplied.length)
+      throw new Error("IMPORT_FILE_ALREADY_COMPLETED");
+    // Resolve every reference again at confirmation using the current company and branch scope.
+    for (const row of preview.rows) {
+      const r = row.resolved;
+      if(row.action==="UPDATE"&&(!r.targetVersion||!z.string().datetime().safeParse(r.targetVersion).success))throw new Error("IMPORT_TARGET_CHANGED");
+      if (
+        r.branchId &&
+        !(await tx.branch.findFirst({
+          where: {
+            id: r.branchId,
+            companyId: actor.companyId,
+            isActive: true,
+            ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+              ? { id: { in: actor.branchIds ?? [], equals: r.branchId } }
+              : {}),
+          },
+          select: { id: true },
+        }))
+      )
+        throw new Error("IMPORT_BRANCH_OUTSIDE_SCOPE");
+      for (const id of [r.customerId, r.priceCustomerId].filter(Boolean)) {
+        if (
+          !(await tx.customer.findFirst({
+            where: {
+              id,
+              companyId: actor.companyId,
+              ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+                ? { branchId: { in: actor.branchIds ?? [] } }
+                : {}),
+            },
+            select: { id: true },
+          }))
+        )
+          throw new Error("IMPORT_REFERENCE_CHANGED");
+      }
+      if (
+        r.unitId &&
+        !(await tx.accountUnit.findFirst({
+          where: { id: r.unitId, companyId: actor.companyId, isActive: true },
+          select: { id: true },
+        }))
+      )
+        throw new Error("IMPORT_REFERENCE_CHANGED");
+      if (
+        r.categoryId &&
+        !(await tx.accountCategory.findFirst({
+          where: {
+            id: r.categoryId,
+            companyId: actor.companyId,
+            isActive: true,
+          },
+          select: { id: true },
+        }))
+      )
+        throw new Error("IMPORT_REFERENCE_CHANGED");
+      if (
+        r.ledgerId &&
+        !(await tx.ledgerAccount.findFirst({
+          where: {
+            id: r.ledgerId,
+            companyId: actor.companyId,
+            isActive: true,
+            allowPosting: true,
+          },
+          select: { id: true },
+        }))
+      )
+        throw new Error("IMPORT_REFERENCE_CHANGED");
+    }
     await tx.accountImportJob.update({
       where: { id: job.id },
       data: { status: "PROCESSING", confirmedById: actor.id },
@@ -423,13 +783,24 @@ export async function executeAccountImportForActor(
           address: v.address || null,
           gstin: v.gstin || null,
           stateCode: v.state_code || null,
+          ...(v.is_active
+            ? { isActive: v.is_active.toLowerCase() === "true" }
+            : {}),
           isAccountCustomer: true,
         };
         if (row.action === "UPDATE") {
-          await tx.customer.updateMany({
-            where: { id: r.existingId, companyId: actor.companyId! },
+          const changed = await tx.customer.updateMany({
+            where: {
+              id: r.existingId,
+              companyId: actor.companyId!,
+              updatedAt:new Date(r.targetVersion),
+              ...(actor.branchAccessScope === "SELECTED_BRANCHES"
+                ? { branchId: { in: actor.branchIds ?? [] } }
+                : {}),
+            },
             data,
           });
+          if (changed.count !== 1) throw new Error("IMPORT_TARGET_CHANGED");
           updated++;
         } else {
           await tx.customer.create({
@@ -445,12 +816,16 @@ export async function executeAccountImportForActor(
           address: v.address || null,
           gstin: v.gstin || null,
           stateCode: v.state_code || null,
+          ...(v.is_active
+            ? { isActive: v.is_active.toLowerCase() === "true" }
+            : {}),
         };
         if (row.action === "UPDATE") {
-          await tx.vendor.updateMany({
-            where: { id: r.existingId, companyId: actor.companyId! },
+          const changed = await tx.vendor.updateMany({
+            where: { id: r.existingId, companyId: actor.companyId!, updatedAt:new Date(r.targetVersion) },
             data,
           });
+          if (changed.count !== 1) throw new Error("IMPORT_TARGET_CHANGED");
           updated++;
         } else {
           await tx.vendor.create({
@@ -471,14 +846,18 @@ export async function executeAccountImportForActor(
             : null,
           taxRate: v.tax_rate ? new Prisma.Decimal(v.tax_rate) : null,
           hsnCode: v.hsn || null,
+          ...(v.is_active
+            ? { isActive: v.is_active.toLowerCase() === "true" }
+            : {}),
           trackInventory: v.track_inventory?.toLowerCase() === "true",
         };
         let productId = r.existingId;
         if (row.action === "UPDATE") {
-          await tx.accountProduct.updateMany({
-            where: { id: r.existingId, companyId: actor.companyId! },
+          const changed = await tx.accountProduct.updateMany({
+            where: { id: r.existingId, companyId: actor.companyId!, updatedAt:new Date(r.targetVersion) },
             data,
           });
+          if (changed.count !== 1) throw new Error("IMPORT_TARGET_CHANGED");
           updated++;
         } else {
           const product = await tx.accountProduct.create({

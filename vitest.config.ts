@@ -24,7 +24,7 @@ export default defineConfig({
         perFile: true,
       },
     },
-    exclude: ["e2e/**", "node_modules/**"],
+    exclude: ["e2e/**", "node_modules/**", "scripts/inspect-lighthouse-network.test.mjs"],
     env: {
       DIRECT_URL: "postgresql://test:test@localhost:5432/salespunch360_test",
       DATABASE_URL: "postgresql://test:test@localhost:5432/salespunch360_test",

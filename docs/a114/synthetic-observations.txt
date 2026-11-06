@@ -1,0 +1,5 @@
+A114_CLOSE_KIND {"kind":"CLOSE_AND_LOCK_EXISTING_YEAR","deletionMethodAvailableInMock":false,"backupRequested":false,"closingDate":"2025-03-31T00:00:00.000Z"}
+A114_VERIFICATION_BOUNDARY {"verificationReads":11,"allBeforeTransaction":true,"companyPostingLockObserved":false,"realConcurrencyExecuted":false}
+A114_REPLAY {"targetAlreadyClosed":true,"globalCheckPreventsTargetRead":true}
+A114_PREFIX_SETTER {"syntheticPrefixAccepted":"0#@","sequenceResetRequested":false,"existingSequence":42,"referenceRestartModeImplemented":false}
+A114_WEB_FLOW {"yearList":true,"referenceModeChooser":false,"backupStep":false,"closeExecuted":false}

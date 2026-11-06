@@ -1,4 +1,5 @@
 "use server";
+import {submitPaymentForActor} from "@/lib/account/payment-submission";
 import { accountAction } from "@/lib/account/action-feedback";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -112,9 +113,11 @@ export async function postCommercialAction(form: FormData) {
 }
 export async function saveSettlementWithFeedback(form: FormData) {
   return accountAction(async () => {
-    await createSettlement(payload(form));
-    return "/workspace/account/transactions";
-  }, "Payment posted");
+    const actor=await requirePermissionForMutation("ACCOUNT_SETTLEMENT_ENTRY");
+    const files=form.getAll("attachments").filter(file=>file instanceof File&&file.size>0) as File[];
+    const row=await submitPaymentForActor({...actor,companyId:actor.companyId!},payload(form),files);
+    return `/workspace/account/settlements/${row.id}`;
+  }, "Payment saved");
 }
 export async function saveSettlementAction(form: FormData) {
   await createSettlement(payload(form));
@@ -160,4 +163,10 @@ export async function closeRemainingOrderAction(form:FormData){
   await (await import("@/lib/account/orders/lifecycle")).closeRemainingOrderForActor(actor as Parameters<typeof import("@/lib/account/orders/lifecycle").closeRemainingOrderForActor>[0],{documentId:String(form.get("id")),reason:String(form.get("reason")??"")});
   revalidatePath(`/workspace/account/transactions/${String(form.get("id"))}`);
  },"Remaining order closed");
+}
+
+export async function refreshPurchaseItemOptionsAction(){
+ await requirePermissionForMutation("ACCOUNT_PURCHASE_ENTRY");
+ const {commercialEditorOptions}=await import("@/lib/account/commercial");
+ return JSON.parse(JSON.stringify(await commercialEditorOptions()));
 }

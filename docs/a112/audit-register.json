@@ -1,0 +1,97 @@
+{
+  "page_id": "A112",
+  "page_name": "Backup & Recovery",
+  "route": "/workspace/account/utilities/backup",
+  "inventory_label": "Application exports complement\u2014but never replace\u2014provider PostgreSQL backups.",
+  "audit_status": "AUDIT COMPLETE \u2014 source and synthetic service scope only",
+  "reference_status": "Owner supplied four-option Backup/Restore menu, Auto Backup ON/OFF and Google consent, phone-save, e-mail share and restore file-picker references. Full restore policy remains undecided.",
+  "owner_requirements": {
+    "automatic_provider": "GOOGLE_DRIVE_ONLY",
+    "menu_options": [
+      "Auto Backup",
+      "Backup to phone",
+      "Backup to e-mail",
+      "Restore backup"
+    ],
+    "hostinger_setup": "Owner paused hosting setup and asked to resume the audit. Do not claim live deployment/scheduler verified."
+  },
+  "findings": [
+    {
+      "finding_id": "A112-F01",
+      "severity": "Medium",
+      "classification": "Native utility startup/API contract",
+      "current_behavior": "AccountUtilityScreen always calls vm.load(mode). For backup and export, the ViewModel requests /api/v1/mobile/account/utilities/backup or /export, but mobileUtilities has neither section and throws INVALID_SECTION. The generic error path can leave an error banner while separate generate/export buttons remain available.",
+      "required_correction": "Avoid unsupported startup requests for action-only screens, or implement an authorized matching section/DTO. Distinguish startup/load errors from actual generation/delivery errors; cover Web/native screen entry and role denial.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Synthetic calls to the actual mobileUtilities function rejected backup and export with INVALID_SECTION. Source chain: AccountUtilityScreen.kt:109; AccountUtilityViewModel.kt:27; src/lib/mobile/account-administration.ts:385. API HTTP status/banner rendering inferred from source, not device or live HTTP execution.",
+      "affected_pages": [
+        "A112",
+        "A113"
+      ]
+    },
+    {
+      "finding_id": "A112-F02",
+      "severity": "Medium",
+      "classification": "Manual reminder distinguishes generation from durable delivery",
+      "current_behavior": "Record-only manual generation inserts AccountBackupRecord before any download/save/share completes. backupReminderDue accepts provider-less generated records as recent backups, including a generated file later abandoned by the consumer. Therefore a reminder can be postponed without a saved or handed-off copy.",
+      "required_correction": "Keep generation and delivery states distinct. Base reminder suppression on the explicitly documented durable-save/share confirmation policy. Do not describe an email handoff as confirmed email delivery, or infer a completed browser download from GET generation.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual createAccountBackupForActor synthetic call recorded a bundle without storage writes or a consumer save/share. Given that generated timestamp, actual backupReminderDue returned false. Source utilities.ts:698 and backup-settings.ts:225."
+    },
+    {
+      "finding_id": "A112-F03",
+      "severity": "Medium",
+      "classification": "Unstructured sensitive-field exclusion guarantee",
+      "current_behavior": "Authentication users are explicitly projected and Google credentials live outside snapshots, but raw operational audit metadata, recycle snapshots and other selected JSON are serialized without recursive sensitive-key exclusion. Synthetic password/apiToken values in an operational audit metadata object survived the generated bundle.",
+      "required_correction": "Define and enforce the secret-exclusion schema for exported unstructured metadata without destroying required immutable business history. Test nested JSON and recycled/snapshotted values separately from the existing authentication-column exclusion.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual synthetic bundle retained two SYNTHETIC_A112 sensitive-key markers. No real credential or production record was queried, and no existing production leak is asserted. Source utilities.ts:580/634/691. Related A111-F02 has a different consumer (mobile audit history)."
+    },
+    {
+      "finding_id": "A112-F04",
+      "severity": "Medium",
+      "classification": "Native shared-file lifecycle and repeated actions",
+      "current_behavior": "Native backup generation has no in-flight guard and delivers a fixed salespunch360-account-backup.json filename. The share handler writes that same cache path before exposing a FileProvider URI; consuming UI state does not retire the cache copy. Repeated requests can replace the bytes associated with an earlier shared path.",
+      "required_correction": "Give each export/backup delivery a unique private cache file and request identity, guard concurrent generation/delivery and define cleanup after sharing. Keep a successful user-selected phone backup separate from disposable share-cache files.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source-only lifecycle review: AccountUtilityViewModel.backup/download and AccountUtilityScreen.kt:117\u2013137. Actual race, FileProvider grant duration, cross-account behavior and physical device cleanup were not exercised. No actual cross-company disclosure is asserted."
+    }
+  ],
+  "verified_existing_controls": [
+    "Admin-only backup generation rejected a non-admin before snapshot reads in the synthetic probe.",
+    "Existing focused tests passed for checksum-protected snapshots, file-inclusive limits/failure, Google state binding and encrypted connection, Drive-only scheduling and confirmed remote delivery.",
+    "Native phone-save picker, Web transfer verification and exact four menu entries exist in merged source; real device/browser/provider delivery not certified."
+  ],
+  "blocked_decisions": [
+    {
+      "id": "A112-D01",
+      "subject": "Full restore mode",
+      "status": "OWNER DECISION PENDING",
+      "options": [
+        "Restore into a new company",
+        "Replace current company business data"
+      ],
+      "current_behavior": "Restore routes show an explicit pending screen. No destructive restore is enabled. The audit does not count that accepted pause as an implemented feature or force a default policy."
+    }
+  ],
+  "external_readiness": [
+    "Hostinger release state and scheduler configuration are unverified/pending.",
+    "First live Google consent/upload and Android device flows remain unverified."
+  ],
+  "verification": {
+    "date": "2026-11-04",
+    "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "test_report": "docs/a112/focused-test-evidence.json",
+    "combined_passed": 102,
+    "combined_failed": 0,
+    "audit_probe_checks": 5,
+    "scope": "Source/synthetic only; no deployment, production mutation or live provider upload."
+  },
+  "implementation_changes": "NONE \u2014 audit documents only; existing implementation from PR #172 reviewed, not certified fully correct.",
+  "next_page": {
+    "id": "A113",
+    "page_name": "Export data",
+    "route": "/workspace/account/utilities/export",
+    "status": "Audited in the same checkpoint"
+  }
+}

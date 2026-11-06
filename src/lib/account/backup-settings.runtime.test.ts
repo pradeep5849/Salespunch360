@@ -157,6 +157,7 @@ describe("Google Drive only backup execution", () => {
       true,
       "GOOGLE_DRIVE",
       expect.any(String),
+      true,
     );
     expect(m.upload).toHaveBeenCalledWith(
       "company",

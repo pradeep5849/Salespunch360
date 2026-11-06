@@ -20,7 +20,7 @@ describe("native Purchase workflow", () => {
   it("uses authoritative posting, settlement, outstanding and entitlement", () => {
     for (const x of [
       "postCommercialDocumentForActor",
-      "createSettlementForActor",
+      "createAllocatedPaymentForActor",
       "documentOutstandingsBatch",
       "assertOperationalWrite",
     ])

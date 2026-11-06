@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {trapDialogFocus} from "./dialog-keyboard";
 import {printPdfPageImages} from "./print-page-images";
 import {preparePrintPdf,isShareCancellation} from "./share-print-file";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -59,70 +60,7 @@ export const TRANSACTION_FILTERS = [
   { value: "SUBCONTRACT_PURCHASE", label: "Purchase (Job work)" },
   { value: "SALE_REPEATING", label: "Sale [Repeating]" },
 ] as const;
-export const ADD_GROUPS: { title: string; actions: Action[] }[] = [
-  {
-    title: "Sale transactions",
-    actions: [
-      {
-        label: "Payment-In",
-        href: "/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",
-      },
-      {
-        label: "Sale Return",
-        href: "/workspace/account/transactions/new?type=CREDIT_NOTE",
-      },
-      {
-        label: "Delivery Challan",
-        href: "/workspace/account/transactions/new?type=DELIVERY_CHALLAN",
-      },
-      {
-        label: "Estimate / Quotation",
-        href: "/workspace/account/quotations/new",
-      },
-      {
-        label: "Proforma Invoice",
-        href: "/workspace/account/transactions/new?type=PROFORMA_INVOICE",
-      },
-      {
-        label: "Sale Order",
-        href: "/workspace/account/transactions/new?type=SALES_ORDER",
-      },
-      {
-        label: "Sale Invoice",
-        href: "/workspace/account/transactions/new?type=SALES_INVOICE",
-      },
-      { label: "Mobile POS", disabled: true },
-    ],
-  },
-  {
-    title: "Purchase transactions",
-    actions: [
-      {
-        label: "Purchase",
-        href: "/workspace/account/transactions/new?type=PURCHASE_BILL",
-      },
-      {
-        label: "Payment-Out",
-        href: "/workspace/account/transactions/money?type=VENDOR_PAYMENT",
-      },
-      {
-        label: "Purchase Return",
-        href: "/workspace/account/transactions/new?type=DEBIT_NOTE",
-      },
-      {
-        label: "Purchase Order",
-        href: "/workspace/account/transactions/new?type=PURCHASE_ORDER",
-      },
-    ],
-  },
-  {
-    title: "Other transactions",
-    actions: [
-      { label: "Expenses", href: "/workspace/account/expenses/new" },
-      { label: "P2P Transfer", href: "/workspace/account/money/party-transfers" },
-    ],
-  },
-];
+export {TRANSACTION_LAUNCHER as ADD_GROUPS} from "@/lib/account/transaction-launcher";
 const MORE_TXN: Action[] = [
   { label: "Bank Accounts", href: "/workspace/account/money/bank-accounts" },
   { label: "Day Book", href: "/workspace/account/reports/general-ledger" },
@@ -170,7 +108,9 @@ export function AccountMobileHome({
   canCreateParty = false,
   canCreateSale = false,
   shareAs = "ASK",
+  launcherGroups = [],
 }: {
+  launcherGroups?:{title:string;actions:Action[]}[];
   shareAs?: "ASK"|"PDF";
   searchScope?: { branchId?: string; scope?: "all" };
   canCreateParty?: boolean;
@@ -194,6 +134,13 @@ export function AccountMobileHome({
   const [active, setActive] = useState<Transaction | null>(null);
   const [draftTypes, setDraftTypes] = useState(selectedTypes);
   const [floatingVisible, setFloatingVisible] = useState(true);
+  const sheetRef=useRef<HTMLElement>(null);
+  useEffect(()=>{
+   if(!sheet)return;
+   const previous=document.activeElement;
+   sheetRef.current?.querySelector<HTMLElement>("button:not([disabled]),a,input")?.focus();
+   return()=>{if(previous instanceof HTMLElement&&previous.isConnected)previous.focus();};
+  },[sheet]);
   const searchInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -548,6 +495,8 @@ export function AccountMobileHome({
           }}
         >
           <section
+            ref={sheetRef}
+            onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();setSheet(null);}else trapDialogFocus(event);}}
             className={`account-sheet${sheet === "add" ? " account-add-launcher" : ""}`}
             role="dialog"
             aria-modal="true"
@@ -570,7 +519,7 @@ export function AccountMobileHome({
               </button>
             </header>
             {sheet === "add" &&
-              ADD_GROUPS.map((group) => (
+              launcherGroups.map((group) => (
                 <div className="account-sheet-group" key={group.title}>
                   <h3>{group.title}</h3>
                   <div>

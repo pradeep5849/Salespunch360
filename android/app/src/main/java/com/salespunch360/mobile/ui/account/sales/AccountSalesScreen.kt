@@ -27,6 +27,7 @@ import com.salespunch360.mobile.AccountSalesViewModel
 @Composable
 fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(String)->Unit={}, initialProjectId:String?=null, projectMode:Boolean=false, initialDocumentId:String?=null, initialDuplicateId:String?=null, initialQuotationId:String?=null,initialQuotationRevisionId:String?=null,initialOrderId:String?=null, vm: AccountSalesViewModel = viewModel()) {
     val state = vm.state.collectAsStateWithLifecycle().value
+    var printTarget by remember { mutableStateOf<com.salespunch360.mobile.account.SalesDocumentRow?>(null) }
     LaunchedEffect(initialDocumentId) { initialDocumentId?.let(vm::open) }
     LaunchedEffect(initialType,state.options.types) { if (initialType != null && initialType!="SALES_INVOICE" && state.options.types.isNotEmpty()) vm.filter(initialType) }
     var initialEditorOpened by remember(initialType, initialProjectId, projectMode,initialOrderId,initialDuplicateId,initialQuotationId,initialQuotationRevisionId) { mutableStateOf(false) }
@@ -55,6 +56,7 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp)) }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (!state.loading && state.rows.isEmpty()) item { Text("No sales documents found.", Modifier.padding(24.dp)) }
+            if(state.nextCursor!=null)item{TextButton(onClick=vm::loadMore,enabled=!state.loading){Text("Load older transactions")}}
             items(state.rows, key = { it.id }) { row ->
                 val isSale=row.type=="SALES_INVOICE"
                 val paymentLabel=when(row.paymentStatus){"PAID"->"SALE : PAID";"PARTIALLY_PAID"->"SALE : PARTIAL";"UNPAID"->"SALE : UNPAID";else->row.status}
@@ -64,12 +66,13 @@ fun AccountSalesScreen(initialType: String?, padding: PaddingValues, navigate:(S
                             Column(Modifier.weight(1f)){Text(row.party,fontWeight=FontWeight.SemiBold);Text(if(isSale)paymentLabel else row.type.replace('_',' '),style=MaterialTheme.typography.labelSmall,color=if(row.paymentStatus=="PAID")MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)}
                             Column{Text("#${row.number}",fontWeight=FontWeight.Medium,style=MaterialTheme.typography.bodySmall);Text(accountDate(row.date),style=MaterialTheme.typography.labelSmall)}
                         }
-                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.total),fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.balance.ifBlank{row.total}),fontWeight=FontWeight.SemiBold)};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
+                        Row(Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=8.dp)){Column(Modifier.weight(1f)){Text("Total",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.total),fontWeight=FontWeight.SemiBold)};if(row.type=="SALES_INVOICE"&&row.status=="POSTED"){Column(Modifier.weight(1f)){Text("Balance",style=MaterialTheme.typography.labelSmall);Text(accountMoney(row.balance.ifBlank{"0"}),fontWeight=FontWeight.SemiBold)}};IconButton(onClick={printTarget=row}){Icon(Icons.Default.Print,"Print")};IconButton(onClick={printTarget=row}){Icon(Icons.Default.Share,"Share")};IconButton(onClick={vm.open(row.id)}){Icon(Icons.Default.MoreVert,"More")}}
                     }
                 }
             }
         }
     }
+    printTarget?.let{row->AlertDialog(onDismissRequest={printTarget=null},title={Text(row.number)},text={Column{com.salespunch360.mobile.ui.account.DocumentPrintActions(row.type,row.id,row.number)}},confirmButton={TextButton(onClick={printTarget=null}){Text("Close")}})}
     state.editor?.let { SalesDocumentEditor(it, state.options, state.saving, vm::editDraft, vm::addLine, vm::updateLine, vm::removeLine, vm::closeEditor, vm::save,vm::updateInvoicePrefix,vm::createSaleCustomer,navigate) }
     state.detail?.let { SalesDocumentDetail(it, state.saving, vm::closeDetail, vm::requestPost, vm::editSavedSale, vm::deleteSavedSale,navigate) }
     state.salePriceDocumentId?.let{SalePriceConfirmation(it,vm::closePriceConfirmation)}

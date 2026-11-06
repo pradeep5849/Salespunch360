@@ -24,6 +24,7 @@ type Unit = { id: string; name: string; symbol: string };
 type Category = { id: string; name: string; scope: string };
 type Props = {
   initialKind?: "products" | "services";
+  initialName?:string;
   onCreated?:(item:{id:string;kind:"products"|"services"})=>Promise<void>|void;
   onCancel?:()=>void;
   units: Unit[];
@@ -76,6 +77,7 @@ export function AddItemEditor({
   customFields = [],
   hsnCodes = [],
   initialKind = "products",
+  initialName = "",
 }: Props) {
   const customFieldPrefix=useId();
   const [settings, setSettings] = useState(initialSettings);
@@ -93,7 +95,7 @@ export function AddItemEditor({
           ? "products"
           : initialKind,
     ),
-    [name, setName] = useState(""),
+    [name, setName] = useState(initialName),
     [primaryUnit, setPrimaryUnit] = useState(
       settings.itemUnits === false
         ? ""

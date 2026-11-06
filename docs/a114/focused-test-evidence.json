@@ -1,0 +1,48 @@
+{
+  "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+  "prior_audit_checkpoint": "0f3c85114d9aaee8b935b57ff12d02acb3067825",
+  "date": "2026-11-04",
+  "numTotalTests": 49,
+  "numPassedTests": 49,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "prisma/migrations/a15-a17-finalization.contract.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/accounting/service.runtime.test.ts",
+      "status": "passed",
+      "assertions": 26
+    },
+    {
+      "name": "src/lib/mobile/account-accounting-reports.contract.test.ts",
+      "status": "passed",
+      "assertions": 4
+    },
+    {
+      "name": "src/lib/account/a114.audit-probe.test.tsx",
+      "status": "passed",
+      "assertions": 11
+    },
+    {
+      "name": "src/lib/account/numbering-sales-invoice.test.ts",
+      "status": "passed",
+      "assertions": 2
+    },
+    {
+      "name": "src/lib/account/numbering.runtime.test.ts",
+      "status": "passed",
+      "assertions": 1
+    },
+    {
+      "name": "src/lib/account/transaction-settings.test.ts",
+      "status": "passed",
+      "assertions": 2
+    }
+  ],
+  "scope": "11 actual-function/SSR audit probes plus 38 existing focused unit/runtime/source-contract checks. Database, closing writes and locks were mocked; no real close, delete, backup, Google upload or concurrent database transaction executed.",
+  "probe_retention": "docs/a114/service-audit-probe.txt; retired outside the active regression suite because some probes intentionally capture defects."
+}

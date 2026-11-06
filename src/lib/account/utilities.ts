@@ -1,6 +1,10 @@
+import {redactAuditMetadata} from "./audit-redaction";
+import {readRestoreSnapshot} from "./restore-snapshot";
+import {isCompanyRestoreOwner,requireCompanyRestoreOwner} from "./restore-owner";
 import {collectBackupPrivateFiles,verifyBackupPrivateFiles} from "./backup-private-files";
 import {privateStorage} from "@/lib/storage";
 import { createHash,randomUUID } from "node:crypto";
+import {z} from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -33,7 +37,7 @@ const result = (
 export async function verifyAccountDataForActor(actor: {
   id: string;
   companyId: string;
-}): Promise<VerificationResult[]> {
+}, client: Prisma.TransactionClient = db, scope?: {financialYearId:string;startDate:Date;endDate:Date}): Promise<VerificationResult[]> {
   const companyId = actor.companyId;
   const [
     journals,
@@ -46,15 +50,15 @@ export async function verifyAccountDataForActor(actor: {
     assignmentHistory,
     users,
   ] = await Promise.all([
-    db.journalEntry.findMany({
-      where: { companyId },
+    client.journalEntry.findMany({
+      where: { companyId, ...(scope?{financialYearId:scope.financialYearId}:{}) },
       select: {
         journalNumber: true,
         lines: { select: { debit: true, credit: true } },
       },
     }),
-    db.commercialDocument.findMany({
-      where: { companyId },
+    client.commercialDocument.findMany({
+      where: { companyId, ...(scope?{issueDate:{gte:scope.startDate,lte:scope.endDate}}:{}) },
       select: {
         documentNumber: true,
         balanceDue: true,
@@ -67,17 +71,17 @@ export async function verifyAccountDataForActor(actor: {
         taxTotal: true,
       },
     }),
-    db.ledgerAccount.groupBy({
+    client.ledgerAccount.groupBy({
       by: ["systemKey"],
       where: { companyId, systemKey: { not: null } },
       _count: true,
     }),
-    db.moneyAccount.findMany({
+    client.moneyAccount.findMany({
       where: { companyId },
       select: { name: true, ledgerAccountId: true },
     }),
-    db.stockMovement.findMany({
-      where: { companyId },
+    client.stockMovement.findMany({
+      where: { companyId, ...(scope?{movementDate:{gte:scope.startDate,lte:scope.endDate}}:{}) },
       select: {
         id: true,
         sourceId: true,
@@ -87,11 +91,11 @@ export async function verifyAccountDataForActor(actor: {
         productId: true,
       },
     }),
-    db.project.findMany({
+    client.project.findMany({
       where: { companyId },
       select: { projectNumber: true, branchId: true, customerId: true },
     }),
-    db.asset.findMany({
+    client.asset.findMany({
       where: { companyId },
       select: {
         id: true,
@@ -101,11 +105,11 @@ export async function verifyAccountDataForActor(actor: {
         status: true,
       },
     }),
-    db.assetAssignmentHistory.findMany({
+    client.assetAssignmentHistory.findMany({
       where: { companyId, returnedAt: null },
       select: { assetId: true, assignedToId: true },
     }),
-    db.user.findMany({
+    client.user.findMany({
       where: { companyId },
       select: {
         id: true,
@@ -156,12 +160,12 @@ export async function verifyAccountDataForActor(actor: {
   const unpaired = [...transferGroups].filter(([, x]) => x.size !== 2);
   const branches = new Set(
       (
-        await db.branch.findMany({ where: { companyId }, select: { id: true } })
+        await client.branch.findMany({ where: { companyId }, select: { id: true } })
       ).map((x) => x.id),
     ),
     customers = new Set(
       (
-        await db.customer.findMany({
+        await client.customer.findMany({
           where: { companyId },
           select: { id: true },
         })
@@ -253,24 +257,43 @@ export async function verifyAccountDataForActor(actor: {
   ];
 }
 
+async function requireCloseBooksAdmin(actor: {id:string;companyId:string;accountRole?:string|null}, client:Prisma.TransactionClient=db) {
+  if(actor.accountRole!=="ACCOUNT_ADMIN"||!await client.user.findFirst({where:{id:actor.id,companyId:actor.companyId,isActive:true,accountAccessActive:true,accountRole:"ACCOUNT_ADMIN",branchAccessScope:"ALL_BRANCHES",role:{not:"SUPER_ADMIN"}},select:{id:true}}))throw new AuthorizationError();
+}
+
+/** Read-only review. Confirmation repeats verification under the posting lock. */
+export async function previewFinancialYearCloseForActor(actor:{id:string;companyId:string;accountRole?:string|null},financialYearId:string){
+  const id=z.string().guid().parse(financialYearId);
+  return db.$transaction(async tx=>{
+    await requireCloseBooksAdmin(actor,tx);
+    const company=await tx.company.findUniqueOrThrow({where:{id:actor.companyId},select:{name:true}});
+    const year=await tx.financialYear.findFirst({where:{id,companyId:actor.companyId}});
+    if(!year)throw new Error("INVALID_FINANCIAL_YEAR");
+    const checks=await verifyAccountDataForActor(actor,tx,{financialYearId:year.id,startDate:year.startDate,endDate:year.endDate});
+    return {companyName:company.name,checkScope:"Journals, documents and stock movements: selected year. Ledger, money-account, project and asset integrity: whole company.",id:year.id,name:year.name,status:year.status,startDate:year.startDate.toISOString().slice(0,10),endDate:year.endDate.toISOString().slice(0,10),earlyClose:year.endDate>new Date(),canClose:year.status==="OPEN"&&!checks.some(x=>x.status==="ERROR"),checks,reviewedAt:new Date().toISOString()};
+  },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+}
+
 export async function closeFinancialYearForActor(
   actor: { id: string; companyId: string; accountRole?: string | null },
   input: { financialYearId: string; earlyCloseReason?: string },
 ) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
-  const checks = await verifyAccountDataForActor(actor),
-    errors = checks.filter((x) => x.status === "ERROR");
-  if (errors.length)
-    throw new Error(
-      `FINANCIAL_YEAR_VERIFICATION_FAILED:${errors.map((x) => x.check).join(",")}`,
-    );
+  input = z.object({financialYearId:z.string().uuid(),earlyCloseReason:z.string().trim().max(2000).optional()}).strict().parse(input);
   return db.$transaction(async (tx) => {
+    await requireCloseBooksAdmin(actor,tx);
+    // Same first lock as journal posting and period-lock changes.
+    await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
     await tx.$queryRaw`SELECT "id" FROM "financial_years" WHERE "id"=${input.financialYearId}::uuid AND "companyId"=${actor.companyId!}::uuid FOR UPDATE`;
     const year = await tx.financialYear.findFirst({
       where: { id: input.financialYearId, companyId: actor.companyId! },
     });
     if (!year) throw new Error("INVALID_FINANCIAL_YEAR");
     if (year.status === "CLOSED") return year;
+    const checks = await verifyAccountDataForActor(actor,tx,{financialYearId:year.id,startDate:year.startDate,endDate:year.endDate});
+    const errors = checks.filter(check=>check.status === "ERROR");
+    if (errors.length) throw new Error(`FINANCIAL_YEAR_VERIFICATION_FAILED:${errors.map(check=>check.check).join(",")}`);
+
     if (year.endDate > new Date() && !input.earlyCloseReason?.trim())
       throw new Error("EARLY_CLOSE_REASON_REQUIRED");
     const closed = await tx.financialYear.update({
@@ -493,36 +516,20 @@ export async function restoreMasterForActor(
   });
 }
 
-export const redactAuditMetadata = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(redactAuditMetadata);
-  if (value && typeof value === "object")
-    return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [
-        /password|secret|token|credential|smtp/i.test(k) ? k : k,
-        /password|secret|token|credential|smtp/i.test(k)
-          ? "[REDACTED]"
-          : redactAuditMetadata(v),
-      ]),
-    );
-  return value;
-};
+export {redactAuditMetadata} from "./audit-redaction";
 export async function getAuditHistory() {
-  const actor = await requirePermission("ACCOUNT_REPORTS");
-  const rows = await db.accountingAuditEvent.findMany({
-    where: { companyId: actor.companyId! },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    include: { actor: { select: { name: true } } },
-  });
-  return rows.map((x) => ({ ...x, metadata: redactAuditMetadata(x.metadata) }));
+  const actor = await requirePermission("ACCOUNT_SETTINGS");
+  const {auditHistoryPageForActor}=await import("./audit-history");
+  return (await auditHistoryPageForActor({...actor,companyId:actor.companyId!})).rows;
 }
 
 export async function createAccountBackupForActor(actor: {
   id: string;
   companyId: string;
   accountRole: string | null;
-},archive=false,includePrivateFiles=false,deliveryProvider?:"GOOGLE_DRIVE",reservationId?:string) {
+},archive=false,includePrivateFiles=false,deliveryProvider?:"GOOGLE_DRIVE",reservationId?:string,includeRestoreSnapshot=false) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  if(includeRestoreSnapshot)await requireCompanyRestoreOwner(actor);
   if(reservationId && (!deliveryProvider || archive))throw new Error("INVALID_BACKUP_RESERVATION");
   const companyId = actor.companyId!;
   // Repeatable read keeps invoices, payments and ledger balances from different moments out of one bundle.
@@ -580,6 +587,7 @@ export async function createAccountBackupForActor(actor: {
       projectMaterialMovement,
       quotationAttachment,
       commercialAttachment,
+      paymentAttachment,
       accountOperationalAudit,
       saleReturnRevision,
       saleRevisionCredit,
@@ -620,6 +628,7 @@ export async function createAccountBackupForActor(actor: {
       tx.projectMaterialMovement.findMany({where:{companyId}}),
       tx.quotationAttachment.findMany({where:{companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]}),
       tx.commercialAttachment.findMany({where:{companyId},orderBy:[{documentId:"asc"},{position:"asc"}]}),
+      tx.paymentAttachment.findMany({where:{companyId},orderBy:[{settlementId:"asc"},{position:"asc"}]}),
       tx.accountOperationalAudit.findMany({where:{companyId},orderBy:[{createdAt:"asc"},{id:"asc"}]}),
       tx.saleReturnRevision.findMany({where:{companyId}}),
       tx.saleRevisionCredit.findMany({where:{companyId}}),
@@ -658,6 +667,7 @@ export async function createAccountBackupForActor(actor: {
       return row.entityType==="PARTY_TRANSFER"&&row.eventType==="PARTY_TRANSFER_POSTED"&&typeof metadata?.photoObjectKey==="string"?[{sourceId:row.entityId,photoObjectKey:metadata.photoObjectKey,expectedSha256:metadata.photoSha256}]:[];
     });
     return {...identity,
+      ...(includeRestoreSnapshot?{restoreSnapshot:await readRestoreSnapshot(tx,companyId)}:{}),
       partyTransferPhotos,
       commercialDocumentLine,
       purchaseLineAllocation,
@@ -667,6 +677,7 @@ export async function createAccountBackupForActor(actor: {
       projectMaterialMovement,
       quotationAttachment,
       commercialAttachment,
+      paymentAttachment,
       accountOperationalAudit,
       saleReturnRevision,
       saleRevisionCredit,
@@ -700,12 +711,14 @@ export async function createAccountBackupForActor(actor: {
       assetAssignmentHistory,
     };
   },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:60000});
-  const privateFiles=includePrivateFiles?await collectBackupPrivateFiles(companyId,company,privateStorage()):undefined;
-  if(privateFiles)verifyBackupPrivateFiles(companyId,company,privateFiles);
+  const fileSnapshot={...company,...company.restoreSnapshot?.models};
+  const privateFiles=includePrivateFiles?await collectBackupPrivateFiles(companyId,fileSnapshot,privateStorage()):undefined;
+  if(privateFiles)verifyBackupPrivateFiles(companyId,fileSnapshot,privateFiles);
   const manifest = {
     ...(deliveryProvider?{provider:deliveryProvider}:{}),
     format: "SalesPunch360 Account Backup",
-    formatVersion: includePrivateFiles?3:2,
+    formatVersion: includeRestoreSnapshot?4:includePrivateFiles?3:2,
+    replaceCompanySupported:includeRestoreSnapshot,
     generatedAt: new Date().toISOString(),
     company: { id: company.id, name: company.name },
     appVersion: process.env.npm_package_version ?? "unknown",
@@ -723,7 +736,7 @@ export async function createAccountBackupForActor(actor: {
     recovery:
       "Use authenticated imports and Recycle Bin for application recovery. Provider PostgreSQL backups remain required for disaster recovery.",
   };
-  const bundle = { manifest, data: company, ...(privateFiles?{privateFiles}:{}) },
+  const bundle = { manifest, data: redactAuditMetadata(company), ...(privateFiles?{privateFiles}:{}) },
     bytes = new TextEncoder().encode(
       JSON.stringify(
         bundle,
@@ -733,6 +746,7 @@ export async function createAccountBackupForActor(actor: {
     ),
     checksum = createHash("sha256").update(bytes).digest("hex");
   const backupId=reservationId??randomUUID(),objectKey=`companies/${companyId}/account-backups/${backupId}.json`;
+  if(includeRestoreSnapshot && bytes.byteLength > 128 * 1024 * 1024) throw new Error("BACKUP_FILES_TOO_LARGE");
   if(archive)await privateStorage().put(objectKey,Buffer.from(bytes));
   const recordManifest={...manifest,...(deliveryProvider?{deliveryState:"IN_PROGRESS"}:{})};
   let record;
@@ -771,8 +785,6 @@ export async function restoreMaster(recycleId: string) {
   );
 }
 export async function createAccountBackup(includePrivateFiles=false) {
-  return createAccountBackupForActor(
-    (await requirePermissionForMutation("ACCOUNT_SETTINGS")) as never,
-    false,includePrivateFiles,
-  );
+  const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  return createAccountBackupForActor(actor as never,false,includePrivateFiles,undefined,undefined,await isCompanyRestoreOwner(actor as never));
 }

@@ -1,4 +1,5 @@
 import type {
+  BranchAccessScope,
   AccountModule,
   AccountRole,
   ProductEdition,
@@ -224,6 +225,7 @@ const groups: AccountNavGroup[] = [
   {
     label: "Accounting",
     items: [
+      {label:"Audit History",href:"/workspace/account/utilities/audit",permission:"ACCOUNT_SETTINGS",roles:["ACCOUNT_ADMIN"]},
       {
         label: "Chart of Accounts",
         href: "/workspace/account/accounting/accounts",
@@ -287,7 +289,7 @@ const groups: AccountNavGroup[] = [
     items: [
       { label: "Verify my data", href: "/workspace/account/utilities/verification", permission: "ACCOUNT_SETTINGS" },
       { label: "Import Items", href: "/workspace/account/utilities/import?type=ITEMS", permission: "ACCOUNT_ACCOUNTS", requiredModules: ["INVENTORY"], requiresItems: true },
-      { label: "Export Items", href: "/workspace/account/utilities/export?type=items", permission: "ACCOUNT_REPORTS", requiredModules: ["INVENTORY"], requiresItems: true },
+      { label: "Export Items", roles:["ACCOUNT_ADMIN","ACCOUNTANT"], href: "/workspace/account/utilities/export?type=items", permission: "ACCOUNT_REPORTS", requiredModules: ["INVENTORY"], requiresItems: true },
       { label: "Import Parties", href: "/workspace/account/utilities/import?type=CUSTOMERS", permission: "ACCOUNT_ACCOUNTS" },
       { label: "Recycle Bin", href: "/workspace/account/utilities/recycle-bin", permission: "ACCOUNT_SETTINGS" },
       { label: "Close Financial Year", href: "/workspace/account/utilities/financial-year", permission: "ACCOUNT_PERIOD_LOCK" },
@@ -339,7 +341,7 @@ export function accountNavSectionId(label: string) {
     .replace(/^-+|-+$/g, "");
 }
 export function buildAccountNavigation(
-  actor: WorkspacePrincipal,
+  actor: WorkspacePrincipal & {branchAccessScope?:BranchAccessScope},
   edition: ProductEdition,
   enabled: readonly AccountModule[],
   itemsEnabled = true,
@@ -351,6 +353,7 @@ export function buildAccountNavigation(
       (item) =>
         (item.requiredModules ?? []).every((module) => set.has(module)) &&
         (!item.requiresItems || itemsEnabled) &&
+        (item.href!=="/workspace/account/utilities/audit" || actor.branchAccessScope==="ALL_BRANCHES") &&
         !(
           item.href === "/workspace/account/expenses" &&
           actor.accountRole === "PROJECT_MANAGER" &&

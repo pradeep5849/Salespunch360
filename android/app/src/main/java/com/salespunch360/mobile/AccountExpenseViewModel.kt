@@ -42,6 +42,7 @@ class AccountExpenseViewModel(app:Application):AndroidViewModel(app){
  fun search(v:String){_state.value=_state.value.copy(query=v);load(true)}
  fun filter(v:String?){_state.value=_state.value.copy(status=v);load(false)}
  fun create(){if(_state.value.saving||_state.value.loading)return;val selectedBranch=android.net.Uri.parse("https://local.invalid/?$contextQuery").getQueryParameter("branchId");_state.value=_state.value.copy(editing=buildJsonObject{selectedBranch?.let{put("branchId",it)}},detail=null,requestKey=UUID.randomUUID().toString(),error=null,newCategoryId=null)}
+ fun createForType(type:String?){create();if(type!=null&&(_state.value.options["allowedTypes"] as? JsonArray)?.any{it.jsonPrimitive.content==type}==true){val existing=_state.value.editing?:return;_state.value=_state.value.copy(editing=JsonObject(existing+mapOf("type" to JsonPrimitive(type))))}}
  fun edit(x:JsonObject){if(_state.value.saving)return;_state.value=_state.value.copy(editing=x,detail=null,error=null,newCategoryId=null)}
  fun dismiss(){if(_state.value.saving)return;detailJob?.cancel();_state.value=_state.value.copy(editing=null,detail=null,error=null)}
  fun open(id:String){detailJob?.cancel();detailJob=viewModelScope.launch{try{_state.value=_state.value.copy(detail=api.expense(id))}catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}}}

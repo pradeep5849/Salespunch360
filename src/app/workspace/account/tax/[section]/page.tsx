@@ -1,32 +1,23 @@
-import { Money } from "@/components/account/account-ui";
-import { AccountDate } from "@/components/account/display-preferences";
-import{notFound}from"next/navigation";
-import{revalidatePath}from"next/cache";
-import{getTaxSettings,gstReport,updateCompanyTaxSettings}from"@/lib/account/tax";
-import{AuthorizationError,requirePermissionForMutation}from"@/lib/auth/authorization";
-import{db}from"@/lib/db";
-import{TaxSettingsReference,type TaxPreferences}from"@/components/account/tax-settings-reference";
-const iso=(d:Date)=>d.toISOString().slice(0,10);
-
-export default async function Page({params,searchParams}:{params:Promise<{section:string}>;searchParams:Promise<{from?:string;to?:string;branchId?:string}>}){
- const{section}=await params;if(!["settings","reports"].includes(section))notFound();
- const context=await getTaxSettings();
- if(section==="settings"){
-  const transactionDefaults=(context.settings?.transactionDefaults as Record<string,unknown>|null)??{};
-  const stored=(transactionDefaults.taxPreferences as TaxPreferences|undefined)??{};
-  const values:TaxPreferences={gst:stored.gst??context.settings?.gstRegistrationType!=="UNREGISTERED",hsnSac:stored.hsnSac??true,additionalCess:stored.additionalCess??false,reverseCharge:stored.reverseCharge??false,stateOfSupply:stored.stateOfSupply??true,ewayBillNumber:stored.ewayBillNumber??false,compositeScheme:stored.compositeScheme??Boolean(context.settings?.compositionEnabled),enableTcs:stored.enableTcs??false,enableTds:stored.enableTds??false};
-  async function save(fd:FormData){
-   "use server";
-   const actor=await requirePermissionForMutation("ACCOUNT_SETTINGS");if(actor.accountRole!=="ACCOUNT_ADMIN")throw new AuthorizationError();
-   const existing=await db.accountSettings.findUnique({where:{companyId:actor.companyId!}}),defaults=(existing?.transactionDefaults as Record<string,unknown>|null)??{},itemSettings=(existing?.itemSettings as Record<string,unknown>|null)??{};
-   const preferences:TaxPreferences={gst:fd.get("gst")==="on",hsnSac:fd.get("hsnSac")==="on",additionalCess:fd.get("additionalCess")==="on",reverseCharge:fd.get("reverseCharge")==="on",stateOfSupply:fd.get("stateOfSupply")==="on",ewayBillNumber:fd.get("ewayBillNumber")==="on",compositeScheme:fd.get("compositeScheme")==="on",enableTcs:fd.get("enableTcs")==="on",enableTds:fd.get("enableTds")==="on"};
-   const txPrefs=(defaults.transactionPreferences as Record<string,unknown>|undefined)??{},nextDefaults={...defaults,taxPreferences:preferences,transactionPreferences:{...txPrefs,transactionTax:preferences.gst,reverseCharge:preferences.reverseCharge,stateOfSupply:preferences.stateOfSupply,ewayBillNumber:preferences.ewayBillNumber}},nextItemSettings={...itemSettings,itemWiseTax:preferences.gst,hsnSac:preferences.hsnSac,additionalCess:preferences.additionalCess};
-   await db.accountSettings.upsert({where:{companyId:actor.companyId!},create:{companyId:actor.companyId!,transactionDefaults:nextDefaults,itemSettings:nextItemSettings},update:{transactionDefaults:nextDefaults,itemSettings:nextItemSettings}});
-   const currentRegistration=existing?.gstRegistrationType??"UNREGISTERED",gstRegistrationType=preferences.compositeScheme?"COMPOSITION":preferences.gst?(currentRegistration==="SEZ"?"SEZ":"REGULAR"):"UNREGISTERED";
-   const taxProfile:{gstRegistrationType:"UNREGISTERED"|"REGULAR"|"COMPOSITION"|"SEZ";compositionEnabled:boolean;defaultTaxMode:"EXCLUSIVE"|"INCLUSIVE";defaultStateCode?:string}={gstRegistrationType,compositionEnabled:Boolean(preferences.compositeScheme),defaultTaxMode:existing?.defaultTaxMode??"EXCLUSIVE"};if(existing?.defaultStateCode)taxProfile.defaultStateCode=existing.defaultStateCode;
-   await updateCompanyTaxSettings(taxProfile);await db.accountingAuditEvent.create({data:{companyId:actor.companyId!,actorUserId:actor.id,eventType:"SETTINGS_CHANGED",entityType:"ACCOUNT_SETTINGS",entityId:actor.companyId!,metadata:{sections:["TAX_GST"]}}});revalidatePath("/workspace/account/tax/settings");
-  }
-  return <TaxSettingsReference values={values} action={save}/>;
+import {notFound,redirect} from "next/navigation";
+import {revalidatePath} from "next/cache";
+import {getTaxSettings} from "@/lib/account/tax";
+import {requirePermissionForMutation} from "@/lib/auth/authorization";
+import {saveTaxPreferences} from "@/lib/account/tax-preferences";
+import {TaxSettingsReference,type TaxPreferences} from "@/components/account/tax-settings-reference";
+export default async function Page({params,searchParams}:{params:Promise<{section:string}>;searchParams:Promise<{from?:string;to?:string;branchId?:string}>}) {
+ const {section}=await params;
+ if(section==="reports") {
+  const q=await searchParams;
+  const query=new URLSearchParams(Object.entries(q).filter((entry):entry is [string,string]=>Boolean(entry[1]))).toString();
+  redirect(`/workspace/account/reports/gst-party${query?`?${query}`:""}`);
  }
- const q=await searchParams,from=new Date(q.from??`${new Date().getUTCFullYear()}-04-01`),to=new Date(q.to??new Date()),report=await gstReport({from,to,branchId:q.branchId});return <main className="employees-shell"><section className="employees-content"><h1>GST & Tax Report</h1><form method="get" className="stack"><label>From date <input name="from" type="date" defaultValue={iso(from)}/></label><label>To date <input name="to" type="date" defaultValue={iso(to)}/></label><label>Branch <select aria-label="Branch" name="branchId" defaultValue={q.branchId}><option value="">Authorized Company</option>{context.branches.map(x=><option value={x.id} key={x.id}>{x.name}</option>)}</select></label><button>Apply</button></form><p>Outward taxable <Money value={report.outward.taxable} /> · CGST <Money value={report.outward.cgst} /> · SGST <Money value={report.outward.sgst} /> · IGST <Money value={report.outward.igst} /></p><p>Inward taxable <Money value={report.inward.taxable} /> · ITC components <Money value={report.inward.cgst.add(report.inward.sgst).add(report.inward.igst).add(report.inward.cess)} /></p><div role="region" aria-label="GST report rows" tabIndex={0} style={{overflowX:"auto"}}><table><thead><tr><th>Date</th><th>Document</th><th>Party</th><th>Taxable</th><th>CGST</th><th>SGST</th><th>IGST</th><th>CESS</th><th>TDS</th><th>TCS</th></tr></thead><tbody>{report.rows.map(x=><tr key={x.id}><td><AccountDate value={iso(x.date)} /></td><td>{x.number}</td><td>{x.party}</td><td><Money value={x.taxable} /></td><td><Money value={x.cgst} /></td><td><Money value={x.sgst} /></td><td><Money value={x.igst} /></td><td><Money value={x.cess} /></td><td><Money value={x.tds} /></td><td><Money value={x.tcs} /></td></tr>)}</tbody></table></div></section></main>;
+ if(section!=="settings")notFound();
+ const context=await getTaxSettings(),defaults=(context.settings?.transactionDefaults as Record<string,unknown>|null)??{},stored=(defaults.taxPreferences as TaxPreferences|undefined)??{};
+ const values:TaxPreferences={gst:context.settings?.gstRegistrationType!=="UNREGISTERED",hsnSac:true,stateOfSupply:true,compositeScheme:Boolean(context.settings?.compositionEnabled),...stored};
+ async function save(fd:FormData) {"use server";
+  const keys=["gst","hsnSac","additionalCess","reverseCharge","stateOfSupply","ewayBillNumber","compositeScheme","enableTcs","enableTds"];
+  await saveTaxPreferences(await requirePermissionForMutation("ACCOUNT_SETTINGS"),{...Object.fromEntries(keys.map(key=>[key,fd.get(key)==="on"])),...(fd.get("compositionCategory")?{compositionCategory:fd.get("compositionCategory")}:{})});
+  revalidatePath("/workspace/account/tax/settings");
+ }
+ return <TaxSettingsReference values={values} action={save}/>;
 }

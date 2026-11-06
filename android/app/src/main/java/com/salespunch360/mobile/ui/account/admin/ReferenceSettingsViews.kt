@@ -110,13 +110,37 @@ class ServiceReminderViewModel(app:Application):AndroidViewModel(app){
 }
 
 @Composable fun TaxPreferencesView(data:JsonElement,vm:AccountAdministrationViewModel,navigate:(String)->Unit){
- val settings=(data as? JsonObject)?.get("settings")?.jsonObject;val stored=settings?.get("transactionDefaults")?.jsonObject?.get("taxPreferences")?.jsonObject
- fun b(k:String,d:Boolean)=stored?.get(k)?.jsonPrimitive?.booleanOrNull?:d
- var gst by remember(stored){mutableStateOf(b("gst",settings?.get("gstRegistrationType")?.jsonPrimitive?.content!="UNREGISTERED"))};var hsn by remember(stored){mutableStateOf(b("hsnSac",true))};var cess by remember(stored){mutableStateOf(b("additionalCess",false))};var reverse by remember(stored){mutableStateOf(b("reverseCharge",false))};var state by remember(stored){mutableStateOf(b("stateOfSupply",true))};var eway by remember(stored){mutableStateOf(b("ewayBillNumber",false))};var composite by remember(stored){mutableStateOf(b("compositeScheme",false))};var tcs by remember(stored){mutableStateOf(b("enableTcs",false))};var tds by remember(stored){mutableStateOf(b("enableTds",false))}
- fun save(){vm.save("tax-preferences",buildJsonObject{put("gst",gst);put("hsnSac",hsn);put("additionalCess",cess);put("reverseCharge",reverse);put("stateOfSupply",state);put("ewayBillNumber",eway);put("compositeScheme",composite);put("enableTcs",tcs);put("enableTds",tds)})}
- LazyColumn(Modifier.fillMaxSize()){item{RefNavRow("Tax List"){navigate("/workspace/account/tax/list")}};item{RefSwitchRow("GST",gst){gst=it;save()}};item{RefSwitchRow("HSN/SAC Code",hsn){hsn=it;save()}};item{RefSwitchRow("Additional CESS",cess){cess=it;save()}};item{RefSwitchRow("Reverse Charge",reverse){reverse=it;save()}};item{RefSwitchRow("State of Supply",state){state=it;save()}};item{RefSwitchRow("E-Way Bill No.",eway){eway=it;save()}};item{RefSwitchRow("Composite Scheme",composite){composite=it;save()}};item{RefSwitchRow("Enable TCS",tcs){tcs=it;save()}};item{RefSwitchRow("Enable TDS",tds){tds=it;save()}}}
+ val settings=(data as? JsonObject)?.get("settings")?.jsonObject
+ val stored=settings?.get("transactionDefaults")?.jsonObject?.get("taxPreferences")?.jsonObject
+ val fields=listOf("gst" to "GST","hsnSac" to "HSN/SAC Code","additionalCess" to "Additional CESS","reverseCharge" to "Reverse Charge","stateOfSupply" to "State of Supply","ewayBillNumber" to "E-Way Bill No.","compositeScheme" to "Composite Scheme","enableTcs" to "Enable TCS","enableTds" to "Enable TDS")
+ var prefs by remember(stored){mutableStateOf(fields.associate{(key,_)->key to (stored?.get(key)?.jsonPrimitive?.booleanOrNull ?: when(key){"hsnSac","stateOfSupply"->true;"gst"->settings?.get("gstRegistrationType")?.jsonPrimitive?.content!="UNREGISTERED";else->false})})}
+ var category by remember(stored){mutableStateOf(stored?.get("compositionCategory")?.jsonPrimitive?.contentOrNull?:"")}
+ var query by remember{mutableStateOf("")};var info by remember{mutableStateOf<String?>(null)}
+ LazyColumn(Modifier.fillMaxSize()){
+  item{RefNavRow("Tax List"){navigate("/workspace/account/tax/list")}}
+  item{OutlinedTextField(query,{query=it},label={Text("Search tax settings")})}
+  items(fields.filter{it.second.contains(query,true)}){(key,label)->Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){RefSwitchRow(label,prefs[key]?:false){prefs=prefs+(key to it)}};TextButton(onClick={info=label}){Text("ⓘ")}}}
+  if(prefs["compositeScheme"]==true)item{Text("Composition business category");listOf("MANUFACTURING" to "Manufacturing","TRADER_GOODS" to "Trader Goods","RESTAURANT" to "Restaurant").forEach{(value,label)->Row(verticalAlignment=Alignment.CenterVertically){RadioButton(category==value,{category=value});Text(label)}}}
+  if(prefs["enableTcs"]==true)item{RefNavRow("Manage TCS rates"){navigate("/workspace/account/tax/list")}}
+  item{Button(enabled=prefs["compositeScheme"]!=true||category.isNotBlank(),onClick={vm.save("tax-preferences",buildJsonObject{prefs.forEach{(key,value)->put(key,value)};if(category.isNotBlank())put("compositionCategory",category)})}){Text("Save tax settings")}}
+ }
+ info?.let{label->AlertDialog(onDismissRequest={info=null},title={Text(label)},text={Text("Controls $label for new entries. Apply the treatment required for your business. Posted transactions and saved tax history remain unchanged.")},confirmButton={TextButton(onClick={info=null}){Text("OK")}})}
 }
 
 private val standardGroups=listOf("GST@0%" to "SGST@0%     CGST@0%","GST@0.25%" to "SGST@0.125%     CGST@0.125%","GST@3%" to "SGST@1.5%     CGST@1.5%","GST@5%" to "SGST@2.5%     CGST@2.5%","GST@12%" to "SGST@6%     CGST@6%","GST@18%" to "SGST@9%     CGST@9%","GST@28%" to "SGST@14%     CGST@14%","GST@40%" to "SGST@20%     CGST@20%")
 private val standardRates=listOf("CGST@0%" to "0%","Exempt" to "0%","IGST@0%" to "0%","SGST@0%" to "0%","CGST@0.125%" to "0.125%","SGST@0.125%" to "0.125%","IGST@0.25%" to "0.25%","CGST@1.5%" to "1.5%","SGST@1.5%" to "1.5%","CGST@2.5%" to "2.5%","SGST@2.5%" to "2.5%","IGST@3%" to "3%","IGST@5%" to "5%","CGST@6%" to "6%","SGST@6%" to "6%","CGST@9%" to "9%","SGST@9%" to "9%","IGST@12%" to "12%","CGST@14%" to "14%","SGST@14%" to "14%","IGST@18%" to "18%","CGST@20%" to "20%","SGST@20%" to "20%","IGST@28%" to "28%","IGST@40%" to "40%")
-@Composable fun TaxListView(){var groups by remember{mutableStateOf(false)};Column(Modifier.fillMaxSize()){TabRow(if(groups)1 else 0){Tab(!groups,{groups=false}){Text("TAX RATES",Modifier.padding(18.dp))};Tab(groups,{groups=true}){Text("TAX GROUPS",Modifier.padding(18.dp))}};LazyColumn{if(!groups)items(standardRates){x->Row(Modifier.fillMaxWidth().heightIn(min=62.dp).padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically){Text(x.first,Modifier.weight(1f),fontSize=16.sp);Text(x.second,fontSize=16.sp,color=Color.Gray)};HorizontalDivider()}else items(standardGroups){x->Column(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=14.dp)){Text(x.first,fontSize=16.sp,fontWeight=FontWeight.SemiBold);Spacer(Modifier.height(12.dp));Text(x.second,fontSize=14.sp,color=Color.Gray)};HorizontalDivider()}}}}
+@Composable fun TaxListView(data:JsonElement,vm:AccountAdministrationViewModel){
+ var groups by remember{mutableStateOf(false)};var query by remember{mutableStateOf("")};var add by remember{mutableStateOf(false)}
+ var name by remember{mutableStateOf("")};var rate by remember{mutableStateOf("")};var cgst by remember{mutableStateOf("")};var sgst by remember{mutableStateOf("")}
+ val settings=(data as? JsonObject)?.get("settings")?.jsonObject
+ val catalog=settings?.get("transactionDefaults")?.jsonObject?.get("taxCatalog")?.jsonObject
+ val custom=(catalog?.get(if(groups)"customGroups" else "customRates") as? JsonArray)?.map{row->val x=row.jsonObject;(x["name"]?.jsonPrimitive?.content?:"") to if(groups)"SGST ${x["sgst"]?.jsonPrimitive?.content}% · CGST ${x["cgst"]?.jsonPrimitive?.content}%" else "${x["rate"]?.jsonPrimitive?.content}%"}.orEmpty()
+ val rows=((if(groups)standardGroups else standardRates)+custom).filter{it.first.contains(query,true)}
+ Column(Modifier.fillMaxSize()){
+  Row{TextButton(onClick={vm.load("tax-list")}){Text("Refresh")};TextButton(onClick={add=true}){Text("Add or update custom tax")}}
+  OutlinedTextField(query,{query=it},label={Text("Search taxes")})
+  TabRow(if(groups)1 else 0){Tab(!groups,{groups=false}){Text("TAX RATES",Modifier.padding(18.dp))};Tab(groups,{groups=true}){Text("TAX GROUPS",Modifier.padding(18.dp))}}
+  LazyColumn{items(rows){x->Column(Modifier.fillMaxWidth().padding(18.dp)){Text(x.first,fontWeight=FontWeight.SemiBold);Text(x.second)};HorizontalDivider()}}
+ }
+ if(add)AlertDialog(onDismissRequest={add=false},title={Text("Custom tax ${if(groups)"group" else "rate"}")},text={Column{Text("An existing custom name replaces that entry. Built-in taxes stay unchanged.");OutlinedTextField(name,{name=it},label={Text("Name")});OutlinedTextField(rate,{rate=it},label={Text("Rate %")});if(groups){OutlinedTextField(cgst,{cgst=it},label={Text("CGST %")});OutlinedTextField(sgst,{sgst=it},label={Text("SGST %")})}}},confirmButton={TextButton(enabled=name.isNotBlank()&&rate.isNotBlank(),onClick={vm.save("tax-catalog",buildJsonObject{put("kind",if(groups)"GROUP" else "RATE");put("name",name);put("rate",rate);if(groups){put("cgst",cgst);put("sgst",sgst)}});add=false}){Text("Save")}},dismissButton={TextButton(onClick={add=false}){Text("Cancel")}})
+}

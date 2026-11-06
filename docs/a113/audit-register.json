@@ -1,0 +1,98 @@
+{
+  "page_id": "A113",
+  "page_name": "Export data",
+  "route": "/workspace/account/utilities/export",
+  "inventory_label": "Queries are rerun on the server with your Company and Branch scope.",
+  "audit_status": "AUDIT COMPLETE \u2014 source, actual CSV/XLSX serialization and synthetic service scope only",
+  "reference_status": "Owner supplied Utilities menu with Export Items selected. Detailed export-screen layout, columns and reference output file have not been supplied; visual/file-format equivalence is not certified.",
+  "findings": [
+    {
+      "finding_id": "A113-F01",
+      "severity": "High",
+      "classification": "CSV formula injection candidates",
+      "current_behavior": "CSV quoting doubles quotes but does not neutralize formula-like text. The actual CSV encoder emitted a synthetic customer name =1+1 unchanged as a cell. Spreadsheet applications may interpret such values as formulas depending on how the file is opened/imported.",
+      "required_correction": "Apply a documented spreadsheet-safe CSV text policy to untrusted fields, covering leading formula characters and control/whitespace variants while preserving legitimate numeric values. Keep XLSX values explicit strings and test both formats.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual encoder/parser probe returned =1+1 unchanged. No spreadsheet or formula was executed. The XLSX counterpart was verified as ExcelJS ValueType.String, not a formula object. Source exports.ts:9\u201316."
+    },
+    {
+      "finding_id": "A113-F02",
+      "severity": "Medium",
+      "classification": "Silent export truncation and unstable ordering",
+      "current_behavior": "Every dataset query takes at most 10,000 rows without orderBy or continuation. The response has only bytes/contentType and the UI provides no total, truncation message or continuation. A 10,001-row mock honoring the actual take argument yielded 10,000 output records.",
+      "required_correction": "Export all authorized rows using stable ordering and bounded streaming/chunks, or disclose the limit and provide a complete authorized continuation mechanism. Add a greater-than-limit completeness test.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Synthetic query-cap probe and actual CSV output; no real large database was queried. Source exports.ts:54/68/82/103/117 and page.tsx."
+    },
+    {
+      "finding_id": "A113-F03",
+      "severity": "Medium",
+      "classification": "Export/import portability and empty schema",
+      "current_behavior": "Exported Customers omit branch; Items omit unit/category; Projects omit customer/branch. Passing the actual generated CSV into actual import preview rejects the files with missing-column errors. Empty CSV has zero bytes and empty XLSX uses no_data rather than dataset headers. The screen does not explain these schema limitations.",
+      "required_correction": "Define whether exports are analytical or import-ready. For import-ready exports, provide scoped relational references and shared column schemas; otherwise clearly label limitations and offer an explicit import-ready format. Keep headers for empty datasets.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual CSV\u2192parse/preview probes: Customers MISSING_COLUMNS:branch; Items MISSING_COLUMNS:unit,category; Projects MISSING_COLUMNS:customer,branch. Empty CSV probe produced zero bytes. Source exports.ts and imports.ts requiredHeaders.",
+      "policy_note": "The screen never explicitly promises round-trip restore. The finding is a concrete portability/documentation gap, not proof that the existing UI made that promise."
+    },
+    {
+      "finding_id": "A113-F04",
+      "severity": "Medium",
+      "classification": "Inventory/item feature policy inconsistent across entry points",
+      "current_behavior": "The selected Export Items navigation entry requires INVENTORY and enabled item features, but the generic Export page always includes Items. The export endpoint requires ACCOUNT_REPORTS only and does not consult Inventory/item-feature state. A synthetic authorized direct item export returned data without reading disabled-module configuration.",
+      "required_correction": "Apply one explicit feature policy to menu, generic page and Web/mobile export endpoints. If read-only exports must remain available after Inventory is disabled, document that deliberate exception and make the entry points consistent rather than silently expanding operational permissions.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source navigation.ts Export Items requiredModules/requiresItems; actual exportAccountData wrapper probe used ACCOUNT_REPORTS and never called the disabled-module provider. No unauthorized production export or cross-company access is asserted."
+    },
+    {
+      "finding_id": "A113-F05",
+      "severity": "Low",
+      "classification": "Export input validation/error contract",
+      "current_behavior": "An unsupported format is rejected only after the dataset query and row transformation. The Web route does not translate unsupported type/format into a documented 400 response; mobile uses the generic unexpected-error path.",
+      "required_correction": "Validate the type/format allowlists before reading business rows and map invalid requests to consistent safe 400 responses with no data query.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Actual unsupported-format probe queried customers once then threw UNSUPPORTED_EXPORT_FORMAT. Web/mobile status behavior is source inference, not live HTTP execution."
+    },
+    {
+      "finding_id": "A113-F06",
+      "severity": "Medium",
+      "classification": "Native CSV share MIME type",
+      "current_behavior": "The Android share handler uses the XLSX MIME type only for .xlsx and application/json for every other file. Generated .csv exports are therefore shared as JSON, which can affect available apps and interpretation.",
+      "required_correction": "Carry the actual authorized download MIME type through the native file-delivery DTO, or use a validated extension-to-MIME mapping including text/csv. Verify Android share targets and receiving-app behavior for CSV, XLSX and JSON backup.",
+      "implementation_status": "NOT STARTED",
+      "evidence": "Source AccountUtilityScreen.kt:124\u2013131. Physical chooser/receiving-app behavior not tested."
+    }
+  ],
+  "shared_findings": [
+    {
+      "finding_id": "A112-F01",
+      "impact": "Opening Export also requests the unsupported mobileUtilities export section. Counted once under A112."
+    },
+    {
+      "finding_id": "A112-F04",
+      "impact": "Native export sharing uses the same mutable cache-file pattern. Counted once under A112."
+    }
+  ],
+  "verified_existing_controls": [
+    "Actual customer query used server-provided companyId and selected branch IDs.",
+    "Actual project-manager export query included company, branch IDs and projectManagerId.",
+    "XLSX formula-like text was an explicit string. No formula was executed.",
+    "Web export endpoint source uses private/no-store caching and both serializers preserve declared string values in executed synthetic checks."
+  ],
+  "verification": {
+    "date": "2026-11-04",
+    "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+    "test_report": "docs/a112/focused-test-evidence.json",
+    "combined_passed": 102,
+    "combined_failed": 0,
+    "audit_probe_checks": 10,
+    "scope": "Synthetic DB reads and actual encoders/import preview; source-only Android MIME review. No live HTTP/browser/device or database export."
+  },
+  "implementation_changes": "NONE \u2014 findings/probes only, not fixes.",
+  "next_page": {
+    "id": "A114",
+    "page_name": "Close Financial Year",
+    "route": "/workspace/account/utilities/financial-year",
+    "status": "REFERENCE PENDING",
+    "reference_needed": "Owner reference app screen after Menu \u2192 Utilities \u2192 Close Financial Year, and subsequent confirmation/options screens if present."
+  }
+}

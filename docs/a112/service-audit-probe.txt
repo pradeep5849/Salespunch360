@@ -1,0 +1,74 @@
+import {createHash} from "node:crypto";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const m = vi.hoisted(() => ({
+  storageGet: vi.fn(),
+  reads: new Map<string, ReturnType<typeof vi.fn>>(),
+  identity: vi.fn(),
+  record: vi.fn(),
+  recordUpdate:vi.fn(),
+  config:vi.fn(),latest:vi.fn(),allow:vi.fn(),permission:vi.fn(),
+  audit: vi.fn(),
+  transaction: vi.fn(),
+}));
+vi.mock("@/lib/storage",()=>({privateStorage:()=>({get:m.storageGet})}));
+vi.mock("@/lib/db", () => {
+  const tx = new Proxy(
+    {},
+    {
+      get: (_, name) => {
+        if (name === "company") return { findUniqueOrThrow: m.identity };
+        if (name === "accountBackupRecord") return { create: m.record, update:m.recordUpdate };
+        if (name === "accountingAuditEvent") return { create: m.audit };
+        const key = String(name);
+        if (!m.reads.has(key)) m.reads.set(key, vi.fn().mockResolvedValue([]));
+        return { findMany: m.reads.get(key) };
+      },
+    },
+  );
+  return {
+    db: {
+      accountSettings:{findUnique:m.config},
+      accountBackupRecord:{findFirst:m.latest},
+      $transaction: async (
+        fn: (value: unknown) => unknown,
+        options: unknown,
+      ) => {
+        m.transaction(options);
+        return fn(tx);
+      },
+    },
+  };
+});
+vi.mock("@/lib/auth/authorization",()=>({requirePermission:m.permission,requirePermissionForMutation:m.permission,AuthorizationError:class extends Error{}}));
+vi.mock("@/lib/auth/permissions",()=>({canUsePermission:m.allow}));
+vi.mock("@/lib/mobile/account-transactions",()=>({mobileAccountActor:(u:unknown)=>u}));
+import {mobileUtilities} from "@/lib/mobile/account-administration";
+import {backupReminderDue} from "./backup-settings";
+import { createAccountBackupForActor } from "./utilities";
+const actor = {
+  id: "admin",
+  companyId: "company-a",
+  accountRole: "ACCOUNT_ADMIN",
+};
+beforeEach(() => {
+  vi.clearAllMocks();
+  m.reads.clear();
+  m.allow.mockReturnValue(true);
+  m.identity.mockResolvedValue({
+    id: "company-a",
+    name: "A",
+    slug: "a",
+    customers: [],
+    vendors: [],
+    accountProducts: [],
+    projects: [],
+    ledgerAccounts: [],
+    financialYears: [],
+  });
+  m.record.mockImplementation(async ({ data }) => data);
+});
+
+it.each(["backup","export"])("captures unsupported native startup utility section %s",async kind=>{await expect(mobileUtilities({...actor,productEdition:"SALESPUNCH360_ACCOUNT"} as never,kind)).rejects.toThrow("INVALID_SECTION");console.log("A112_NATIVE_STARTUP",JSON.stringify({kind,result:"INVALID_SECTION",databaseSnapshotCalls:m.identity.mock.calls.length}));expect(m.identity).not.toHaveBeenCalled()});
+it("captures manual generation recording before any consumer saves or shares",async()=>{const output=await createAccountBackupForActor(actor);expect(m.record).toHaveBeenCalledOnce();expect(m.storageGet).not.toHaveBeenCalled();m.config.mockResolvedValue({transactionDefaults:{backupSettings:{autoBackup:false,intervalDays:2,manualReminderDays:10}},createdAt:new Date("2026-01-01")});m.latest.mockResolvedValue({generatedAt:new Date("2026-11-04")});expect(await backupReminderDue("company-a",new Date("2026-11-05"))).toBe(false);console.log("A112_GENERATION_VS_DELIVERY",JSON.stringify({generatedBytes:output.bytes.length,recorded:true,storageSaved:false,manualReminderDue:false,consumerSaveOrSharePerformed:false}))});
+it("captures unstructured sensitive-key values retained in a synthetic backup",async()=>{m.reads.set("accountOperationalAudit",vi.fn().mockResolvedValue([{id:"synthetic",metadata:{password:"SYNTHETIC_A112",nested:{apiToken:"SYNTHETIC_A112"}}}]));const result=await createAccountBackupForActor(actor);const bundle=JSON.parse(new TextDecoder().decode(result.bytes));expect(bundle.data.accountOperationalAudit[0].metadata.password).toBe("SYNTHETIC_A112");expect(bundle.data.accountOperationalAudit[0].metadata.nested.apiToken).toBe("SYNTHETIC_A112");console.log("A112_UNSTRUCTURED_METADATA",JSON.stringify({syntheticSensitiveValuesRetained:true,productionSecretsQueried:false}))});
+it("confirms a non-admin cannot generate a company snapshot",async()=>{await expect(createAccountBackupForActor({...actor,accountRole:"ACCOUNTANT"})).rejects.toThrow();expect(m.identity).not.toHaveBeenCalled()});

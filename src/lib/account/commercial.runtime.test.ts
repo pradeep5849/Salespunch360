@@ -5,6 +5,7 @@ const m = vi.hoisted(() => ({
   modules: vi.fn(),
   txRun: vi.fn(),
   doc: vi.fn(),
+  list: vi.fn(),
   adjust: vi.fn(),
   alloc: vi.fn(),
   apply: vi.fn(),
@@ -23,9 +24,13 @@ vi.mock("@/lib/auth/authorization", () => ({
 vi.mock("./modules", () => ({ requireAccountModules: m.modules }));
 vi.mock("@/lib/accounting/service", () => ({ postJournalInTx: m.post }));
 vi.mock("@/lib/db", () => ({
-  db: { $transaction: m.txRun, commercialDocument: { findFirst: m.doc } },
+  db: {
+    $transaction: m.txRun,
+    commercialDocument: { findFirst: m.doc, findMany: m.list },
+  },
 }));
 import {
+  listCommercialDocumentsPageForActor,
   createSettlement,
   documentOutstanding,
   postCommercialDocument,
@@ -176,4 +181,55 @@ describe("A4/A5 runtime", () => {
       expect(m.post).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("bounded scoped commercial list", () => {
+  it("loads 51 rows to expose a stable 50-row cursor page without reading lines", async () => {
+    m.list.mockResolvedValue(
+      Array.from({ length: 51 }, (_, index) => ({
+        id: String(index),
+        type: "PURCHASE_ORDER",
+        status: "DRAFT",
+        balanceDue: new Prisma.Decimal(0),
+      })),
+    );
+    const page = await listCommercialDocumentsPageForActor(
+      actor() as never,
+      {},
+      ["PURCHASE_ORDER"],
+    );
+    expect(page.rows).toHaveLength(50);
+    expect(page.nextCursor).toBe("49");
+    expect(m.list.mock.calls[0][0]).toMatchObject({
+      take: 51,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      where: { companyId: actor().companyId, type: { in: ["PURCHASE_ORDER"] } },
+    });
+    expect(m.list.mock.calls[0][0].include).toBeUndefined();
+  });
+  it("rejects unauthorized branches, foreign cursors and cross-family types before reading a page", async () => {
+    const branch = "33333333-3333-4333-8333-333333333333";
+    await expect(
+      listCommercialDocumentsPageForActor(
+        {
+          ...actor(),
+          branchAccessScope: "SELECTED_BRANCHES",
+          branchIds: [],
+        } as never,
+        { branchId: branch },
+      ),
+    ).rejects.toThrow();
+    await expect(
+      listCommercialDocumentsPageForActor(
+        actor() as never,
+        { type: "SALES_INVOICE" },
+        ["PURCHASE_BILL"],
+      ),
+    ).rejects.toThrow();
+    m.doc.mockResolvedValue(null);
+    await expect(
+      listCommercialDocumentsPageForActor(actor() as never, { cursor: branch }),
+    ).rejects.toThrow();
+    expect(m.list).not.toHaveBeenCalled();
+  });
 });

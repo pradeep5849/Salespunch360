@@ -1,0 +1,91 @@
+{
+  "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+  "date": "2026-11-04",
+  "numTotalTests": 102,
+  "numPassedTests": 102,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "scope": "Actual service functions and serializers with synthetic mocked database/storage/Google responses. Real CSV/XLSX encoding and parsing. No production DB, live HTTP server, Google consent/upload or Android device execution. Passing defect probes establish current defects, not remediation.",
+  "files": [
+    {
+      "name": "src/components/account/backup-preferences-fields.test.tsx",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/components/account/backup-transfer.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/account/a112.audit-probe.test.ts",
+      "status": "passed",
+      "assertions": 5
+    },
+    {
+      "name": "src/lib/account/a113.audit-probe.test.ts",
+      "status": "passed",
+      "assertions": 10
+    },
+    {
+      "name": "src/lib/account/a15-imports.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/lib/account/backup-private-files.test.ts",
+      "status": "passed",
+      "assertions": 9
+    },
+    {
+      "name": "src/lib/account/backup-settings.runtime.test.ts",
+      "status": "passed",
+      "assertions": 15
+    },
+    {
+      "name": "src/lib/account/backup-snapshot.runtime.test.ts",
+      "status": "passed",
+      "assertions": 15
+    },
+    {
+      "name": "src/lib/account/google-drive-backup.test.ts",
+      "status": "passed",
+      "assertions": 10
+    },
+    {
+      "name": "src/lib/account/utilities-menu.test.ts",
+      "status": "passed",
+      "assertions": 7
+    },
+    {
+      "name": "src/app/api/internal/account-backups/route.test.ts",
+      "status": "passed",
+      "assertions": 2
+    },
+    {
+      "name": "src/app/workspace/account/menu/page.test.tsx",
+      "status": "passed",
+      "assertions": 5
+    },
+    {
+      "name": "src/app/api/account/backup/google/routes.test.ts",
+      "status": "passed",
+      "assertions": 9
+    },
+    {
+      "name": "src/app/api/account/utilities/backup/route.test.ts",
+      "status": "passed",
+      "assertions": 3
+    },
+    {
+      "name": "src/app/api/v1/mobile/account/backup/route.test.ts",
+      "status": "passed",
+      "assertions": 3
+    }
+  ],
+  "probe_retention": {
+    "src/lib/account/a112.audit-probe.test.ts": "docs/a112/service-audit-probe.txt",
+    "src/lib/account/a113.audit-probe.test.ts": "docs/a113/service-audit-probe.txt"
+  },
+  "production_changes": "NONE"
+}

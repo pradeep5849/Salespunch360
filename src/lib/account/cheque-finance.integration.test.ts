@@ -836,7 +836,10 @@ describe.skipIf(!url)(
         }
         const mixed=await runFinancialReportForActor(actor,"customers",{scope:"all",from:"2026-10-10",to:"2026-10-10",customerId:party.id});
         expect(mixed.rows[0][1]).toBe("Mixed units");
-        await reversePostedSaleForActor(actor,sale.id);
+        // Reversal uses today's business date. Pin Date only, so this historical-cutoff
+        // assertion remains deterministic after October; Prisma timers remain real.
+        vi.useFakeTimers({toFake:["Date"]});vi.setSystemTime(new Date("2026-10-31T06:00:00Z"));
+        try{await reversePostedSaleForActor(actor,sale.id)}finally{vi.useRealTimers()}
         const corrected=await runFinancialReportForActor(actor,"customers",{scope:"all",from:"2026-10-10",to:"2026-10-31",customerId:party.id,projectId:project.id,productId:products[0].id});
         expect(corrected.rows).toHaveLength(1);expect(corrected.rows[0][2]).toBe("0");expect(corrected.rows[0][1]).toBe("0.0000 Nos");
       }finally{await client.accountSettings.update({where:{companyId},data:{enabledModules:[]}})}

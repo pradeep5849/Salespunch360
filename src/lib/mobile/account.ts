@@ -1,3 +1,4 @@
+import {transactionLauncherForRole} from "@/lib/account/transaction-launcher";
 import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
 import type { ProjectActor } from "@/lib/account/projects";
 import { resolveDisplayPreferences } from "@/lib/account/display-preferences";
@@ -79,6 +80,7 @@ export async function mobileAccountBootstrap(
     itemSettings: settings?.itemSettings ?? {},
     displayPreferences: resolveDisplayPreferences(settings),
     effectivePermissions: rolePermissionSummary(actor.accountRole),
+    transactionLauncher:transactionLauncherForRole(actor.accountRole,modules,branch.context.mode==="BRANCH"?branch.context.branchId:undefined),
     canSwitchWorkspace: user.authorizedWorkspaces.includes("SALES"),
     branch: branch.context,
     availableBranches: branch.branches,

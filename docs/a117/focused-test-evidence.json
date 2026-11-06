@@ -1,0 +1,26 @@
+{
+  "source_commit": "887402cf9868ca3df800513dd8e776c0b1874ff9",
+  "date": "2026-11-05",
+  "numTotalTests": 16,
+  "numPassedTests": 16,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "files": [
+    {
+      "name": "src/lib/account/a117.audit-probe.test.tsx",
+      "status": "passed",
+      "assertions": 4
+    },
+    {
+      "name": "src/lib/account/utilities-menu.test.ts",
+      "status": "passed",
+      "assertions": 7
+    },
+    {
+      "name": "src/app/workspace/account/menu/page.test.tsx",
+      "status": "passed",
+      "assertions": 5
+    }
+  ],
+  "scope": "Four actual hub SSR/pure-policy audit probes plus twelve existing menu checks. Authentication fixture mocked; pure permission policy evaluated directly. No live browser, API, device or production database. Probes retained as text only."
+}

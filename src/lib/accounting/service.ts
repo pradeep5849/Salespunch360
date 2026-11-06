@@ -64,6 +64,7 @@ export async function accountingOverviewForActor(
   return {
     ...data,
     capabilities: {
+      canRestartNumbering: a.accountRole === "ACCOUNT_ADMIN" && a.branchAccessScope === "ALL_BRANCHES",
       canPost:
         a.accountRole === "ACCOUNT_ADMIN" || a.accountRole === "ACCOUNTANT",
       canManageChart: a.accountRole === "ACCOUNT_ADMIN",

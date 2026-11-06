@@ -1,1 +1,2 @@
-import Link from "next/link";import {requirePermission} from "@/lib/auth/authorization";import {requireAccountModules} from "@/lib/account/modules";export default async function Page(){const a=await requirePermission("ACCOUNT_REPORTS");await requireAccountModules(a,"GST_ADVANCED");return <main className="employees-shell"><section className="employees-content"><h1>GST & Taxes</h1><p>GST reports are operational summaries and are not government-filed returns.</p><nav className="employee-actions"><Link href="/workspace/account/tax/settings">settings</Link><Link href="/workspace/account/tax/reports">reports</Link></nav></section></main>}
+import {redirect} from "next/navigation";
+export default function Page(){redirect("/workspace/account/tax/settings");}

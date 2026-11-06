@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
     cpus: 1,
     memoryBasedWorkersCount: false,
     staticGenerationMaxConcurrency: 1,
-    serverActions: { bodySizeLimit: "6mb" },
+    serverActions: { bodySizeLimit: "11mb" },
   },
   agentRules: false,
   poweredByHeader: false,
