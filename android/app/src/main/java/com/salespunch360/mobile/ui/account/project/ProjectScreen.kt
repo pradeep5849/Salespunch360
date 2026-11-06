@@ -264,7 +264,7 @@ private fun ProjectDetail(
     if (confirmArchive) AlertDialog(
         onDismissRequest = { confirmArchive = false },
         title = { Text("Move project to Recycle Bin?") },
-        text = { Text("This project will be hidden from active lists. Its linked records are preserved and it can be restored from Account Recycle Bin.") },
+        text = { Text("This project will be hidden from active lists. Restore it within seven days. Once scheduled cleanup is enabled, unlinked records are permanently deleted; linked history is retained.") },
         confirmButton = { TextButton(onClick = { confirmArchive = false; archive(x.str("id")) }, enabled = !saving) { Text("Move to Recycle Bin") } },
         dismissButton = { TextButton(onClick = { confirmArchive = false }) { Text("Cancel") } },
     )

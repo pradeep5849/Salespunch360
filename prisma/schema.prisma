@@ -544,6 +544,7 @@ enum AccountingAuditEventType {
   IMPORT_COMPLETED
   RECORD_ARCHIVED
   RECORD_RESTORED
+  RECORD_PURGED
   FINANCIAL_YEAR_CLOSED
   SETTINGS_CHANGED
   BACKUP_GENERATED
@@ -2025,6 +2026,9 @@ model AccountRecycleRecord {
   reason       String?
   restoredById String?  @db.Uuid
   restoredAt   DateTime?
+  purgedAt DateTime?
+  purgeBlockedReason String? @db.VarChar(160)
+  purgeCheckedAt DateTime?
 
   @@unique([companyId, entityType, entityId])
   @@index([companyId, archivedAt])

@@ -1,0 +1,26 @@
+name: Scheduled seven-day Recycle Bin cleanup
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: production-recycle-retention
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run authenticated bounded cleanup
+        env:
+          FIELD_JOB_SECRET: ${{ secrets.FIELD_JOB_SECRET }}
+        run: |
+          if [ -z "$FIELD_JOB_SECRET" ]; then
+            echo "Cleanup not configured: set the same FIELD_JOB_SECRET in GitHub Actions and Hostinger."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 90 \
+            --request POST \
+            --header "Authorization: Bearer $FIELD_JOB_SECRET" \
+            https://www.salespunch360.com/api/internal/account-recycle-cleanup
