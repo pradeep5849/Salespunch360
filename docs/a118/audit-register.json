@@ -1,0 +1,66 @@
+{
+  "page_id": "A118",
+  "page_name": "Period Locks",
+  "route": "/workspace/account/utilities/period-locks",
+  "inventory_label": "Normal Account UI can only advance a lock. Closed years cannot be reopened.",
+  "audit_status": "AUDIT COMPLETE \u2014 source and isolated PostgreSQL scope",
+  "reference_status": "Inventory policy verified; no new visual reference supplied. Browser/native interaction and production mutation not tested.",
+  "source_commit": "56d907f9131b855381699d6af530b1bdaecaf288",
+  "findings": [
+    {
+      "finding_id": "A118-F01",
+      "severity": "High",
+      "classification": "Lock-through date does not cover the full calendar day",
+      "current_behavior": "A date-only lock is stored at UTC midnight. validateContext compares entryDate <= lockedThrough, while postingSchema accepts timestamps. A same-day noon journal posted successfully after setting a date-only lock.",
+      "required_correction": "Use one defined business-date convention across all posting and lock checks. Reject or normalize timestamp input and enforce an inclusive whole-day cutoff consistently.",
+      "evidence": "Actual PostgreSQL service reproduction: lockedThrough 2031-10-31; entryDate 2031-10-31T12:00:00.000Z returned POSTED. Local synthetic data only.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A118-F02",
+      "severity": "Medium",
+      "classification": "Irreversible lock advancement lacks a review and actionable Web feedback",
+      "current_behavior": "Web submits directly through advancePeriodLockAction without confirmation, pending guard or accountAction error handling. Reason input lacks server minlength 3. Native uses free-text dates and an unfiltered active-year picker including CLOSED years; it does not show the existing cutoff or irreversible impact in the lock dialog.",
+      "required_correction": "Add explicit year/current cutoff/new cutoff review and irreversible-impact confirmation, pending protection and field-level domain errors; limit native choices to open eligible years and use validated date controls. Preserve server-side restrictions.",
+      "evidence": "Source inspection of period-lock page, account-finalization action, FinancialYearScreen and shared periodLockSchema. No browser/native tap or reference screenshot comparison performed.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A118-F03",
+      "severity": "Low",
+      "classification": "Same-date retries produce duplicate lock audit events",
+      "current_behavior": "The service permits an equal lock date and always upserts and appends PERIOD_LOCKED. Two identical requests generated two audit rows. The Web date min includes the existing cutoff.",
+      "required_correction": "Treat an identical already-applied lock as a no-op or define retry identity; distinguish a genuinely new advance and retain reliable actor/date change history.",
+      "evidence": "Actual isolated PostgreSQL reproduction: two identical calls, two PERIOD_LOCKED rows.",
+      "implementation_status": "NOT STARTED"
+    },
+    {
+      "finding_id": "A118-F04",
+      "severity": "Low",
+      "classification": "Native lock editor ignores write capabilities",
+      "current_behavior": "FinancialYearScreen always shows New, including period-lock mode, although the overview exposes canManagePeriods. ACCOUNTANT has ACCOUNT_LEDGER_VIEW and can load overview but lacks ACCOUNT_PERIOD_LOCK; server correctly denies the write.",
+      "required_correction": "Gate the native lock editor with canonical server capabilities and preserve the existing endpoint permission check.",
+      "evidence": "Native source plus accountingOverviewForActor capabilities and shared permission map. This is a dead-action UX issue, not an authorization bypass.",
+      "implementation_status": "NOT STARTED"
+    }
+  ],
+  "verified_existing_controls": [
+    "Clearing and backward movement rejected.",
+    "Cross-company financial year rejected.",
+    "Company lock serializes posting, period changes and year close.",
+    "Closed financial years remain closed and reject posting.",
+    "Web and mobile mutation entry points require ACCOUNT_PERIOD_LOCK; native dead actions do not bypass it."
+  ],
+  "verification": {
+    "date": "2026-11-06",
+    "passed": 6,
+    "failed": 0,
+    "evidence": "docs/a118/focused-test-evidence.json",
+    "scope": "Three audit reproductions plus three existing close-books tests on disposable loopback *_ci PostgreSQL. Positive reproduction tests assert current defective behaviour; passing does not mean defects are fixed."
+  },
+  "implementation_changes": "NONE \u2014 audit documents and synthetic evidence only",
+  "next_page": {
+    "id": "A119",
+    "status": "UNASSIGNED \u2014 supplied numbering source ends at A118; do not invent the next page label."
+  }
+}

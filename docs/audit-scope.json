@@ -1,6 +1,6 @@
 {
   "date": "2026-11-04",
-  "active_scope": "IMPLEMENT_A104_THROUGH_A117",
+  "active_scope": "AUDIT_ONLY_FROM_A118",
   "allowed_work": [
     "Inspect source and supplied reference images",
     "Run read-only or synthetic/mocked audit checks",
@@ -17,7 +17,7 @@
     "explanation": "Earlier feature-change requests were interpreted as implementation instructions, followed by an explicit merge/release question and the owner reply Ok do. The assistant acknowledges this exception should have been kept clearly separate from the numbered audit.",
     "hosting_deployment": "UNVERIFIED; hosting access and scheduled-job setup were paused by the owner."
   },
-  "updated_date": "2026-11-05",
+  "updated_date": "2026-11-06",
   "owner_batch_plan": {
     "current_phase": "Continue audit only",
     "later_phase": "Implement findings together in a separate implementation phase beginning at A104",
@@ -48,5 +48,12 @@
     "latest_request": "2026-11-06: Now impliment A04 to a117; interpreted as A104\u2013A117 from prior context",
     "audit_reader_policy": "OWNER_CONFIRMED: company-wide audit events for all-branch Account Admins only",
     "close_books_modes": "OWNER_CONFIRMED: preserve-history financial-year close and collision-safe numbering restart; no destructive Start Fresh"
+  },
+  "audit_resume": {
+    "owner_request": "Ok continue aduit",
+    "current_page": "A118",
+    "implementation_batch": "A104\u2013A117 merged in #180; root host correction merged in #181",
+    "boundary": "Audit only; no new application fixes or production mutations",
+    "next_inventory_reference": "A119 label not present in available numbering source"
   }
 }

@@ -1,0 +1,119 @@
+import { randomUUID } from "node:crypto";
+import { PrismaClient } from "@prisma/client";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { ProjectActor } from "@/lib/account/projects";
+const url = process.env.RESTORE_TEST_DATABASE_URL;
+if (
+  url &&
+  (!["localhost", "127.0.0.1"].includes(new URL(url).hostname) ||
+    !new URL(url).pathname.endsWith("_ci"))
+)
+  throw new Error("Isolated local *_ci database required");
+const client = new PrismaClient({
+  datasources: {
+    db: { url: url ?? "postgresql://test:test@127.0.0.1:55432/close_ci" },
+  },
+});
+vi.mock("@/lib/db", () => ({
+  db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
+}));
+import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
+import { postJournalForActor, setPeriodLockForActor } from "@/lib/accounting/service";
+import {
+
+} from "@/lib/account/utilities";
+const companyId = randomUUID(),
+  branchId = randomUUID(),
+  userId = randomUUID(),
+  yearId = randomUUID();
+const actor = {
+  id: userId,
+  name: "Fixture",
+  email: `${userId}@example.test`,
+  companyId,
+  role: "ACCOUNT_USER",
+  isActive: true,
+  accountRole: "ACCOUNT_ADMIN",
+  accountAccessActive: true,
+  salesAccessActive: false,
+  salesRole: null,
+  managerType: null,
+  branchAccessScope: "ALL_BRANCHES",
+  branchIds: [],
+} as ProjectActor;
+describe.skipIf(!url)("A118 period-lock audit evidence", () => {
+  beforeAll(async () => {
+    await client.company.create({
+      data: {
+        id: companyId,
+        name: "Close fixture",
+        slug: `close-${companyId}`,
+        productEdition: "SALESPUNCH360_ACCOUNT",
+      },
+    });
+    await client.user.create({
+      data: {
+        id: userId,
+        companyId,
+        name: actor.name,
+        email: actor.email,
+        passwordHash: "fixture-only",
+        role: "ACCOUNT_USER",
+        accountRole: "ACCOUNT_ADMIN",
+        accountAccessActive: true,
+        branchAccessScope: "ALL_BRANCHES",
+      },
+    });
+    await client.branch.create({
+      data: { id: branchId, companyId, name: "Main", code: "MAIN" },
+    });
+    await client.financialYear.create({
+      data: {
+        id: yearId,
+        companyId,
+        name: "FY",
+        startDate: new Date("2026-04-01"),
+        endDate: new Date("2027-03-31"),
+      },
+    });
+    for (const row of DEFAULT_LEDGER_ACCOUNTS)
+      await client.ledgerAccount.create({
+        data: {
+          companyId,
+          code: row.code,
+          name: row.name,
+          accountClass: row.accountClass,
+          normalBalance: row.normalBalance,
+          systemKey: row.systemKey,
+          isSystem: row.isSystem,
+        },
+      });
+  });
+  afterAll(async () => {
+    await client.$disconnect();
+  });
+
+  async function year(index: number) {
+    return client.financialYear.create({data:{companyId,name:`Audit ${index}`,startDate:new Date(`${2030+index}-04-01`),endDate:new Date(`${2031+index}-03-31`)}});
+  }
+  it("rejects null, backward and cross-company year targets", async()=>{
+    const fy=await year(0);
+    await setPeriodLockForActor(actor,{financialYearId:fy.id,lockedThrough:"2030-10-31",reason:"Audit fixture lock"});
+    await expect(setPeriodLockForActor(actor,{financialYearId:fy.id,lockedThrough:null,reason:"Audit unlock"})).rejects.toThrow("PERIOD_UNLOCK_NOT_SUPPORTED");
+    await expect(setPeriodLockForActor(actor,{financialYearId:fy.id,lockedThrough:"2030-10-30",reason:"Audit backward"})).rejects.toThrow("PERIOD_UNLOCK_NOT_SUPPORTED");
+    await expect(setPeriodLockForActor({...actor,companyId:randomUUID()},{financialYearId:fy.id,lockedThrough:"2030-11-01",reason:"Audit other company"})).rejects.toThrow("INVALID_LOCK_DATE");
+  });
+  it("reproduces a same-day noon journal posting after a date-only lock", async()=>{
+    const fy=await year(1);
+    await setPeriodLockForActor(actor,{financialYearId:fy.id,lockedThrough:"2031-10-31",reason:"Audit full day expected"});
+    const ledgers=await client.ledgerAccount.findMany({where:{companyId,systemKey:{in:["CASH","OWNER_CAPITAL"]}}});
+    const row=await postJournalForActor(actor,{financialYearId:fy.id,branchId,entryDate:"2031-10-31T12:00:00.000Z",sourceType:"MANUAL_JOURNAL",sourceId:randomUUID(),postingPurpose:"PRIMARY",lines:[{ledgerAccountId:ledgers[0].id,debit:"10",credit:"0"},{ledgerAccountId:ledgers[1].id,debit:"0",credit:"10"}]});
+    expect(row.status).toBe("POSTED");
+    console.log("A118_SAME_DAY_POST",row.entryDate.toISOString());
+  });
+  it("reproduces repeated equal-date lock writes and duplicate audit events", async()=>{
+    const fy=await year(2),input={financialYearId:fy.id,lockedThrough:"2032-10-31",reason:"Audit repeated lock"};
+    await setPeriodLockForActor(actor,input);await setPeriodLockForActor(actor,input);
+    expect(await client.accountingAuditEvent.count({where:{companyId,entityId:fy.id,eventType:"PERIOD_LOCKED"}})).toBe(2);
+  });
+});
