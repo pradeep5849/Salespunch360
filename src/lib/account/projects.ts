@@ -92,6 +92,7 @@ export function projectRecordScope(
 ): Prisma.ProjectWhereInput {
   return {
     companyId: actor.companyId,
+    archivedAt: null,
     branchId: { in: branchIds },
     ...(actor.accountRole === "PROJECT_MANAGER"
       ? {

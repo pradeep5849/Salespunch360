@@ -60,6 +60,16 @@ class AccountProjectViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = _state.value.copy(saving = true, error = null)
         try { api.projectAction(id, action, billingServiceId); _state.value = _state.value.copy(saving = false); open(id); load() } catch (e: Exception) { fail(e) }
     }
+    fun archive(id: String) = viewModelScope.launch {
+        if (_state.value.saving) return@launch
+        _state.value = _state.value.copy(saving = true, error = null)
+        try {
+            api.archiveProject(id)
+            detailGeneration++
+            _state.value = _state.value.copy(saving = false, detail = null, costing = null)
+            load()
+        } catch (e: Exception) { fail(e) }
+    }
     fun editBudget(value: Boolean = true) { if (!_state.value.saving) _state.value = _state.value.copy(budgetEditing = value, error = null) }
     fun saveBudget(id: String, lines: List<ProjectBudgetLineDraft>) = viewModelScope.launch {
         if (_state.value.saving || !validProjectBudget(lines)) return@launch

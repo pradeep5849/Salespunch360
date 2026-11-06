@@ -1,3 +1,4 @@
+import { archiveProjectAction } from "@/app/actions/account-finalization";
 import {AccountTimestamp} from "@/components/account/account-ui";
 import {AccountDate, ClientMoney} from "@/components/account/display-preferences";
 import Link from "next/link";
@@ -440,6 +441,12 @@ export default async function Page({
           </>
         )}
 
+        {actor.accountRole === "ACCOUNT_ADMIN" && (
+          <form action={archiveProjectAction}>
+            <input type="hidden" name="projectId" value={id} />
+            <button type="submit">Move project to Recycle Bin</button>
+          </form>
+        )}
         <h2>Audit history</h2>
         <ul>
           {project.audits.map((event) => (
