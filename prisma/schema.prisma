@@ -2869,6 +2869,7 @@ model Project {
   companyId            String               @db.Uuid
   branchId             String               @db.Uuid
   projectNumber        String               @db.VarChar(100)
+  archivedAt           DateTime?
   name                 String               @db.VarChar(240)
   customerId           String               @db.Uuid
   siteName             String?              @db.VarChar(240)

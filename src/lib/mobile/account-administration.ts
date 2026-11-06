@@ -506,6 +506,12 @@ export async function mobileBackup(u: MobileAppPrincipal,includePrivateFiles=fal
   const {isCompanyRestoreOwner}=await import("@/lib/account/restore-owner");
   return createAccountBackupForActor(a,false,includePrivateFiles,undefined,undefined,await isCompanyRestoreOwner(a));
 }
+export async function mobileProjectArchive(u: MobileAppPrincipal, projectId: string) {
+  const a = admin(u);
+  await assertOperationalWrite(a.companyId);
+  const { archiveProjectForActor } = await import("@/lib/account/utilities");
+  return archiveProjectForActor(a, projectId, "Archived by account administrator");
+}
 export async function mobileRecycleRestore(u: MobileAppPrincipal, id: string) {
   const a = admin(u);
   await assertOperationalWrite(a.companyId);
