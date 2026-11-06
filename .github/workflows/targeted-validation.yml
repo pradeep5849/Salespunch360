@@ -58,6 +58,10 @@ jobs:
         run: npx vitest run src/lib/account/commercial-editor-pricing.test.ts src/lib/account/item-pricing.test.ts src/lib/account/purchase-editor-lineage.test.ts
       - name: Pending visit conversion ownership and authorization
         run: npx vitest run src/lib/auth/permissions.test.ts src/lib/visits/add-phone-concurrency.test.ts src/lib/visits/locking.regression.test.ts src/lib/leads/production-fixes.regression.test.ts src/lib/mobile/leads-reports.test.ts
+      - name: Public discovery, sitemap and proxy regressions
+        run: npx vitest run src/lib/public-site src/components/public/public-footer.test.tsx src/components/public/inquiry-accessibility.test.ts src/app/sitemap.test.ts src/proxy.test.ts src/proxy.csp.test.ts
+      - name: Lighthouse network diagnostics regression
+        run: node --test scripts/inspect-lighthouse-network.test.mjs
       - run: npm run typecheck
       - run: npm run lint
 
