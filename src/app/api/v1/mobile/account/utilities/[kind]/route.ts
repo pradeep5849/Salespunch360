@@ -16,6 +16,7 @@ export async function GET(
       await mobileUtilities(
         await authenticateMobileToken(r.headers.get("authorization")),
         kind,
+        Object.fromEntries(new URL(r.url).searchParams),
       ),
     );
   } catch (e) {

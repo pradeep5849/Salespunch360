@@ -220,6 +220,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun journal(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals/${enc(id)}")).jsonObject
  suspend fun reverseJournal(id:String,payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/journals/${enc(id)}/reverse","POST",payload.toString())).jsonObject
  suspend fun createFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years","POST",payload.toString())).jsonObject
+ suspend fun previewCloseFinancialYear(id:String)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years/preview-close?financialYearId=${enc(id)}")).jsonObject
  suspend fun closeFinancialYear(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/accounting/financial-years/close","POST",payload.toString())).jsonObject
  suspend fun assetsPage(q:String="",status:String?=null,offset:Int=0)=json.parseToJsonElement(call("api/v1/mobile/account/assets?paged=1&offset=$offset&limit=50"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="&").takeIf{it!="&"}.orEmpty())).jsonObject
  suspend fun assets(q:String="",status:String?=null)=json.parseToJsonElement(call("api/v1/mobile/account/assets"+buildList{if(q.isNotBlank())add("q=${enc(q)}");status?.let{add("status=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty())).jsonArray
@@ -261,6 +262,10 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun saveAccountAdministration(section:String,action:String,payload:kotlinx.serialization.json.JsonElement)=json.parseToJsonElement(call("api/v1/mobile/account/${enc(section)}/${enc(action)}","POST",payload.toString()))
  suspend fun accountTax(filters:Map<String,String> = emptyMap())=json.parseToJsonElement(call("api/v1/mobile/account/tax"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
  suspend fun saveAccountTax(payload:kotlinx.serialization.json.JsonObject)=json.parseToJsonElement(call("api/v1/mobile/account/tax","POST",payload.toString()))
+ suspend fun numberingRestartOptions()=json.decodeFromString<List<NumberingRestartOption>>(call("api/v1/mobile/account/numbering-restart"))
+ suspend fun previewNumberingRestart(seriesId:String,prefix:String,reason:String)=json.decodeFromString<NumberingRestartReview>(call("api/v1/mobile/account/numbering-restart","POST",json.encodeToString(buildJsonObject{put("action","PREVIEW");put("input",buildJsonObject{put("seriesId",seriesId);put("prefix",prefix);put("reason",reason)})})))
+ suspend fun confirmNumberingRestart(token:String)=call("api/v1/mobile/account/numbering-restart","POST",json.encodeToString(buildJsonObject{put("action","CONFIRM");put("input",buildJsonObject{put("token",token);put("confirmed",true)})}))
+ suspend fun accountAuditHistory(query:String="")=json.decodeFromString<AccountAuditPage>(call("api/v1/mobile/account/utilities/audit"+(if(query.isBlank())""else"?$query")))
  suspend fun accountUtility(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}")).jsonArray
  suspend fun setAccountReportFavourite(reportKey:String,favourite:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/reports/favourites","POST",buildJsonObject{put("reportKey",reportKey);put("favourite",favourite)}.toString())).jsonObject
  suspend fun accountReportOptions()=json.parseToJsonElement(call("api/v1/mobile/account/reports/options")).jsonObject

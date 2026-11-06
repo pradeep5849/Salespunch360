@@ -1,6 +1,6 @@
 {
   "scope": "A104\u2013A117",
-  "date": "2026-11-05",
+  "date": "2026-11-06",
   "status": "IN PROGRESS",
   "findings": [
     {
@@ -126,7 +126,8 @@
       "finding_id": "A107-F02",
       "status": "IN_PROGRESS",
       "verification": [
-        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open."
+        "Purchase details and independent duplicate preparation implemented; safe correction lifecycle and attachment parity remain open.",
+        "Web/native correction now prepares source-bound debit-note review through existing lifecycle. No hard deletion or silent cancellation of posted bill history. Validation pending."
       ]
     },
     {
@@ -175,7 +176,8 @@
       "finding_id": "A108-F03",
       "status": "IN_PROGRESS",
       "verification": [
-        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open."
+        "Business dates, single-cash multi-invoice allocation, unused advance, previews and independent duplicate preparation implemented. Optional metadata/files, partial openings/cheques and remaining platform parity remain open.",
+        "Partial opening-debt and pending cheque plans implemented. Atomic clearance/reversal/re-clearance and historical opening balances pass four allocation database tests; all 37 existing cheque regressions pass."
       ]
     },
     {
@@ -259,7 +261,8 @@
       "finding_id": "A110-F01",
       "status": "IN_PROGRESS",
       "verification": [
-        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "Nonfinancial balances hidden/zeroed; Web uses authorized PDF handoff with cancellation/error states; native Print/Share uses shared PDF preview rather than opening detail. Platform verification pending."
       ]
     },
     {
@@ -287,42 +290,48 @@
       "finding_id": "A110-F05",
       "status": "IN_PROGRESS",
       "verification": [
-        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open."
+        "Scoped bounded cursor pages and calculated balances implemented for Web and native. Card menu parity remains open.",
+        "Nonfinancial balances hidden/zeroed; Web uses authorized PDF handoff with cancellation/error states; native Print/Share uses shared PDF preview rather than opening detail. Platform verification pending."
       ]
     },
     {
       "finding_id": "A111-F01",
-      "status": "AWAITING_PRODUCT_DECISION",
+      "status": "IN_PROGRESS",
       "verification": [
-        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending."
       ]
     },
     {
       "finding_id": "A111-F02",
       "status": "IN_PROGRESS",
       "verification": [
-        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending."
       ]
     },
     {
       "finding_id": "A111-F03",
       "status": "IN_PROGRESS",
       "verification": [
-        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending."
       ]
     },
     {
       "finding_id": "A111-F04",
       "status": "IN_PROGRESS",
       "verification": [
-        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending."
       ]
     },
     {
       "finding_id": "A111-F05",
-      "status": "AWAITING_PRODUCT_DECISION",
+      "status": "IN_PROGRESS",
       "verification": [
-        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending."
+        "Recursive mobile metadata redaction implemented. Reader/branch policy, reachable navigation, filters and presentation remain pending.",
+        "Owner selected active all-branch Account Admins only. Shared current-DB authorization, redacted DTO, stable timestamp/id cursor and filtered Web/native activity views added. Eleven audit/redaction tests passed; Android platform run pending."
       ]
     },
     {
@@ -371,14 +380,16 @@
       "finding_id": "A113-F03",
       "status": "IN_PROGRESS",
       "verification": [
-        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Export UI labels reporting portability limits; native export choices are loaded from the same server feature policy. Endpoint enforcement retained; platform verification pending."
       ]
     },
     {
       "finding_id": "A113-F04",
       "status": "IN_PROGRESS",
       "verification": [
-        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open."
+        "Bounded export, static headers, reversible formula-safe CSV, format validation and native MIME corrected. Nonempty unsupported import columns fail visibly; project portability and native availability parity remain open.",
+        "Export UI labels reporting portability limits; native export choices are loaded from the same server feature policy. Endpoint enforcement retained; platform verification pending."
       ]
     },
     {
@@ -399,35 +410,40 @@
       "finding_id": "A114-F01",
       "status": "IN_PROGRESS",
       "verification": [
-        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending."
       ]
     },
     {
       "finding_id": "A114-F02",
       "status": "IN_PROGRESS",
       "verification": [
-        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending."
       ]
     },
     {
       "finding_id": "A114-F03",
       "status": "IN_PROGRESS",
       "verification": [
-        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending."
       ]
     },
     {
       "finding_id": "A114-F04",
       "status": "IN_PROGRESS",
       "verification": [
-        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending."
       ]
     },
     {
       "finding_id": "A114-F05",
-      "status": "AWAITING_PRODUCT_DECISION",
+      "status": "IN_PROGRESS",
       "verification": [
-        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending."
+        "Close confirmation, runtime validation, same-transaction target-year checks and company locking implemented. Restart/start-fresh policy decision pending.",
+        "Owner approved history-preserving year close plus future numbering restart; destructive Start Fresh excluded. Added read-only server preview, company-wide admin checks, signed stale-safe numbering review, namespace collision checks and audited retry-safe restart. Four numbering and two close/posting database tests passed; platform/expanded concurrency review pending."
       ]
     },
     {

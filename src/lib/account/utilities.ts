@@ -58,7 +58,7 @@ export async function verifyAccountDataForActor(actor: {
       },
     }),
     client.commercialDocument.findMany({
-      where: { companyId, ...(scope?{financialYearId:scope.financialYearId}:{}) },
+      where: { companyId, ...(scope?{issueDate:{gte:scope.startDate,lte:scope.endDate}}:{}) },
       select: {
         documentNumber: true,
         balanceDue: true,
@@ -257,6 +257,23 @@ export async function verifyAccountDataForActor(actor: {
   ];
 }
 
+async function requireCloseBooksAdmin(actor: {id:string;companyId:string;accountRole?:string|null}, client:Prisma.TransactionClient=db) {
+  if(actor.accountRole!=="ACCOUNT_ADMIN"||!await client.user.findFirst({where:{id:actor.id,companyId:actor.companyId,isActive:true,accountAccessActive:true,accountRole:"ACCOUNT_ADMIN",branchAccessScope:"ALL_BRANCHES",role:{not:"SUPER_ADMIN"}},select:{id:true}}))throw new AuthorizationError();
+}
+
+/** Read-only review. Confirmation repeats verification under the posting lock. */
+export async function previewFinancialYearCloseForActor(actor:{id:string;companyId:string;accountRole?:string|null},financialYearId:string){
+  const id=z.string().guid().parse(financialYearId);
+  return db.$transaction(async tx=>{
+    await requireCloseBooksAdmin(actor,tx);
+    const company=await tx.company.findUniqueOrThrow({where:{id:actor.companyId},select:{name:true}});
+    const year=await tx.financialYear.findFirst({where:{id,companyId:actor.companyId}});
+    if(!year)throw new Error("INVALID_FINANCIAL_YEAR");
+    const checks=await verifyAccountDataForActor(actor,tx,{financialYearId:year.id,startDate:year.startDate,endDate:year.endDate});
+    return {companyName:company.name,checkScope:"Journals, documents and stock movements: selected year. Ledger, money-account, project and asset integrity: whole company.",id:year.id,name:year.name,status:year.status,startDate:year.startDate.toISOString().slice(0,10),endDate:year.endDate.toISOString().slice(0,10),earlyClose:year.endDate>new Date(),canClose:year.status==="OPEN"&&!checks.some(x=>x.status==="ERROR"),checks,reviewedAt:new Date().toISOString()};
+  },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+}
+
 export async function closeFinancialYearForActor(
   actor: { id: string; companyId: string; accountRole?: string | null },
   input: { financialYearId: string; earlyCloseReason?: string },
@@ -264,6 +281,7 @@ export async function closeFinancialYearForActor(
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   input = z.object({financialYearId:z.string().uuid(),earlyCloseReason:z.string().trim().max(2000).optional()}).strict().parse(input);
   return db.$transaction(async (tx) => {
+    await requireCloseBooksAdmin(actor,tx);
     // Same first lock as journal posting and period-lock changes.
     await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
     await tx.$queryRaw`SELECT "id" FROM "financial_years" WHERE "id"=${input.financialYearId}::uuid AND "companyId"=${actor.companyId!}::uuid FOR UPDATE`;
@@ -463,14 +481,9 @@ export async function restoreMasterForActor(
 
 export {redactAuditMetadata} from "./audit-redaction";
 export async function getAuditHistory() {
-  const actor = await requirePermission("ACCOUNT_REPORTS");
-  const rows = await db.accountingAuditEvent.findMany({
-    where: { companyId: actor.companyId! },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    include: { actor: { select: { name: true } } },
-  });
-  return rows.map((x) => ({ ...x, metadata: redactAuditMetadata(x.metadata) }));
+  const actor = await requirePermission("ACCOUNT_SETTINGS");
+  const {auditHistoryPageForActor}=await import("./audit-history");
+  return (await auditHistoryPageForActor({...actor,companyId:actor.companyId!})).rows;
 }
 
 export async function createAccountBackupForActor(actor: {

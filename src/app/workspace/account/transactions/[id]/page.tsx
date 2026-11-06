@@ -32,7 +32,7 @@ export default async function Page({
 
   return (
     <main>
-      <nav aria-label="Transaction actions"><Link href="/workspace/account/settings/transactions">Transaction settings</Link>{x.type==="PURCHASE_BILL"&&<Link href={`/workspace/account/transactions/new?type=PURCHASE_BILL&duplicateId=${x.id}`}>Duplicate purchase</Link>}{x.type==="PURCHASE_BILL"&&x.status==="POSTED"&&<p>Posted bills retain their journal, payments and stock history. Use a purchase return/debit note to correct the original bill.</p>}</nav>
+      <nav aria-label="Transaction actions"><Link href="/workspace/account/settings/transactions">Transaction settings</Link>{x.type==="PURCHASE_BILL"&&<Link href={`/workspace/account/transactions/new?type=PURCHASE_BILL&duplicateId=${x.id}`}>Duplicate purchase</Link>}{x.type==="PURCHASE_BILL"&&x.status==="POSTED"&&<p>Posted bills retain their journal, payments and stock history. Use a purchase return/debit note to correct the original bill. {controls.canPost&&<Link href={`/workspace/account/transactions/new?type=DEBIT_NOTE&sourceId=${x.id}`}>Prepare correction / purchase return</Link>}</p>}</nav>
       <h1>
         {x.type} {x.documentNumber}
       </h1>

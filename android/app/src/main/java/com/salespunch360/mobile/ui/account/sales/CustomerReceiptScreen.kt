@@ -47,7 +47,12 @@ fun CustomerReceiptScreen(padding: PaddingValues,duplicateId:String?=null, initi
         item { OutlinedTextField(state.amount, { value -> vm.update { it.copy(amount = value) } }, label = { Text("Amount") }, modifier = Modifier.fillMaxWidth()) }
         if(state.type=="CUSTOMER_RECEIPT"&&state.discountEnabled&&!state.multipleLinks)item{OutlinedTextField(state.discountAmount,{value->vm.update{it.copy(discountAmount=value)}},label={Text("Payment Discount")},supportingText={Text("Cash received plus discount settles the invoice.")},modifier=Modifier.fillMaxWidth())}
         item { OutlinedTextField(state.date, { value -> vm.update { it.copy(date = value) } }, label = { Text("Receipt date (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth()) }
-        if(state.type!="APPLY_ADVANCE")item { SelectField("Payment method", state.mode, listOf("CASH" to "Cash", "BANK" to "Bank")) { value -> vm.update { it.copy(mode = value) } } }
+        if(state.type!="APPLY_ADVANCE")item { SelectField("Payment method", state.mode, listOf("CASH" to "Cash", "BANK" to "Bank", "CHEQUE" to "Cheque")) { value -> vm.update { it.copy(mode = value) } } }
+        if(state.type!="APPLY_ADVANCE"&&state.mode=="CHEQUE"){
+            item{OutlinedTextField(state.chequeNumber,{value->vm.update{it.copy(chequeNumber=value)}},label={Text("Cheque number")})}
+            item{OutlinedTextField(state.chequeDate,{value->vm.update{it.copy(chequeDate=value)}},label={Text("Cheque date")})}
+            item{Text("Pending until cleared. Linked amounts and cash are posted together at clearance.")}
+        }
         if(state.type!="APPLY_ADVANCE")item { SelectField("Money account", state.moneyAccountId, state.moneyAccounts.filter { it.branchId == null || it.branchId == state.branchId }.map { it.id to it.name }) { value -> vm.update { it.copy(moneyAccountId = value) } } }
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.reference, { value -> vm.update { it.copy(reference = value) } }, label = { Text("Reference") }, modifier = Modifier.fillMaxWidth()) }
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.notes, { value -> vm.update { it.copy(notes = value) } }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth()) }

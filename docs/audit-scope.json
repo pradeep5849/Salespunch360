@@ -38,12 +38,15 @@
     ],
     "resume_audit_at": "A118",
     "production_merge_or_deployment": "Not authorized by this implementation request; prepare reviewable changes first.",
-    "unresolved_destructive_policy": "Close Books Start Fresh remains pending; restore replacement policy is confirmed.",
+    "unresolved_destructive_policy": "Start Fresh is not in the approved modes. No destructive cleanup or production numbering restart is authorized.",
     "restore_policy": {
       "mode": "REPLACE_EXISTING_COMPANY",
       "state": "OWNER_CONFIRMED",
       "behavior": "Restore the existing company to the exact saved backup state; remove later business entries and changes after explicit warning and confirmation. No new company.",
       "source": "User clarified and confirmed on 2026-11-05."
-    }
+    },
+    "latest_request": "2026-11-06: Now impliment A04 to a117; interpreted as A104\u2013A117 from prior context",
+    "audit_reader_policy": "OWNER_CONFIRMED: company-wide audit events for all-branch Account Admins only",
+    "close_books_modes": "OWNER_CONFIRMED: preserve-history financial-year close and collision-safe numbering restart; no destructive Start Fresh"
   }
 }

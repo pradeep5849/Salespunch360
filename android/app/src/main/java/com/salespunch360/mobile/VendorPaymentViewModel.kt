@@ -52,6 +52,8 @@ data class VendorPaymentState(
     val billId: String = "",
     val amount: String = "",
     val date: String = com.salespunch360.mobile.account.accountReportToday().toString(),
+    val chequeNumber:String="",
+    val chequeDate:String=com.salespunch360.mobile.account.accountReportToday().toString(),
     val mode: String = "BANK",
     val accountId: String = "",
     val reference: String = "",
@@ -137,7 +139,8 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
                     openingId="",linkAmount="",links=emptyMap(),
                     billId = "",
                     amount = "",
-                    message = "Vendor payment posted by the server."
+                    chequeNumber="",
+                    message = if(current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else "Vendor payment posted by the server."
                 )
             }
             refresh()
@@ -166,6 +169,7 @@ internal fun vendorPaymentValidation(s:VendorPaymentState):String? {
  if(s.type !in s.allowedTypes||s.vendorId.isBlank()||s.branchId.isBlank())return "Select an available payment type, branch and vendor."
  if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.amount)||amount==null||amount.signum()<=0)return "Enter a positive amount with up to two decimals."
  if(runCatching{java.time.LocalDate.parse(s.date)}.isFailure)return "Enter a real payment date."
+ if(s.mode=="CHEQUE"&&(s.chequeNumber.isBlank()||s.accountId.isBlank()||runCatching{java.time.LocalDate.parse(s.chequeDate)}.isFailure))return "Enter a cheque number, real cheque date and bank account."
  if(s.type=="VENDOR_ADVANCE")return null
  if(s.multipleLinks){var total=java.math.BigDecimal.ZERO;for((id,text) in s.links){if(text.isBlank())continue
   val bill=s.bills.find{it.id==id&&it.branchId==s.branchId&&it.vendorId==s.vendorId}?:return "A bill is outside this vendor and branch."
@@ -177,6 +181,7 @@ internal fun vendorPaymentValidation(s:VendorPaymentState):String? {
  return null
 }
 internal fun vendorPaymentPayload(current:VendorPaymentState)=buildJsonObject {
+ if(current.mode=="CHEQUE"){put("chequeNumber",current.chequeNumber);put("chequeDate",current.chequeDate)}
  put("idempotencyKey",current.requestKey);put("type",current.type);put("branchId",current.branchId);put("partyId",current.vendorId);put("paymentMode",current.mode)
  current.accountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",current.amount);put("transactionDate",current.date);put("reference",current.reference);put("notes",current.notes)
  putJsonArray("allocations"){if(current.type!="VENDOR_ADVANCE"){if(current.multipleLinks)current.links.filterValues{it.isNotBlank()}.forEach{(id,amount)->add(buildJsonObject{put("documentId",id);put("amount",amount)})}else add(buildJsonObject{if(current.openingId.isNotBlank())put("openingBalanceId",current.openingId)else put("documentId",current.billId);put("amount",current.linkAmount.ifBlank{current.amount})})}}

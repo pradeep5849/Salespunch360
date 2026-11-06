@@ -2600,6 +2600,7 @@ export const settlementInput = z
             "Exactly one allocation target is required",
           ),
       )
+      .max(100)
       .prefault([]),
   })
   .strict();
@@ -3151,6 +3152,32 @@ export async function applyAdvanceForActor(actor: Actor, raw: unknown, transacti
       },
   );
 }
+/** Applies existing advance cash to a registered opening debt; never records cash twice. */
+export async function applyAdvanceToOpeningForActor(actor:Actor,raw:unknown,transaction?:Prisma.TransactionClient){
+ financialRole(actor);
+ const d=z.object({advanceId:z.string().guid(),openingBalanceId:z.string().guid(),amount:decimal,applicationDate:calendarDateInput,idempotencyKey:z.string().min(8).max(120)}).strict().parse(raw);
+ const amount=new D(d.amount);if(amount.lte(0))throw new Error("INVALID_AMOUNT");
+ return inAccountTransaction(transaction,async tx=>{
+  await tx.$queryRaw`SELECT 1::int AS locked FROM account_settlements WHERE id=${d.advanceId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  await tx.$queryRaw`SELECT 1::int AS locked FROM party_opening_balances WHERE id=${d.openingBalanceId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+  const advance=await tx.accountSettlement.findFirst({where:{id:d.advanceId,companyId:actor.companyId,...EFFECTIVE_SETTLEMENT,type:{in:["CUSTOMER_ADVANCE","VENDOR_ADVANCE"]}}});
+  const opening=await tx.partyOpeningBalance.findFirst({where:{id:d.openingBalanceId,companyId:actor.companyId,journalEntry:{is:{status:"POSTED"}}}});
+  if(!advance||!opening||advance.projectId||opening.branchId!==advance.branchId||opening.partyId!==advance.partyId||opening.partyType!==(advance.type==="CUSTOMER_ADVANCE"?"CUSTOMER":"VENDOR"))throw new Error("INVALID_OPENING_ALLOCATION");
+  assertBranch(actor,opening.branchId);await requireAccountModules(actor,...settlementPolicy[advance.type].modules);
+  if(d.applicationDate.getTime()!==advance.transactionDate.getTime()||d.applicationDate<opening.effectiveDate)throw new Error("INVALID_APPLICATION_DATE");
+  const prior=await tx.accountOperationalAudit.findFirst({where:{companyId:actor.companyId,entityType:"OPENING_ADVANCE_APPLICATION",metadata:{path:["idempotencyKey"],equals:d.idempotencyKey}}});
+  if(prior){const metadata=prior.metadata as {advanceId:string;openingBalanceId:string;amount:string;applicationDate:string};if(metadata.advanceId!==advance.id||metadata.openingBalanceId!==opening.id||!new D(metadata.amount).eq(amount)||metadata.applicationDate!==d.applicationDate.toISOString().slice(0,10))throw new Error("IDEMPOTENCY_KEY_REUSED");return tx.openingBalanceAllocation.findUniqueOrThrow({where:{id:prior.entityId}})}
+  const used=await tx.openingBalanceAllocation.aggregate({where:{companyId:actor.companyId,openingBalanceId:opening.id,...EFFECTIVE_SETTLEMENT_ALLOCATION},_sum:{amount:true}});
+  if(amount.gt(advance.remainingAmount)||amount.add(used._sum.amount??0).gt(opening.amount))throw new Error("ALLOCATION_EXCEEDS_OUTSTANDING");
+  const customer=advance.type==="CUSTOMER_ADVANCE",keys=customer?["CUSTOMER_ADVANCES","ACCOUNTS_RECEIVABLE"]:["ACCOUNTS_PAYABLE","ADVANCES"],ctx=await systemContext(tx,actor,d.applicationDate,keys),id=crypto.randomUUID();
+  const journal=await postJournalInTx(tx,actor,{financialYearId:ctx.fy.id,branchId:opening.branchId,entryDate:d.applicationDate,sourceType:"ADVANCE_APPLICATION",sourceId:id,postingPurpose:"PRIMARY",lines:[{ledgerAccountId:ctx.account(keys[0]),debit:amount.toFixed(2),credit:"0"},{ledgerAccountId:ctx.account(keys[1]),debit:"0",credit:amount.toFixed(2)}]});
+  const allocation=await tx.openingBalanceAllocation.create({data:{id,companyId:actor.companyId,settlementId:advance.id,openingBalanceId:opening.id,amount}});
+  await tx.accountSettlement.update({where:{id:advance.id},data:{remainingAmount:{decrement:amount}}});
+  await tx.accountOperationalAudit.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"ADVANCE_APPLIED_TO_OPENING",entityType:"OPENING_ADVANCE_APPLICATION",entityId:id,metadata:{advanceId:advance.id,openingBalanceId:opening.id,amount:amount.toFixed(2),applicationDate:d.applicationDate.toISOString().slice(0,10),idempotencyKey:d.idempotencyKey,journalEntryId:journal.id}}});
+  return allocation;
+ });
+}
+
 export async function applyAdvance(raw: unknown) {
   return applyAdvanceForActor(
     (await requirePermissionForMutation("ACCOUNT_SETTLEMENT_ENTRY")) as Actor,
@@ -3248,7 +3275,7 @@ export async function listCommercialDocumentsPageForActor(actor:Actor,raw:{curso
  const rows=await db.commercialDocument.findMany({where:{companyId:actor.companyId,...scope(actor),...(input.branchId?{branchId:input.branchId}:{}),...(input.type?{type:input.type}:allowedTypes?{type:{in:allowedTypes}}:{}),NOT:{type:"SALES_INVOICE",status:"DRAFT"},...(input.q?{OR:[{documentNumber:{contains:input.q,mode:"insensitive"}},{partyName:{contains:input.q,mode:"insensitive"}}]}:{})},orderBy:[{createdAt:"desc"},{id:"desc"}],take:51,...(input.cursor?{cursor:{id:input.cursor},skip:1}:{})});
  const visible=rows.slice(0,50);
  const outstanding=await documentOutstandingsBatch(actor.companyId,visible.filter(row=>row.status==="POSTED" && ["SALES_INVOICE","PURCHASE_BILL"].includes(row.type)));
- return {rows:visible.map(row=>({...row,outstanding:outstanding.get(row.id)??row.balanceDue})),nextCursor:rows.length>50?visible[visible.length-1].id:undefined};
+ return {rows:visible.map(row=>({...row,showBalance:row.status==="POSTED"&&["SALES_INVOICE","PURCHASE_BILL"].includes(row.type),outstanding:outstanding.get(row.id)??new D(0)})),nextCursor:rows.length>50?visible[visible.length-1].id:undefined};
 }
 export async function listCommercialDocumentsPage(raw:{cursor?:string;type?:string;q?:string;branchId?:string}={}) {
  return listCommercialDocumentsPageForActor((await requirePermission("ACCOUNT_LEDGER_VIEW")) as Actor,raw);

@@ -205,6 +205,14 @@ class AccountPurchaseViewModel(app: Application) : AndroidViewModel(app) {
         _state.value=_state.value.copy(detail=null,draft=PurchaseDraft(branchId=source.str("branchId"),vendorId=source.str("vendorId"),taxMode=source.str("taxMode"),notes=source.str("notes"),lines=lines),message="Independent purchase prepared. Review current units, supplier bill identity and allocations. Nothing was saved or posted.")
     }
 
+    fun correctPurchase(){
+        val state=_state.value;val source=state.detail?:return
+        if(source.str("type")!="PURCHASE_BILL"||source.str("status")!="POSTED"||"DEBIT_NOTE" !in state.types)return
+        if(state.sources.none{it.str("id")==source.str("id")}){_state.value=state.copy(error="This bill has no eligible remaining return. Refresh before preparing a correction.");return}
+        creationIdentity.reset()
+        _state.value=state.copy(detail=null,draft=PurchaseDraft(type="DEBIT_NOTE",branchId=source.str("branchId"),vendorId=source.str("vendorId"),sourceDocumentId=source.str("id"),taxMode=source.str("taxMode"),notes="Correction of ${source.str("documentNumber")}. Review quantities and physical stock return.",lines=source.array("lines").map{purchaseSourceLine(it).copy(stockReturnQuantity="0")}),message="Correction prepared for review. Original bill, payments and stock history remain unchanged until you explicitly save and post the debit note.")
+    }
+
     fun open(id: String) = viewModelScope.launch {
         try {
             _state.value = _state.value.copy(detail = api.purchase(id))

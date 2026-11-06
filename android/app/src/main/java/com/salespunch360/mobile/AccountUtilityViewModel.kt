@@ -12,6 +12,7 @@ import kotlinx.serialization.json.*
 
 data class UtilityState(
     val loading: Boolean = false,
+    val exportTypes:List<String> = emptyList(),
     val rows: JsonArray = JsonArray(emptyList()),
     val preview: JsonObject? = null,
     val restoreReview: JsonObject? = null,
@@ -26,7 +27,12 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
     val state = _state.asStateFlow()
 
     fun load(mode: String) {
-        if(mode == "backup" || mode == "export") { _state.value = _state.value.copy(rows=JsonArray(emptyList()),loading=false,error=null); return }
+        if(mode == "backup") { _state.value = _state.value.copy(rows=JsonArray(emptyList()),loading=false,error=null); return }
+        if(mode=="export"){
+            _state.value=_state.value.copy(loading=true,error=null,exportTypes=emptyList())
+            viewModelScope.launch {runCatching{api.accountUtility("export-types").map{it.jsonPrimitive.content}}.onSuccess{_state.value=_state.value.copy(loading=false,exportTypes=it)}.onFailure{_state.value=_state.value.copy(loading=false,error="Could not load authorized exports. Retry.")}}
+            return
+        }
         viewModelScope.launch {
             runCatching {
                 if (mode == "import") {

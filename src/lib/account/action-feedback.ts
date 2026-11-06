@@ -9,6 +9,10 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_AUDIT_CURSOR:"The audit page link is invalid. Reset filters and load the first page.",
+  EARLY_CLOSE_REASON_REQUIRED:"Enter a reason to close before the financial year ends.",
+  CLOSE_CONFIRMATION_REQUIRED:"Review the year and confirm that it is ready to close.",
+  PURCHASE_RETURN_UNAVAILABLE:"Choose a posted purchase bill with eligible remaining quantities.",
   GOOGLE_DRIVE_BACKUP_NOT_CONFIGURED:"Google Drive backup is not configured on the server.",
   GOOGLE_DRIVE_BACKUP_NOT_CONNECTED:"Connect Google Drive before enabling automatic backup.",
   GOOGLE_DRIVE_BACKUP_RECONNECT_REQUIRED:"Reconnect Google Drive to resume automatic backup.",
@@ -342,11 +346,13 @@ const messages: Record<string, string> = {
 export const isAccountDomainError = (error: unknown): error is Error =>
   error instanceof Error &&
   (Object.hasOwn(messages, error.message) ||
+    error.message.startsWith("FINANCIAL_YEAR_VERIFICATION_FAILED:") ||
     commercialDomainMessage(error.message) !== undefined ||
     /^(CUSTOM_FIELDS_REQUIRED|INVALID_CUSTOM_FIELD):[a-zA-Z0-9_]+$/.test(
       error.message,
     ));
 export function accountErrorMessage(error: unknown) {
+  if(error instanceof Error&&error.message.startsWith("FINANCIAL_YEAR_VERIFICATION_FAILED:"))return "Verification found blockers. Refresh the close-books review, correct the listed issues and try again. No year was closed.";
   if (
     error instanceof Error &&
     /^CUSTOM_FIELDS_REQUIRED:[a-zA-Z0-9_]+$/.test(error.message)

@@ -182,10 +182,12 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/accounting/journals")->JournalScreen(padding=padding)
             state.selectedPath.startsWith("/workspace/account/accounting/opening")->JournalScreen(padding=padding,opening=true)
             state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding,onNavigate=vm::select,initialCreate=state.selectedPath.substringBefore("?").endsWith("/new"),initialBranchId=queryValue(state.selectedPath,"branchId"))
-            state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding)
+            state.selectedPath.substringBefore("?")=="/workspace/account/utilities/financial-year/numbering"->com.salespunch360.mobile.ui.account.accounting.NumberingRestartScreen(padding,vm::back)
+            state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding,onRestartNumbering=if(data.user.accountRole==com.salespunch360.mobile.data.AccountRole.ACCOUNT_ADMIN){ {vm.select("/workspace/account/utilities/financial-year/numbering")} }else null)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.substringBefore("?")=="/workspace/account/tax/reports"->AccountReportsScreen("gst-party",padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"),onNavigate=vm::select)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
+            state.selectedPath.substringBefore("?")=="/workspace/account/utilities/audit"->com.salespunch360.mobile.ui.account.admin.AuditHistoryScreen(padding)
             utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding,initialImportType=queryValue(state.selectedPath,"type")?:"CUSTOMERS",initialExportType=queryValue(state.selectedPath,"type"),backupMode=queryValue(state.selectedPath,"mode"))
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}

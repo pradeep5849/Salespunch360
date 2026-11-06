@@ -34,7 +34,7 @@ import {
   updateGeneralSettingsForActor,
 } from "@/lib/account/settings";
 import { taxProfileInput } from "@/lib/account/tax";
-import { redactAuditMetadata, verifyAccountDataForActor } from "@/lib/account/utilities";
+import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 import { PREFIX_TYPES } from "@/lib/account/transaction-settings";
@@ -389,20 +389,17 @@ export async function mobileSaveTax(u: MobileAppPrincipal, raw: unknown) {
     update: v,
   });
 }
-export async function mobileUtilities(u: MobileAppPrincipal, kind: string) {
+export async function mobileUtilities(u: MobileAppPrincipal, kind: string,query:unknown={}) {
   const a = actor(
     u,
     kind === "audit" || kind === "recycle-bin" || kind === "verification"
       ? "ACCOUNT_SETTINGS"
       : "ACCOUNT_REPORTS",
   );
-  if (kind === "audit")
-    return (await db.accountingAuditEvent.findMany({
-      where: { companyId: a.companyId },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      include: { actor: { select: { name: true } } },
-    })).map(row => ({ ...row, metadata: redactAuditMetadata(row.metadata) }));
+  if (kind === "audit") {
+    const {auditHistoryPageForActor}=await import("@/lib/account/audit-history");
+    return auditHistoryPageForActor(a,query);
+  }
   if (kind === "recycle-bin")
     return db.accountRecycleRecord.findMany({
       where: { companyId: a.companyId, restoredAt: null },
@@ -410,6 +407,7 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string) {
       take: 100,
     });
   if (kind === "verification") return verifyAccountDataForActor(a);
+  if(kind==="export-types")return (await import("@/lib/account/transfer-access")).availableTransferTypes(a);
   if (kind === "imports")
     return db.accountImportJob.findMany({
       where: { companyId: a.companyId },

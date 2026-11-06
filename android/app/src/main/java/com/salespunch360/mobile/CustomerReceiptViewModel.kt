@@ -49,6 +49,8 @@ data class ReceiptState(
     val discountAmount:String="",
     val discountEnabled:Boolean=false,
     val date: String = com.salespunch360.mobile.account.accountReportToday().toString(),
+    val chequeNumber:String="",
+    val chequeDate:String=com.salespunch360.mobile.account.accountReportToday().toString(),
     val mode: String = "BANK",
     val moneyAccountId: String = "",
     val reference: String = "",
@@ -138,7 +140,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 api.createCustomerReceipt(receiptPayload(current))
-                _state.value = current.copy(saving=false,amount="",discountAmount="",invoiceId="",advanceId="",links=emptyMap(),requestKey=UUID.randomUUID().toString(),message=if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
+                _state.value = current.copy(saving=false,amount="",discountAmount="",invoiceId="",advanceId="",links=emptyMap(),requestKey=UUID.randomUUID().toString(),chequeNumber="",message=if(current.type!="APPLY_ADVANCE"&&current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
                 refresh()
             } catch(e:Exception){_state.value=current.copy(saving=false,error=errorText(e))}
         }
@@ -153,6 +155,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 internal fun receiptValidation(s:ReceiptState):String? {
+ if(s.type!="APPLY_ADVANCE"&&s.mode=="CHEQUE"&&(s.chequeNumber.isBlank()||s.moneyAccountId.isBlank()||runCatching{java.time.LocalDate.parse(s.chequeDate)}.isFailure))return "Enter a cheque number, real cheque date and bank account."
  if(s.type !in s.allowedTypes)return "This payment function is disabled."
  val amount=s.amount.toBigDecimalOrNull()
  if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.amount)||amount==null||amount.signum()<=0)return "Enter a positive amount with up to two decimal places."
@@ -183,5 +186,6 @@ internal fun receiptValidation(s:ReceiptState):String? {
 internal fun receiptPayload(s:ReceiptState)=if(s.type=="APPLY_ADVANCE")buildJsonObject{
  put("action","APPLY_ADVANCE");putJsonObject("payload"){put("advanceId",s.advanceId);put("documentId",s.invoiceId);put("amount",s.amount);put("applicationDate",s.date);put("idempotencyKey",s.requestKey)}
 }else buildJsonObject{
+ if(s.mode=="CHEQUE"){put("chequeNumber",s.chequeNumber);put("chequeDate",s.chequeDate)}
  put("idempotencyKey",s.requestKey);put("type",s.type);put("branchId",s.branchId);put("partyId",s.customerId);s.projectId.takeIf{it.isNotBlank()}?.let{put("projectId",it)};put("paymentMode",s.mode);s.moneyAccountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",s.amount);put("transactionDate",s.date);put("reference",s.reference);put("notes",s.notes);putJsonArray("allocations"){if(s.type=="CUSTOMER_RECEIPT"&&s.multipleLinks){s.links.filterValues{it.isNotBlank()}.forEach{(id,amount)->add(buildJsonObject{put("documentId",id);put("amount",amount)})}}else if(s.type=="CUSTOMER_RECEIPT")add(buildJsonObject{put("documentId",s.invoiceId);val discount=if(s.discountEnabled)s.discountAmount.ifBlank{"0"}.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO else java.math.BigDecimal.ZERO;put("amount",((s.amount.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO)+discount).toPlainString());put("discountAmount",discount.toPlainString())})}
 }

@@ -3,6 +3,8 @@ package com.salespunch360.mobile.ui.account.accounting
 import com.salespunch360.mobile.ui.account.accountDate
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -23,7 +25,8 @@ import kotlinx.serialization.json.*
 fun FinancialYearScreen(
     periodLocks: Boolean,
     padding: PaddingValues,
-    vm: AccountAccountingViewModel = viewModel()
+    vm: AccountAccountingViewModel = viewModel(),
+    onRestartNumbering:(()->Unit)?=null
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val years = state.data.array("financialYears").map { it.jsonObject }
@@ -50,6 +53,8 @@ fun FinancialYearScreen(
             }
         }
 
+        if(!periodLocks&&state.data["capabilities"]?.jsonObject?.get("canRestartNumbering")?.jsonPrimitive?.booleanOrNull==true&&onRestartNumbering!=null)TextButton(onClick=onRestartNumbering){Text("Restart future numbering; keep history")}
+
         if (state.loading) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
@@ -70,7 +75,7 @@ fun FinancialYearScreen(
                         )
                     },
                     trailingContent = {
-                        if (!periodLocks && year.str("status") == "OPEN") {
+                        if (!periodLocks && year.str("status") == "OPEN" && state.data["capabilities"]?.jsonObject?.get("canRestartNumbering")?.jsonPrimitive?.booleanOrNull==true) {
                             TextButton(onClick = { vm.editor("close:${year.str("id")}") }) {
                                 Text("Close")
                             }
@@ -86,6 +91,8 @@ fun FinancialYearScreen(
     state.editor?.let { kind ->
         FinancialDialog(
             kind = kind,
+            review = state.closeReview,
+            busy = state.saving || state.loading,
             years = years,
             close = vm::close,
             save = { target, payload -> vm.save(target, payload) }
@@ -96,6 +103,8 @@ fun FinancialYearScreen(
 @Composable
 private fun FinancialDialog(
     kind: String,
+    review: JsonObject?,
+    busy: Boolean,
     years: List<JsonObject>,
     close: () -> Unit,
     save: (String, JsonObject) -> Unit
@@ -105,12 +114,13 @@ private fun FinancialDialog(
     var to by remember { mutableStateOf("") }
     var year by remember { mutableStateOf(kind.substringAfter("close:", "")) }
     var reason by remember { mutableStateOf("") }
+    var confirmed by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = close,
         title = { Text(kind.substringBefore(':').replace('-', ' ')) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 when (kind) {
                     "financial-years" -> {
                         OutlinedTextField(name, { name = it }, label = { Text("Name") })
@@ -123,18 +133,29 @@ private fun FinancialDialog(
                         OutlinedTextField(reason, { reason = it }, label = { Text("Reason") })
                     }
                     else -> {
-                        Text("Closing performs server verification and permanently locks the year.")
+                        Text("Closing keeps documents and history, and locks posting through the year end. Verification runs again on confirmation.")
+                        if(review==null)Text("Load the server review before confirming.")
+                        review?.let { data ->
+                            Text("${data.str("companyName")} · ${data.str("startDate")} – ${data.str("endDate")}")
+                            Text(data.str("checkScope"))
+                            data.array("checks").forEach { value ->
+                                val check=value.jsonObject
+                                Text("${check.str("status")}: ${check.str("check")} (${check["affected"]?.jsonPrimitive?.content.orEmpty()})")
+                            }
+                        }
                         OutlinedTextField(
                             reason,
                             { reason = it },
                             label = { Text("Early-close reason when required") }
                         )
+                        Row { Checkbox(confirmed,{confirmed=it});Text("I confirm this year is ready to close.") }
                     }
                 }
             }
         },
         confirmButton = {
             Button(
+                enabled = !busy && (!kind.startsWith("close:") || (review?.get("canClose")?.jsonPrimitive?.booleanOrNull==true && confirmed && (review["earlyClose"]?.jsonPrimitive?.booleanOrNull!=true || reason.isNotBlank()))),
                 onClick = {
                     when (kind) {
                         "financial-years" -> save(

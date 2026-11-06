@@ -11,7 +11,7 @@ export const redactAuditMetadata = (value: unknown): unknown => {
     return Object.fromEntries(
       Object.entries(value).map(([k, v]) => [
         k,
-        /password|secret|token|credential|smtp/i.test(k)
+        /password|secret|token|credential|smtp|apikey|privatekey|authorization|cookie/i.test(k.replace(/[^a-z0-9]/gi,""))
           ? "[REDACTED]"
           : redactAuditMetadata(v),
       ]),

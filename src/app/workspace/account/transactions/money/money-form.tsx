@@ -7,7 +7,7 @@ import Link from "next/link";
 import {useState} from "react";
 import {useRouter} from "next/navigation";
 import {saveSettlementWithFeedback} from "@/app/actions/commercial";
-type O={id:string;name:string;branchId?:string|null};
+type O={id:string;name:string;branchId?:string|null;type?:string};
 type Doc={id:string;documentNumber:string;partyId:string;branchId:string;projectId?:string|null;outstanding:string;type:string};
 type Project={id:string;projectNumber:string;name:string;customerId:string;branchId:string};
 type Opening={id:string;partyId:string;branchId:string;partyType:string;effectiveDate:string;outstanding:string};
@@ -27,15 +27,16 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  const openingTargets=openings.filter(row=>row.partyId===partyId&&row.branchId===branchId&&row.partyType===(vendor?"VENDOR":"CUSTOMER"));
  const discount=type==="CUSTOMER_RECEIPT"&&discountEnabled&&target.startsWith("document:")&&!multiple;
  const allocations=advance?[]:multiple?links.filter(row=>row.target&&cents(row.amount)>BigInt(0)).map(row=>allocationForTarget(row.target,row.amount)):[{...allocationForTarget(target,discount?paymentSettlementAmount(amount,paymentDiscount):amount),...(discount?{discountAmount:paymentDiscount||"0"}:{})}];
+ const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState(reportCalendarDate());
  const unused=advance?cents(amount):multiple?cents(amount)-links.reduce((sum,row)=>sum+cents(row.amount),BigInt(0)):BigInt(0);
- const payload={idempotencyKey,type,branchId,partyId,projectId:projectId||undefined,paymentMode,moneyAccountId:moneyAccountId||undefined,amount,transactionDate:date,reference,notes,allocations};
+ const payload={idempotencyKey,type,branchId,partyId,projectId:projectId||undefined,paymentMode,moneyAccountId:moneyAccountId||undefined,amount,transactionDate:date,reference,notes,allocations,...(paymentMode==="CHEQUE"?{chequeNumber,chequeDate}:{})};
  function clearLinks(){setTarget("");setPaymentDiscount("");setLinks([]);}
  function targetOptions(){return <><option value="">Select target</option>{docs.map(row=><option key={row.id} value={`document:${row.id}`}>{vendor?"Bill":"Invoice"} {row.documentNumber} · {formatMoney(row.outstanding,display)} outstanding</option>)}{openingTargets.map(row=><option key={row.id} value={`opening:${row.id}`}>Opening balance · {formatCalendarDate(row.effectiveDate,display)} · {formatMoney(row.outstanding,display)} outstanding</option>)}</>}
  return <form action={async form=>{if(pending)return;setPending(true);setError("");setMessage("");try{
   if(multiple&&unused<BigInt(0)){setError("Linked amounts exceed the payment.");return;}
   const result=await saveSettlementWithFeedback(form);
   if(result.kind==="error")setError(result.message);
-  else if(form.get("saveMode")==="new"){setAmount("");setPaymentDiscount("");setTarget("");setLinks([]);setNotes("");setReference("");setKey(crypto.randomUUID());setMessage("Payment posted. Ready for a new entry.");router.refresh();}
+  else if(form.get("saveMode")==="new"){setAmount("");setPaymentDiscount("");setTarget("");setLinks([]);setNotes("");setReference("");setChequeNumber("");setKey(crypto.randomUUID());setMessage(paymentMode==="CHEQUE"?"Cheque saved as pending. Ready for a new entry.":"Payment posted. Ready for a new entry.");router.refresh();}
   else if(result.redirectTo)router.push(result.redirectTo);
  }catch{setError("Unable to confirm posting. Keep these inputs and retry the same payment; check recent entries before starting another.");}finally{setPending(false);}}} onReset={event=>event.preventDefault()} className="stack">
  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}{companyName&&<p>Firm: {companyName}</p>}{initialDraft&&<p>This is a new payment template. The original allocations, discount, date and bank reference were not copied. Review it before saving; saving records a new cash movement.</p>}
@@ -47,8 +48,9 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  <label>{vendor?"Vendor":"Customer"}<select aria-label={vendor?"Vendor":"Customer"} value={partyId} onChange={event=>{setParty(event.target.value);setProject("");clearLinks();}} required><option value="">Select</option>{(vendor?vendors:customers.filter(row=>!row.branchId||row.branchId===branchId)).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
  <p>Open document and opening balance: {formatMoney(decimal([...docs,...openingTargets].reduce((sum,row)=>sum+cents(row.outstanding),BigInt(0))),display)}</p>
  <label>Project<select value={projectId} onChange={event=>{setProject(event.target.value);clearLinks();}}><option value="">Non-project payment</option>{projectOptions.map(row=><option key={row.id} value={row.id}>{row.projectNumber} · {row.name}</option>)}</select></label>
- <label>Payment mode<select aria-label="Payment mode" value={paymentMode} onChange={event=>setMode(event.target.value)}><option>CASH</option><option>BANK</option></select></label>
- <label>Money Account<select value={moneyAccountId} onChange={event=>setMoneyAccount(event.target.value)}><option value="">Legacy {paymentMode}</option>{moneyAccounts.filter(row=>!row.branchId||row.branchId===branchId).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+ <label>Payment mode<select aria-label="Payment mode" value={paymentMode} onChange={event=>setMode(event.target.value)}><option>CASH</option><option>BANK</option><option>CHEQUE</option></select></label>
+ <label>Money Account<select required={paymentMode==="CHEQUE"} value={moneyAccountId} onChange={event=>setMoneyAccount(event.target.value)}><option value="">{paymentMode==="CHEQUE"?"Select a bank account":`Legacy ${paymentMode}`}</option>{moneyAccounts.filter(row=>(!row.branchId||row.branchId===branchId)&&(paymentMode!=="CHEQUE"||row.type==="BANK")).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+ {paymentMode==="CHEQUE"&&<><label>Cheque number<input value={chequeNumber} maxLength={80} onChange={event=>setChequeNumber(event.target.value)} required/></label><label>Cheque date<input type="date" value={chequeDate} onChange={event=>setChequeDate(event.target.value)} required/></label><p>The payment stays pending until the cheque is cleared. No cash or linked payment is posted before clearance.</p></>}
  <label>{vendor?"Paid":"Received"}<input type="number" min="0.01" step="0.01" value={amount} onChange={event=>setAmount(event.target.value)} required/></label>
  {!advance&&<><label><input type="checkbox" checked={multiple} onChange={event=>{setMultiple(event.target.checked);clearLinks();}}/> Link multiple transactions or keep an unused amount</label>
  {multiple?<section><p>The unlinked amount is retained as an advance. Cash is recorded once. Linking an existing advance later does not record cash again.</p>{links.map((row,index)=><div key={index}><label>Target<select value={row.target} onChange={event=>setLinks(links.map((value,i)=>i===index?{...value,target:event.target.value}:value))} required>{targetOptions()}</select></label><label>Link amount<input type="number" min="0.01" step="0.01" value={row.amount} required onChange={event=>setLinks(links.map((value,i)=>i===index?{...value,amount:event.target.value}:value))}/></label><button type="button" onClick={()=>setLinks(links.filter((_,i)=>i!==index))}>Remove link</button></div>)}<button type="button" onClick={()=>setLinks([...links,{target:"",amount:""}])}>Add transaction link</button><p>Unused amount: {unused>=BigInt(0)?formatMoney(decimal(unused),display):"Linked amounts exceed payment"}</p></section>:<label>Allocation target<select aria-label="Allocation target" value={target} onChange={event=>{setTarget(event.target.value);setPaymentDiscount("");}} required>{targetOptions()}</select></label>}

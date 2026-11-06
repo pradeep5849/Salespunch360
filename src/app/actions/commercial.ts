@@ -114,7 +114,7 @@ export async function saveSettlementWithFeedback(form: FormData) {
   return accountAction(async () => {
     const row=await createSettlement(payload(form));
     return `/workspace/account/settlements/${row.id}`;
-  }, "Payment posted");
+  }, "Payment saved");
 }
 export async function saveSettlementAction(form: FormData) {
   await createSettlement(payload(form));

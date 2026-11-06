@@ -24,6 +24,14 @@ Auto backup remains Google Drive only. Manual generation and share-sheet opening
 - Four export service tests passed, including 10,001 rows, empty XLSX headers and literal formula/apostrophe text round-trip.
 - Restore cancels deferred deletion of live files, and the cleanup worker serializes with restore and rechecks cancelled queue records.
 
+## November 6 follow-up
+
+Owner decisions: Audit History is restricted to active all-branch Account Admins. Close Books provides history-preserving financial-year close and a dedicated restart of future numbering under a new unused prefix. Start Fresh is excluded. These product decisions do not authorize production execution.
+
+Implemented shared audit authorization, nested credential redaction, filters and stable cursor pagination; Web/native audit views; read-only close review; current-admin checks; signed numbering preview, current-counter revalidation, collision checks, serialization and append-only audit. Partial opening allocations and cheque plans now use the existing single-cash advance lifecycle; pending cheques do not post, clearance applies links atomically, and reopening restores balances. Added purchase correction preparation and real PDF handoffs for transaction cards, and shared native export capability discovery.
+
+Current evidence: 11 audit/redaction tests, four numbering database tests, two close-books database tests, four allocated-payment database tests, all 37 existing cheque lifecycle regression tests, and 57 focused unit/runtime tests passed. The profitability regression fixture now pins its October reversal date so its historical cutoff is deterministic. TypeScript and full ESLint passed before the latest small UI/policy additions; fresh full checks are running. No live data/settings were changed.
+
 ## Outstanding scope
 
 Remaining work includes audit reader/branch policy, close-books restart versus destructive start-fresh policy, native multi-target payment parity, native transaction card/action parity and pagination, purchase entry/footer and safe correction lifecycle, payment optional metadata/attachments, export/import portability edge cases, and end-to-end accessibility/browser/device checks. Partial opening-balance allocations and partial cheque allocations currently fail safely rather than pretending to be implemented.

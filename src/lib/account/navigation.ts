@@ -1,4 +1,5 @@
 import type {
+  BranchAccessScope,
   AccountModule,
   AccountRole,
   ProductEdition,
@@ -224,6 +225,7 @@ const groups: AccountNavGroup[] = [
   {
     label: "Accounting",
     items: [
+      {label:"Audit History",href:"/workspace/account/utilities/audit",permission:"ACCOUNT_SETTINGS",roles:["ACCOUNT_ADMIN"]},
       {
         label: "Chart of Accounts",
         href: "/workspace/account/accounting/accounts",
@@ -339,7 +341,7 @@ export function accountNavSectionId(label: string) {
     .replace(/^-+|-+$/g, "");
 }
 export function buildAccountNavigation(
-  actor: WorkspacePrincipal,
+  actor: WorkspacePrincipal & {branchAccessScope?:BranchAccessScope},
   edition: ProductEdition,
   enabled: readonly AccountModule[],
   itemsEnabled = true,
@@ -351,6 +353,7 @@ export function buildAccountNavigation(
       (item) =>
         (item.requiredModules ?? []).every((module) => set.has(module)) &&
         (!item.requiresItems || itemsEnabled) &&
+        (item.href!=="/workspace/account/utilities/audit" || actor.branchAccessScope==="ALL_BRANCHES") &&
         !(
           item.href === "/workspace/account/expenses" &&
           actor.accountRole === "PROJECT_MANAGER" &&

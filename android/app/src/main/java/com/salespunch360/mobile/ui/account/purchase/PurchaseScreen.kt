@@ -64,7 +64,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
         }
     }
     state.draft?.let { PurchaseEditor(it, state, vm) }
-    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate,canDuplicate="PURCHASE_BILL" in state.types,onDuplicate=vm::duplicatePurchase) }
+    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate,canDuplicate="PURCHASE_BILL" in state.types,onDuplicate=vm::duplicatePurchase,canCorrect="DEBIT_NOTE" in state.types,onCorrect=vm::correctPurchase) }
     state.posting?.let {
         AlertDialog(
             onDismissRequest = vm::cancelPost,

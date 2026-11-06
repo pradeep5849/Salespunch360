@@ -191,7 +191,8 @@ fun AccountUtilityScreen(
                 }
             }
             "export" -> {
-                listOf("customers", "vendors", "items", "projects", "chart-of-accounts").filter { initialExportType == null || initialExportType !in listOf("customers", "vendors", "items", "projects", "chart-of-accounts") || it == initialExportType }.forEach { type ->
+                Text("Reporting exports contain names and current-company references. For importing, use the selected import template and review every row; project names are not portable identifiers.")
+                state.exportTypes.filter { initialExportType == null || initialExportType !in listOf("customers", "vendors", "items", "projects", "chart-of-accounts") || it == initialExportType }.forEach { type ->
                     Row {
                         Text(type, Modifier.weight(1f))
                         Button(enabled=!state.loading,onClick = { vm.export(type, "csv") }) { Text("CSV") }

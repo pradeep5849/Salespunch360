@@ -15,7 +15,7 @@ import com.salespunch360.mobile.account.bool
 import com.salespunch360.mobile.account.array
 import com.salespunch360.mobile.account.str
 import kotlinx.serialization.json.*
-@Composable fun PurchaseDetail(d:JsonObject,saving:Boolean,onClose:()->Unit,onPost:(String)->Unit,navigate:(String)->Unit={},canDuplicate:Boolean=false,onDuplicate:()->Unit={}){
+@Composable fun PurchaseDetail(d:JsonObject,saving:Boolean,onClose:()->Unit,onPost:(String)->Unit,navigate:(String)->Unit={},canDuplicate:Boolean=false,onDuplicate:()->Unit={},canCorrect:Boolean=false,onCorrect:()->Unit={}){
  Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)){
   Surface(Modifier.fillMaxSize()){
    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
@@ -32,7 +32,7 @@ import kotlinx.serialization.json.*
     items(d.array("projectMaterialMovements")){row->Text("${row.str("movementType")} · ${row.str("quantity")}")}
     item{com.salespunch360.mobile.ui.account.DocumentPrintActions(d.str("type"),d.str("id"),d.str("documentNumber"))}
     item{d.str("notes").takeIf{it.isNotBlank()}?.let{Text(it)};TextButton(onClick={navigate("/workspace/account/settings/transactions")}){Text("Transaction settings")}}
-    item{if(d.str("type")=="PURCHASE_BILL"&&canDuplicate)Button(enabled=!saving,onClick=onDuplicate){Text("Duplicate purchase")};if(d.str("status")=="POSTED")Text("Posted bills retain their journals, payments and stock history. Correct them through a purchase return/debit note.");if(d.bool("canPost")||d.bool("canConfirmOrder"))Button(enabled=!saving,onClick={onPost(d.str("id"))}){Text(if(d.str("type")=="PURCHASE_ORDER")"Confirm order" else "Post")}}
+    item{if(d.str("type")=="PURCHASE_BILL"&&canDuplicate)Button(enabled=!saving,onClick=onDuplicate){Text("Duplicate purchase")};if(d.str("type")=="PURCHASE_BILL"&&d.str("status")=="POSTED"&&canCorrect)Button(enabled=!saving,onClick=onCorrect){Text("Prepare correction / purchase return")};if(d.str("status")=="POSTED")Text("Posted bills retain their journals, payments and stock history. Correct them through a purchase return/debit note.");if(d.bool("canPost")||d.bool("canConfirmOrder"))Button(enabled=!saving,onClick={onPost(d.str("id"))}){Text(if(d.str("type")=="PURCHASE_ORDER")"Confirm order" else "Post")}}
    }
   }
  }

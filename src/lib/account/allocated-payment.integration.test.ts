@@ -9,6 +9,9 @@ vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof Prism
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {createCommercialDocumentForActor,postCommercialDocumentForActor,documentOutstandingsBatch} from "./commercial";
 import {createAllocatedPaymentForActor} from "./allocated-payment";
+import {postJournalInTx} from "@/lib/accounting/service";
+import {listOpeningOutstandings} from "./opening-balances";
+import {chequeFinancialActionForActor} from "./cheque-finance";
 const companyId=randomUUID(),branchId=randomUUID(),userId=randomUUID(),customerId=randomUUID();
 const actor={id:userId,name:"Fixture",email:`${userId}@example.test`,companyId,role:"ACCOUNT_USER",isActive:true,accountRole:"ACCOUNT_ADMIN",accountAccessActive:true,salesAccessActive:false,salesRole:null,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor;
 const invoices:{id:string;grandTotal:Prisma.Decimal;payableAmount:Prisma.Decimal|null}[]=[];
@@ -43,4 +46,38 @@ describe.skipIf(!url)("single-cash partial payment and unused advance",()=>{
   await expect(createAllocatedPaymentForActor(actor,{type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"500",transactionDate:"2026-11-05",idempotencyKey:randomUUID(),allocations:[{documentId:randomUUID(),amount:"10"}]})).rejects.toThrow();
   expect(await client.accountSettlement.count({where:{companyId}})).toBe(before);
  });
+ it("partially pays opening debt once and rejects excess without leaving cash records",async()=>{
+  const year=await client.financialYear.findFirstOrThrow({where:{companyId}}),ar=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"ACCOUNTS_RECEIVABLE"}}),equity=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"OPENING_BALANCE_EQUITY"}});
+  const journal=await client.$transaction(tx=>postJournalInTx(tx,actor,{financialYearId:year.id,branchId,entryDate:"2026-10-01",sourceType:"OPENING_BALANCE",sourceId:randomUUID(),lines:[{ledgerAccountId:ar.id,debit:"80",credit:"0"},{ledgerAccountId:equity.id,debit:"0",credit:"80"}]}));
+  const opening=await client.partyOpeningBalance.create({data:{companyId,branchId,partyId:customerId,partyType:"CUSTOMER",partyName:"Buyer",effectiveDate:new Date("2026-10-01"),amount:"80",journalEntryId:journal.id,createdById:userId}});
+  const input={type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CASH",amount:"100",transactionDate:"2026-11-05",idempotencyKey:randomUUID(),allocations:[{openingBalanceId:opening.id,amount:"30"}]};
+  const payment=await createAllocatedPaymentForActor(actor,input);expect(payment.remainingAmount.toString()).toBe("70");
+  const rows=await listOpeningOutstandings({companyId,partyType:"CUSTOMER",partyId:customerId,branchIds:[branchId]});expect(rows.find(x=>x.id===opening.id)?.outstanding.toString()).toBe("50");
+  expect((await createAllocatedPaymentForActor(actor,input)).id).toBe(payment.id);
+  const count=await client.accountSettlement.count({where:{companyId}});
+  await expect(createAllocatedPaymentForActor(actor,{...input,idempotencyKey:randomUUID(),allocations:[{openingBalanceId:opening.id,amount:"60"}]})).rejects.toThrow("ALLOCATION_EXCEEDS_OUTSTANDING");
+  expect(await client.accountSettlement.count({where:{companyId}})).toBe(count);
+ });
+ it("keeps partial cheque links pending, posts at clearance, reverses and reapplies without duplicate cash",async()=>{
+  const bankLedger=await client.ledgerAccount.findFirstOrThrow({where:{companyId,systemKey:"BANK"}});
+  const bank=await client.moneyAccount.create({data:{companyId,branchId,name:"Allocation bank",type:"BANK",ledgerAccountId:bankLedger.id}});
+  const opening=await client.partyOpeningBalance.findFirstOrThrow({where:{companyId,partyId:customerId}});
+  const before=await client.journalEntry.count({where:{companyId}});
+  const input={type:"CUSTOMER_RECEIPT",branchId,partyId:customerId,paymentMode:"CHEQUE",moneyAccountId:bank.id,chequeNumber:"PARTIAL-1",chequeDate:"2026-11-05",amount:"100",transactionDate:"2026-11-05",idempotencyKey:randomUUID(),allocations:[{documentId:invoices[0].id,amount:"20"},{openingBalanceId:opening.id,amount:"10"}]};
+  const pending=await createAllocatedPaymentForActor(actor,input);expect(pending.status).toBe("PENDING_CHEQUE");expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+  const cheque=await client.cheque.findFirstOrThrow({where:{companyId,settlementId:pending.id}});
+  const close={action:"CLOSE",requestKey:randomUUID(),expectedVersion:0,actionDate:"2026-11-06",moneyAccountId:bank.id};
+  await chequeFinancialActionForActor(actor,cheque.id,close);
+  expect((await client.accountSettlement.findUniqueOrThrow({where:{id:pending.id}})).remainingAmount.toString()).toBe("70");
+  expect((await documentOutstandingsBatch(companyId,invoices)).get(invoices[0].id)?.toString()).toBe("30");
+  await chequeFinancialActionForActor(actor,cheque.id,close);expect(await client.journalEntry.count({where:{companyId}})).toBe(before+3);
+  await chequeFinancialActionForActor(actor,cheque.id,{action:"REOPEN",requestKey:randomUUID(),expectedVersion:1,actionDate:"2026-11-07",reason:"Recheck cheque clearance"});
+  expect((await documentOutstandingsBatch(companyId,invoices)).get(invoices[0].id)?.toString()).toBe("50");
+  await chequeFinancialActionForActor(actor,cheque.id,{...close,requestKey:randomUUID(),expectedVersion:2,actionDate:"2026-11-08"});
+  expect((await documentOutstandingsBatch(companyId,invoices)).get(invoices[0].id)?.toString()).toBe("30");
+  for(const [day,expected] of [["2026-11-05","50"],["2026-11-06","40"],["2026-11-07","50"],["2026-11-08","40"]]){
+   const rows=await listOpeningOutstandings({companyId,partyType:"CUSTOMER",partyId:customerId,asOf:new Date(day)});expect(rows.find(x=>x.id===opening.id)?.outstanding.toString()).toBe(expected);
+  }
+  const lines=await client.journalLine.findMany({where:{companyId,ledgerAccountId:bankLedger.id}});expect(lines.reduce((n,x)=>n+Number(x.debit)-Number(x.credit),0)).toBe(100);
+ },60000);
 });

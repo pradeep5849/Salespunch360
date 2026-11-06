@@ -41,7 +41,12 @@ fun VendorPaymentScreen(padding: PaddingValues,duplicateId:String?=null, initial
         if(state.type!="VENDOR_ADVANCE"&&!state.multipleLinks)item{OutlinedTextField(state.linkAmount,{value->vm.edit{it.copy(linkAmount=value)}},label={Text("Link amount")})}
         item { OutlinedTextField(state.amount, { value -> vm.edit { it.copy(amount = value) } }, label = { Text("Amount") }) }
         item { OutlinedTextField(state.date, { value -> vm.edit { it.copy(date = value) } }, label = { Text("Payment date") }) }
-        item { SelectField("Method", state.mode, listOf("CASH" to "Cash", "BANK" to "Bank")) { value -> vm.edit { it.copy(mode = value) } } }
+        item { SelectField("Method", state.mode, listOf("CASH" to "Cash", "BANK" to "Bank", "CHEQUE" to "Cheque")) { value -> vm.edit { it.copy(mode = value) } } }
+        if(state.mode=="CHEQUE"){
+            item{OutlinedTextField(state.chequeNumber,{value->vm.edit{it.copy(chequeNumber=value)}},label={Text("Cheque number")})}
+            item{OutlinedTextField(state.chequeDate,{value->vm.edit{it.copy(chequeDate=value)}},label={Text("Cheque date")})}
+            item{Text("Pending until cleared. Linked amounts and cash are posted together at clearance.")}
+        }
         item { SelectField("Money account", state.accountId, state.accounts.filter { it.branchId == null || it.branchId == state.branchId }.map { it.id to it.name }) { value -> vm.edit { it.copy(accountId = value) } } }
         item { OutlinedTextField(state.reference, { value -> vm.edit { it.copy(reference = value) } }, label = { Text("Reference") }) }
         item { OutlinedTextField(state.notes, { value -> vm.edit { it.copy(notes = value) } }, label = { Text("Notes") }) }

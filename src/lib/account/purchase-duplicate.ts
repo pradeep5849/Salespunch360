@@ -11,3 +11,9 @@ export function purchaseDuplicateDraft(source:Awaited<ReturnType<typeof getComme
   return {lineType:line.lineType,sourceId:line.productId??line.serviceId??line.workPackageId??"",itemName:line.itemName,itemCode:line.itemCode??undefined,description:line.description??"",specification:line.specification??"",unitName:line.unitName??"",unitSymbol:line.unitSymbol??"",unitSelection:selected,quotationUnitReviewRequired:line.lineType!=="CUSTOM",quantity:line.quantity.toString(),rate:line.rate.toString(),discountType:line.discountType??"",discountValue:retainedLineDiscountValue(line)??"0",taxRate:line.taxRate.toString(),cessRate:line.cessRate.toString(),warehouseId:"",batchId:"",serialNumberId:"",stockReturnQuantity:"0",sourceCommercialLineId:"",purchaseAllocations:[]};
  })};
 }
+/** Review-only preparation for the existing debit-note lifecycle; does not cancel the bill. */
+export function purchaseReturnDraft(source:Awaited<ReturnType<typeof getCommercialDocumentForActor>>,date:string):SaleDraftInitial {
+ if(source.type!=="PURCHASE_BILL"||source.status!=="POSTED")throw new Error("PURCHASE_RETURN_UNAVAILABLE");
+ const draft=purchaseDuplicateDraft(source,date);
+ return {...draft,sourceDocumentId:source.id,freightAmount:"0",otherChargesAmount:"0",notes:`Correction of ${source.documentNumber}. Review quantities, tax and physical stock return before saving.`,lines:draft.lines.map((line,index)=>({...line,sourceCommercialLineId:source.lines[index].id,quotationUnitReviewRequired:false,unitConversionSnapshot:source.lines[index].unitConversionSnapshot?parseCommercialUnitSnapshot(source.lines[index].unitConversionSnapshot):undefined,stockReturnQuantity:"0"}))};
+}
