@@ -123,7 +123,7 @@ fun ProjectScreen(
     }
     s.editing?.let { ProjectEditor(it, s.options, s.saving, s.error, vm::close, vm::save) }
     s.detail?.let {
-        ProjectDetail(it,s.costing,s.options.array("billingServices"),s.saving,s.error,vm::close,vm::edit,vm::action,vm::editBudget,vm::editChange,vm::transitionChange)
+        ProjectDetail(it,s.costing,s.options.array("billingServices"),s.saving,s.error,vm::close,vm::edit,vm::action,vm::archive,vm::editBudget,vm::editChange,vm::transitionChange)
     }
     s.changeEditing?.let { ChangeOrderDialog(it,s.saving,s.error,vm::closeChange,vm::updateChange,vm::saveChange) }
     if (s.budgetEditing && s.detail != null) {
@@ -254,15 +254,30 @@ private fun ProjectDetail(
     close: () -> Unit,
     edit: () -> Unit,
     action: (String, String, String?) -> Unit,
+    archive: (String) -> Unit,
     budget: () -> Unit,
     editChange: (JsonObject?) -> Unit,
     transitionChange: (String, String) -> Unit,
 ) {
     val final = workflowStatus(x.str("status")) == "COMPLETED"
+    var confirmArchive by remember(x.str("id")) { mutableStateOf(false) }
+    if (confirmArchive) AlertDialog(
+        onDismissRequest = { confirmArchive = false },
+        title = { Text("Move project to Recycle Bin?") },
+        text = { Text("This project will be hidden from active lists. Its linked records are preserved and it can be restored from Account Recycle Bin.") },
+        confirmButton = { TextButton(onClick = { confirmArchive = false; archive(x.str("id")) }, enabled = !saving) { Text("Move to Recycle Bin") } },
+        dismissButton = { TextButton(onClick = { confirmArchive = false }) { Text("Cancel") } },
+    )
     var billingServiceId by remember(x.str("id")) { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = close,
         title = { Text(x.str("projectNumber")) },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { confirmArchive = true }, enabled = !saving) { Text("Move to Recycle Bin") }
+                TextButton(onClick = close) { Text("Close") }
+            }
+        },
         text = {
             LazyColumn {
                 error?.let { message -> item { Text(message,color=MaterialTheme.colorScheme.error) } }
