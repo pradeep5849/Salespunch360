@@ -17,3 +17,11 @@ describe("canonical production host",()=>{
  it("passes canonical www APIs through",()=>expect(run("https://www.salespunch360.com/api/health").status).toBe(200));
  it("keeps localhost usable outside production",()=>{vi.stubEnv("NODE_ENV","development");expect(proxy(new NextRequest("http://localhost:3000/api/health")).headers.get("location")).toBeNull()});
 });
+
+describe("public Markdown representation",()=>{
+ it("rewrites canonical homepage requests that explicitly accept Markdown",()=>{const r=run("https://www.salespunch360.com/",{accept:"text/markdown"});expect(r.headers.get("x-middleware-rewrite")).toBe("https://www.salespunch360.com/site.md");expect(r.headers.get("vary")).toContain("Accept")});
+ it("keeps browser HTML and zero-quality Markdown unchanged",()=>{for(const accept of ["text/html","text/markdown;q=0,text/html"]){expect(run("https://www.salespunch360.com/",{accept}).headers.get("x-middleware-rewrite")).toBeNull()}});
+ it("keeps authenticated workspace requests outside content negotiation",()=>expect(run("https://www.salespunch360.com/workspace",{accept:"text/markdown"}).headers.get("x-middleware-rewrite")).toBeNull());
+ it("preserves the canonical-host redirect before negotiation",()=>expect(run("https://salespunch360.com/",{accept:"text/markdown"}).status).toBe(308));
+});
+it("keeps RSC navigation out of Markdown negotiation",()=>{const r=run("https://www.salespunch360.com/",{accept:"text/markdown",rsc:"1"});expect(r.headers.get("x-middleware-rewrite")).toBeNull();expect(r.headers.get("vary")).toContain("RSC")});
