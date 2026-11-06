@@ -402,7 +402,7 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string,query:
   }
   if (kind === "recycle-bin")
     return db.accountRecycleRecord.findMany({
-      where: { companyId: a.companyId, restoredAt: null },
+      where: { companyId: a.companyId, restoredAt: null, purgedAt: null },
       orderBy: { archivedAt: "desc" },
       take: 100,
     });

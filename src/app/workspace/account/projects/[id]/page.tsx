@@ -444,6 +444,7 @@ export default async function Page({
         {actor.accountRole === "ACCOUNT_ADMIN" && (
           <form action={archiveProjectAction}>
             <input type="hidden" name="projectId" value={id} />
+            <p>Restore within seven days. Once scheduled cleanup is enabled, unlinked records are permanently deleted; linked history is retained.</p>
             <button type="submit">Move project to Recycle Bin</button>
           </form>
         )}

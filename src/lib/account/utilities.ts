@@ -348,6 +348,7 @@ export async function archiveMaster(input: {
   const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
     const delegate = tx[recycleTypes[input.entityType]] as typeof tx.customer;
     const record = await delegate.findFirst({
       where: { id: input.entityId, companyId: actor.companyId! },
@@ -377,6 +378,9 @@ export async function archiveMaster(input: {
       update: {
         restoredAt: null,
         restoredById: null,
+        purgedAt: null,
+        purgeBlockedReason: null,
+        purgeCheckedAt: null,
         archivedAt: new Date(),
         archivedById: actor.id,
         reason: input.reason,
@@ -402,6 +406,7 @@ export async function archiveProjectForActor(
 ) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
     const project = await tx.project.findFirst({
       where: { id: projectId, companyId: actor.companyId, archivedAt: null },
       select: { id: true, name: true },
@@ -412,7 +417,7 @@ export async function archiveProjectForActor(
     const recycle = await tx.accountRecycleRecord.upsert({
       where: { companyId_entityType_entityId: { companyId: actor.companyId, entityType: "PROJECT", entityId: project.id } },
       create: { companyId: actor.companyId, entityType: "PROJECT", entityId: project.id, displayName: project.name, archivedById: actor.id, archivedAt: now, reason },
-      update: { restoredAt: null, restoredById: null, archivedById: actor.id, archivedAt: now, reason },
+      update: { restoredAt: null, restoredById: null, purgedAt: null, purgeBlockedReason: null, purgeCheckedAt: null, archivedById: actor.id, archivedAt: now, reason },
     });
     await tx.accountingAuditEvent.create({
       data: { companyId: actor.companyId, actorUserId: actor.id, eventType: "RECORD_ARCHIVED", entityType: "PROJECT", entityId: project.id, reason },
@@ -431,8 +436,9 @@ export async function restoreMasterForActor(
 ) {
   if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
   return db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
     const recycle = await tx.accountRecycleRecord.findFirst({
-      where: { id: recycleId, companyId: actor.companyId!, restoredAt: null },
+      where: { id: recycleId, companyId: actor.companyId!, restoredAt: null, purgedAt: null },
     });
     if (!recycle) throw new Error("RECYCLE_RECORD_NOT_FOUND");
     if (recycle.entityType === "PROJECT") {

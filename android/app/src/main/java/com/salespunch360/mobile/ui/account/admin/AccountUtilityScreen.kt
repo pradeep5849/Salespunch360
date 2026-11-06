@@ -246,6 +246,10 @@ private fun JsonList(rows: JsonArray, onRestore: ((String) -> Unit)? = null) {
             Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     Text(item["displayName"]?.jsonPrimitive?.content ?: item["fileName"]?.jsonPrimitive?.content ?: item.toString())
+                    if(onRestore!=null) {
+                        Text("Scheduled cleanup permanently deletes unlinked records after seven days; linked history is retained.")
+                        item["purgeBlockedReason"]?.jsonPrimitive?.contentOrNull?.let { Text("Retained: " + it.replace('_', ' ').lowercase()) }
+                    }
                     onRestore?.let { restore ->
                         val id = item["id"]?.jsonPrimitive?.contentOrNull
                         if (id != null) Button(onClick = { restore(id) }) { Text("Restore") }
