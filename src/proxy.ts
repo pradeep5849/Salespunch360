@@ -64,6 +64,9 @@ export function proxy(request: NextRequest) {
   const canonical = request.nextUrl.clone();
   canonical.protocol = "https:";
   canonical.host = "www.salespunch360.com";
+  // NextURL retains the upstream Node port when its host is replaced.
+  // Public canonical URLs must use the default HTTPS port.
+  canonical.port = "";
   return NextResponse.redirect(canonical, 308);
 }
 export const config = { matcher: "/:path*" };
