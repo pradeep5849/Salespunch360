@@ -372,21 +372,34 @@ export async function archiveMaster(input: {
     return recycle;
   });
 }
-export async function archiveProject(projectId: string, reason: string) {
-  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
-  if (actor.accountRole !== "ACCOUNT_ADMIN" || !actor.companyId) throw new AuthorizationError();
-  return db.$transaction(async tx => {
-    const project = await tx.project.findFirst({where:{id:projectId,companyId:actor.companyId,archivedAt:null},select:{id:true,name:true}});
+export async function archiveProjectForActor(
+  actor: { id: string; companyId: string; accountRole: string | null },
+  projectId: string,
+  reason: string,
+) {
+  if (actor.accountRole !== "ACCOUNT_ADMIN") throw new AuthorizationError();
+  return db.$transaction(async (tx) => {
+    const project = await tx.project.findFirst({
+      where: { id: projectId, companyId: actor.companyId, archivedAt: null },
+      select: { id: true, name: true },
+    });
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     const now = new Date();
-    await tx.project.update({where:{id:project.id},data:{archivedAt:now}});
-    await tx.accountRecycleRecord.upsert({
-      where:{companyId_entityType_entityId:{companyId:actor.companyId,entityType:"PROJECT",entityId:project.id}},
-      create:{companyId:actor.companyId,entityType:"PROJECT",entityId:project.id,displayName:project.name,archivedById:actor.id,archivedAt:now,reason},
-      update:{restoredAt:null,restoredById:null,archivedById:actor.id,archivedAt:now,reason},
+    await tx.project.update({ where: { id: project.id }, data: { archivedAt: now } });
+    const recycle = await tx.accountRecycleRecord.upsert({
+      where: { companyId_entityType_entityId: { companyId: actor.companyId, entityType: "PROJECT", entityId: project.id } },
+      create: { companyId: actor.companyId, entityType: "PROJECT", entityId: project.id, displayName: project.name, archivedById: actor.id, archivedAt: now, reason },
+      update: { restoredAt: null, restoredById: null, archivedById: actor.id, archivedAt: now, reason },
     });
-    await tx.accountingAuditEvent.create({data:{companyId:actor.companyId,actorUserId:actor.id,eventType:"RECORD_ARCHIVED",entityType:"PROJECT",entityId:project.id,reason}});
+    await tx.accountingAuditEvent.create({
+      data: { companyId: actor.companyId, actorUserId: actor.id, eventType: "RECORD_ARCHIVED", entityType: "PROJECT", entityId: project.id, reason },
+    });
+    return recycle;
   });
+}
+export async function archiveProject(projectId: string, reason: string) {
+  const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
+  return archiveProjectForActor(actor, projectId, reason);
 }
 export async function restoreMasterForActor(
   actor: { id: string; companyId: string; accountRole: string | null },
