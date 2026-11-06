@@ -305,7 +305,7 @@ describe("A084-F17 dormant costed Project material report boundaries",()=>{
  it("scopes every all-project material query to assignments as well as authorized branches",async()=>{
   enable();mocks.projects.mockResolvedValue([{id:"assigned-project"}]);
   await runFinancialReportForActor(manager,"material-consumption",{});
-  expect(mocks.projects).toHaveBeenCalledWith({where:{companyId:"company",branchId:{in:["allowed"]},OR:[{projectManagerId:"actor"},{members:{some:{userId:"actor"}}}]},select:{id:true}});
+  expect(mocks.projects).toHaveBeenCalledWith({where:{companyId:"company",archivedAt:null,branchId:{in:["allowed"]},OR:[{projectManagerId:"actor"},{members:{some:{userId:"actor"}}}]},select:{id:true}});
   expect(mocks.movements).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({companyId:"company",branchId:{in:["allowed"]},projectId:{in:["assigned-project"]},movementType:"CONSUMPTION"})}));
  });
  it("rejects an unassigned explicit project before any material read",async()=>{
