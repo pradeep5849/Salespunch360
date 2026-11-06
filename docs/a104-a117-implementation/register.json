@@ -1,7 +1,7 @@
 {
   "scope": "A104\u2013A117",
   "date": "2026-11-06",
-  "status": "IMPLEMENTED; FINAL VALIDATION IN PROGRESS",
+  "status": "IMPLEMENTED; AUTOMATED VALIDATION COMPLETED; FINAL FOLLOW-UP CI AND REVIEW PENDING",
   "findings": [
     {
       "finding_id": "A104-F01",
@@ -595,5 +595,16 @@
       ]
     }
   ],
-  "latest_checkpoint": "Implementation branch only; no merge, deployment or production restore. First Web/Android checkpoint passed; follow-up validation pending."
+  "latest_checkpoint": "Implementation branch only; no merge, deployment or production restore. First Web/Android checkpoint passed; follow-up validation pending.",
+  "validation": {
+    "local_unit_tests_passed": 3935,
+    "isolated_database_tests_passed_before_security_followup": 30,
+    "browser_reviews_passed": 8,
+    "cheque_regressions_passed": 37,
+    "reconciled_ci_run": 42195076507,
+    "reconciled_ci": "Web, migration and Android passed",
+    "security_followup": "Payment evidence 5 tests and company restore 4 tests passed; RLS enabled without browser policies; final CI pending",
+    "production": "Not merged, migrated or deployed",
+    "public_lighthouse": "HTTP 403; separate live-site follow-up"
+  }
 }

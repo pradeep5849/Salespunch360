@@ -30,7 +30,7 @@ The owner selected active all-branch Account Admins as the only company-wide aud
 
 Added shared current-user audit authorization, credential redaction, filtered chronological Web/native views and stable pagination; read-only close review; signed numbering previews, stale-counter rejection, case-insensitive namespace checks and retry-safe audit. Opening-debt and pending-cheque allocations use one cash operation, with atomic clearance/reversal/re-clearance and historical balances. Purchase corrections prepare a source-bound debit note while retaining the bill and cash history.
 
-Payments now support immutable billing identity and private PDF/PNG/JPEG evidence (50 files, 10 MiB combined). File failure rolls back the payment; retries bind the original file manifest. Evidence remains reachable through cheque re-clearance and is included in exact company snapshots and file-inclusive recovery, with immutable source hashes checked independently of the bundle manifest. Migration 20261106010000_payment_supporting_evidence adds the nullable metadata, evidence table and history guards. The full 162-migration chain passed on a fresh isolated PostgreSQL database.
+Payments now support immutable billing identity and private PDF/PNG/JPEG evidence (50 files, 10 MiB combined). File failure rolls back the payment; retries bind the original file manifest. Evidence remains reachable through cheque re-clearance and is included in exact company snapshots and file-inclusive recovery, with immutable source hashes checked independently of the bundle manifest. Migration 20261106010000_payment_supporting_evidence adds the nullable metadata, evidence table and history guards. The full 162-migration implementation chain passed on a fresh isolated PostgreSQL database. The subsequently merged main-branch project archive migration was also applied locally, bringing the current chain to 163.
 
 Imports display before/after values and reject updates when the reviewed target has changed. Native export choices use the same role/module policy as the API: Project Managers retain assigned-project exports; company-wide master catalogues require Account Admin/Accountant access. The owner-selected Utilities menu remains six items; Audit History is in Accounting and backups remain separate.
 
@@ -43,7 +43,9 @@ Purchase/payment preview and sharing reuse the existing authorized PDF/image hel
 - All 37 existing cheque lifecycle regressions passed. A historical profitability fixture now pins its reversal date rather than depending on the current month.
 - The production Web build passed with synthetic credentials and a local database; no production credentials were used.
 - The first PR checkpoint passed GitHub Web, migration and Android unit/lint checks. Follow-up changes are awaiting a new platform run.
-- A broad local run passed 3,923 tests and found three PDF timeouts while compilation was running and two outdated purchase capability mocks. All affected suites subsequently passed alone: 73 tests. Export permission and recovery follow-ups passed 20 tests. A final full-suite run and final lint/type checks are still required.
+- The final full local suite passed: 580 files, 3,935 tests, with 384 database-gated tests skipped in that run. The dedicated database suite separately passed all 30 tests, including again after reconciling main. TypeScript and changed-source ESLint passed.
+- Main-branch project archive/restore changes were reconciled without dropping close-books confirmation or preview. Reconciled-head Web, migration and Android CI all passed (run 42195076507). A separate local post-reconciliation build compiled but exhausted memory during type checking; the CI Web build passed.
+- Live-site Lighthouse remains selectively blocked by HTTP 403; the separate diagnostic note records fresh Hostinger request IDs. It is not a speed measurement of this unmerged branch.
 
 ## Review and deployment
 
@@ -52,3 +54,8 @@ PR #180 is a draft review checkpoint and is not merged or deployed. Final curren
 Apply the new migration through the existing migration deployment process before starting this application version. Private evidence uses the already configured HOSTINGER_STORAGE_PATH; this change introduces no new secret or password setting. Keep credentials in the deployment environment. Do not run financial-year closing, numbering restart or company restore against production merely to verify this PR.
 
 The original A104–A117 audit registers are historical records. The implementation register tracks current validation; avoid interpreting historical NOT STARTED markers as a current-head implementation result. Audit resumes at A118 after this implementation range is reviewed.
+
+
+## Backend evidence security follow-up
+
+The production migration workflow identifies Supabase PostgreSQL. Following its [RLS guidance](https://supabase.com/docs/guides/database/postgres/row-level-security), migration 20261106094000_payment_evidence_backend_security enables RLS without browser policies and fixes invoker trigger search paths. PUBLIC and browser roles cannot execute the trigger functions. Prisma backend owner access still uses application company, role and branch checks. All 164 migrations applied locally; payment and restore regressions passed after this change. No production advisor, SQL or schema mutation was executed. The migration remains part of the existing Prisma chain, with no second migration framework introduced.

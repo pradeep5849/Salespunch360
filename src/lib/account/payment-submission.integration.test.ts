@@ -311,4 +311,25 @@ describe.skipIf(!url)("atomic payment supporting evidence and recovery", () => {
       ).bytes.toString(),
     ).toBe("%PDF-1.7\ncheque proof");
   });
+  it("keeps evidence backend-only with RLS and hardened invoker triggers", async () => {
+    const [table] = await client.$queryRaw<Array<{ enabled: boolean; policies: bigint }>>`
+      SELECT c.relrowsecurity AS enabled,
+        (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='payment_attachments') AS policies
+      FROM pg_class c WHERE c.oid='public.payment_attachments'::regclass`;
+    expect(table.enabled).toBe(true);
+    expect(Number(table.policies)).toBe(0);
+    const functions = await client.$queryRaw<Array<{ prosecdef: boolean; proconfig: string[]; public_execute: boolean }>>`
+      SELECT p.prosecdef,p.proconfig,
+        EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+          WHERE a.grantee=0 AND a.privilege_type='EXECUTE') AS public_execute
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname='public' AND p.proname IN ('guard_payment_attachment_history','guard_payment_billing_history')`;
+    expect(functions).toHaveLength(2);
+    for (const fn of functions) {
+      expect(fn.prosecdef).toBe(false);
+      expect(fn.proconfig).toContain('search_path=""');
+      expect(fn.public_execute).toBe(false);
+    }
+  });
+
 });
