@@ -22,6 +22,7 @@ export type ImportPreviewRow = {
   rowNumber: number;
   action: ImportAction;
   values: Record<string, string>;
+  before?:Record<string,string>;
   resolved: Record<string, string>;
   warnings: string[];
   errors: string[];
@@ -215,15 +216,15 @@ export async function previewAccountImportForActor(
             ? { branchId: { in: actor.branchIds ?? [] } }
             : {}),
         },
-        select: { id: true, name: true, gstin: true, phone: true, email: true },
+        select: { id: true, name: true, gstin: true, phone: true, email: true,address:true,stateCode:true,isActive:true,branchId:true,updatedAt:true },
       }),
       db.vendor.findMany({
         where: { companyId: actor.companyId! },
-        select: { id: true, name: true, gstin: true, phone: true, email: true },
+        select: { id: true, name: true, gstin: true, phone: true, email: true,address:true,stateCode:true,isActive:true,updatedAt:true },
       }),
       db.accountProduct.findMany({
         where: { companyId: actor.companyId! },
-        select: { id: true, name: true, code: true, barcode: true },
+        select: { id: true, name: true, code: true, barcode: true,unitId:true,categoryId:true,salePrice:true,costPrice:true,taxRate:true,hsnCode:true,trackInventory:true,isActive:true,updatedAt:true },
       }),
       db.accountUnit.findMany({
         where: { companyId: actor.companyId!, isActive: true },
@@ -257,7 +258,7 @@ export async function previewAccountImportForActor(
     const errors: string[] = [],
       warnings: string[] = [],
       resolved: Record<string, string> = {};
-    let action: ImportAction = "CREATE";
+    let action: ImportAction = "CREATE",before:Record<string,string>|undefined;
     const supported: Record<AccountImportType, string[]> = {
       CUSTOMERS: [
         "name",
@@ -366,6 +367,12 @@ export async function previewAccountImportForActor(
     if (duplicate.length > 1) errors.push("Ambiguous duplicate match");
     else if (duplicate.length === 1) {
       resolved.existingId = duplicate[0].id;
+      const target=duplicate[0] as unknown as Record<string,unknown>;
+      if(target.updatedAt instanceof Date)resolved.targetVersion=target.updatedAt.toISOString();
+      const fieldMap:Record<string,string>={name:"name",phone:"phone",email:"email",address:"address",gstin:"gstin",state_code:"stateCode",is_active:"isActive",code:"code",barcode:"barcode",sale_rate:"salePrice",purchase_rate:"costPrice",tax_rate:"taxRate",hsn:"hsnCode",track_inventory:"trackInventory"};
+      before=Object.fromEntries(Object.entries(fieldMap).filter(([,field])=>field in target).map(([column,field])=>[column,target[field]==null?"":String(target[field])]));
+      if(type==="CUSTOMERS")before.branch=branches.find(branch=>branch.id===target.branchId)?.code??String(target.branchId??"");
+      if(type==="ITEMS"){before.unit=units.find(unit=>unit.id===target.unitId)?.name??"";before.category=categories.find(category=>category.id===target.categoryId)?.name??"";}
       action = input.updateExisting ? "UPDATE" : "SKIP";
       warnings.push(
         input.updateExisting
@@ -505,7 +512,7 @@ export async function previewAccountImportForActor(
       }
     }
     if (errors.length) action = "ERROR";
-    return { rowNumber: index + 2, action, values, resolved, warnings, errors };
+    return { rowNumber: index + 2, action, values, ...(before?{before}:{}), resolved, warnings, errors };
   });
   if (type === "OPENING_BALANCES") {
     const contexts = new Set(
@@ -688,6 +695,7 @@ export async function executeAccountImportForActor(
     // Resolve every reference again at confirmation using the current company and branch scope.
     for (const row of preview.rows) {
       const r = row.resolved;
+      if(row.action==="UPDATE"&&(!r.targetVersion||!z.string().datetime().safeParse(r.targetVersion).success))throw new Error("IMPORT_TARGET_CHANGED");
       if (
         r.branchId &&
         !(await tx.branch.findFirst({
@@ -785,6 +793,7 @@ export async function executeAccountImportForActor(
             where: {
               id: r.existingId,
               companyId: actor.companyId!,
+              updatedAt:new Date(r.targetVersion),
               ...(actor.branchAccessScope === "SELECTED_BRANCHES"
                 ? { branchId: { in: actor.branchIds ?? [] } }
                 : {}),
@@ -813,7 +822,7 @@ export async function executeAccountImportForActor(
         };
         if (row.action === "UPDATE") {
           const changed = await tx.vendor.updateMany({
-            where: { id: r.existingId, companyId: actor.companyId! },
+            where: { id: r.existingId, companyId: actor.companyId!, updatedAt:new Date(r.targetVersion) },
             data,
           });
           if (changed.count !== 1) throw new Error("IMPORT_TARGET_CHANGED");
@@ -845,7 +854,7 @@ export async function executeAccountImportForActor(
         let productId = r.existingId;
         if (row.action === "UPDATE") {
           const changed = await tx.accountProduct.updateMany({
-            where: { id: r.existingId, companyId: actor.companyId! },
+            where: { id: r.existingId, companyId: actor.companyId!, updatedAt:new Date(r.targetVersion) },
             data,
           });
           if (changed.count !== 1) throw new Error("IMPORT_TARGET_CHANGED");

@@ -30,8 +30,8 @@ import kotlinx.serialization.json.*
     item{Text("Inventory and project history",style=MaterialTheme.typography.titleMedium)}
     items(d.array("stockMovements")){row->Text("${accountDate(row.str("movementDate"))} · ${row.str("movementType")} · ${row.str("quantity")}")}
     items(d.array("projectMaterialMovements")){row->Text("${row.str("movementType")} · ${row.str("quantity")}")}
-    item{com.salespunch360.mobile.ui.account.DocumentPrintActions(d.str("type"),d.str("id"),d.str("documentNumber"))}
-    item{d.str("notes").takeIf{it.isNotBlank()}?.let{Text(it)};TextButton(onClick={navigate("/workspace/account/settings/transactions")}){Text("Transaction settings")}}
+    item{com.salespunch360.mobile.ui.account.DocumentPrintActions(d.str("type"),d.str("id"),d.str("documentNumber"),preferredShareAs=d.str("shareAs"))}
+    item{d.str("notes").takeIf{it.isNotBlank()}?.let{Text(it)};if(d.bool("canEditTransactionSettings"))TextButton(onClick={navigate("/workspace/account/settings/transactions")}){Text("Transaction settings")}}
     item{if(d.str("type")=="PURCHASE_BILL"&&canDuplicate)Button(enabled=!saving,onClick=onDuplicate){Text("Duplicate purchase")};if(d.str("type")=="PURCHASE_BILL"&&d.str("status")=="POSTED"&&canCorrect)Button(enabled=!saving,onClick=onCorrect){Text("Prepare correction / purchase return")};if(d.str("status")=="POSTED")Text("Posted bills retain their journals, payments and stock history. Correct them through a purchase return/debit note.");if(d.bool("canPost")||d.bool("canConfirmOrder"))Button(enabled=!saving,onClick={onPost(d.str("id"))}){Text(if(d.str("type")=="PURCHASE_ORDER")"Confirm order" else "Post")}}
    }
   }

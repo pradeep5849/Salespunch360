@@ -22,10 +22,13 @@ import kotlinx.serialization.json.*
    Text(entry.str("documentNumber"));Text(entry.str("partyName"));Text("${accountDate(entry.str("issueDate"))} · ${entry.str("status")}");Text("Branch: ${root.str("branch")}")
    Text("Amount: ${accountMoney(entry.str("grandTotal"))}");Text("Unused: ${accountMoney(entry.str("balanceDue"))}");Text("Discount: ${accountMoney(root.str("discountAmount"))}");Text("Method: ${root.str("paymentMode")}")
    root.str("reference").takeIf{it.isNotBlank()}?.let{Text("Reference: $it")};root.str("notes").takeIf{it.isNotBlank()}?.let{Text(it)}
+   root.str("billingName").takeIf{it.isNotBlank()&&it!="null"}?.let{Text("Billing name: $it")}
+   root.str("billingAddress").takeIf{it.isNotBlank()&&it!="null"}?.let{Text("Billing address: $it")}
+   root.array("attachments").forEach{file->PaymentEvidenceShare(file.str("id"),file.str("displayName"),file.str("mimeType"))}
    Text("Applications",style=MaterialTheme.typography.titleMedium)
    val applications=root.array("applications");if(applications.isEmpty())Text("No applications.")
    applications.forEach{row->Text("${row.str("number")} · ${row.str("status")} · ${accountMoney(row.str("amount"))}");row.str("href").takeIf{it.isNotBlank()&&it!="null"}?.let{href->TextButton(onClick={navigate(href)}){Text("Open linked document")}}}
-   DocumentPrintActions(entry.str("printType"),id,entry.str("documentNumber"))
+   DocumentPrintActions(entry.str("printType"),id,entry.str("documentNumber"),preferredShareAs=root.str("shareAs"))
    if(root.bool("canDuplicate"))TextButton(onClick={navigate("/workspace/account/transactions/money?type=${entry.str("type")}&duplicateId=$id")}){Text("Duplicate payment")}
    Text("Opening, printing or preparing a duplicate does not post money. A duplicate is an unlinked new entry until you save it.")
   }

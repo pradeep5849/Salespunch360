@@ -20,6 +20,7 @@ vi.mock("@/lib/db", () => ({
 }));
 import {
   saveImportPreviewForActor,
+  previewAccountImportForActor,
   executeAccountImportForActor,
   type ImportPreview,
 } from "./imports";
@@ -142,5 +143,21 @@ describe.skipIf(!url)("real import confirmation concurrency and scope", () => {
       ),
     ).rejects.toThrow("IMPORT_BRANCH_OUTSIDE_SCOPE");
     expect(await client.customer.count({ where: { companyId } })).toBe(0);
+  });
+  it("shows before/after values and refuses to overwrite a target changed after review",async()=>{
+    const email=`${randomUUID()}@example.test`;
+    const vendor=await client.vendor.create({data:{companyId,name:"Before import",email}});
+    const bytes=new TextEncoder().encode(`name,email\nAfter import,${email}\n`);
+    const preview=await previewAccountImportForActor(actor,{type:"VENDORS",fileName:"review.csv",bytes,updateExisting:true});
+    expect(preview.rows[0].action).toBe("UPDATE");expect(preview.rows[0].before?.name).toBe("Before import");expect(preview.rows[0].values.name).toBe("After import");
+    const job=await saveImportPreviewForActor(actor,preview);
+    await client.vendor.update({where:{id:vendor.id},data:{name:"Another administrator's change"}});
+    await expect(executeAccountImportForActor(actor,job.id)).rejects.toThrow("IMPORT_TARGET_CHANGED");
+    expect((await client.vendor.findUniqueOrThrow({where:{id:vendor.id}})).name).toBe("Another administrator's change");
+    const fresh=await previewAccountImportForActor(actor,{type:"VENDORS",fileName:"review.csv",bytes,updateExisting:true});
+    const reviewed=await saveImportPreviewForActor(actor,fresh);expect(reviewed.id).not.toBe(job.id);
+    const result=await executeAccountImportForActor(actor,reviewed.id);expect(result.updated).toBe(1);
+    expect((await client.vendor.findUniqueOrThrow({where:{id:vendor.id}})).name).toBe("After import");
+    expect((await executeAccountImportForActor(actor,reviewed.id)).idempotent).toBe(true);
   });
 });

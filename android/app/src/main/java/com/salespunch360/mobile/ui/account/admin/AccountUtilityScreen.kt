@@ -264,6 +264,8 @@ private fun ImportRows(rows: JsonArray) {
             Card(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     Text("Row ${row["rowNumber"]} · ${row["action"]?.jsonPrimitive?.content}", style=MaterialTheme.typography.titleSmall)
+                    (row["before"] as? JsonObject)?.let{before->Text("Before",style=MaterialTheme.typography.titleSmall);before.forEach{(key,value)->Text("${key.replace('_',' ')}: ${value.jsonPrimitive.content}")}}
+                    Text(if(row["action"]?.jsonPrimitive?.content=="UPDATE")"After import"else"Planned values",style=MaterialTheme.typography.titleSmall)
                     (row["values"] as? JsonObject)?.forEach { (key,value) -> Text("${key.replace('_',' ')}: ${value.jsonPrimitive.content}") }
                     (row["resolved"] as? JsonObject)?.get("existingId")?.let{ Text("Matched record: ${it.jsonPrimitive.content}") }
                     listOf("errors","warnings").forEach { key -> (row[key] as? JsonArray)?.forEach{ Text(it.jsonPrimitive.content) } }

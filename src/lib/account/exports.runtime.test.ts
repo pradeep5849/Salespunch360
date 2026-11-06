@@ -5,7 +5,7 @@ const fixture = vi.hoisted(() => ({
   reads: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ db: { vendor: { findMany: fixture.reads } } }));
-vi.mock("./transfer-access", () => ({ assertTransferAvailable: vi.fn() }));
+vi.mock("./transfer-access", () => ({ assertTransferAvailable: vi.fn(),assertExportRole: vi.fn() }));
 vi.mock("@/lib/auth/authorization", () => ({ requirePermission: vi.fn() }));
 import { exportAccountDataForActor } from "./exports";
 import { parseImportFile } from "./imports";

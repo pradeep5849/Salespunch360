@@ -65,6 +65,7 @@ const reviewedTables = new Set([
   "quotation_audit_events",
   "commercial_documents",
   "commercial_attachments",
+  "payment_attachments",
   "service_reminder_completions",
   "commercial_document_lines",
   "purchase_line_allocations",

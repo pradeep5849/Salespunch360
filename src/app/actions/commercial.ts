@@ -1,4 +1,5 @@
 "use server";
+import {submitPaymentForActor} from "@/lib/account/payment-submission";
 import { accountAction } from "@/lib/account/action-feedback";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -112,7 +113,9 @@ export async function postCommercialAction(form: FormData) {
 }
 export async function saveSettlementWithFeedback(form: FormData) {
   return accountAction(async () => {
-    const row=await createSettlement(payload(form));
+    const actor=await requirePermissionForMutation("ACCOUNT_SETTLEMENT_ENTRY");
+    const files=form.getAll("attachments").filter(file=>file instanceof File&&file.size>0) as File[];
+    const row=await submitPaymentForActor({...actor,companyId:actor.companyId!},payload(form),files);
     return `/workspace/account/settlements/${row.id}`;
   }, "Payment saved");
 }

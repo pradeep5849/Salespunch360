@@ -60,7 +60,7 @@ describe("A11-A14 runtime closure", () => {
       "createAssetAction",
     );
     expect(read("src/app/workspace/account/tax/[section]/page.tsx")).toContain(
-      "gstReport",
+      "/workspace/account/reports/gst-party",
     );
     expect(
       read("src/app/workspace/account/reports/[report]/page.tsx"),

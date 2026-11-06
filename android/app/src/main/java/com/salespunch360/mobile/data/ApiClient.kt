@@ -48,7 +48,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun accountBootstrap(branchId:String?=null,companyWide:Boolean=false):AccountBootstrap{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/bootstrap$query"))}
  suspend fun accountDashboard(branchId:String?=null,companyWide:Boolean=false):AccountDashboard{val query=when{companyWide->"?scope=all";branchId!=null->"?branchId=${enc(branchId)}";else->""};return json.decodeFromString(call("api/v1/mobile/account/dashboard$query"))}
  suspend fun accountHome(q:String="",types:Set<String> = emptySet(),branchId:String?=null,companyWide:Boolean=false):AccountHome{val query=buildList{add("homeVersion=2");if(companyWide)add("scope=all") else branchId?.let{add("branchId=${enc(it)}")};if(q.isNotBlank())add("q=${enc(q)}");types.forEach{add("type=${enc(it)}")}}.joinToString("&",prefix="?").takeIf{it!="?"}.orEmpty();return json.decodeFromString(call("api/v1/mobile/account/home$query"))}
- suspend fun accountDocumentPdf(type:String,id:String,theme:String="",color:String="")=download("api/v1/mobile/account/print/${enc(type)}/${enc(id)}"+if(theme.isBlank())""else"?theme=${enc(theme)}&color=${enc(color)}")
+ suspend fun accountDocumentPdf(type:String,id:String,theme:String="",color:String="")=download("api/v1/mobile/account/print/${enc(type)}/${enc(id)}"+listOfNotNull(theme.takeIf{it.isNotBlank()}?.let{"theme=${enc(it)}"},color.takeIf{it.isNotBlank()}?.let{"color=${enc(it)}"}).joinToString("&").let{if(it.isBlank())""else"?$it"})
  suspend fun accountMasterList(kind:String,q:String="",active:String="true",branchId:String?=null,offset:Int=0):List<AccountMasterRecord>{val query=buildList{if(q.isNotBlank())add("q=${enc(q)}");add("active=${enc(active)}");add("offset=$offset");branchId?.let{add("branchId=${enc(it)}")}}.joinToString("&",prefix="?");return json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}$query"))}
  suspend fun accountMasterOptions(kind:String="customers"):AccountMasterOptions=json.decodeFromString(call("api/v1/mobile/account/master-data/${enc(kind)}?view=options"))
  suspend fun setAccountItemsActive(kind:String,ids:List<String>,active:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/item-management","POST",buildJsonObject{put("action","SET_ACTIVE");put("kind",kind);put("isActive",active);putJsonArray("ids"){ids.forEach{add(kotlinx.serialization.json.JsonPrimitive(it))}}}.toString())).jsonObject
@@ -118,6 +118,18 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
    json.parseToJsonElement(raw).jsonObject
   }
  }
+ suspend fun createPaymentWithAttachments(payload:JsonObject,files:List<SaleCreationAttachment>)=withContext(Dispatchers.IO){
+  require(validSaleCreationAttachments(files)){"Choose PDF, PNG or JPEG evidence, up to 50 files and 10 MB combined."}
+  val body=MultipartBody.Builder().setType(MultipartBody.FORM).addFormDataPart("payload",payload.toString()).apply{files.forEach{file->addFormDataPart("attachments",file.name,file.bytes.toRequestBody(file.mime.toMediaType()))}}.build()
+  val requestToken=session.token()
+  val request=Request.Builder().url(BuildConfig.API_BASE_URL+"api/v1/mobile/account/payments/with-attachments").apply{requestToken?.let{header("Authorization","Bearer $it")}}.post(body).build()
+  http.newCall(request).awaitResponse().use{response->
+   val raw=response.body?.string()?:"{}"
+   if(!response.isSuccessful){if(response.code==401)session.invalidateIfCurrent(requestToken);val code=runCatching{val value=json.parseToJsonElement(raw).jsonObject;(value["error"]?:value["errorCode"])?.jsonPrimitive?.content}.getOrNull();throw ApiException(response.code,code)}
+   json.parseToJsonElement(raw).jsonObject
+  }
+ }
+ suspend fun paymentAttachment(id:String)=download("api/v1/mobile/account/payment-attachments/${enc(id)}")
  suspend fun editSaleWithAttachments(id:String,payload:JsonObject,files:List<SaleCreationAttachment>,filesOnly:Boolean)=withContext(Dispatchers.IO){
   require(validSaleCreationAttachments(files)&&files.isNotEmpty()){ "Choose PDF, PNG or JPEG files, up to 50 files and 10 MB combined." }
   val body=MultipartBody.Builder().setType(MultipartBody.FORM).apply{

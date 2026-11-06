@@ -18,7 +18,7 @@ vi.mock("@/lib/db", () => ({
   db: new Proxy({}, { get: (_, key) => client[key as keyof PrismaClient] }),
 }));
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
-import { postJournalForActor } from "@/lib/accounting/service";
+import { postJournalForActor, setPeriodLockForActor } from "@/lib/accounting/service";
 import {
   previewFinancialYearCloseForActor,
   closeFinancialYearForActor,
@@ -174,5 +174,17 @@ describe.skipIf(!url)("close-books review and posting serialization", () => {
         .lockedThrough!.toISOString()
         .slice(0, 10),
     ).toBe("2027-03-31");
+  });
+  it("serializes year close with lock advancement and never reopens the closed period",async()=>{
+    const year=await client.financialYear.create({data:{companyId,name:"Next FY",startDate:new Date("2027-04-01"),endDate:new Date("2028-03-31")}});
+    const results=await Promise.allSettled([
+      setPeriodLockForActor(actor,{financialYearId:year.id,lockedThrough:"2027-10-31",reason:"Reviewed period"}),
+      closeFinancialYearForActor(actor,{financialYearId:year.id,earlyCloseReason:"Reviewed next year"}),
+    ]);
+    expect(results[1].status).toBe("fulfilled");
+    const lock=await client.accountingPeriodLock.findFirstOrThrow({where:{companyId,financialYearId:year.id}});
+    expect(lock.lockedThrough?.toISOString().slice(0,10)).toBe("2028-03-31");
+    await expect(setPeriodLockForActor(actor,{financialYearId:year.id,lockedThrough:"2027-09-30",reason:"Attempt stale lock"})).rejects.toThrow();
+    expect((await client.financialYear.findUniqueOrThrow({where:{id:year.id}})).status).toBe("CLOSED");
   });
 });

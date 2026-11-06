@@ -98,6 +98,10 @@ describe.skipIf(!url)("reviewed history-preserving numbering restart", () => {
       await client.accountingAuditEvent.count({ where: { companyId } }),
     ).toBe(0);
   });
+  it("rejects a reserved namespace regardless of letter case",async()=>{
+    await client.numberingSeries.create({data:{companyId,branchId,seriesKey:"PURCHASE_ORDER",prefix:"reserved/",padding:4}});
+    await expect(previewNumberingRestart(actor,input("RESERVED/"))).rejects.toThrow("NUMBERING_PREFIX_ALREADY_USED");
+  });
   it("rejects a stale preview after a real number is allocated", async () => {
     const review = await previewNumberingRestart(actor, input("NEXT/"));
     expect(

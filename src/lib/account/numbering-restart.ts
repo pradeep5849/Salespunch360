@@ -139,28 +139,28 @@ async function unusedPrefix(
     client.numberingSeries.findFirst({
       where: {
         companyId: actor.companyId,
-        OR: [{ prefix: { startsWith: prefix } }, { prefix: { in: prefixes } }],
+        OR: [{ prefix: { startsWith: prefix, mode:"insensitive" } }, { prefix: { in: prefixes, mode:"insensitive" } }],
       },
       select: { id: true },
     }),
     client.commercialDocument.findFirst({
       where: {
         companyId: actor.companyId,
-        documentNumber: { startsWith: prefix },
+        documentNumber: { startsWith: prefix, mode:"insensitive" },
       },
       select: { id: true },
     }),
     client.accountSettlement.findFirst({
       where: {
         companyId: actor.companyId,
-        settlementNumber: { startsWith: prefix },
+        settlementNumber: { startsWith: prefix, mode:"insensitive" },
       },
       select: { id: true },
     }),
     client.quotationDocument.findFirst({
       where: {
         companyId: actor.companyId,
-        documentNumber: { startsWith: prefix },
+        documentNumber: { startsWith: prefix, mode:"insensitive" },
       },
       select: { id: true },
     }),

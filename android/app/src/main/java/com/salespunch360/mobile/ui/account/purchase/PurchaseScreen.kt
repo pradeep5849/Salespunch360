@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.account.bool
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.AccountPurchaseViewModel
 
@@ -64,7 +65,7 @@ fun PurchaseScreen(initialType: String?, padding: PaddingValues, initialProjectI
         }
     }
     state.draft?.let { PurchaseEditor(it, state, vm) }
-    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate,canDuplicate="PURCHASE_BILL" in state.types,onDuplicate=vm::duplicatePurchase,canCorrect="DEBIT_NOTE" in state.types,onCorrect=vm::correctPurchase) }
+    state.detail?.let { PurchaseDetail(it, state.saving, vm::close, vm::askPost,navigate,canDuplicate="PURCHASE_BILL" in state.types&&it.bool("canDuplicatePurchase"),onDuplicate=vm::duplicatePurchase,canCorrect="DEBIT_NOTE" in state.types&&it.bool("canCorrectPurchase"),onCorrect=vm::correctPurchase) }
     state.posting?.let {
         AlertDialog(
             onDismissRequest = vm::cancelPost,

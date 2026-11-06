@@ -229,6 +229,8 @@ async function sourceRequest(
     moneyAccountId: bankId,
     transactionDate: date,
     reference: source.reference ?? undefined,
+    billingName:source.billingName??undefined,
+    billingAddress:source.billingAddress??undefined,
     notes: source.notes ?? undefined,
     chequeNumber: row.chequeNumber,
     chequeDate: row.chequeDate,
@@ -370,6 +372,12 @@ export async function chequeFinancialActionForActor(
                 { reuseChequeId: id },
               );
               await copyPendingPaymentPlan(tx,a,previousSourceId,source.id);
+              const evidence=await tx.paymentAttachment.findMany({where:{companyId:a.companyId,settlementId:previousSourceId},orderBy:{position:"asc"}});
+              if(evidence.length){
+                await tx.$executeRaw`SELECT set_config('app.payment_attachment_save_id',${source.id},true)`;
+                await tx.paymentAttachment.createMany({data:evidence.map(file=>({...file,id:crypto.randomUUID(),settlementId:source!.id}))});
+                await tx.accountOperationalAudit.create({data:{companyId:a.companyId,actorUserId:a.id,eventType:"PAYMENT_EVIDENCE_CARRIED",entityType:"ACCOUNT_SETTLEMENT",entityId:source.id,metadata:{fromSettlementId:previousSourceId,count:evidence.length}}});
+              }
               row = { ...row, settlementId: source.id };
             }
             if (source.status !== "PENDING_CHEQUE")

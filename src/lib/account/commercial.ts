@@ -2583,6 +2583,8 @@ export const settlementInput = z
     amount: decimal.pipe(z.string().regex(/^\d{1,16}(\.\d{1,2})?$/)),
     transactionDate: calendarDateInput,
     reference: z.string().max(160).optional(),
+    billingName:z.string().trim().max(240).optional(),
+    billingAddress:z.string().trim().max(2000).optional(),
     chequeNumber: z.string().trim().min(1).max(80).optional(),
     chequeDate: calendarDateInput.optional(),
     notes: z.string().max(5000).optional(),
@@ -2860,7 +2862,7 @@ export async function createSettlementForActor(actor: Actor, raw: unknown, trans
             companyId: actor.companyId, branchId: d.branchId, type: d.type, status: "PENDING_CHEQUE", settlementNumber: number,
             partyId: d.partyId, customerId: p.party === "customer" ? d.partyId : null, vendorId: p.party === "vendor" ? d.partyId : null,
             idempotencyKey: d.idempotencyKey, creationRequestHash: requestHash, paymentMode: "CHEQUE", moneyAccountId: bank.id, projectId: settlementProject?.id,
-            amount, discountAmount, remainingAmount: 0, transactionDate: d.transactionDate, reference: d.reference, notes: d.notes, createdById: actor.id,
+            amount, discountAmount, remainingAmount: 0, transactionDate: d.transactionDate, reference: d.reference, billingName:d.billingName, billingAddress:d.billingAddress, notes: d.notes, createdById: actor.id,
             allocations: { create: d.allocations.filter(row => row.documentId).map(row => ({ documentId: row.documentId!, amount: row.amount, discountAmount: row.discountAmount })) },
           } });
           if (d.allocations.some(row => row.openingBalanceId)) await tx.openingBalanceAllocation.createMany({ data: d.allocations.filter(row => row.openingBalanceId).map(row => ({ companyId: actor.companyId, settlementId: pending.id, openingBalanceId: row.openingBalanceId!, amount: row.amount })) });
@@ -2965,6 +2967,8 @@ export async function createSettlementForActor(actor: Actor, raw: unknown, trans
               remainingAmount: p.advance ? amount : 0,
               transactionDate: d.transactionDate,
               reference: d.reference,
+              billingName:d.billingName,
+              billingAddress:d.billingAddress,
               notes: d.notes,
               journalEntryId: journal.id,
               createdById: actor.id,
@@ -3609,14 +3613,14 @@ export async function commercialDocumentControlsForActor(actor:Actor,documentId:
     });
   if (!document)
     return {
-      canPost:false,canConfirmPurchaseOrder:false,canConfirmSalesOrder: false,
+      shareAs:"ASK" as const,canPost:false,canDuplicatePurchase:false,canCorrectPurchase:false,canEditTransactionSettings:false,canConfirmPurchaseOrder:false,canConfirmSalesOrder: false,
       canManage: false,
       canRemind: false,
       advances: [],
       enabledModules: [] as ModuleKey[],
     };
   const enabledModules = await enabledModulesForCompany(actor.companyId),
-    company=await db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true}}),
+    company=await db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{productEdition:true,accountSettings:{select:{transactionDefaults:true}}}}),
     canConfirmSalesOrder=document.status==="DRAFT"&&document.type==="SALES_ORDER"&&enabledModules.includes("SALES")&&enabledModules.includes("SALES_ORDER")&&canUsePermission(actor,company.productEdition,"ACCOUNT_SALES_ENTRY")&&(!document.sourceQuotationRevisionId||(enabledModules.includes("QUOTATIONS_BOQ")&&canUsePermission(actor,company.productEdition,"ACCOUNT_QUOTATION_VIEW"))),
     canManage =
       document.status==="POSTED"&&(actor.accountRole === "ACCOUNT_ADMIN" ||
@@ -3640,7 +3644,12 @@ export async function commercialDocumentControlsForActor(actor:Actor,documentId:
             select: { id: true, settlementNumber: true, remainingAmount: true },
           })
         : [];
+  const purchaseWriter=(actor.accountRole==="ACCOUNT_ADMIN"||actor.accountRole==="ACCOUNTANT")&&canUsePermission(actor,company.productEdition,"ACCOUNT_PURCHASE_ENTRY");
   return {
+    shareAs:normalizeTransactionPreferences((company.accountSettings?.transactionDefaults as Record<string,unknown>|null)?.transactionPreferences).shareAs,
+    canEditTransactionSettings:canUsePermission(actor,company.productEdition,"ACCOUNT_SETTINGS"),
+    canDuplicatePurchase:document.type==="PURCHASE_BILL"&&purchaseWriter&&policies.PURCHASE_BILL.modules.every(module=>enabledModules.includes(module)),
+    canCorrectPurchase:document.type==="PURCHASE_BILL"&&document.status==="POSTED"&&purchaseWriter&&policies.DEBIT_NOTE.modules.every(module=>enabledModules.includes(module))&&canUsePermission(actor,company.productEdition,"ACCOUNT_JOURNAL_POST"),
     canPost:document.status==="DRAFT"&&policies[document.type].financial&&policies[document.type].modules.every(module=>enabledModules.includes(module))&&canUsePermission(actor,company.productEdition,"ACCOUNT_JOURNAL_POST"),
     canConfirmPurchaseOrder:document.status==="DRAFT"&&document.type==="PURCHASE_ORDER"&&enabledModules.includes("PURCHASES")&&enabledModules.includes("PURCHASE_ORDER")&&canUsePermission(actor,company.productEdition,"ACCOUNT_PURCHASE_ENTRY"),
     canConfirmSalesOrder,

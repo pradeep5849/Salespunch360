@@ -54,6 +54,9 @@ data class VendorPaymentState(
     val date: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val chequeNumber:String="",
     val chequeDate:String=com.salespunch360.mobile.account.accountReportToday().toString(),
+    val evidenceFiles:List<SaleCreationAttachment> = emptyList(),
+    val billingName:String="",
+    val billingAddress:String="",
     val mode: String = "BANK",
     val accountId: String = "",
     val reference: String = "",
@@ -131,7 +134,7 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
 
         update { it.copy(saving = true) }
         try {
-            api.createVendorPayment(vendorPaymentPayload(current))
+            if(current.evidenceFiles.isNotEmpty())api.createPaymentWithAttachments(vendorPaymentPayload(current),current.evidenceFiles)else api.createVendorPayment(vendorPaymentPayload(current))
             update {
                 it.copy(
                     saving = false,
@@ -139,7 +142,7 @@ class VendorPaymentViewModel(app: Application) : AndroidViewModel(app) {
                     openingId="",linkAmount="",links=emptyMap(),
                     billId = "",
                     amount = "",
-                    chequeNumber="",
+                    evidenceFiles=emptyList(),billingName="",billingAddress="",chequeNumber="",
                     message = if(current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else "Vendor payment posted by the server."
                 )
             }
@@ -182,6 +185,7 @@ internal fun vendorPaymentValidation(s:VendorPaymentState):String? {
 }
 internal fun vendorPaymentPayload(current:VendorPaymentState)=buildJsonObject {
  if(current.mode=="CHEQUE"){put("chequeNumber",current.chequeNumber);put("chequeDate",current.chequeDate)}
+ put("billingName",current.billingName);put("billingAddress",current.billingAddress)
  put("idempotencyKey",current.requestKey);put("type",current.type);put("branchId",current.branchId);put("partyId",current.vendorId);put("paymentMode",current.mode)
  current.accountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",current.amount);put("transactionDate",current.date);put("reference",current.reference);put("notes",current.notes)
  putJsonArray("allocations"){if(current.type!="VENDOR_ADVANCE"){if(current.multipleLinks)current.links.filterValues{it.isNotBlank()}.forEach{(id,amount)->add(buildJsonObject{put("documentId",id);put("amount",amount)})}else add(buildJsonObject{if(current.openingId.isNotBlank())put("openingBalanceId",current.openingId)else put("documentId",current.billId);put("amount",current.linkAmount.ifBlank{current.amount})})}}

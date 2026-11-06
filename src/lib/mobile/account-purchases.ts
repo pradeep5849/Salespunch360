@@ -2,6 +2,7 @@ import type { CommercialDocumentType } from "@prisma/client";
 import { canUsePermission } from "@/lib/auth/permissions";
 import { assertOperationalWrite } from "@/lib/billing/entitlement";
 import {
+  commercialDocumentControlsForActor,
   finalizeNonFinancialDocumentForActor,
   commercialDocumentPolicies,
   commercialEditorOptionsForActor,
@@ -90,8 +91,13 @@ export async function mobilePurchaseDetail(u: MobileAppPrincipal, id: string) {
     id,
   );
   if (!TYPES.has(x.type)) throw new Error("MOBILE_FORBIDDEN");
+  const controls=await commercialDocumentControlsForActor(mobileAccountActor(u),id);
   return {
     ...x,
+    shareAs:controls.shareAs,
+    canDuplicatePurchase:controls.canDuplicatePurchase,
+    canCorrectPurchase:controls.canCorrectPurchase,
+    canEditTransactionSettings:controls.canEditTransactionSettings,
     canPost:
       x.status === "DRAFT" &&
       ["PURCHASE_BILL", "DEBIT_NOTE"].includes(x.type) &&

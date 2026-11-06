@@ -34,6 +34,7 @@ export async function commitPendingPaymentPlan(tx:Prisma.TransactionClient,actor
 export async function createAllocatedPaymentForActor(
   actor: ProjectActor,
   raw: unknown,
+  transaction?:Prisma.TransactionClient,
 ) {
   if(actor.accountRole!=="ACCOUNT_ADMIN"&&actor.accountRole!=="ACCOUNTANT")throw new AuthorizationError();
   const input = settlementInput.parse(raw);
@@ -63,11 +64,11 @@ export async function createAllocatedPaymentForActor(
       new Prisma.Decimal(row.discountAmount).gt(0),
     )
   )
-    return createSettlementForActor(actor, input);
+    return createSettlementForActor(actor, input, transaction);
   if (allocated.gt(amount) || amount.lte(0))
     throw new Error("ALLOCATION_TOTAL_MISMATCH");
   const hash = createHash("sha256").update(JSON.stringify(input)).digest("hex");
-  return inAccountTransaction(undefined, async (tx) => {
+  return inAccountTransaction(transaction, async (tx) => {
     await tx.$queryRaw`SELECT id FROM companies WHERE id=${actor.companyId}::uuid FOR UPDATE`;
     const previous = await tx.accountOperationalAudit.findFirst({
       where: {

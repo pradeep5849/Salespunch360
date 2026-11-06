@@ -26,14 +26,29 @@ Auto backup remains Google Drive only. Manual generation and share-sheet opening
 
 ## November 6 follow-up
 
-Owner decisions: Audit History is restricted to active all-branch Account Admins. Close Books provides history-preserving financial-year close and a dedicated restart of future numbering under a new unused prefix. Start Fresh is excluded. These product decisions do not authorize production execution.
+The owner selected active all-branch Account Admins as the only company-wide audit readers. Close Books provides history-preserving year close and a separate restart of future numbering under a completely unused prefix. Destructive Start Fresh is excluded. These product decisions do not authorize production execution.
 
-Implemented shared audit authorization, nested credential redaction, filters and stable cursor pagination; Web/native audit views; read-only close review; current-admin checks; signed numbering preview, current-counter revalidation, collision checks, serialization and append-only audit. Partial opening allocations and cheque plans now use the existing single-cash advance lifecycle; pending cheques do not post, clearance applies links atomically, and reopening restores balances. Added purchase correction preparation and real PDF handoffs for transaction cards, and shared native export capability discovery.
+Added shared current-user audit authorization, credential redaction, filtered chronological Web/native views and stable pagination; read-only close review; signed numbering previews, stale-counter rejection, case-insensitive namespace checks and retry-safe audit. Opening-debt and pending-cheque allocations use one cash operation, with atomic clearance/reversal/re-clearance and historical balances. Purchase corrections prepare a source-bound debit note while retaining the bill and cash history.
 
-Current evidence: 11 audit/redaction tests, four numbering database tests, two close-books database tests, four allocated-payment database tests, all 37 existing cheque lifecycle regression tests, and 57 focused unit/runtime tests passed. The profitability regression fixture now pins its October reversal date so its historical cutoff is deterministic. TypeScript and full ESLint passed before the latest small UI/policy additions; fresh full checks are running. No live data/settings were changed.
+Payments now support immutable billing identity and private PDF/PNG/JPEG evidence (50 files, 10 MiB combined). File failure rolls back the payment; retries bind the original file manifest. Evidence remains reachable through cheque re-clearance and is included in exact company snapshots and file-inclusive recovery, with immutable source hashes checked independently of the bundle manifest. Migration 20261106010000_payment_supporting_evidence adds the nullable metadata, evidence table and history guards. The full 162-migration chain passed on a fresh isolated PostgreSQL database.
 
-## Outstanding scope
+Imports display before/after values and reject updates when the reviewed target has changed. Native export choices use the same role/module policy as the API: Project Managers retain assigned-project exports; company-wide master catalogues require Account Admin/Accountant access. The owner-selected Utilities menu remains six items; Audit History is in Accounting and backups remain separate.
 
-Remaining work includes audit reader/branch policy, close-books restart versus destructive start-fresh policy, native multi-target payment parity, native transaction card/action parity and pagination, purchase entry/footer and safe correction lifecycle, payment optional metadata/attachments, export/import portability edge cases, and end-to-end accessibility/browser/device checks. Partial opening-balance allocations and partial cheque allocations currently fail safely rather than pretending to be implemented.
+Purchase/payment preview and sharing reuse the existing authorized PDF/image helpers, preserve company appearance/default share preferences and provide explicit SMS-app composition without claiming delivery. No hosting, DNS, CDN, production database or application secrets were changed.
 
-The original audit registers are historical evidence. Do not interpret them or this checkpoint as completion of all findings. Audit resumes at A118 after the authorized implementation range is completed.
+## Current verification
+
+- 30 isolated database safety tests passed together across restore, payments/evidence, imports, close-books, numbering, paging and tax concurrency.
+- Eight browser reviews passed on mobile and desktop: audit redaction, numbering review/confirmation, read-only close review and payment evidence save/download.
+- All 37 existing cheque lifecycle regressions passed. A historical profitability fixture now pins its reversal date rather than depending on the current month.
+- The production Web build passed with synthetic credentials and a local database; no production credentials were used.
+- The first PR checkpoint passed GitHub Web, migration and Android unit/lint checks. Follow-up changes are awaiting a new platform run.
+- A broad local run passed 3,923 tests and found three PDF timeouts while compilation was running and two outdated purchase capability mocks. All affected suites subsequently passed alone: 73 tests. Export permission and recovery follow-ups passed 20 tests. A final full-suite run and final lint/type checks are still required.
+
+## Review and deployment
+
+PR #180 is a draft review checkpoint and is not merged or deployed. Final current-head Web/migration/Android checks and review are required before publishing. No audit-reader or close-books product decision remains pending.
+
+Apply the new migration through the existing migration deployment process before starting this application version. Private evidence uses the already configured HOSTINGER_STORAGE_PATH; this change introduces no new secret or password setting. Keep credentials in the deployment environment. Do not run financial-year closing, numbering restart or company restore against production merely to verify this PR.
+
+The original A104–A117 audit registers are historical records. The implementation register tracks current validation; avoid interpreting historical NOT STARTED markers as a current-head implementation result. Audit resumes at A118 after this implementation range is reviewed.

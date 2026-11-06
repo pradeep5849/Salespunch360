@@ -9,6 +9,9 @@ export type AccountActionResult = {
   fieldErrors?: Record<string, string>;
 };
 const messages: Record<string, string> = {
+  INVALID_PAYMENT_ATTACHMENT:"Choose PDF, PNG or JPEG payment evidence, up to 50 files and 10 MB combined.",
+  PAYMENT_ATTACHMENT_LIMIT:"Payment evidence is limited to 50 files and 10 MB combined.",
+  PAYMENT_ATTACHMENT_UNAVAILABLE:"This payment evidence could not be verified. Retry or contact support.",
   INVALID_AUDIT_CURSOR:"The audit page link is invalid. Reset filters and load the first page.",
   EARLY_CLOSE_REASON_REQUIRED:"Enter a reason to close before the financial year ends.",
   CLOSE_CONFIRMATION_REQUIRED:"Review the year and confirm that it is ready to close.",

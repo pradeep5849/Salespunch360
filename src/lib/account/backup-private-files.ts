@@ -21,6 +21,15 @@ export function backupPrivateFileKeys(companyId:string,snapshot:Record<string,un
 }
 function expectedPrivateHashes(snapshot:Record<string,unknown>){
  const expected=new Map<string,string>();
+ // Typed document/evidence records bind their bytes independently of the bundle manifest.
+ // Historical JSON metadata is deliberately not traversed.
+ for(const rows of Object.values(snapshot))if(Array.isArray(rows))for(const row of rows){
+  if(!row||typeof row!=="object")continue;
+  const value=row as Record<string,unknown>,key=value.storageKey,hash=value.contentHash;
+  if(typeof key!=="string"||!key||hash==null)continue;
+  if(typeof hash!=="string"||!/^[a-f0-9]{64}$/.test(hash)||expected.has(key)&&expected.get(key)!==hash)throw new Error("BACKUP_FILE_INTEGRITY_INVALID");
+  expected.set(key,hash);
+ }
  for(const row of Array.isArray(snapshot.partyTransferPhotos)?snapshot.partyTransferPhotos:[]){
   if(!row||typeof row!=="object")throw new Error("BACKUP_FILE_INTEGRITY_INVALID");
   const value=row as Record<string,unknown>,key=value.photoObjectKey,hash=value.expectedSha256;

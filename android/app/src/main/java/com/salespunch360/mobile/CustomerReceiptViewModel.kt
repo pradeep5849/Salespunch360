@@ -51,6 +51,9 @@ data class ReceiptState(
     val date: String = com.salespunch360.mobile.account.accountReportToday().toString(),
     val chequeNumber:String="",
     val chequeDate:String=com.salespunch360.mobile.account.accountReportToday().toString(),
+    val evidenceFiles:List<SaleCreationAttachment> = emptyList(),
+    val billingName:String="",
+    val billingAddress:String="",
     val mode: String = "BANK",
     val moneyAccountId: String = "",
     val reference: String = "",
@@ -139,8 +142,8 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
         _state.value=current.copy(saving=true,error=null)
         viewModelScope.launch {
             try {
-                api.createCustomerReceipt(receiptPayload(current))
-                _state.value = current.copy(saving=false,amount="",discountAmount="",invoiceId="",advanceId="",links=emptyMap(),requestKey=UUID.randomUUID().toString(),chequeNumber="",message=if(current.type!="APPLY_ADVANCE"&&current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
+                if(current.type!="APPLY_ADVANCE"&&current.evidenceFiles.isNotEmpty())api.createPaymentWithAttachments(receiptPayload(current),current.evidenceFiles)else api.createCustomerReceipt(receiptPayload(current))
+                _state.value = current.copy(saving=false,amount="",discountAmount="",invoiceId="",advanceId="",links=emptyMap(),requestKey=UUID.randomUUID().toString(),evidenceFiles=emptyList(),billingName="",billingAddress="",chequeNumber="",message=if(current.type!="APPLY_ADVANCE"&&current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
                 refresh()
             } catch(e:Exception){_state.value=current.copy(saving=false,error=errorText(e))}
         }
@@ -187,5 +190,6 @@ internal fun receiptPayload(s:ReceiptState)=if(s.type=="APPLY_ADVANCE")buildJson
  put("action","APPLY_ADVANCE");putJsonObject("payload"){put("advanceId",s.advanceId);put("documentId",s.invoiceId);put("amount",s.amount);put("applicationDate",s.date);put("idempotencyKey",s.requestKey)}
 }else buildJsonObject{
  if(s.mode=="CHEQUE"){put("chequeNumber",s.chequeNumber);put("chequeDate",s.chequeDate)}
+ put("billingName",s.billingName);put("billingAddress",s.billingAddress)
  put("idempotencyKey",s.requestKey);put("type",s.type);put("branchId",s.branchId);put("partyId",s.customerId);s.projectId.takeIf{it.isNotBlank()}?.let{put("projectId",it)};put("paymentMode",s.mode);s.moneyAccountId.takeIf{it.isNotBlank()}?.let{put("moneyAccountId",it)};put("amount",s.amount);put("transactionDate",s.date);put("reference",s.reference);put("notes",s.notes);putJsonArray("allocations"){if(s.type=="CUSTOMER_RECEIPT"&&s.multipleLinks){s.links.filterValues{it.isNotBlank()}.forEach{(id,amount)->add(buildJsonObject{put("documentId",id);put("amount",amount)})}}else if(s.type=="CUSTOMER_RECEIPT")add(buildJsonObject{put("documentId",s.invoiceId);val discount=if(s.discountEnabled)s.discountAmount.ifBlank{"0"}.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO else java.math.BigDecimal.ZERO;put("amount",((s.amount.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO)+discount).toPlainString());put("discountAmount",discount.toPlainString())})}
 }

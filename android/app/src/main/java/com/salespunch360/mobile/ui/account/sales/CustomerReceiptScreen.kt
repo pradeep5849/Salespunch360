@@ -54,6 +54,11 @@ fun CustomerReceiptScreen(padding: PaddingValues,duplicateId:String?=null, initi
             item{Text("Pending until cleared. Linked amounts and cash are posted together at clearance.")}
         }
         if(state.type!="APPLY_ADVANCE")item { SelectField("Money account", state.moneyAccountId, state.moneyAccounts.filter { it.branchId == null || it.branchId == state.branchId }.map { it.id to it.name }) { value -> vm.update { it.copy(moneyAccountId = value) } } }
+        if(state.type!="APPLY_ADVANCE"){
+            item{OutlinedTextField(state.billingName,{value->vm.update{it.copy(billingName=value)}},label={Text("Billing name (optional)")})}
+            item{OutlinedTextField(state.billingAddress,{value->vm.update{it.copy(billingAddress=value)}},label={Text("Billing address (optional)")})}
+            item{com.salespunch360.mobile.ui.account.PaymentEvidencePicker(state.evidenceFiles,!state.saving&&!state.loading){files->vm.update{it.copy(evidenceFiles=files)}}}
+        }
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.reference, { value -> vm.update { it.copy(reference = value) } }, label = { Text("Reference") }, modifier = Modifier.fillMaxWidth()) }
         if(state.type!="APPLY_ADVANCE")item { OutlinedTextField(state.notes, { value -> vm.update { it.copy(notes = value) } }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth()) }
         item { Button(onClick = vm::save, enabled = !state.saving && !state.loading && state.type in state.allowedTypes && state.customerId.isNotBlank() && (state.type=="CUSTOMER_ADVANCE" || state.multipleLinks || state.invoiceId.isNotBlank()), modifier = Modifier.fillMaxWidth()) { Text(if (state.saving) "Posting…" else if(state.type=="APPLY_ADVANCE")"Apply advance" else if(state.type=="CUSTOMER_ADVANCE")"Post advance" else "Post receipt") } }

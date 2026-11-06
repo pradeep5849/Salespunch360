@@ -1,4 +1,4 @@
-import {assertTransferAvailable} from "./transfer-access";
+import {assertTransferAvailable,assertExportRole} from "./transfer-access";
 import ExcelJS from "exceljs";
 import { requirePermission } from "@/lib/auth/authorization";
 import { db } from "@/lib/db";
@@ -46,6 +46,7 @@ export async function exportAccountDataForActor(
   format: string,
 ) {
   validateExportRequest(type,format);
+  assertExportRole(actor,type);
   await assertTransferAvailable(actor,type);
   const branchIds =
       actor.branchAccessScope === "SELECTED_BRANCHES"

@@ -9,15 +9,19 @@ export function PaymentPreview({
   number,
   label = "Payment receipt preview",
   backHref,
+  preferredShareAs="ASK",
+  canEditPrintSettings=false,
 }: {
   id: string;
   type: string;
   number: string;
   label?: string;
   backHref?: string;
+  preferredShareAs?:"ASK"|"PDF";
+  canEditPrintSettings?:boolean;
 }) {
-  const [theme, setTheme] = useState("REGULAR"),
-    [color, setColor] = useState("#988ee2"),
+  const [theme, setTheme] = useState(""),
+    [color, setColor] = useState(""),
     [file, setFile] = useState<File | null>(null),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
@@ -52,13 +56,15 @@ export function PaymentPreview({
     }
   }
   const base = `/api/account/print/${encodeURIComponent(type)}/${encodeURIComponent(id)}`,
-    query = new URLSearchParams({ theme, color }),
+    query = new URLSearchParams({ ...(theme?{theme}:{}),...(color?{color}:{}) }),
     src = `${base}?${query}`;
   async function prepare() {
     setBusy(true);
     setMessage("");
     try {
-      setFile(await preparePrintPdf(`${src}&format=pdf`, number));
+      const prepared=await preparePrintPdf(`${src}&format=pdf`, number);
+      setFile(prepared);
+      if(preferredShareAs==="PDF")await shareFiles([prepared]);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not prepare PDF.",
@@ -68,7 +74,7 @@ export function PaymentPreview({
     }
   }
   return (
-    <section aria-label="Payment preview">
+    <section aria-label={label}>
       <header>
         <h2>{label}</h2>
         <button
@@ -77,9 +83,7 @@ export function PaymentPreview({
         >
           Print
         </button>
-        <Link href="/workspace/account/settings/print-templates">
-          Print settings
-        </Link>
+        {canEditPrintSettings&&<Link href="/workspace/account/settings/print-templates">Print settings</Link>}
       </header>
       <label>
         Theme
@@ -92,6 +96,7 @@ export function PaymentPreview({
             setImages([]);
           }}
         >
+          <option value="">Company default</option>
           {["REGULAR", "MODERN", "CLASSIC", "MINIMAL"].map((value) => (
             <option key={value}>{value}</option>
           ))}
@@ -102,7 +107,7 @@ export function PaymentPreview({
         <input
           disabled={busy}
           type="color"
-          value={color}
+          value={color||"#988ee2"}
           onChange={(event) => {
             setColor(event.target.value);
             setFile(null);
@@ -110,10 +115,11 @@ export function PaymentPreview({
           }}
         />
       </label>
+      <button type="button" disabled={busy} onClick={()=>{setTheme("");setColor("");setFile(null);setImages([]);}}>Use company appearance defaults</button>
       <iframe
         ref={frame}
         src={src}
-        title={`${number} payment preview`}
+        title={`${number} transaction preview`}
         style={{ width: "100%", height: "70vh", border: "1px solid #ccc" }}
       />
       <p>
@@ -121,7 +127,7 @@ export function PaymentPreview({
         document never posts another transaction.
       </p>
       <button type="button" disabled={busy} onClick={() => void prepare()}>
-        {busy ? "Preparing…" : "Prepare PDF for sharing"}
+        {busy ? "Preparing…" : preferredShareAs==="PDF"?"Share document (PDF default)":"Prepare PDF / image sharing"}
       </button>
       {file && (
         <>
@@ -157,6 +163,7 @@ export function PaymentPreview({
         </button>
       )}
 
+      <a href={`sms:?body=${encodeURIComponent(`${type.replaceAll("_"," ")} ${number}`)}`}>Compose SMS summary</a>
       <a href={`${src}&format=pdf`} download>
         Save PDF
       </a>

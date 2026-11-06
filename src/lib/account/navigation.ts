@@ -289,7 +289,7 @@ const groups: AccountNavGroup[] = [
     items: [
       { label: "Verify my data", href: "/workspace/account/utilities/verification", permission: "ACCOUNT_SETTINGS" },
       { label: "Import Items", href: "/workspace/account/utilities/import?type=ITEMS", permission: "ACCOUNT_ACCOUNTS", requiredModules: ["INVENTORY"], requiresItems: true },
-      { label: "Export Items", href: "/workspace/account/utilities/export?type=items", permission: "ACCOUNT_REPORTS", requiredModules: ["INVENTORY"], requiresItems: true },
+      { label: "Export Items", roles:["ACCOUNT_ADMIN","ACCOUNTANT"], href: "/workspace/account/utilities/export?type=items", permission: "ACCOUNT_REPORTS", requiredModules: ["INVENTORY"], requiresItems: true },
       { label: "Import Parties", href: "/workspace/account/utilities/import?type=CUSTOMERS", permission: "ACCOUNT_ACCOUNTS" },
       { label: "Recycle Bin", href: "/workspace/account/utilities/recycle-bin", permission: "ACCOUNT_SETTINGS" },
       { label: "Close Financial Year", href: "/workspace/account/utilities/financial-year", permission: "ACCOUNT_PERIOD_LOCK" },

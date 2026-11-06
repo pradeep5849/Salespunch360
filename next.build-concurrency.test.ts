@@ -37,6 +37,6 @@ it("bounds Next build workers when the shared host exposes 64 CPUs", () => {
   expect(config.workers).toBe(1);
   expect(config.memoryFanout).toBe(false);
   expect(config.staticConcurrency).toBe(1);
-  expect(config.serverActionLimit).toBe("6mb");
+  expect(config.serverActionLimit).toBe("11mb");
   expect(config.tracedFonts).toContain("./assets/fonts/*.ttf");
 }, 35000);

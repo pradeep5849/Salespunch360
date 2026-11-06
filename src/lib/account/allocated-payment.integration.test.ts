@@ -7,11 +7,12 @@ if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(ur
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/allocated_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
-import {createCommercialDocumentForActor,postCommercialDocumentForActor,documentOutstandingsBatch} from "./commercial";
+import {createCommercialDocumentForActor,postCommercialDocumentForActor,documentOutstandingsBatch,getCommercialDocumentForActor,commercialDocumentControlsForActor} from "./commercial";
 import {createAllocatedPaymentForActor} from "./allocated-payment";
 import {postJournalInTx} from "@/lib/accounting/service";
 import {listOpeningOutstandings} from "./opening-balances";
 import {chequeFinancialActionForActor} from "./cheque-finance";
+import {purchaseDuplicateDraft,purchaseReturnDraft} from "./purchase-duplicate";
 const companyId=randomUUID(),branchId=randomUUID(),userId=randomUUID(),customerId=randomUUID();
 const actor={id:userId,name:"Fixture",email:`${userId}@example.test`,companyId,role:"ACCOUNT_USER",isActive:true,accountRole:"ACCOUNT_ADMIN",accountAccessActive:true,salesAccessActive:false,salesRole:null,managerType:null,branchAccessScope:"ALL_BRANCHES",branchIds:[]} as ProjectActor;
 const invoices:{id:string;grandTotal:Prisma.Decimal;payableAmount:Prisma.Decimal|null}[]=[];
@@ -80,4 +81,21 @@ describe.skipIf(!url)("single-cash partial payment and unused advance",()=>{
   }
   const lines=await client.journalLine.findMany({where:{companyId,ledgerAccountId:bankLedger.id}});expect(lines.reduce((n,x)=>n+Number(x.debit)-Number(x.credit),0)).toBe(100);
  },60000);
+ it("prepares purchase duplicates and corrections without writes, and retains original cash and bill history",async()=>{
+  const vendor=await client.vendor.create({data:{companyId,name:"Correction vendor"}});
+  const bill=await createCommercialDocumentForActor(actor,{type:"PURCHASE_BILL",purchasePurpose:"GENERAL_OFFICE",branchId,partyId:vendor.id,postingDate:"2026-11-05",issueDate:"2026-11-05",vendorInvoiceNumber:`SUP-${randomUUID()}`,vendorInvoiceDate:"2026-11-05",lines:[{lineType:"CUSTOM",itemName:"Service",quantity:"1",rate:"100",taxRate:"0"}]});
+  await postCommercialDocumentForActor(actor,{documentId:bill.id});
+  const payment=await createAllocatedPaymentForActor(actor,{type:"VENDOR_PAYMENT",branchId,partyId:vendor.id,paymentMode:"CASH",transactionDate:"2026-11-05",amount:"20",idempotencyKey:randomUUID(),allocations:[{documentId:bill.id,amount:"20"}]});
+  expect((await commercialDocumentControlsForActor(actor,bill.id)).canCorrectPurchase).toBe(true);
+  expect((await commercialDocumentControlsForActor({...actor,accountRole:"DATA_ENTRY"},bill.id)).canCorrectPurchase).toBe(false);
+  const source=await getCommercialDocumentForActor(actor,bill.id),before=await client.journalEntry.count({where:{companyId}}),documents=await client.commercialDocument.count({where:{companyId}});
+  const duplicate=purchaseDuplicateDraft(source,"2026-11-06"),prepared=purchaseReturnDraft(source,"2026-11-06");
+  expect(duplicate).not.toHaveProperty("vendorInvoiceNumber");expect(duplicate).not.toHaveProperty("sourceDocumentId");expect(duplicate.lines.every(line=>!line.sourceCommercialLineId&&!line.purchaseAllocations.length)).toBe(true);
+  expect(prepared.sourceDocumentId).toBe(bill.id);expect(prepared.lines[0].sourceCommercialLineId).toBe(source.lines[0].id);
+  expect(await client.commercialDocument.count({where:{companyId}})).toBe(documents);expect(await client.journalEntry.count({where:{companyId}})).toBe(before);
+  const note=await createCommercialDocumentForActor(actor,{type:"DEBIT_NOTE",purchasePurpose:prepared.purchasePurpose,branchId,partyId:vendor.id,sourceDocumentId:prepared.sourceDocumentId,issueDate:prepared.issueDate,lines:[{lineType:"CUSTOM",itemName:prepared.lines[0].itemName,quantity:"0.25",rate:prepared.lines[0].rate,taxRate:"0",sourceCommercialLineId:prepared.lines[0].sourceCommercialLineId,stockReturnQuantity:"0"}]});
+  await postCommercialDocumentForActor(actor,{documentId:note.id});
+  expect((await documentOutstandingsBatch(companyId,[bill])).get(bill.id)?.toString()).toBe("55");
+  expect((await client.commercialDocument.findUniqueOrThrow({where:{id:bill.id}})).status).toBe("POSTED");expect((await client.accountSettlement.findUniqueOrThrow({where:{id:payment.id}})).status).toBe("POSTED");expect(await client.accountSettlement.count({where:{companyId,vendorId:vendor.id}})).toBe(1);
+ });
 });

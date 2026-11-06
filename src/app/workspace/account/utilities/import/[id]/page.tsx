@@ -50,6 +50,8 @@ export default async function Page({
                 <h2>
                   Row {row.rowNumber} · {row.action}
                 </h2>
+                {row.before&&<section aria-label="Current record before import"><h3>Before</h3><dl>{Object.entries(row.before).map(([key,value])=><div key={key}><dt>{key.replaceAll("_"," ")}</dt><dd>{value||"—"}</dd></div>)}</dl></section>}
+                <h3>{row.action==="UPDATE"?"After import":"Planned values"}</h3>
                 <dl>
                   {Object.entries(row.values).map(([key, value]) => (
                     <div key={key}>
