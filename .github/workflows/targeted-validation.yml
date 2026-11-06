@@ -62,6 +62,8 @@ jobs:
         run: npx vitest run src/lib/auth/permissions.test.ts src/lib/visits/add-phone-concurrency.test.ts src/lib/visits/locking.regression.test.ts src/lib/leads/production-fixes.regression.test.ts src/lib/mobile/leads-reports.test.ts
       - name: Public discovery, sitemap and proxy regressions
         run: npx vitest run src/lib/public-site src/components/public/public-footer.test.tsx src/components/public/inquiry-accessibility.test.ts src/app/sitemap.test.ts src/proxy.test.ts src/proxy.csp.test.ts
+      - name: Fail-closed production migration gate
+        run: npx vitest run scripts/production-build.test.ts scripts/check-runtime-schema.test.mjs
       - name: Lighthouse network diagnostics regression
         run: node --test scripts/inspect-lighthouse-network.test.mjs
       - run: npm run typecheck
@@ -86,7 +88,7 @@ jobs:
 
   migration:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
@@ -113,10 +115,27 @@ jobs:
         env:
           ACCOUNT_MIGRATION_REHEARSAL_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/account/migration-chain.integration.test.ts --maxWorkers=1
+      - name: Migration-gated production build against isolated database
+        env:
+          DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+          DIRECT_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+          APP_URL: https://www.salespunch360.com
+          NODE_ENV: production
+          NODE_OPTIONS: --max-old-space-size=4096
+          HOSTINGER_STORAGE_PATH: /tmp/release-private-files
+          SMTP_HOST: smtp.hostinger.com
+          SMTP_PORT: "465"
+          SMTP_SECURE: "true"
+          SMTP_USER: fixture@example.invalid
+          MAIL_FROM: fixture@example.invalid
+        run: |
+          export AUTH_SECRET="$(openssl rand -hex 48)"
+          export SMTP_PASSWORD="$(openssl rand -hex 24)"
+          npm run build
       - name: Existing-company restore and atomic payment allocation
         env:
           RESTORE_TEST_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
-        run: npx vitest run src/lib/account/company-restore.integration.test.ts src/lib/account/allocated-payment.integration.test.ts src/lib/account/close-books.integration.test.ts src/lib/account/numbering-restart.integration.test.ts src/lib/account/payment-submission.integration.test.ts src/lib/account/transaction-list.integration.test.ts src/lib/account/tax-settings.integration.test.ts src/lib/account/imports.integration.test.ts --maxWorkers=1
+        run: npx vitest run src/lib/account/project-archive-release.integration.test.ts src/lib/account/company-restore.integration.test.ts src/lib/account/allocated-payment.integration.test.ts src/lib/account/close-books.integration.test.ts src/lib/account/numbering-restart.integration.test.ts src/lib/account/payment-submission.integration.test.ts src/lib/account/transaction-list.integration.test.ts src/lib/account/tax-settings.integration.test.ts src/lib/account/imports.integration.test.ts --maxWorkers=1
       - name: Backup tenant isolation and reusable expense item retention
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci

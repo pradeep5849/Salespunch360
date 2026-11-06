@@ -26,6 +26,9 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   await db.$executeRaw`INSERT INTO branches (id,"companyId",name,code,"isPrimary","updatedAt") VALUES (${branchId}::uuid,${companyId}::uuid,'Fixture branch','PRIMARY',true,NOW())`;
   await db.$executeRaw`INSERT INTO users (id,"companyId",name,email,"passwordHash",role,"accountRole","accountAccessActive","updatedAt") VALUES (${userId}::uuid,${companyId}::uuid,'Fixture user',${`${userId}@example.test`},'not-login-test','ACCOUNT_USER','ACCOUNT_ADMIN',true,NOW())`;
   await db.$executeRaw`INSERT INTO customers (id,"companyId","branchId",name,"shippingAddress","isAccountCustomer","updatedAt") VALUES (${customerId}::uuid,${companyId}::uuid,${branchId}::uuid,'Existing customer','Current customer site',true,NOW())`;
+  const legacyProjectId=randomUUID();
+  await db.$executeRaw`INSERT INTO projects (id,"companyId","branchId","customerId","createdById","projectNumber",name,"updatedAt") VALUES (${legacyProjectId}::uuid,${companyId}::uuid,${branchId}::uuid,${customerId}::uuid,${userId}::uuid,'PRE-ARCHIVE','Existing project',NOW())`;
+  const [projectBefore]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(p) AS record FROM projects p WHERE id=${legacyProjectId}::uuid`;
   // Use the pre-upgrade columns: the generated client already knows the new field.
   await db.$executeRaw`INSERT INTO commercial_documents ("id","companyId","branchId","type","status","documentNumber","partyId","partyName","customerId","issueDate","subtotal","taxableTotal","taxTotal","grandTotal","balanceDue","createdById","updatedAt") VALUES (${id}::uuid,${companyId}::uuid,${branchId}::uuid,'SALES_INVOICE','DRAFT','PRE-MIGRATION',${customerId}::uuid,'Existing customer',${customerId}::uuid,'2026-10-11',100,100,0,100,100,${userId}::uuid,NOW())`;
   await db.$executeRaw`UPDATE commercial_documents SET notes='Historical terms' WHERE id=${id}::uuid`;
@@ -40,6 +43,12 @@ it.skipIf(!url)("deploys the complete migration chain and preserves pre-shipping
   const [before]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM commercial_documents d WHERE id=${id}::uuid`;
   for(const name of readdirSync(resolve("prisma/migrations"))){if(name!=="migration_lock.toml"&&name>=target)cpSync(resolve("prisma/migrations",name),join(scratch,"migrations",name),{recursive:true});}
   deploy();
+  const migratedProject=await db.project.findUniqueOrThrow({where:{id:legacyProjectId}});
+  expect(migratedProject.archivedAt).toBeNull();
+  const [projectAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(p)-'archivedAt' AS record FROM projects p WHERE id=${legacyProjectId}::uuid`;
+  expect(projectAfter.record).toEqual(projectBefore.record);
+  const archiveIndex=await db.$queryRaw<Array<{indexdef:string}>>`SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='projects_companyId_archivedAt_idx'`;
+  expect(archiveIndex).toHaveLength(1);
   const [after]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM commercial_documents d WHERE id=${id}::uuid`;
   const [quoteDocumentAfter]=await db.$queryRaw<Array<{record:Record<string,unknown>}>>`SELECT to_jsonb(d) AS record FROM quotation_documents d WHERE id=${quoteId}::uuid`;
   const {convertedCommercialDocumentId,convertedAt,...quoteDocumentRetained}=quoteDocumentAfter.record;
