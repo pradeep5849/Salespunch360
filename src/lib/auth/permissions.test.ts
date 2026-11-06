@@ -16,6 +16,17 @@ describe("static module permission matrix", () => {
     expect(can(sales("SALES"), "SALES_USER_ADMIN")).toBe(false);
     for (const role of ["MANAGER", "SALES"] as const) for (const permission of SALES_ROLE_PERMISSIONS[role]) expect(can(sales(role), permission)).toBe(true);
   });
+  it("allows scoped pending conversion without opening personal check-ins", () => {
+    for (const salesRole of ["PRIMARY_ADMIN", "ADMIN", "MANAGER", "SALES"] as const) {
+      const actor=sales(salesRole,{managerType:salesRole==="MANAGER"?"MANAGER_ONLY":null});
+      expect(canMutate(actor,"SALES_PENDING_LEAD_CONVERSION")).toBe(true);
+      expect(canMutate({...actor,isActive:false},"SALES_PENDING_LEAD_CONVERSION")).toBe(false);
+      expect(canMutate({...actor,salesAccessActive:false},"SALES_PENDING_LEAD_CONVERSION")).toBe(false);
+      expect(canMutate(actor,"SALES_PENDING_LEAD_CONVERSION","SALESPUNCH360_ACCOUNT")).toBe(false);
+      if(salesRole!=="SALES")expect(canMutate(actor,"SALES_CHECK_INS")).toBe(false);
+    }
+    expect(canMutate(sales("SALES",{designation:"Telecaller"}),"SALES_PENDING_LEAD_CONVERSION")).toBe(false);
+  });
   it("enforces Sales lifecycle and edition", () => {
     for (const permission of PERMISSIONS.filter(p => p.startsWith("SALES_"))) expect(can(sales("PRIMARY_ADMIN", { salesAccessActive: false }), permission)).toBe(false);
     expect(can(sales("SALES"), "SALES_DASHBOARD", "SALESPUNCH360_ACCOUNT")).toBe(false);
