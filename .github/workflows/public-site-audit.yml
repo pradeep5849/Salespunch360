@@ -1,52 +1,23 @@
-name: Public website mobile and desktop audit
+name: Root host diagnostic
 on:
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  lighthouse:
-    name: Lighthouse ${{ matrix.device }}
+  public-host-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    strategy:
-      fail-fast: false
-      matrix:
-        device: [mobile, desktop]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: '22'
-      - name: Audit the public homepage
-        id: audit
-        continue-on-error: true
-        env:
-          DEVICE: ${{ matrix.device }}
-          CHROME_PATH: /usr/bin/google-chrome
+      - name: Compare DNS TLS and redirect paths
+        shell: bash
         run: |
-          mkdir -p reports
-          google-chrome --version
-          curl -sS --max-time 30 -D reports/response-headers.txt -o reports/response-body.html -w "PUBLIC_HTTP_STATUS=%{http_code}\n" https://www.salespunch360.com/
-          node scripts/inspect-public-response.mjs reports/response-headers.txt reports/response-body.html
-          if [ "$DEVICE" = desktop ]; then
-            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --preset=desktop --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
-          else
-            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
-          fi
-      - name: Inspect actual browser network responses
-        if: always()
-        run: node scripts/inspect-lighthouse-network.mjs reports
-      - name: Summarize measured results
-        if: ${{ steps.audit.outcome == 'success' }}
-        run: node scripts/summarize-public-lighthouse.mjs reports/lighthouse.report.json reports/summary.json
-      - name: Report an unsuccessful audit
-        if: ${{ steps.audit.outcome != 'success' }}
-        run: |
-          echo "::error::The public audit did not complete. Inspect response diagnostics and the Lighthouse runtime error; no speed score is valid."
-          exit 1
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: public-lighthouse-${{ matrix.device }}
-          path: reports/
+          for host in salespunch360.com www.salespunch360.com; do
+            echo "HOST=$host"
+            dig +short "$host" A
+            dig +short "$host" AAAA
+            for scheme in http https; do
+              echo "URL=$scheme://$host/"
+              curl -sS --max-time 25 -D - -o /dev/null "$scheme://$host/" || true
+              echo "REDIRECT_CHAIN=$scheme://$host/"
+              curl -sS -L --max-redirs 6 --max-time 35 -D - -o /dev/null -w 'FINAL_STATUS=%{http_code} FINAL_URL=%{url_effective}\n' "$scheme://$host/" || true
+            done
+          done
