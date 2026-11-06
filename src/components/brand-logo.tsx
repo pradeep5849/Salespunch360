@@ -1,3 +1,3 @@
 import Image from "next/image";import Link from "next/link";
 /** Canonical SalesPunch360 brand. Uses the full official logo (mark, wordmark and TRACK. PUNCH. PERFORM. tagline). */
-export function BrandLogo({href="/",inverse=false}:{href?:string;inverse?:boolean}){return <Link href={href} className={`brand-logo${inverse?" inverse":""}`} aria-label="SalesPunch360 home"><Image src="/salespunch360-logo.png" width={1536} height={1024} sizes="(max-width: 600px) 142px, 184px" priority alt="SalesPunch360 — Track. Punch. Perform."/></Link>}
+export function BrandLogo({href="/",inverse=false,priority=true}:{href?:string;inverse?:boolean;priority?:boolean}){return <Link href={href} className={`brand-logo${inverse?" inverse":""}`} aria-label="SalesPunch360 home"><Image src="/salespunch360-logo.png" width={1536} height={1024} sizes="(max-width: 600px) 142px, 184px" priority={priority} alt="SalesPunch360 — Track. Punch. Perform."/></Link>}

@@ -62,7 +62,7 @@ class LeadsViewModel(app:Application):AndroidViewModel(app){
  fun followUp(lead:LeadSummary,dueDate:String,notes:String?,type:String,assignedUserId:String?=null){mutate("${if(type=="CALL") "Call" else "Visit"} follow-up added successfully."){followUpMutations.create(lead.id,dueDate,type,notes,assignedUserId)}}
  fun recordCall(lead:LeadSummary,result:String,notes:String?,nextCallbackAt:String?,dialStartedAt:String?=null,dialEndedAt:String?=null,timingSource:String?=null){mutate("Call result saved."){telecalling.recordCall(lead.id,result,notes,nextCallbackAt,dialStartedAt=dialStartedAt,dialEndedAt=dialEndedAt,timingSource=timingSource)}}
  fun edit(request:LeadEditRequest,onSaved:()->Unit={}){mutate("Lead updated.",onSaved){val saved=api.editLead(request);if(requestedDetail==saved.id)_state.value=_state.value.copy(detail=saved);_state.value=_state.value.copy(leads=_state.value.leads.map{if(it.id==saved.id)saved else it})}}
- fun delete(lead:LeadSummary){mutate("Lead deleted.",{close()}){api.deleteLead(lead.id)}}
+ fun delete(lead:LeadSummary){mutate("Lead deleted successfully.",{close();_state.value=_state.value.copy(message="Lead deleted successfully.")}){api.deleteLead(lead.id)}}
  fun addPendingPhone(visit:PendingLeadVisit,phone:String){mutate("Phone added. Lead created."){api.addPendingPhone(visit.id,phone)}}
  fun clear(){_state.value=_state.value.copy(message=null)}
  private fun mutate(success:String,onSaved:()->Unit={},action:suspend()->Any){

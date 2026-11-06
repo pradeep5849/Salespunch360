@@ -20,8 +20,8 @@ export async function mobilePendingLeadPage(user:MobilePrincipal,raw:Record<stri
  const compatibility=!f.page,page=f.page??1,pageSize=compatibility?200:(f.pageSize??50),skip=(page-1)*pageSize;
  const [count,rows]=await Promise.all([
   db.customerVisit.count({where}),
-  db.customerVisit.findMany({where,include:{user:{select:{id:true,name:true}},customer:{select:{name:true}},photo:{select:{id:true}}},orderBy:[{checkedInAt:'desc'},{id:'desc'}],skip,take:pageSize+1}),
+  db.customerVisit.findMany({where,include:{user:{select:{id:true,name:true,salesRole:true,managerId:true}},customer:{select:{name:true}},photo:{select:{id:true}}},orderBy:[{checkedInAt:'desc'},{id:'desc'}],skip,take:pageSize+1}),
  ]);
- const hasMore=rows.length>pageSize,visits=rows.slice(0,pageSize).map(v=>({id:v.id,contactName:v.contactName,customerName:v.customer?.name??null,userId:v.user.id,userName:v.user.name,checkedInAt:v.checkedInAt,checkedOutAt:v.checkedOutAt,visitNotes:v.visitNotes,checkInAddress:v.checkInAddress,checkInLatitude:v.checkInLatitude,checkInLongitude:v.checkInLongitude,hasPhoto:Boolean(v.photo),photoUrl:v.photo?`/api/v1/mobile/visit-photos/${v.id}/thumbnail`:null,canAddPhone:v.user.id===user.id}));
+ const hasMore=rows.length>pageSize,visits=rows.slice(0,pageSize).map(v=>({id:v.id,contactName:v.contactName,customerName:v.customer?.name??null,userId:v.user.id,userName:v.user.name,checkedInAt:v.checkedInAt,checkedOutAt:v.checkedOutAt,visitNotes:v.visitNotes,checkInAddress:v.checkInAddress,checkInLatitude:v.checkInLatitude,checkInLongitude:v.checkInLongitude,hasPhoto:Boolean(v.photo),photoUrl:v.photo?`/api/v1/mobile/visit-photos/${v.id}/thumbnail`:null,canAddPhone:v.user.id===user.id||user.salesRole==="ADMIN"||user.salesRole==="PRIMARY_ADMIN"||(user.salesRole==="MANAGER"&&v.user.salesRole==="SALES"&&v.user.managerId===user.id)}));
  return{count,page,pageSize,hasMore,visits};
 }

@@ -4,13 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { BrandLogo } from "@/components/brand-logo";
-import { db } from "@/lib/db";
+import { publicSiteSettings } from "@/lib/public-site/settings";
+import { publicTelephone, publicStructuredData } from "@/lib/public-site/discovery";
 export async function PublicFooter() {
   // Public settings and destinations must reflect the current server configuration.
   await connection();
-  const settings = await db.publicSiteSettings.findUnique({
-    where: { id: "default" },
-  });
+  const settings = await publicSiteSettings();
   const appUrl = googlePlayDestination(
     settings?.googlePlayUrl,
     process.env.GOOGLE_PLAY_URL,
@@ -26,9 +25,11 @@ export async function PublicFooter() {
   ] as const;
   return (
     <footer className="public-footer reference-footer">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(publicStructuredData(settings)).replace(/</g,"\\u003c")}} />
       <div className="footer-grid">
         <div className="footer-brand">
-          <BrandLogo inverse />
+          <BrandLogo inverse priority={false} />
+          <a href={`tel:${publicTelephone}`}>Sales enquiries: +91 96112 78818</a>
           <p>
             Track field sales. Manage your business. Grow with one connected
             platform.
