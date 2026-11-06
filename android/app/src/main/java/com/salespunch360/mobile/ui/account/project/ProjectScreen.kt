@@ -421,7 +421,6 @@ private fun ProjectDetail(
                 }
             }
         },
-        dismissButton = { TextButton(close) { Text("Close") } },
     )
 }
 
