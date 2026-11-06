@@ -399,7 +399,8 @@ export async function archiveProjectForActor(
 }
 export async function archiveProject(projectId: string, reason: string) {
   const actor = await requirePermissionForMutation("ACCOUNT_SETTINGS");
-  return archiveProjectForActor(actor, projectId, reason);
+  if (!actor.companyId) throw new AuthorizationError();
+  return archiveProjectForActor({ id: actor.id, companyId: actor.companyId, accountRole: actor.accountRole }, projectId, reason);
 }
 export async function restoreMasterForActor(
   actor: { id: string; companyId: string; accountRole: string | null },
