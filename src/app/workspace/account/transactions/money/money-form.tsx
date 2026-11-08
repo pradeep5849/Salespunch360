@@ -23,6 +23,7 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  const [amount,setAmount]=useState(initialDraft?.amount??""),[paymentDiscount,setPaymentDiscount]=useState(""),[target,setTarget]=useState(""),[paymentMode,setMode]=useState(initialDraft?.paymentMode??"BANK"),[moneyAccountId,setMoneyAccount]=useState(initialDraft?.moneyAccountId??""),[reference,setReference]=useState(""),[notes,setNotes]=useState(initialDraft?.notes??""),[date,setDate]=useState(()=>reportCalendarDate()),[idempotencyKey,setKey]=useState(()=>crypto.randomUUID());
  const [multiple,setMultiple]=useState(Boolean(initialDraft)),[links,setLinks]=useState<{target:string;amount:string}[]>([]);
  const vendor=type.startsWith("VENDOR"),advance=type.endsWith("ADVANCE"),projectOptions=projects.filter(row=>row.customerId===partyId&&row.branchId===branchId);
+ const [linkProject,setLinkProject]=useState(Boolean(initialProject?.id));
  const docs=documents.filter(row=>row.partyId===partyId&&row.branchId===branchId&&(!projectId||row.projectId===projectId)&&row.type===(vendor?"PURCHASE_BILL":"SALES_INVOICE"));
  const openingTargets=openings.filter(row=>row.partyId===partyId&&row.branchId===branchId&&row.partyType===(vendor?"VENDOR":"CUSTOMER"));
  const discount=type==="CUSTOMER_RECEIPT"&&discountEnabled&&target.startsWith("document:")&&!multiple;
@@ -30,7 +31,7 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState(reportCalendarDate());
  const [billingName,setBillingName]=useState(""),[billingAddress,setBillingAddress]=useState("");
  const unused=advance?cents(amount):multiple?cents(amount)-links.reduce((sum,row)=>sum+cents(row.amount),BigInt(0)):BigInt(0);
- const payload={idempotencyKey,type,branchId,partyId,projectId:projectId||undefined,paymentMode,moneyAccountId:moneyAccountId||undefined,amount,transactionDate:date,reference,notes,billingName,billingAddress,allocations,...(paymentMode==="CHEQUE"?{chequeNumber,chequeDate}:{})};
+ const payload={idempotencyKey,type,branchId,partyId,projectId:linkProject?projectId||undefined:undefined,paymentMode,moneyAccountId:moneyAccountId||undefined,amount,transactionDate:date,reference,notes,billingName,billingAddress,allocations,...(paymentMode==="CHEQUE"?{chequeNumber,chequeDate}:{})};
  function clearLinks(){setTarget("");setPaymentDiscount("");setLinks([]);}
  function targetOptions(){return <><option value="">Select target</option>{docs.map(row=><option key={row.id} value={`document:${row.id}`}>{vendor?"Bill":"Invoice"} {row.documentNumber} · {formatMoney(row.outstanding,display)} outstanding</option>)}{openingTargets.map(row=><option key={row.id} value={`opening:${row.id}`}>Opening balance · {formatCalendarDate(row.effectiveDate,display)} · {formatMoney(row.outstanding,display)} outstanding</option>)}</>}
  return <form action={async form=>{if(pending)return;setPending(true);setError("");setMessage("");try{
@@ -42,15 +43,15 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  }catch{setError("Unable to confirm posting. Keep these inputs and retry the same payment; check recent entries before starting another.");}finally{setPending(false);}}} onReset={event=>event.preventDefault()} className="stack">
  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}{companyName&&<p>Firm: {companyName}</p>}{initialDraft&&<p>This is a new payment template. The original allocations, discount, date and bank reference were not copied. Review it before saving; saving records a new cash movement.</p>}
  <input type="hidden" name="payload" value={JSON.stringify(payload)}/><fieldset disabled={pending}>
- <label>Transaction<select value={type} onChange={event=>{setType(event.target.value);setParty("");setProject("");clearLinks();}}>{allowedTypes.map(value=><option key={value}>{value}</option>)}</select></label>
+ {type!=="CUSTOMER_RECEIPT"&&<label>Transaction<select value={type} onChange={event=>{setType(event.target.value);setParty("");setProject("");clearLinks();}}>{allowedTypes.map(value=><option key={value}>{value}</option>)}</select></label>}
  <p>Receipt/payment number is assigned by the server after saving.</p>
  <label>Date<input type="date" value={date} onChange={event=>setDate(event.target.value)} required/></label>
- <label>Branch<select value={branchId} onChange={event=>{setBranch(event.target.value);setParty("");setProject("");clearLinks();}}>{branches.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+ 
  <label>{vendor?"Vendor":"Customer"}<select aria-label={vendor?"Vendor":"Customer"} value={partyId} onChange={event=>{setParty(event.target.value);setProject("");clearLinks();}} required><option value="">Select</option>{(vendor?vendors:customers.filter(row=>!row.branchId||row.branchId===branchId)).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
  <p>Open document and opening balance: {formatMoney(decimal([...docs,...openingTargets].reduce((sum,row)=>sum+cents(row.outstanding),BigInt(0))),display)}</p>
- <label>Project<select value={projectId} onChange={event=>{setProject(event.target.value);clearLinks();}}><option value="">Non-project payment</option>{projectOptions.map(row=><option key={row.id} value={row.id}>{row.projectNumber} · {row.name}</option>)}</select></label>
- <label>Payment mode<select aria-label="Payment mode" value={paymentMode} onChange={event=>setMode(event.target.value)}><option>CASH</option><option>BANK</option><option>CHEQUE</option></select></label>
- <label>Money Account<select required={paymentMode==="CHEQUE"} value={moneyAccountId} onChange={event=>setMoneyAccount(event.target.value)}><option value="">{paymentMode==="CHEQUE"?"Select a bank account":`Legacy ${paymentMode}`}</option>{moneyAccounts.filter(row=>(!row.branchId||row.branchId===branchId)&&(paymentMode!=="CHEQUE"||row.type==="BANK")).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+ {!vendor&&<><label><input type="checkbox" checked={linkProject} onChange={event=>{setLinkProject(event.target.checked);if(!event.target.checked)setProject("");clearLinks();}}/> Link Payment to Project</label>{linkProject&&<>{projectOptions.length?<label>Select Project<select value={projectId} onChange={event=>{setProject(event.target.value);clearLinks();}} required><option value="">Select Project</option>{projectOptions.map(row=><option key={row.id} value={row.id}>{row.projectNumber} · {row.name}</option>)}</select></label>:<p>No projects available for this customer.</p>}<Link href={`/workspace/account/projects/new?customerId=${encodeURIComponent(partyId)}&returnTo=${encodeURIComponent("/workspace/account/transactions/money?type=CUSTOMER_RECEIPT")}`}>+ Add Project</Link></>}</>}
+ <label>Payment Type<select aria-label="Payment Type" value={paymentMode} onChange={event=>setMode(event.target.value)}><option>CASH</option><option>BANK</option><option>CHEQUE</option></select></label>
+ <label>Money Account<select required={paymentMode==="CHEQUE"} value={moneyAccountId} onChange={event=>setMoneyAccount(event.target.value)}><option value="">{paymentMode==="CHEQUE"?"Select a bank account":"Select account"}</option>{moneyAccounts.filter(row=>(!row.branchId||row.branchId===branchId)&&(paymentMode!=="CHEQUE"||row.type==="BANK")).map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
  {paymentMode==="CHEQUE"&&<><label>Cheque number<input value={chequeNumber} maxLength={80} onChange={event=>setChequeNumber(event.target.value)} required/></label><label>Cheque date<input type="date" value={chequeDate} onChange={event=>setChequeDate(event.target.value)} required/></label><p>The payment stays pending until the cheque is cleared. No cash or linked payment is posted before clearance.</p></>}
  <label>{vendor?"Paid":"Received"}<input type="number" min="0.01" step="0.01" value={amount} onChange={event=>setAmount(event.target.value)} required/></label>
  {!advance&&<><label><input type="checkbox" checked={multiple} onChange={event=>{setMultiple(event.target.checked);clearLinks();}}/> Link multiple transactions or keep an unused amount</label>
@@ -60,7 +61,7 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  <label>Billing name (optional)<input maxLength={240} value={billingName} onChange={event=>setBillingName(event.target.value)}/></label><label>Billing address (optional)<textarea maxLength={2000} value={billingAddress} onChange={event=>setBillingAddress(event.target.value)}/></label>
  <label>Supporting evidence (PDF, PNG or JPEG; 10 MB combined)<input key={idempotencyKey} type="file" name="attachments" multiple accept="application/pdf,image/png,image/jpeg"/></label>
  <label>Reference<input maxLength={160} value={reference} onChange={event=>setReference(event.target.value)}/></label><label>Notes<textarea maxLength={5000} value={notes} onChange={event=>setNotes(event.target.value)}/></label>
- <Link href="/workspace/account/settings/transactions">Transaction settings</Link>
+ 
  <button type="submit" name="saveMode" value="close">{pending?"Posting…":"Save"}</button><button type="submit" name="saveMode" value="new">Save &amp; New</button>
  </fieldset></form>;
 }
