@@ -17,10 +17,21 @@ jobs:
           FIELD_JOB_SECRET: ${{ secrets.FIELD_JOB_SECRET }}
         run: |
           if [ -z "$FIELD_JOB_SECRET" ]; then
-            echo "Cleanup not configured: set the same FIELD_JOB_SECRET in GitHub Actions and Hostinger."
+            echo "::warning::Cleanup not configured: set the same FIELD_JOB_SECRET in GitHub Actions and Hostinger."
+            echo "### Cleanup skipped — not configured" >> "$GITHUB_STEP_SUMMARY"
+            echo "No cleanup request was sent. Automatic deletion is not verified active." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          curl --fail --silent --show-error --max-time 90 \
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            --output "$RUNNER_TEMP/recycle-cleanup.json" \
             --request POST \
             --header "Authorization: Bearer $FIELD_JOB_SECRET" \
             https://www.salespunch360.com/api/internal/account-recycle-cleanup
+          jq -e '(.active | type == "boolean") and (.failed | type == "number") and .failed == 0' "$RUNNER_TEMP/recycle-cleanup.json" > /dev/null
+          if jq -e '.active == true' "$RUNNER_TEMP/recycle-cleanup.json" > /dev/null; then
+            echo "### Cleanup policy active" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"Processed: \(.processed); purged: \(.purged); retained: \(.retained); skipped: \(.skipped); failed: \(.failed)."' "$RUNNER_TEMP/recycle-cleanup.json" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Cleanup inactive — disabled or within activation grace" >> "$GITHUB_STEP_SUMMARY"
+            echo "No records were purged. Review activation configuration and its full seven-day grace." >> "$GITHUB_STEP_SUMMARY"
+          fi
