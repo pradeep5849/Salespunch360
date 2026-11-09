@@ -18,14 +18,16 @@ data class ReceiptInvoice(
     val customerId: String,
     val projectId: String,
     val number: String,
-    val outstanding: String
+    val outstanding: String,
+    val originalAmount:String="",val issueDate:String=""
 )
 
 data class ReceiptRow(val id: String, val number: String, val date: String, val amount: String, val mode: String,val type:String="CUSTOMER_RECEIPT")
 
 data class ReceiptAdvance(val id:String,val number:String,val branchId:String,val customerId:String,val projectId:String,val remaining:String)
 data class ReceiptState(
-    val multipleLinks:Boolean=false,
+    val companyName:String="",val balance:String?=null,val receiptNumber:String="",val advanceNumber:String="",val reviewError:String?=null,val saved:ReceiptRow?=null,val uncertain:Boolean=false,
+    val multipleLinks:Boolean=true,
     val links:Map<String,String> = emptyMap(),
     val type:String="CUSTOMER_RECEIPT",
     val allowedTypes:List<String> = emptyList(),
@@ -78,7 +80,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
             val context = api.customerReceiptContext()
             val branches = context.array("branches").map { it.option() }
             val customers = context.array("customers").map { it.option() }
-            val accounts = context.array("moneyAccounts").map { it.option() }
+            val accounts = context.array("moneyAccounts").map { it.option("type") }
             val projects = context.array("projects").map { it.option() }
             val documents = context.array("documents").map {
                 ReceiptInvoice(
@@ -87,7 +89,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
                     it.str("customerId"),
                     it.str("projectId"),
                     it.str("documentNumber"),
-                    it.str("outstanding")
+                    it.str("outstanding"),it.str("grandTotal"),it.str("issueDate").take(10)
                 )
             }
             val history = context.array("receipts").map {
@@ -101,7 +103,7 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             _state.value = _state.value.copy(
-                loading = false,
+                loading = false,companyName=context.str("companyName"),
                 discountEnabled=context["discountDuringPayment"]?.jsonPrimitive?.booleanOrNull==true,
                 branches = branches,
                 customers = customers,
@@ -114,27 +116,37 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
                 history = history,
                 branchId = _state.value.branchId.ifBlank { branches.firstOrNull()?.id.orEmpty() }
             )
+            loadReview()
         } catch (e: Exception) {
             _state.value = _state.value.copy(loading = false, error = errorText(e))
         }
     }
 
+    private var reviewVersion=0
+    private fun loadReview(){val s=_state.value;if(s.branchId.isBlank())return;val version=++reviewVersion;_state.value=s.copy(balance=null,reviewError=null);viewModelScope.launch{try{val row=api.receiptEntryReview(s.branchId,s.customerId);if(version==reviewVersion)_state.value=_state.value.copy(balance=row.str("balance").takeIf{it!="null"&&it.isNotBlank()},receiptNumber=row.str("receiptNumber"),advanceNumber=row.str("advanceNumber"))}catch(e:Exception){if(version==reviewVersion)_state.value=_state.value.copy(reviewError="Unable to load the current balance and receipt number.")}}}
+    fun createParty(name:String,phone:String,done:()->Unit){val s=_state.value;if(s.saving)return;_state.value=s.copy(saving=true,error=null);viewModelScope.launch{try{val row=api.saveAccountMaster("customers",null,buildJsonObject{put("branchId",s.branchId);put("name",name);put("phone",phone)});_state.value=s.copy(saving=false,customerId=row.id,projectId="",invoiceId="",billingName=row.name,links=emptyMap());refresh();done()}catch(e:Exception){_state.value=s.copy(saving=false,error=errorText(e))}}}
+    private var accountCreationKey=UUID.randomUUID().toString()
+    fun createAccount(name:String,type:String,done:()->Unit){val s=_state.value;if(s.saving)return;_state.value=s.copy(saving=true,error=null);viewModelScope.launch{try{val row=api.moneyAction("accounts",buildJsonObject{put("branchId",s.branchId);put("name",name);put("type",type);put("creationRequestKey",accountCreationKey)}).jsonObject;accountCreationKey=UUID.randomUUID().toString();_state.value=s.copy(saving=false,moneyAccountId=row.str("id"),mode=if(type=="CASH")"CASH"else"BANK");refresh();done()}catch(e:Exception){_state.value=s.copy(saving=false,error=errorText(e))}}}
     fun initialRoute(projectId:String?,requestedType:String?,branchId:String?=null){
         val s=_state.value;if(s.loading||initialRouteApplied)return;initialRouteApplied=true
         val project=s.projects.find{it.id==projectId}
-        _state.value=s.copy(type=requestedType?.takeIf{it in s.allowedTypes}?:s.type.takeIf{it in s.allowedTypes}?:s.allowedTypes.firstOrNull().orEmpty(),projectId=project?.id.orEmpty(),branchId=project?.branchId?:s.branches.find{it.id==branchId}?.id?:s.branchId,customerId=project?.let{s.projectCustomers[it.id]}.orEmpty())
+        _state.value=s.copy(type=if(requestedType!="APPLY_ADVANCE"&&"CUSTOMER_RECEIPT" in s.allowedTypes)"CUSTOMER_RECEIPT"else requestedType?.takeIf{it in s.allowedTypes}?:s.type.takeIf{it in s.allowedTypes}?:s.allowedTypes.firstOrNull().orEmpty(),projectId=project?.id.orEmpty(),branchId=project?.branchId?:s.branches.find{it.id==branchId}?.id?:s.branchId,customerId=project?.let{s.projectCustomers[it.id]}.orEmpty(),billingName=project?.let{projectRow->s.customers.find{it.id==s.projectCustomers[projectRow.id]}?.name}.orEmpty())
+        loadReview()
     }
     private var duplicateApplied:String?=null
-    fun duplicate(id:String?){if(id==null||_state.value.loading||duplicateApplied==id)return;duplicateApplied=id;_state.value=_state.value.copy(loading=true);viewModelScope.launch{try{val draft=api.accountSettlement(id,true);val s=_state.value;require(draft.str("type") in s.allowedTypes&&s.branches.any{it.id==draft.str("branchId")}&&s.customers.any{it.id==draft.str("partyId")}){"This duplicate is unavailable in your current context."};_state.value=s.copy(loading=false,type=draft.str("type"),branchId=draft.str("branchId"),customerId=draft.str("partyId"),projectId="",invoiceId="",advanceId="",multipleLinks=true,links=emptyMap(),amount=draft.str("amount"),mode=draft.str("paymentMode"),moneyAccountId=draft.str("moneyAccountId"),notes=draft.str("notes"),reference="",discountAmount="",date=com.salespunch360.mobile.account.accountReportToday().toString(),requestKey=UUID.randomUUID().toString(),message="Independent unlinked payment prepared. Review it before posting.")}catch(e:Exception){_state.value=_state.value.copy(loading=false,error=errorText(e))}}}
+    fun duplicate(id:String?){if(id==null||_state.value.loading||duplicateApplied==id)return;duplicateApplied=id;_state.value=_state.value.copy(loading=true);viewModelScope.launch{try{val draft=api.accountSettlement(id,true);val s=_state.value;require(draft.str("type") in s.allowedTypes&&s.branches.any{it.id==draft.str("branchId")}&&s.customers.any{it.id==draft.str("partyId")}){"This duplicate is unavailable in your current context."};_state.value=s.copy(loading=false,type=if("CUSTOMER_RECEIPT" in s.allowedTypes)"CUSTOMER_RECEIPT"else draft.str("type"),branchId=draft.str("branchId"),customerId=draft.str("partyId"),billingName=s.customers.find{it.id==draft.str("partyId")}?.name.orEmpty(),projectId="",invoiceId="",advanceId="",multipleLinks=true,links=emptyMap(),amount=draft.str("amount"),mode=draft.str("paymentMode"),moneyAccountId=draft.str("moneyAccountId"),notes=draft.str("notes"),reference="",discountAmount="",date=com.salespunch360.mobile.account.accountReportToday().toString(),requestKey=UUID.randomUUID().toString(),message="Independent unlinked payment prepared. Review it before posting.")}catch(e:Exception){_state.value=_state.value.copy(loading=false,error=errorText(e))}}}
     fun update(transform: (ReceiptState) -> ReceiptState) {
-        if(_state.value.saving||_state.value.loading)return
+        if(_state.value.saving||_state.value.loading||_state.value.uncertain)return
         val previous=_state.value
         val next=transform(previous)
         val changedContext=next.branchId!=previous.branchId||next.customerId!=previous.customerId||next.projectId!=previous.projectId||next.type!=previous.type
-        _state.value=next.copy(links=if(changedContext)emptyMap()else next.links,requestKey=UUID.randomUUID().toString(),error=null,message=null)
+        _state.value=next.copy(billingName=if(next.customerId!=previous.customerId)next.customers.find{it.id==next.customerId}?.name.orEmpty()else next.billingName,links=if(changedContext)emptyMap()else next.links,requestKey=UUID.randomUUID().toString(),error=null,message=null)
+        if(changedContext)loadReview()
     }
 
-    fun save() {
+    fun saveAndNew(){save(true)}
+    fun clearSaved(){_state.value=_state.value.copy(saved=null)}
+    fun save(saveAndNew:Boolean=false) {
         val current = _state.value
         if(current.saving||current.loading)return
         val error=receiptValidation(current)
@@ -142,10 +154,10 @@ class CustomerReceiptViewModel(app: Application) : AndroidViewModel(app) {
         _state.value=current.copy(saving=true,error=null)
         viewModelScope.launch {
             try {
-                if(current.type!="APPLY_ADVANCE"&&current.evidenceFiles.isNotEmpty())api.createPaymentWithAttachments(receiptPayload(current),current.evidenceFiles)else api.createCustomerReceipt(receiptPayload(current))
-                _state.value = current.copy(saving=false,amount="",discountAmount="",invoiceId="",advanceId="",links=emptyMap(),requestKey=UUID.randomUUID().toString(),evidenceFiles=emptyList(),billingName="",billingAddress="",chequeNumber="",message=if(current.type!="APPLY_ADVANCE"&&current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
+                val result=if(current.type!="APPLY_ADVANCE"&&current.evidenceFiles.isNotEmpty())api.createPaymentWithAttachments(receiptPayload(current),current.evidenceFiles)else api.createCustomerReceipt(receiptPayload(current))
+                _state.value = current.copy(saved=if(!saveAndNew&&current.type!="APPLY_ADVANCE")ReceiptRow(result.str("id"),result.str("settlementNumber"),current.date,current.amount,current.mode,result.str("type").ifBlank{current.type})else null,uncertain=false,saving=false,customerId=if(saveAndNew)""else current.customerId,projectId=if(saveAndNew)""else current.projectId,notes="",amount="",discountAmount="",invoiceId="",advanceId="",links=emptyMap(),requestKey=UUID.randomUUID().toString(),evidenceFiles=emptyList(),billingName="",billingAddress="",chequeNumber="",message=if(current.type!="APPLY_ADVANCE"&&current.mode=="CHEQUE")"Cheque saved as pending; it posts only when cleared."else if(current.type=="APPLY_ADVANCE")"Advance applied by the server." else "Customer payment posted by the server.")
                 refresh()
-            } catch(e:Exception){_state.value=current.copy(saving=false,error=errorText(e))}
+            } catch(e:Exception){_state.value=current.copy(saving=false,uncertain=e !is ApiException||e.status>=500,error=errorText(e))}
         }
     }
 
@@ -163,6 +175,7 @@ internal fun receiptValidation(s:ReceiptState):String? {
  val amount=s.amount.toBigDecimalOrNull()
  if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.amount)||amount==null||amount.signum()<=0)return "Enter a positive amount with up to two decimal places."
  if(runCatching{java.time.LocalDate.parse(s.date)}.isFailure)return "Enter a valid date in YYYY-MM-DD format."
+ if(s.type!="APPLY_ADVANCE"&&s.moneyAccountId.isBlank())return "Select a saved payment account."
  if(s.branchId.isBlank()||s.customerId.isBlank())return "Select a branch and customer."
  val discount=if(s.type=="CUSTOMER_RECEIPT"&&s.discountEnabled)s.discountAmount.ifBlank{"0"}.toBigDecimalOrNull() else java.math.BigDecimal.ZERO
  if(discount==null||discount.signum()<0||discount.scale()>2||(s.type=="CUSTOMER_RECEIPT"&&s.discountEnabled&&!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(s.discountAmount.ifBlank{"0"})))return "Enter a payment discount with up to two decimal places."
@@ -171,17 +184,17 @@ internal fun receiptValidation(s:ReceiptState):String? {
   var total=java.math.BigDecimal.ZERO
   for((id,text) in s.links){if(text.isBlank())continue
    val link=text.toBigDecimalOrNull()
-   val invoice=s.invoices.find{it.id==id&&it.branchId==s.branchId&&it.customerId==s.customerId&&it.projectId==s.projectId}?:return "An invoice is outside this payment context."
+   val invoice=s.invoices.find{it.id==id&&it.branchId==s.branchId&&it.customerId==s.customerId&&(s.projectId.isBlank()||it.projectId==s.projectId)}?:return "An invoice is outside this payment context."
    if(!Regex("\\d{1,16}(\\.\\d{1,2})?").matches(text)||link==null||link.signum()<=0||link>(invoice.outstanding.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO))return "Enter a positive link amount within each invoice balance."
    total+=link
   }
   if(total>amount)return "Linked amounts exceed cash received."
  }else if(s.type!="CUSTOMER_ADVANCE"){
-  val invoice=s.invoices.find{it.id==s.invoiceId&&it.branchId==s.branchId&&it.customerId==s.customerId&&it.projectId==s.projectId}?:return "Select an invoice for this customer, branch and Project."
+  val invoice=s.invoices.find{it.id==s.invoiceId&&it.branchId==s.branchId&&it.customerId==s.customerId&&(s.projectId.isBlank()||it.projectId==s.projectId)}?:return "Select an invoice for this customer, branch and Project."
   if(amount+discount>(invoice.outstanding.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO))return "Cash plus discount exceeds the invoice balance."
  }
  if(s.type=="APPLY_ADVANCE"){
-  val advance=s.advances.find{it.id==s.advanceId&&it.branchId==s.branchId&&it.customerId==s.customerId&&it.projectId==s.projectId}?:return "Select an advance for this invoice's customer and Project."
+  val advance=s.advances.find{it.id==s.advanceId&&it.branchId==s.branchId&&it.customerId==s.customerId&&(s.projectId.isBlank()||it.projectId==s.projectId)}?:return "Select an advance for this invoice's customer and Project."
   if(amount>(advance.remaining.toBigDecimalOrNull()?:java.math.BigDecimal.ZERO))return "Amount exceeds the unused advance."
  }
  return null

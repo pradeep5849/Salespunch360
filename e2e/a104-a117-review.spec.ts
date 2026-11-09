@@ -2,6 +2,11 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 import { expect, test } from "@playwright/test";
+import {
+  createCommercialDocumentForActor,
+  postCommercialDocumentForActor,
+} from "../src/lib/account/commercial";
+import type { ProjectActor } from "../src/lib/account/projects";
 import { DEFAULT_LEDGER_ACCOUNTS } from "../src/lib/accounting/default-accounts";
 const db = new PrismaClient(),
   password = randomBytes(24).toString("base64url");
@@ -70,7 +75,7 @@ test.beforeAll(async () => {
         isSystem: row.isSystem,
       },
     });
-  await db.customer.create({
+  const receiptCustomer = await db.customer.create({
     data: {
       companyId,
       branchId: branch.id,
@@ -90,6 +95,30 @@ test.beforeAll(async () => {
       },
     })
   ).id;
+  const receiptActor = {
+    ...user,
+    companyId,
+    branchAccessScope: "ALL_BRANCHES",
+    branchIds: [],
+  } as ProjectActor;
+  const invoice = await createCommercialDocumentForActor(receiptActor, {
+    type: "SALES_INVOICE",
+    branchId: branch.id,
+    partyId: receiptCustomer.id,
+    issueDate: "2026-11-05",
+    lines: [
+      {
+        lineType: "CUSTOM",
+        itemName: "Reference service",
+        quantity: "1",
+        rate: "593",
+        taxRate: "0",
+      },
+    ],
+  });
+  await postCommercialDocumentForActor(receiptActor, {
+    documentId: invoice.id,
+  });
   await db.accountingAuditEvent.create({
     data: {
       companyId,
@@ -126,6 +155,9 @@ test("numbering preview is read-only and confirmation restarts only future numbe
   page,
 }) => {
   await page.goto("/workspace/account/utilities/financial-year/numbering");
+  const beforePreview = (
+    await db.numberingSeries.findUniqueOrThrow({ where: { id: seriesId } })
+  ).nextSequence;
   const prefix = `REVIEW-${randomUUID().slice(0, 6).toUpperCase()}/`;
   await page.getByLabel("Branch and document series").selectOption(seriesId);
   await page.getByLabel("New prefix", { exact: true }).fill(prefix);
@@ -141,7 +173,7 @@ test("numbering preview is read-only and confirmation restarts only future numbe
   expect(
     (await db.numberingSeries.findUniqueOrThrow({ where: { id: seriesId } }))
       .nextSequence,
-  ).toBe(BigInt(12));
+  ).toBe(beforePreview);
   await page
     .getByRole("checkbox", {
       name: "I confirm this restart applies only to future documents.",
@@ -179,6 +211,84 @@ test("close-books review shows company, check scope and blockers without closing
   ).toBe("OPEN");
   expect(await db.accountingPeriodLock.count({ where: { companyId } })).toBe(0);
 });
+test("reference links show 593 cap and 507 unused with cancel preserving the receipt", async ({
+  page,
+}, info) => {
+  await page.goto(
+    "/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",
+  );
+  await expect(
+    page.getByRole("button", { name: "Link", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByLabel("Customer Name", { exact: true })
+    .selectOption({ label: "Review customer" });
+  await expect(
+    page.getByText("Party Balance: ₹593.00", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Received", { exact: true }).fill("1100");
+  await page.getByRole("button", { name: "Link", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Link Payment To Txns" });
+  await expect(dialog.getByText(/Original amount:.*593/)).toBeVisible();
+  await dialog.getByRole("checkbox").check();
+  await dialog.getByLabel("Link Amount").fill("594");
+  await expect(
+    dialog.getByRole("button", { name: "Done", exact: true }),
+  ).toBeDisabled();
+  await dialog.getByLabel("Link Amount").fill("593");
+  await expect(
+    dialog.getByText("Unused Amount: ₹507.00", { exact: true }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  await page.screenshot({
+    path: info.outputPath("payment-in-reference.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Link", exact: true }).click();
+  await dialog.getByLabel("Total Received").fill("1200");
+  await dialog.getByLabel("Link Amount").fill("100");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByLabel("Received", { exact: true })).toHaveValue(
+    "1100",
+  );
+  await expect(
+    page.getByText("Unused credit: ₹507.00", { exact: true }),
+  ).toBeVisible();
+});
+test("creating a party preserves the draft and selects its saved identity", async ({
+  page,
+}) => {
+  await page.goto(
+    "/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",
+  );
+  await page.getByLabel("Received", { exact: true }).fill("123.45");
+  await page.getByLabel("Description", { exact: true }).fill("Keep this draft");
+  await page
+    .getByRole("button", { name: "+ Add New Party", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Add New Party",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Name", { exact: true })
+    .fill("Created receipt party");
+  await dialog.getByLabel("Mobile number").fill("9000000001");
+  await dialog.getByRole("button", { name: "Save and select" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByLabel("Billing Name (optional)")).toHaveValue(
+    "Created receipt party",
+  );
+  await expect(page.getByLabel("Received", { exact: true })).toHaveValue(
+    "123.45",
+  );
+  await expect(page.getByLabel("Description", { exact: true })).toHaveValue(
+    "Keep this draft",
+  );
+  await expect(
+    page.getByText("Party Balance: ₹0.00", { exact: true }),
+  ).toBeVisible();
+});
 test("payment billing and private evidence save once and download through scoped authorization", async ({
   page,
 }) => {
@@ -186,19 +296,41 @@ test("payment billing and private evidence save once and download through scoped
     "/workspace/account/transactions/money?type=CUSTOMER_ADVANCE",
   );
   await page
-    .getByLabel("Customer", { exact: true })
+    .getByLabel("Customer Name", { exact: true })
     .selectOption({ label: "Review customer" });
-  await page.getByLabel("Payment mode", { exact: true }).selectOption("CASH");
   await page.getByLabel("Received", { exact: true }).fill("100");
-  await page.getByLabel("Billing name (optional)").fill("Review billing name");
-  await page
-    .getByLabel("Billing address (optional)")
-    .fill("Review billing address");
-  await page.getByLabel("Supporting evidence", { exact: false }).setInputFiles({
+  await page.getByLabel("Billing Name (optional)").fill("Review billing name");
+  await page.getByLabel("Attachment", { exact: false }).setInputFiles({
     name: "receipt.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.7\nbrowser evidence"),
   });
+  await page
+    .getByRole("button", { name: "+ Add Payment Type", exact: true })
+    .click();
+  const accountDialog = page.getByRole("dialog", {
+    name: "Add Payment Type",
+    exact: true,
+  });
+  await accountDialog
+    .getByLabel("Name", { exact: true })
+    .fill("Browser receipt cash");
+  await accountDialog.getByLabel("Account type").selectOption("CASH");
+  await accountDialog.getByRole("button", { name: "Save and select" }).click();
+  await expect(accountDialog).not.toBeVisible();
+  await expect(page.getByLabel("Received", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("Billing Name (optional)")).toHaveValue(
+    "Review billing name",
+  );
+  await expect(page.getByLabel("Payment Type", { exact: true })).toHaveValue(
+    /.+/,
+  );
+  expect(
+    await page
+      .getByLabel("Attachment", { exact: false })
+      .evaluate((input) => (input as HTMLInputElement).files?.length),
+  ).toBe(1);
+  expect(await db.accountSettlement.count({ where: { companyId } })).toBe(0);
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/account\/settlements\//);
   await expect(
@@ -213,4 +345,116 @@ test("payment billing and private evidence save once and download through scoped
   expect((await response.body()).toString()).toBe("%PDF-1.7\nbrowser evidence");
   expect(await db.accountSettlement.count({ where: { companyId } })).toBe(1);
   expect(await db.paymentAttachment.count({ where: { companyId } })).toBe(1);
+});
+
+test("an interrupted receipt response retries the same cash movement and evidence", async ({
+  page,
+}) => {
+  await page.goto(
+    "/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",
+  );
+  await page
+    .getByLabel("Customer Name", { exact: true })
+    .selectOption({ label: "Review customer" });
+  await page.getByLabel("Received", { exact: true }).fill("25");
+  await page
+    .getByRole("button", { name: "+ Add Payment Type", exact: true })
+    .click();
+  const accountDialog = page.getByRole("dialog", {
+    name: "Add Payment Type",
+    exact: true,
+  });
+  await accountDialog
+    .getByLabel("Name", { exact: true })
+    .fill("Retry receipt cash");
+  await accountDialog.getByLabel("Account type").selectOption("CASH");
+  await accountDialog.getByRole("button", { name: "Save and select" }).click();
+  await expect(accountDialog).not.toBeVisible();
+  await page.getByLabel("Attachment", { exact: false }).setInputFiles({
+    name: "uncertain.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.7\nretry evidence"),
+  });
+  const before = await db.accountSettlement.count({ where: { companyId } }),
+    files = await db.paymentAttachment.count({ where: { companyId } });
+  let interrupted = false;
+  await page.route(
+    "**/workspace/account/transactions/money?*",
+    async (route) => {
+      if (route.request().method() === "POST" && !interrupted) {
+        interrupted = true;
+        await route.fetch();
+        await route.abort("connectionreset");
+      } else await route.continue();
+    },
+  );
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByText(
+      "Draft changes are locked until retrying this same receipt confirms the result.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByLabel("Received", { exact: true })).toBeDisabled();
+  expect(await db.accountSettlement.count({ where: { companyId } })).toBe(
+    before + 1,
+  );
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/account\/settlements\//);
+  expect(await db.accountSettlement.count({ where: { companyId } })).toBe(
+    before + 1,
+  );
+  expect(await db.paymentAttachment.count({ where: { companyId } })).toBe(
+    files + 1,
+  );
+});
+
+test("Save and New clears receipt and files only after one confirmed posting", async ({
+  page,
+}) => {
+  await page.goto(
+    "/workspace/account/transactions/money?type=CUSTOMER_RECEIPT",
+  );
+  await page
+    .getByLabel("Customer Name", { exact: true })
+    .selectOption({ label: "Review customer" });
+  await page.getByLabel("Received", { exact: true }).fill("15.25");
+  await page.getByLabel("Description", { exact: true }).fill("New entry reset");
+  await page
+    .getByRole("button", { name: "+ Add Payment Type", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Add Payment Type",
+    exact: true,
+  });
+  await dialog.getByLabel("Name", { exact: true }).fill("Save New cash");
+  await dialog.getByLabel("Account type").selectOption("CASH");
+  await dialog.getByRole("button", { name: "Save and select" }).click();
+  await expect(dialog).not.toBeVisible();
+  await page
+    .getByLabel("Attachment", { exact: false })
+    .setInputFiles({
+      name: "new.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.7\nnew receipt"),
+    });
+  const before = await db.accountSettlement.count({ where: { companyId } });
+  await page.getByRole("button", { name: "Save & New", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Receipt saved. Ready for a new payment.",
+  );
+  await expect(page.getByLabel("Received", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Customer Name", { exact: true })).toHaveValue(
+    "",
+  );
+  await expect(page.getByLabel("Billing Name (optional)")).toHaveValue("");
+  await expect(page.getByLabel("Description", { exact: true })).toHaveValue("");
+  expect(
+    await page
+      .getByLabel("Attachment", { exact: false })
+      .evaluate((input) => (input as HTMLInputElement).files?.length),
+  ).toBe(0);
+  expect(await db.accountSettlement.count({ where: { companyId } })).toBe(
+    before + 1,
+  );
 });

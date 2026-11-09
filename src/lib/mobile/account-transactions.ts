@@ -315,7 +315,7 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
             isAccountCustomer: true,
             ...scope,
           },
-          select: { id: true, name: true, branchId: true },
+          select: { id: true, name: true, branchId: true, phone:true },
           orderBy: { name: "asc" },
         }),
         db.branch.findMany({
@@ -330,8 +330,8 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
           orderBy: { name: "asc" },
         }),
         db.moneyAccount.findMany({
-          where: { companyId: actor.companyId, isActive: true },
-          select: { id: true, name: true, branchId: true },
+          where: { companyId: actor.companyId, isActive: true,...(actor.branchAccessScope==="SELECTED_BRANCHES"?{OR:[{branchId:null},{branchId:{in:actor.branchIds??[]}}]}:{}) },
+          select: { id: true, name: true, branchId: true,type:true },
           orderBy: { name: "asc" },
         }),
         listOpenProjectOptionsForActor(actor, user.productEdition),
@@ -348,6 +348,7 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
             customerId: true,
             projectId: true,
             documentNumber: true,
+            issueDate:true,
             grandTotal: true,
             payableAmount: true,
           },
@@ -407,6 +408,7 @@ export async function mobileCustomerReceiptContext(user: MobileAppPrincipal) {
         })
       : [];
   return {
+    companyName:(await db.company.findUnique({where:{id:actor.companyId},select:{name:true}}))?.name??"",
     allowedTypes,
     advances,
     customers,

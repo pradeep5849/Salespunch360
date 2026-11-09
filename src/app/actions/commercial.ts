@@ -113,10 +113,11 @@ export async function postCommercialAction(form: FormData) {
 }
 export async function saveSettlementWithFeedback(form: FormData) {
   return accountAction(async () => {
+    const mode=String(form.get("saveMode")??"close");if(!["close","new","preview"].includes(mode))throw new Error("INVALID_INPUT");
     const actor=await requirePermissionForMutation("ACCOUNT_SETTLEMENT_ENTRY");
     const files=form.getAll("attachments").filter(file=>file instanceof File&&file.size>0) as File[];
     const row=await submitPaymentForActor({...actor,companyId:actor.companyId!},payload(form),files);
-    return `/workspace/account/settlements/${row.id}`;
+    return `/workspace/account/settlements/${row.id}${mode==="preview"?"/preview":""}`;
   }, "Payment saved");
 }
 export async function saveSettlementAction(form: FormData) {
