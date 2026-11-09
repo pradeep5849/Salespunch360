@@ -14,3 +14,13 @@ Open dedicated Link Payment To Txns screen. Show selected customer's eligible sa
 
 ## Delivery
 Implement both web and Android parity where applicable. Preserve existing accounting, numbering, attachments, sync and historical data. Test partial/full/multi-invoice allocations, concurrent payments, unused credit, account selection and account creation. Run lint/typecheck/tests/build and fix failures. Do not merge until CI is green and user approves.
+
+## Implementation in PR #193
+
+Web and Android use a dedicated Payment-In view. Customer search includes name/mobile; selecting a saved customer fills an editable billing identity and loads the current branch-scoped party ledger balance. Receipt/advance numbers are read-only, non-reserving previews; saving retains authoritative numbering. No customer shows no balance or Link.
+
+Party and money-account creation run in modal flows inside the receipt context. Receipt fields and evidence remain in memory; a successful account creation selects the real saved cash/bank account. One receipt uses exactly one account, with no split-payment controls. Existing Payment-Out and advance application flows retain their separate services.
+
+Link review stages invoice choices and total received separately. It shows dates, original totals and outstanding amounts, validates caps and unused credit, and applies only on Done. Cancel/Escape discards changes. Existing serializable financial services enforce tenant/branch access, source balances, atomic allocations and idempotency. Both clients preserve the request identity on uncertain outcomes and retain evidence for retry.
+
+The fixed footer offers Save & New, Save and three-dot Share/Print, using authorized saved receipt previews. Save & New clears fields and evidence only after confirmed success. Backend verification includes the exact 593/1100/507 example, a real saved bank account, unchanged counters during preview, retry identity and competing receipts. Final current-head Web/Android/build checks and browser evidence are recorded in the PR before merging.

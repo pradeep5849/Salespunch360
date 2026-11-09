@@ -60,15 +60,27 @@ export function ReceiptEntry(p: Props) {
     `${value / BigInt(100)}.${String(value % BigInt(100)).padStart(2, "0")}`;
   const display = useDisplayPreferences(),
     router = useRouter(),
-    draft = p.initialDraft;
+    draft = p.initialDraft,
+    initialProject = p.projects.find((row) => row.id === p.initialProjectId);
   const [branchId, setBranch] = useState(
-    draft?.branchId ?? p.initialBranchId ?? p.branches[0]?.id ?? "",
+    draft?.branchId ??
+      initialProject?.branchId ??
+      p.branches.find((row) => row.id === p.initialBranchId)?.id ??
+      p.branches[0]?.id ??
+      "",
   );
   const [customers, setCustomers] = useState(p.customers),
     [accounts, setAccounts] = useState(p.moneyAccounts);
-  const [partyId, setParty] = useState(draft?.partyId ?? ""),
+  const [partyId, setParty] = useState(
+      draft?.partyId ?? initialProject?.customerId ?? "",
+    ),
     [search, setSearch] = useState(""),
-    [billingName, setBillingName] = useState("");
+    [billingName, setBillingName] = useState(
+      p.customers.find(
+        (row) => row.id === (draft?.partyId ?? initialProject?.customerId),
+      )?.name ?? "",
+    );
+  const [projectId, setProject] = useState(initialProject?.id ?? "");
   const [amount, setAmount] = useState(draft?.amount ?? ""),
     [date, setDate] = useState(reportCalendarDate()),
     [notes, setNotes] = useState(draft?.notes ?? "");
@@ -91,6 +103,7 @@ export function ReceiptEntry(p: Props) {
       advanceNumber: string | null;
     } | null>(null),
     [reviewError, setReviewError] = useState("");
+  const [fileReset, setFileReset] = useState(0);
   const accountKey = useRef(crypto.randomUUID());
   const attempted = useRef<FormData | null>(null);
   const [uncertain, setUncertain] = useState(false);
@@ -120,7 +133,8 @@ export function ReceiptEntry(p: Props) {
     (row) =>
       row.partyId === partyId &&
       row.branchId === branchId &&
-      row.type === "SALES_INVOICE",
+      row.type === "SALES_INVOICE" &&
+      (!projectId || row.projectId === projectId),
   );
   const limits = new Map(
     docs.map((row) => [`document:${row.id}`, row.outstanding]),
@@ -153,6 +167,7 @@ export function ReceiptEntry(p: Props) {
     type,
     branchId,
     partyId,
+    projectId: projectId || undefined,
     paymentMode: mode,
     moneyAccountId: accountId,
     amount,
@@ -175,6 +190,7 @@ export function ReceiptEntry(p: Props) {
   );
   function selectParty(id: string) {
     setParty(id);
+    setProject("");
     setBillingName(customers.find((row) => row.id === id)?.name ?? "");
     setLinks([]);
     setKey(crypto.randomUUID());
@@ -209,11 +225,13 @@ export function ReceiptEntry(p: Props) {
       if (submitted.get("saveMode") === "new") {
         setAmount("");
         setParty("");
+        setProject("");
         setBillingName("");
         setLinks([]);
         setNotes("");
         setSearch("");
         setKey(crypto.randomUUID());
+        setFileReset((value) => value + 1);
         setMessage("Receipt saved. Ready for a new payment.");
         router.refresh();
       } else if (result.redirectTo) router.push(result.redirectTo);
@@ -228,14 +246,21 @@ export function ReceiptEntry(p: Props) {
   }
   return (
     <>
+      <style>{`.receipt-entry{gap:12px!important}.receipt-entry fieldset{display:grid;gap:14px!important;padding:14px!important;border:0!important;margin:0!important}.receipt-entry label{gap:5px!important;margin:0!important;font-size:14px}.receipt-entry input,.receipt-entry select{min-height:40px!important;padding:8px 10px!important;font-size:14px!important}.receipt-entry textarea{min-height:70px!important;padding:8px 10px!important;font-size:14px!important}.receipt-entry p{margin:4px 0!important}.receipt-entry footer button:first-child,.receipt-entry footer button:nth-child(2){flex:1}.receipt-entry-number-date{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.receipt-entry-number-date input{width:100%;min-width:0}`}</style>
       <form
+        onReset={(event) => event.preventDefault()}
         action={save}
-        className="stack"
+        className="stack receipt-entry"
         style={{ maxWidth: 760, margin: "0 auto", paddingBottom: 95 }}
       >
         <header>
           <h1>Payment-In</h1>
           {p.companyName && <p>Firm: {p.companyName}</p>}
+          {projectId && (
+            <p>
+              Project: {p.projects.find((row) => row.id === projectId)?.name}
+            </p>
+          )}
         </header>
         {error && <p role="alert">{error}</p>}
         {message && <p role="status">{message}</p>}
@@ -247,7 +272,7 @@ export function ReceiptEntry(p: Props) {
         )}
         <input type="hidden" name="payload" value={JSON.stringify(payload)} />
         <fieldset disabled={pending || creating || uncertain}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <div className="receipt-entry-number-date">
             <div>
               <label>
                 Receipt No.
@@ -274,6 +299,7 @@ export function ReceiptEntry(p: Props) {
                 value={branchId}
                 onChange={(e) => {
                   setBranch(e.target.value);
+                  setProject("");
                   setParty("");
                   setBillingName("");
                   setLinks([]);
@@ -301,6 +327,7 @@ export function ReceiptEntry(p: Props) {
           <label>
             Customer Name
             <select
+              aria-label="Customer Name"
               required
               value={partyId}
               onChange={(e) => selectParty(e.target.value)}
@@ -377,6 +404,7 @@ export function ReceiptEntry(p: Props) {
           <label>
             Payment Type
             <select
+              aria-label="Payment Type"
               required
               value={accountId}
               onChange={(e) => setAccount(e.target.value)}
@@ -404,6 +432,7 @@ export function ReceiptEntry(p: Props) {
           <label>
             Description
             <textarea
+              aria-label="Description"
               maxLength={5000}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -412,7 +441,7 @@ export function ReceiptEntry(p: Props) {
           <label>
             Attachment (PDF, PNG or JPEG; 10 MB combined)
             <input
-              key={key}
+              key={fileReset}
               type="file"
               name="attachments"
               multiple
@@ -604,6 +633,7 @@ export function ReceiptEntry(p: Props) {
           }}
         >
           <form
+            onReset={(event) => event.preventDefault()}
             className="stack"
             action={async (form) => {
               if (creating) return;
@@ -617,6 +647,7 @@ export function ReceiptEntry(p: Props) {
                   });
                   setCustomers((rows) => [...rows, row]);
                   setParty(row.id);
+                  setProject("");
                   setBillingName(row.name);
                   setLinks([]);
                 } else {
