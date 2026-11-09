@@ -1,6 +1,203 @@
-import {paymentDuplicateForActor} from "@/lib/account/payment-duplicate";
-import {AccountDate} from "@/components/account/display-preferences";
-import {Money} from "@/components/account/account-ui";
-import{commercialEditorOptions,documentOutstandingsBatch}from"@/lib/account/commercial";import{listOpeningOutstandings}from"@/lib/account/opening-balances";import{requirePermission}from"@/lib/auth/authorization";import{enabledModulesForCompany}from"@/lib/account/modules";import{db}from"@/lib/db";import{MoneyForm}from"./money-form";import{resolveInitialMoneyType}from"@/lib/account/payment-discount";
-const policies={CUSTOMER_RECEIPT:["SALES","CUSTOMER_RECEIPTS"],CUSTOMER_ADVANCE:["SALES","CUSTOMER_ADVANCES"],VENDOR_PAYMENT:["PURCHASES","VENDOR_PAYMENTS"],VENDOR_ADVANCE:["PURCHASES","VENDOR_ADVANCES"]} as const;
-export default async function Page({searchParams}:{searchParams:Promise<{duplicateId?:string;type?:string;projectId?:string;branchId?:string}>}){const a=await requirePermission("ACCOUNT_SETTLEMENT_ENTRY");if(a.accountRole!=="ACCOUNT_ADMIN"&&a.accountRole!=="ACCOUNTANT")throw new Error("Not authorized");const duplicateId=(await searchParams).duplicateId,initialDraft=duplicateId?await paymentDuplicateForActor({...a,companyId:a.companyId!},duplicateId):undefined;const [o,enabled,company]=await Promise.all([commercialEditorOptions(),enabledModulesForCompany(a.companyId!),db.company.findUniqueOrThrow({where:{id:a.companyId!},select:{name:true}})]),allowedTypes=Object.entries(policies).filter(([,required])=>required.every(x=>enabled.includes(x))).map(([type])=>type),initialType=resolveInitialMoneyType(allowedTypes,(await searchParams).type),branchIds=a.branchAccessScope==="SELECTED_BRANCHES"?a.branchIds??[]:undefined,branchWhere=branchIds?{branchId:{in:branchIds}}:{},moneyAccounts=await db.moneyAccount.findMany({where:{companyId:a.companyId!,isActive:true,...(branchIds?{OR:[{branchId:null},{branchId:{in:branchIds}}]}:{})},select:{id:true,name:true,branchId:true,type:true}}),settlements=await db.accountSettlement.findMany({where:{companyId:a.companyId!,...branchWhere,type:{in:allowedTypes as never[]}},select:{id:true,type:true,settlementNumber:true,transactionDate:true,amount:true},orderBy:{transactionDate:"desc"},take:50}),documents=await db.commercialDocument.findMany({where:{companyId:a.companyId!,...branchWhere,status:"POSTED",type:{in:["SALES_INVOICE","PURCHASE_BILL"]}},select:{id:true,documentNumber:true,partyId:true,branchId:true,grandTotal:true,payableAmount:true,type:true,projectId:true}}),[customerOpenings,vendorOpenings]=await Promise.all([listOpeningOutstandings({companyId:a.companyId!,partyType:"CUSTOMER",branchIds}),listOpeningOutstandings({companyId:a.companyId!,partyType:"VENDOR",branchIds})]),documentOutstanding=await documentOutstandingsBatch(a.companyId!,documents),openings=[...customerOpenings,...vendorOpenings].map(x=>({id:x.id,partyId:x.partyId,branchId:x.branchId,partyType:x.partyType,effectiveDate:x.effectiveDate.toISOString(),outstanding:x.outstanding.toString()}));return <main><h1>Receipts, payments and advances</h1>{allowedTypes.length?<MoneyForm key={duplicateId??"new"} initialDraft={initialDraft} companyName={company.name} initialBranchId={(await searchParams).branchId} discountEnabled={(o.accountSettings?.transactionDefaults as {transactionPreferences?:{discountDuringPayment?:boolean}}|null)?.transactionPreferences?.discountDuringPayment===true} initialProjectId={(await searchParams).projectId} allowedTypes={allowedTypes} initialType={initialType} branches={o.branches} customers={o.customers} vendors={o.vendors} documents={documents.filter(x=>documentOutstanding.get(x.id)?.gt(0)).map(x=>({id:x.id,documentNumber:x.documentNumber,partyId:x.partyId,branchId:x.branchId,type:x.type,projectId:x.projectId,outstanding:documentOutstanding.get(x.id)!.toString()}))} openings={openings} moneyAccounts={moneyAccounts} projects={o.projects}/>:<p>No money transaction module is enabled for this Company.</p>}<section><h2>Recent receipts, payments and advances</h2>{settlements.map(x=><article key={x.id}><strong>{x.settlementNumber} · {x.type.replaceAll("_"," ")}</strong><span> · <Money value={x.amount.toString()}/> · {<AccountDate value={x.transactionDate.toISOString()}/>} · </span><a target="_blank" rel="noreferrer" href={`/api/account/print/${x.type}/${x.id}`}>Print / Preview</a> · <a href={`/api/account/print/${x.type}/${x.id}?format=pdf`}>Download PDF</a></article>)}</section></main>}
+import { paymentDuplicateForActor } from "@/lib/account/payment-duplicate";
+import { AccountDate } from "@/components/account/display-preferences";
+import { Money } from "@/components/account/account-ui";
+import {
+  commercialEditorOptions,
+  documentOutstandingsBatch,
+} from "@/lib/account/commercial";
+import { listOpeningOutstandings } from "@/lib/account/opening-balances";
+import { requirePermission } from "@/lib/auth/authorization";
+import { enabledModulesForCompany } from "@/lib/account/modules";
+import { db } from "@/lib/db";
+import { MoneyForm } from "./money-form";
+import { resolveInitialMoneyType } from "@/lib/account/payment-discount";
+const policies = {
+  CUSTOMER_RECEIPT: ["SALES", "CUSTOMER_RECEIPTS"],
+  CUSTOMER_ADVANCE: ["SALES", "CUSTOMER_ADVANCES"],
+  VENDOR_PAYMENT: ["PURCHASES", "VENDOR_PAYMENTS"],
+  VENDOR_ADVANCE: ["PURCHASES", "VENDOR_ADVANCES"],
+} as const;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    duplicateId?: string;
+    type?: string;
+    projectId?: string;
+    branchId?: string;
+  }>;
+}) {
+  const a = await requirePermission("ACCOUNT_SETTLEMENT_ENTRY");
+  if (a.accountRole !== "ACCOUNT_ADMIN" && a.accountRole !== "ACCOUNTANT")
+    throw new Error("Not authorized");
+  const duplicateId = (await searchParams).duplicateId,
+    initialDraft = duplicateId
+      ? await paymentDuplicateForActor(
+          { ...a, companyId: a.companyId! },
+          duplicateId,
+        )
+      : undefined;
+  const [o, enabled, company] = await Promise.all([
+      commercialEditorOptions(),
+      enabledModulesForCompany(a.companyId!),
+      db.company.findUniqueOrThrow({
+        where: { id: a.companyId! },
+        select: { name: true },
+      }),
+    ]),
+    allowedTypes = Object.entries(policies)
+      .filter(([, required]) => required.every((x) => enabled.includes(x)))
+      .map(([type]) => type),
+    initialType = resolveInitialMoneyType(
+      allowedTypes,
+      (await searchParams).type,
+    ),
+    branchIds =
+      a.branchAccessScope === "SELECTED_BRANCHES"
+        ? (a.branchIds ?? [])
+        : undefined,
+    branchWhere = branchIds ? { branchId: { in: branchIds } } : {},
+    moneyAccounts = await db.moneyAccount.findMany({
+      where: {
+        companyId: a.companyId!,
+        isActive: true,
+        ...(branchIds
+          ? { OR: [{ branchId: null }, { branchId: { in: branchIds } }] }
+          : {}),
+      },
+      select: { id: true, name: true, branchId: true, type: true },
+    }),
+    settlements = await db.accountSettlement.findMany({
+      where: {
+        companyId: a.companyId!,
+        ...branchWhere,
+        type: { in: allowedTypes as never[] },
+      },
+      select: {
+        id: true,
+        type: true,
+        settlementNumber: true,
+        transactionDate: true,
+        amount: true,
+      },
+      orderBy: { transactionDate: "desc" },
+      take: 50,
+    }),
+    documents = await db.commercialDocument.findMany({
+      where: {
+        companyId: a.companyId!,
+        ...branchWhere,
+        status: "POSTED",
+        type: { in: ["SALES_INVOICE", "PURCHASE_BILL"] },
+      },
+      select: {
+        id: true,
+        documentNumber: true,
+        partyId: true,
+        branchId: true,
+        issueDate: true,
+        grandTotal: true,
+        payableAmount: true,
+        type: true,
+        projectId: true,
+      },
+    }),
+    [customerOpenings, vendorOpenings] = await Promise.all([
+      listOpeningOutstandings({
+        companyId: a.companyId!,
+        partyType: "CUSTOMER",
+        branchIds,
+      }),
+      listOpeningOutstandings({
+        companyId: a.companyId!,
+        partyType: "VENDOR",
+        branchIds,
+      }),
+    ]),
+    documentOutstanding = await documentOutstandingsBatch(
+      a.companyId!,
+      documents,
+    ),
+    openings = [...customerOpenings, ...vendorOpenings].map((x) => ({
+      id: x.id,
+      partyId: x.partyId,
+      branchId: x.branchId,
+      partyType: x.partyType,
+      effectiveDate: x.effectiveDate.toISOString(),
+      outstanding: x.outstanding.toString(),
+    }));
+  return (
+    <main>
+      {!initialType?.startsWith("CUSTOMER_") && (
+        <h1>Receipts, payments and advances</h1>
+      )}
+      {allowedTypes.length ? (
+        <MoneyForm
+          key={duplicateId ?? "new"}
+          initialDraft={initialDraft}
+          companyName={company.name}
+          initialBranchId={(await searchParams).branchId}
+          discountEnabled={
+            (
+              o.accountSettings?.transactionDefaults as {
+                transactionPreferences?: { discountDuringPayment?: boolean };
+              } | null
+            )?.transactionPreferences?.discountDuringPayment === true
+          }
+          initialProjectId={(await searchParams).projectId}
+          allowedTypes={allowedTypes}
+          initialType={initialType}
+          branches={o.branches}
+          customers={o.customers}
+          vendors={o.vendors}
+          documents={documents
+            .filter((x) => documentOutstanding.get(x.id)?.gt(0))
+            .map((x) => ({
+              id: x.id,
+              documentNumber: x.documentNumber,
+              issueDate: x.issueDate.toISOString(),
+              grandTotal: x.grandTotal.toString(),
+              partyId: x.partyId,
+              branchId: x.branchId,
+              type: x.type,
+              projectId: x.projectId,
+              outstanding: documentOutstanding.get(x.id)!.toString(),
+            }))}
+          openings={openings}
+          moneyAccounts={moneyAccounts}
+          projects={o.projects}
+        />
+      ) : (
+        <p>No money transaction module is enabled for this Company.</p>
+      )}
+      {!initialType?.startsWith("CUSTOMER_") && (
+        <section>
+          <h2>Recent receipts, payments and advances</h2>
+          {settlements.map((x) => (
+            <article key={x.id}>
+              <strong>
+                {x.settlementNumber} · {x.type.replaceAll("_", " ")}
+              </strong>
+              <span>
+                {" "}
+                · <Money value={x.amount.toString()} /> ·{" "}
+                {<AccountDate value={x.transactionDate.toISOString()} />} ·{" "}
+              </span>
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href={`/api/account/print/${x.type}/${x.id}`}
+              >
+                Print / Preview
+              </a>{" "}
+              ·{" "}
+              <a href={`/api/account/print/${x.type}/${x.id}?format=pdf`}>
+                Download PDF
+              </a>
+            </article>
+          ))}
+        </section>
+      )}
+    </main>
+  );
+}

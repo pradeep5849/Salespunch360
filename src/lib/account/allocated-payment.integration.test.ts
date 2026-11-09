@@ -6,6 +6,9 @@ const url=process.env.RESTORE_TEST_DATABASE_URL;
 if(url&&(!["localhost","127.0.0.1"].includes(new URL(url).hostname)||!new URL(url).pathname.endsWith("_ci")))throw new Error("Isolated local *_ci database required");
 const client=new PrismaClient({datasources:{db:{url:url??"postgresql://test:test@127.0.0.1:55432/allocated_ci"}}});
 vi.mock("@/lib/db",()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
+import {submitPaymentForActor} from "./payment-submission";
+import {createMoneyAccountForActor} from "./money";
+import {receiptEntryReviewForActor} from "./receipt-entry-review";
 import {DEFAULT_LEDGER_ACCOUNTS} from "@/lib/accounting/default-accounts";
 import {createCommercialDocumentForActor,postCommercialDocumentForActor,documentOutstandingsBatch,getCommercialDocumentForActor,commercialDocumentControlsForActor} from "./commercial";
 import {createAllocatedPaymentForActor} from "./allocated-payment";
@@ -98,4 +101,33 @@ describe.skipIf(!url)("single-cash partial payment and unused advance",()=>{
   expect((await documentOutstandingsBatch(companyId,[bill])).get(bill.id)?.toString()).toBe("55");
   expect((await client.commercialDocument.findUniqueOrThrow({where:{id:bill.id}})).status).toBe("POSTED");expect((await client.accountSettlement.findUniqueOrThrow({where:{id:payment.id}})).status).toBe("POSTED");expect(await client.accountSettlement.count({where:{companyId,vendorId:vendor.id}})).toBe(1);
  });
+ it("reference Payment-In posts one chosen bank account, clears 593 and keeps 507 unused, with exact ledger balance and retry",async()=>{
+  const customer=await client.customer.create({data:{companyId,branchId,name:"Reference receipt customer",isAccountCustomer:true}});
+  const invoice=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customer.id,issueDate:"2026-11-05",lines:[{lineType:"CUSTOM",itemName:"Reference work",quantity:"1",rate:"593",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:invoice.id});
+  const bank=await createMoneyAccountForActor(actor,{branchId,name:"Receipt Bank",type:"BANK",creationRequestKey:randomUUID()});
+  const beforePreview=await client.numberingSeries.findMany({where:{companyId,branchId},select:{id:true,nextSequence:true}});
+  expect((await receiptEntryReviewForActor(actor,{branchId,customerId:customer.id})).balance).toBe("593.00");
+  expect(await client.numberingSeries.findMany({where:{companyId,branchId},select:{id:true,nextSequence:true}})).toEqual(beforePreview);
+  const input={type:"CUSTOMER_RECEIPT",branchId,partyId:customer.id,moneyAccountId:bank.id,paymentMode:"BANK",amount:"1100",billingName:"Editable receipt identity",transactionDate:"2026-11-05",idempotencyKey:randomUUID(),allocations:[{documentId:invoice.id,amount:"593"}]};
+  const saved=await submitPaymentForActor(actor,input);
+  expect(saved.moneyAccountId).toBe(bank.id);expect(saved.amount.toString()).toBe("1100");expect(saved.remainingAmount.toString()).toBe("507");
+  expect((await documentOutstandingsBatch(companyId,[invoice])).get(invoice.id)?.toString()).toBe("0");
+  expect((await receiptEntryReviewForActor(actor,{branchId,customerId:customer.id})).balance).toBe("-507.00");
+  const cashLines=await client.journalLine.findMany({where:{companyId,ledgerAccountId:bank.ledgerAccountId,journalEntry:{status:"POSTED"}}});
+  expect(cashLines).toHaveLength(1);expect(cashLines[0].debit.toString()).toBe("1100");
+  expect((await submitPaymentForActor(actor,input)).id).toBe(saved.id);
+  expect(await client.accountSettlement.count({where:{companyId,customerId:customer.id}})).toBe(1);
+  await expect(submitPaymentForActor(actor,{...input,amount:"1200"})).rejects.toThrow("IDEMPOTENCY_KEY_REUSED");
+  await expect(submitPaymentForActor(actor,{...input,idempotencyKey:randomUUID(),allocations:[{documentId:invoice.id,amount:"1"}]})).rejects.toThrow();
+ },120000);
+ it("rejects one of two competing receipts instead of over-allocating the same invoice",async()=>{
+  const customer=await client.customer.create({data:{companyId,branchId,name:"Concurrent receipt customer",isAccountCustomer:true}});
+  const invoice=await createCommercialDocumentForActor(actor,{type:"SALES_INVOICE",branchId,partyId:customer.id,issueDate:"2026-11-05",lines:[{lineType:"CUSTOM",itemName:"Concurrent work",quantity:"1",rate:"100",taxRate:"0"}]});await postCommercialDocumentForActor(actor,{documentId:invoice.id});
+  const input={type:"CUSTOMER_RECEIPT",branchId,partyId:customer.id,paymentMode:"CASH",amount:"60",transactionDate:"2026-11-05",allocations:[{documentId:invoice.id,amount:"60"}]};
+  const result=await Promise.allSettled([submitPaymentForActor(actor,{...input,idempotencyKey:randomUUID()}),submitPaymentForActor(actor,{...input,idempotencyKey:randomUUID()})]);
+  expect(result.filter(row=>row.status==="fulfilled")).toHaveLength(1);
+  expect((await documentOutstandingsBatch(companyId,[invoice])).get(invoice.id)?.toString()).toBe("40");
+  expect(await client.accountSettlement.count({where:{companyId,customerId:customer.id}})).toBe(1);
+ },120000);
+
 });
