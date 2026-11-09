@@ -16,3 +16,9 @@ Successful cleanup deletes only the unlinked master/project row, writes a RECORD
 No secret value is committed. Missing authentication rejects the call; missing or invalid activation keeps deletion disabled. A missing GitHub job secret logs that scheduling is not configured. Do not claim automatic deletion is active until both sides are configured and a job result is verified.
 
 Migration: 20261106125807_recycle_seven_day_retention (additive enum and nullable tombstone/check fields). The existing production build gate applies and verifies it before this app version serves requests. No migration reset/forced push. A broader Prisma drift proposal from migrate dev was discarded; only this explicitly reviewed delta is committed.
+
+## Operational reporting
+
+A successful Actions run alone does not prove deletion is active: a missing job secret skips the HTTP request. The workflow now emits an explicit warning and summary for that state. An authenticated inactive response means activation is disabled/invalid or the full seven-day grace has not elapsed. Active reports show bounded counts; retained protected records are expected. Partial cleanup failures return HTTP 503, and malformed or failed reports fail the workflow. Completed deletions remain idempotent on the next scheduled retry.
+
+On 9 November 2026, run 42582871013 was observed skipping because the GitHub job secret was not configured. No activation was attempted in this follow-up.

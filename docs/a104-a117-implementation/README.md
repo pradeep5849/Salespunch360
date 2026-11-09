@@ -1,7 +1,7 @@
 # A104–A117 implementation checkpoint
 
-Implementation is in progress. This branch is not a deployment and is not ready to merge.
-The finding register remains pending until each correction has appropriate runtime and platform evidence.
+A104–A117 implementation was merged through PR #180 on 6 November 2026.
+PR #183 subsequently added guarded seven-day Recycle Bin retention. Historical audit findings below describe the earlier review checkpoints; they are not evidence that these merged changes are still unimplemented. Production feature activation must be verified separately.
 
 ## Confirmed restore policy
 
@@ -49,7 +49,7 @@ Purchase/payment preview and sharing reuse the existing authorized PDF/image hel
 
 ## Review and deployment
 
-PR #180 is a draft review checkpoint and is not merged or deployed. Final current-head Web/migration/Android checks and review are required before publishing. No audit-reader or close-books product decision remains pending.
+PR #180 is merged. Its final-head Web, migration and Android checks passed (run 42196951916). No audit-reader or close-books product decision remains pending. The selected Close Books behavior preserves history; destructive Start Fresh was excluded. This follow-up does not execute production financial actions or activate scheduled deletion.
 
 Apply the new migration through the existing migration deployment process before starting this application version. Private evidence uses the already configured HOSTINGER_STORAGE_PATH; this change introduces no new secret or password setting. Keep credentials in the deployment environment. Do not run financial-year closing, numbering restart or company restore against production merely to verify this PR.
 
@@ -59,3 +59,9 @@ The original A104–A117 audit registers are historical records. The implementat
 ## Backend evidence security follow-up
 
 The production migration workflow identifies Supabase PostgreSQL. Following its [RLS guidance](https://supabase.com/docs/guides/database/postgres/row-level-security), migration 20261106094000_payment_evidence_backend_security enables RLS without browser policies and fixes invoker trigger search paths. PUBLIC and browser roles cannot execute the trigger functions. Prisma backend owner access still uses application company, role and branch checks. All 164 migrations applied locally; payment and restore regressions passed after this change. No production advisor, SQL or schema mutation was executed. The migration remains part of the existing Prisma chain, with no second migration framework introduced.
+
+## PR #183 follow-up — 9 November 2026
+
+The latest observed cleanup run (42582871013, job 129045578948) exited successfully without sending a cleanup request because FIELD_JOB_SECRET was missing. This does not establish active automatic deletion. The follow-up adds a visible unconfigured warning and workflow summary, distinguishes inactive grace from an active bounded pass, rejects malformed/failure reports, and returns HTTP 503 for partial worker failures. Protected history retention remains a successful outcome.
+
+Fresh local validation on main plus this follow-up: all 165 migrations applied to a new disposable loopback PostgreSQL database; 36 integration tests passed across recycle retention, project archive/restore, company replacement, payments/evidence, close books, numbering, pagination, taxes and imports. Six cleanup unit/route tests passed; TypeScript and changed-source ESLint passed. Five workflow-shell fixtures passed (unconfigured, inactive, active, partial failure and malformed response). No production cleanup, secret change, restore or year close was performed.
