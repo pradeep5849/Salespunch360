@@ -33,7 +33,7 @@ export function MoneyForm({initialDraft,allowedTypes,initialType,initialProjectI
  const [linkEditorOpen,setLinkEditorOpen]=useState(false);
  const [linkSnapshot,setLinkSnapshot]=useState<{target:string;amount:string}[]>([]);
  const eligibleParties=(vendor?vendors:customers.filter(row=>!row.branchId||row.branchId===branchId)).filter(row=>row.name.toLowerCase().includes(partySearch.trim().toLowerCase())||row.id===partyId);
- const outstandingByTarget=new Map([...docs.map(row=>[`document:${row.id}`,cents(row.outstanding)] as const),...openingTargets.map(row=>[`opening:${row.id}`,cents(row.outstanding)] as const)]);
+ const outstandingByTarget=new Map<string,bigint>([...docs.map(row=>[`document:${row.id}`,cents(row.outstanding)] as const),...openingTargets.map(row=>[`opening:${row.id}`,cents(row.outstanding)] as const)]);
  const linkedByTarget=new Map<string,bigint>();for(const row of links){linkedByTarget.set(row.target,(linkedByTarget.get(row.target)??BigInt(0))+cents(row.amount));}
  const overAllocated=[...linkedByTarget].some(([key,value])=>value>(outstandingByTarget.get(key)??BigInt(0)));
  const customerBalance=[...docs,...openingTargets].reduce((sum,row)=>sum+cents(row.outstanding),BigInt(0));
