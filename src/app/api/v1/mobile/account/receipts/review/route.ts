@@ -1,3 +1,4 @@
+import { canUsePermission } from "@/lib/auth/permissions";
 import { authenticateMobileToken } from "@/lib/mobile/auth";
 import { mobileAccountActor } from "@/lib/mobile/account-transactions";
 import { receiptEntryReviewForActor } from "@/lib/account/receipt-entry-review";
@@ -12,8 +13,13 @@ export async function GET(r: Request) {
   try {
     const user = await authenticateMobileToken(r.headers.get("authorization")),
       query = new URL(r.url).searchParams;
+    const actor = mobileAccountActor(user);
+    if (
+      !canUsePermission(actor, user.productEdition, "ACCOUNT_SETTLEMENT_ENTRY")
+    )
+      throw new Error("MOBILE_FORBIDDEN");
     return mobileJson(
-      await receiptEntryReviewForActor(mobileAccountActor(user), {
+      await receiptEntryReviewForActor(actor, {
         branchId: query.get("branchId"),
         ...(query.get("customerId")
           ? { customerId: query.get("customerId") }
