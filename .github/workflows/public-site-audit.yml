@@ -45,7 +45,7 @@ jobs:
         run: |
           echo "::error::The public audit did not complete. Inspect response diagnostics and the Lighthouse runtime error; no speed score is valid."
           exit 1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: public-lighthouse-${{ matrix.device }}
