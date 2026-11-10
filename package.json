@@ -88,6 +88,18 @@
     "vite": "8.3.5",
     "@typescript-eslint/typescript-estree": {
       "minimatch": "11.0.4"
+    },
+    "eslint": {
+      "minimatch": "11.0.4"
+    },
+    "@eslint/config-array": {
+      "minimatch": "11.0.4"
+    },
+    "rimraf@>=4": {
+      "glob": {
+        ".": "14.0.2",
+        "minimatch": "11.0.4"
+      }
     }
   }
 }
