@@ -32,7 +32,7 @@ describe("native Account Project parity", () => {
     expect(vm).toContain('put("projectId"');
     expect(screen).toContain('SelectField("Project"');
     const normalized = compactSource(screen);
-    expect(normalized).toContain('listOf("" to "No Project")');
+    expect(normalized).toContain('listOf(""to"No Project")');
     expect(normalized).toContain(
       "it.branchId==s.branchId&&s.projectCustomers[it.id]==s.customerId",
     );
