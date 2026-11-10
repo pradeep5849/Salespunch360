@@ -1,3 +1,4 @@
+import { compactSource } from "@/lib/testing/compact-source";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 describe("native Account Project parity", () => {
@@ -30,5 +31,13 @@ describe("native Account Project parity", () => {
       );
     expect(vm).toContain('put("projectId"');
     expect(screen).toContain('SelectField("Project"');
+    const normalized = compactSource(screen);
+    expect(normalized).toContain('listOf("" to "No Project")');
+    expect(normalized).toContain(
+      "it.branchId==s.branchId&&s.projectCustomers[it.id]==s.customerId",
+    );
+    expect(normalized).toContain(
+      'if(!locked)vm.update{it.copy(projectId=value,invoiceId="",links=emptyMap())}',
+    );
   });
 });
