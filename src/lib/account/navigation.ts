@@ -241,11 +241,6 @@ const groups: AccountNavGroup[] = [
         href: "/workspace/account/utilities/financial-year",
         permission: "ACCOUNT_PERIOD_LOCK",
       },
-      {
-        label: "Period Locks",
-        href: "/workspace/account/utilities/period-locks",
-        permission: "ACCOUNT_PERIOD_LOCK",
-      },
     ],
   },
   {
@@ -293,6 +288,7 @@ const groups: AccountNavGroup[] = [
       { label: "Import Parties", href: "/workspace/account/utilities/import?type=CUSTOMERS", permission: "ACCOUNT_ACCOUNTS" },
       { label: "Recycle Bin", href: "/workspace/account/utilities/recycle-bin", permission: "ACCOUNT_SETTINGS" },
       { label: "Close Financial Year", href: "/workspace/account/utilities/financial-year", permission: "ACCOUNT_PERIOD_LOCK" },
+      { label: "Period Locks", href: "/workspace/account/utilities/period-locks", permission: "ACCOUNT_PERIOD_LOCK" },
     ],
   },
   {
