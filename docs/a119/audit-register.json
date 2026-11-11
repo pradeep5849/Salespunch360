@@ -1,0 +1,35 @@
+{
+  "page_id": "A119",
+  "title": "Recycle Bin",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-11",
+  "findings": [
+    {
+      "finding_id": "A119-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "100-row cap without pagination"
+    },
+    {
+      "finding_id": "A119-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Restore pending/result feedback"
+    },
+    {
+      "finding_id": "A119-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Native restore identity and archive context"
+    }
+  ],
+  "validation": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "database_cases": 8,
+    "unit_route_cases": 6,
+    "production_mutations": false
+  },
+  "next_page": "A120"
+}

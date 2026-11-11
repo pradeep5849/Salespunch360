@@ -21,3 +21,11 @@ Reviewed web page/action, shared navigation, mobile context/dispatch/editor, `pe
 43 focused checks passed in four files: Utilities role/order/uniqueness, menu SSR, accounting runtime regressions and mobile navigation contract. The existing accounting runtime checks include posting rejection on locked dates. This run did not execute the opt-in PostgreSQL lock/concurrency suites, physical Android interaction, browser visual parity, or live deployed navigation. No reference Period Locks screenshot was supplied; exact reference parity remains unverified. Full posting/reversal lifecycle coverage and lock-date concurrency require further audit evidence before declaring A118 fully verified.
 
 The Lighthouse issue remains deferred by owner instruction and is separate from this change.
+
+## Audit continuation — 11 November 2026
+
+PR #197 is merged (2c4de1d5e356c2819d933a2ce840aaf38ea5c8a6); F01 is IMPLEMENTED/MERGED, with live UI verification still outstanding. No other A118 behavior fix is included.
+
+The existing disposable PostgreSQL fixture `sp360_pr183_ci` on 127.0.0.1:55432 was started and used for eight integration checks across close-books, recycle retention and Project archive/restore. Six retention/endpoint unit checks also passed: **14 passed, zero failures/skips**. Lock/close serialization preserves the end-of-year lock and rejects a backward lock after closing. Posting/close races, read-only close review and idempotent close passed. These checks strengthen the concurrency evidence; they do not cover every posting/reversal path or native interaction. F02 and F03 remain open; F03 is a closed-year metadata consistency issue, not demonstrated reopening of a closed year.
+
+A119 is Recycle Bin, confirmed from the supplied inventory PDF. No application code changed during this continuation.
