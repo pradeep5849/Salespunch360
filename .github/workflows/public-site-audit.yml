@@ -36,16 +36,17 @@ jobs:
         continue-on-error: true
         env:
           DEVICE: ${{ matrix.device }}
+          AUDIT_URL: https://www.salespunch360.com/?audit=${{ github.run_id }}-${{ matrix.device }}
           CHROME_PATH: /usr/bin/google-chrome
         run: |
           mkdir -p reports
           google-chrome --version
-          curl -sS --max-time 30 -D reports/response-headers.txt -o reports/response-body.html -w "PUBLIC_HTTP_STATUS=%{http_code}\n" https://www.salespunch360.com/
+          curl -sS --max-time 30 -D reports/response-headers.txt -o reports/response-body.html -w "PUBLIC_HTTP_STATUS=%{http_code}\n" "$AUDIT_URL"
           node scripts/inspect-public-response.mjs reports/response-headers.txt reports/response-body.html
           if [ "$DEVICE" = desktop ]; then
-            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --preset=desktop --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
+            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse "$AUDIT_URL" --preset=desktop --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
           else
-            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
+            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse "$AUDIT_URL" --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
           fi
       - name: Inspect actual browser network responses
         if: always()
