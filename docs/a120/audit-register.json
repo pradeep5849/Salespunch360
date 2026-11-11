@@ -1,0 +1,53 @@
+{
+  "page_id": "A120",
+  "title": "Verify my data",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-11",
+  "findings": [
+    {
+      "finding_id": "A120-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Branch/role scope mismatch"
+    },
+    {
+      "finding_id": "A120-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Missing approved reconciliations"
+    },
+    {
+      "finding_id": "A120-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Transfer mismatch false pass"
+    },
+    {
+      "finding_id": "A120-F04",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Canonical ledger readiness not covered"
+    },
+    {
+      "finding_id": "A120-F05",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Verification results and actionability"
+    },
+    {
+      "finding_id": "A120-F06",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Unbounded non-snapshot scan"
+    }
+  ],
+  "validation": {
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "type": "mocked service and pure policy; defect reproduction is not feature acceptance",
+    "production_mutations": false
+  },
+  "reference": "Owner-supplied verification success dialog and approved definition",
+  "next_page": "A121 \u2014 Attendance"
+}
