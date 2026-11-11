@@ -1,10 +1,23 @@
 name: Public website mobile and desktop audit
 on:
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  support-probes:
+    name: Hostinger support HTTP evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Compare public user agents, redirects and cache variants
+        run: python3 scripts/hostinger-403-probe.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: hostinger-support-http-evidence
+          path: reports/hostinger-support/
+          retention-days: 7
   lighthouse:
     name: Lighthouse ${{ matrix.device }}
     runs-on: ubuntu-latest
