@@ -1,0 +1,55 @@
+{
+  "page_id": "A121",
+  "title": "Attendance",
+  "workspace": "Sales / Field Sales",
+  "audit_scope": "Full app; current UI; audit only",
+  "date": "2026-11-11",
+  "findings": [
+    {
+      "finding_id": "A121-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Explicit started/stopped confirmation with IST time"
+    },
+    {
+      "finding_id": "A121-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Multi-branch start lacks selection/context"
+    },
+    {
+      "finding_id": "A121-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Geofence and tracking location requirements conflated"
+    },
+    {
+      "finding_id": "A121-F04",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Transport and tracking failure recovery"
+    },
+    {
+      "finding_id": "A121-F05",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Attendance timezone consistency"
+    },
+    {
+      "finding_id": "A121-F06",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Team status freshness and empty state"
+    }
+  ],
+  "owner_requirement": "Confirmed Attendance started successfully / Attendance stopped successfully with confirmed IST timestamp; never claim success on failed or uncertain request",
+  "validation": {
+    "existing_passed": 43,
+    "new_probes_passed": 7,
+    "executed_failed": 0,
+    "filtered_duplicate_baseline_cases": 3,
+    "browser_device_verified": false,
+    "production_mutations": false
+  },
+  "next_page": "A122"
+}
