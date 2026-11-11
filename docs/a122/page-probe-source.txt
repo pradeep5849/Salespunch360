@@ -1,0 +1,7 @@
+import { expect,it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { readFileSync,existsSync } from 'node:fs';
+import Page from '@/app/workspace/billing/actions/page';
+it('renders the approved three-action layout with exact destinations',()=>{const html=renderToStaticMarkup(Page());for(const [label,path] of [['Add Sales Team','add-sales-team'],['Add Account Team','add-account-team'],['Renewal','renewal']]){expect(html).toContain(`href="/workspace/billing/${path}"`);expect(html).toContain(label);expect(existsSync(`src/app/workspace/billing/${path}/page.tsx`)).toBe(true)}});
+it('uses navigation links rather than creating or activating an order',()=>{const html=renderToStaticMarkup(Page());expect(html).not.toContain('<form');expect(html).not.toContain('type="submit"');expect(html).toContain('href="/workspace/billing"');expect(html).toContain('<h1>Billing</h1>')});
+it('documents absence of route-local billing and capability checks',()=>{const source=readFileSync('src/app/workspace/billing/actions/page.tsx','utf8');expect(source).not.toMatch(/billingDashboard|loadBillingPageData|requireBilling|requirePermission/);expect(source).not.toMatch(/hasSales|hasAccount|paidActive|productEdition/) });

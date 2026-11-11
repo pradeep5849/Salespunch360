@@ -1,0 +1,31 @@
+{
+  "page_id": "A122",
+  "title": "Billing actions",
+  "route": "/workspace/billing/actions",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-11",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A122-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Route-local billing eligibility guard missing; destinations remain guarded"
+    },
+    {
+      "finding_id": "A122-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Unavailable edition/term actions unexplained at entry"
+    }
+  ],
+  "validation": {
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "new_page_probes": 3,
+    "browser_device_verified": false,
+    "production_billing_operations": false
+  },
+  "next_page": "A123"
+}
