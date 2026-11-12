@@ -1,0 +1,14 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+const m=vi.hoisted(()=>({redirect:vi.fn(),load:vi.fn()}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+vi.mock('@/app/workspace/billing/billing-page-data',()=>({loadBillingPageData:m.load}));
+import Alias from '@/app/workspace/billing/add-account-package/page';
+import AddTeam from '@/app/workspace/billing/add-account-team/page';
+function context(patch:any={}){return{r:{hasAccount:true,account:{packageCount:1,sixMonthUnitPrice:900,yearlyUnitPrice:1500}},e:{paidActive:true,adminLimit:1,managerLimit:1,salesLimit:1},telecaller:null,managersEnabled:true,accountPrices:{SIX_MONTH:900,YEARLY:1500},accountCurrent:{endsAt:new Date('2027-01-01')},isPlus:false,activePeriod:'SIX_MONTH',...patch}}
+beforeEach(()=>{vi.clearAllMocks();m.redirect.mockImplementation(()=>{throw new Error('REDIRECT')});m.load.mockResolvedValue(context())});
+it('A123 only redirects to the canonical Add Account Team page',()=>{expect(()=>Alias()).toThrow('REDIRECT');expect(m.redirect).toHaveBeenCalledWith('/workspace/billing/add-account-team');expect(m.load).not.toHaveBeenCalled()});
+it('Account-only screen uses supplied rates and GET review without payment mutation',async()=>{const html=renderToStaticMarkup(await AddTeam());expect(html).toContain('900');expect(html).toContain('1,500');expect(html).toContain('action="/workspace/billing/checkout/account"');expect(html).toContain('method="GET"');expect(html).toContain('min="1" max="100"');expect(html).not.toContain('Continue with Manual Payment')});
+it('denies the unavailable Account option at the destination',async()=>{m.load.mockResolvedValue(context({r:{hasAccount:false}}));const html=renderToStaticMarkup(await AddTeam());expect(html).toContain('Account subscription not available');expect(html).not.toContain('<form')});
+it('requires active Plus before a midterm addition',async()=>{m.load.mockResolvedValue(context({isPlus:true,e:{paidActive:false}}));const html=renderToStaticMarkup(await AddTeam());expect(html).toContain('Start or renew Plus first');expect(html).not.toContain('<form')});
+it('active Plus preserves Sales capacity in the Account addition request',async()=>{m.load.mockResolvedValue(context({isPlus:true}));const html=renderToStaticMarkup(await AddTeam());expect(html).toContain('name="purchaseMode" value="ADD_ACCOUNT"');expect(html).toContain('name="adminSeats" value="1"');expect(html).toContain('name="salesSeats" value="1"');expect(html).toContain('name="accountPackages" value="1"');expect(html).toContain('disabled=""')});

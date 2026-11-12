@@ -1,0 +1,28 @@
+{
+  "page_id": "A124",
+  "title": "Add Account Team",
+  "route": "/workspace/billing/add-account-team",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-12",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A124-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Account-only displayed package prices omit configured rates",
+      "shared_source": "billingDashboard currentPrices conditional",
+      "cross_reference": "A126 checkout review; avoid duplicate shared-loader finding"
+    }
+  ],
+  "validation": {
+    "new_probes_passed": 6,
+    "combined_a123_a124_passed": 33,
+    "shared_existing_cases": 26,
+    "failed_final": 0,
+    "skipped_final": 0,
+    "browser_device_verified": false,
+    "production_billing_operations": false
+  },
+  "next_page": "A125"
+}

@@ -1,0 +1,30 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/Salespunch360
+
+ ❯ .a124-price-audit.test.ts (2 tests | 1 failed) 41ms
+   × reproduces Account-only screen fallback rate differing from authoritative order rate 39ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  .a124-price-audit.test.ts > reproduces Account-only screen fallback rate differing from authoritative order rate
+TypeError: Cannot read properties of undefined (reading 'findUnique')
+ ❯ lockBillingCompany src/lib/billing/company-lock.ts:6:33
+      4| export async function lockBillingCompany(tx:Prisma.TransactionClient,c…
+      5|  await tx.$queryRaw`SELECT 1::int AS "locked" FROM "companies" WHERE "…
+      6|  const company=await tx.company.findUnique({where:{id:companyId},selec…
+       |                                 ^
+      7|  if(!company)throw new Error('NOT_FOUND');
+      8|  return company;
+ ❯ src/lib/billing/service.ts:30:964
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 6 passed (7)
+      Tests  1 failed | 32 passed (33)
+   Start at  03:33:56
+   Duration  984ms (transform 765ms, setup 0ms, import 1.78s, tests 153ms, environment 1ms)
+
