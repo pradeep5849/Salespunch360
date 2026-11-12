@@ -1,0 +1,4 @@
+import {expect,it,vi} from 'vitest';
+vi.mock('@/lib/db',()=>({db:{}}));
+import {mobileBillingContext} from '@/lib/mobile/billing';
+it('reproduces Account-only administrator rejection by the Sales-only mobile billing gate',async()=>{await expect(mobileBillingContext({id:'admin',companyId:'company',name:'Fixture',email:'fixture@example.test',role:'ACCOUNT_USER',salesRole:null,accountRole:'ACCOUNT_ADMIN',managerType:null,productEdition:'SALESPUNCH360_ACCOUNT',authorizedWorkspaces:['ACCOUNT']} as never)).rejects.toMatchObject({code:'FORBIDDEN',status:403})});

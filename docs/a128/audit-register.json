@@ -1,0 +1,44 @@
+{
+  "page_id": "A128",
+  "title": "Payment History",
+  "route": "/workspace/billing/history",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-12",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A128-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Payment History lacks a visible entry in billing navigation"
+    },
+    {
+      "finding_id": "A128-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web order history stops at 50 without pagination"
+    },
+    {
+      "finding_id": "A128-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Payment reference/details and complete purchased capacity unavailable"
+    },
+    {
+      "finding_id": "A128-F04",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Native billing rejects Account-only administrators"
+    }
+  ],
+  "validation": {
+    "passed": 21,
+    "audit_probes": 9,
+    "existing_shared_cases": 12,
+    "failed": 0,
+    "skipped": 0,
+    "browser_device_verified": false,
+    "production_billing_operations": false
+  },
+  "next_page": "A129"
+}

@@ -1,0 +1,14 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {Prisma} from '@prisma/client';
+const m=vi.hoisted(()=>({load:vi.fn()}));
+vi.mock('@/app/workspace/billing/billing-page-data',()=>({loadBillingPageData:m.load}));
+import Page from '@/app/workspace/billing/history/page';
+const row=(patch:any={})=>({id:'12345678-full-synthetic-order-id',provider:'UNCONFIGURED',accountPackages:0,adminSeats:1,managerSeats:1,salesSeats:2,billingPeriod:'SIX_MONTH',createdAt:new Date('2027-01-01T12:00:00Z'),totalAmount:new Prisma.Decimal('100.50'),status:'PAID',currency:'INR',payments:[{manualReference:'SYNTHETIC-UTR-UNIQUE',capturedAt:new Date('2030-01-01'),status:'CAPTURED'}],...patch});
+beforeEach(()=>{vi.clearAllMocks();m.load.mockResolvedValue({r:{orders:[row()]}})});
+it('renders precise stored amount and explicit paid status without mutation controls',async()=>{const s=renderToStaticMarkup(await Page());expect(s).toContain('INR 100.50');expect(s).toContain('PAID');expect(s).not.toContain('<form')});
+it('renders empty history rather than fabricating a payment',async()=>{m.load.mockResolvedValue({r:{orders:[]}});const s=renderToStaticMarkup(await Page());expect(s).toContain('No orders yet.')});
+it('retains a pending status rather than claiming payment success',async()=>{m.load.mockResolvedValue({r:{orders:[row({status:'PENDING'})]}});const s=renderToStaticMarkup(await Page());expect(s).toContain('PENDING');expect(s).not.toContain('PAID')});
+it('renders Account package and Plus breakdowns',async()=>{m.load.mockResolvedValue({r:{orders:[row({provider:'ACCOUNT_PACKAGE',accountPackages:2}),row({id:'second',provider:'PLUS_COMBINED',accountPackages:3})]}});const s=renderToStaticMarkup(await Page());expect(s).toContain('2 Account packages');expect(s).toContain('3 Account packages')});
+it('reproduces omitted payment reference and absent detail navigation',async()=>{const s=renderToStaticMarkup(await Page());expect(s).not.toContain('SYNTHETIC-UTR-UNIQUE');expect(s).not.toContain('12345678-full-synthetic-order-id');expect(s).toContain('Ref 12345678');expect(s).not.toContain('href="/workspace/billing/pending')});
+it('propagates a billing authorization denial before showing history',async()=>{m.load.mockRejectedValue(new Error('Not authorized'));await expect(Page()).rejects.toThrow('Not authorized')});
