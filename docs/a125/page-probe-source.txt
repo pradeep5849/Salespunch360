@@ -1,0 +1,18 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+const m=vi.hoisted(()=>({load:vi.fn(),values:[] as number[],index:0}));
+vi.mock('react',async actual=>({...await actual<typeof import('react')>(),useState:(initial:number)=>[m.values[m.index++]??initial,vi.fn()]}));
+vi.mock('@/app/workspace/billing/billing-page-data',()=>({loadBillingPageData:m.load}));
+import Page from '@/app/workspace/billing/add-sales-team/page';
+import {AddTeamCalculator} from '@/app/workspace/billing/billing-calculator';
+import {orderRequestSchema,priceChangeSchema} from '@/lib/billing/validation';
+const props={managersEnabled:true,adminLimit:2,managerLimit:3,salesLimit:8,telecallerLimit:4,period:'SIX_MONTH' as const,prices:{SIX_MONTH:{admin:1400.5,manager:1100.5,sales:800.5},YEARLY:{admin:2800,manager:2100,sales:1500}},telecallerPrices:{SIX_MONTH:600,YEARLY:1000},isPlus:false,accountPackages:2,endsAt:new Date('2027-01-01')};
+const html=(patch:any={})=>renderToStaticMarkup(AddTeamCalculator({...props,...patch}));
+beforeEach(()=>{vi.clearAllMocks();m.index=0;m.values=[];m.load.mockResolvedValue({r:{hasSales:true,account:{packageCount:2}},e:{paidActive:true,adminLimit:2,managerLimit:3,salesLimit:8,subscription:{endsAt:props.endsAt}},telecaller:{limit:4},managersEnabled:true,prices:props.prices,telecallerPrices:props.telecallerPrices,isPlus:false,activePeriod:'SIX_MONTH'})});
+it('rejects unavailable Sales capability at page entry',async()=>{m.load.mockResolvedValue({r:{hasSales:false},e:null});const s=renderToStaticMarkup(await Page());expect(s).toContain('Sales subscription not available');expect(s).not.toContain('<form')});
+it('offers renewal instead of midterm addition for an unpaid term',async()=>{m.load.mockResolvedValue({r:{hasSales:true},e:{paidActive:false}});const s=renderToStaticMarkup(await Page());expect(s).toContain('Start the Sales subscription first');expect(s).toContain('href="/workspace/billing/renewal"');expect(s).not.toContain('<form')});
+it('zero additions preserve capacities but disable review',()=>{const s=html();for(const [key,value] of [['adminSeats','2'],['managerSeats','3'],['salesSeats','8'],['telecallerSeats','4'],['purchaseMode','ADD_TEAM']])expect(s).toContain(`name="${key}" value="${value}"`);expect(s).toContain('disabled=""');expect(s).toContain('method="GET"');expect(s).not.toContain('Continue with Manual Payment')});
+it('Plus carries unchanged Account packages and only adds selected Sales seats',()=>{m.values=[0,0,2,0];const s=html({isPlus:true});expect(s).toContain('name="accountPackages" value="2"');expect(s).toContain('name="salesSeats" value="10"');expect(s).not.toContain('disabled=""')});
+it('disabled-manager mode removes the Manager addition control',()=>{const s=html({managersEnabled:false,managerLimit:0});expect(s).not.toContain('Add Manager Seats');expect(s).toContain('name="managerSeats" value="0"')});
+it('reproduces an allowed addition input yielding a target above the server limit',()=>{m.values=[0,0,10000,0];const s=html();expect(s).toContain('name="salesSeats" value="10008"');expect(s).not.toContain('disabled=""');expect(orderRequestSchema.safeParse({billingPeriod:'SIX_MONTH',adminSeats:2,managerSeats:3,salesSeats:10008,telecallerSeats:4,retainManagerUserIds:[],retainSalesUserIds:[],idempotencyKey:'audit-key-1234567890'}).success).toBe(false)});
+it('reproduces rounding a supported fractional rate in the full-period price label',()=>{expect(priceChangeSchema.safeParse({role:'SALES',period:'SIX_MONTH',amount:'800.50',currency:'INR'}).success).toBe(true);const s=html();expect(s).toContain('₹801');expect(s).not.toContain('₹800.50')});

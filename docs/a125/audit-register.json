@@ -1,0 +1,43 @@
+{
+  "page_id": "A125",
+  "title": "Add Sales Team",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-12",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A125-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Addition input can exceed total-target limit"
+    },
+    {
+      "finding_id": "A125-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Fractional supported rates rounded in labels"
+    },
+    {
+      "finding_id": "A125-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Native billing period taken from paginated order history"
+    },
+    {
+      "finding_id": "A125-F04",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Native quote failure feedback missing"
+    }
+  ],
+  "validation": {
+    "passed": 35,
+    "new_probes": 7,
+    "existing_cases": 28,
+    "failed": 0,
+    "skipped": 0,
+    "native_findings": "source only; no device/compiler run",
+    "production_billing_operations": false
+  },
+  "next_page": "A126"
+}
