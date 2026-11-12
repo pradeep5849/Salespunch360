@@ -23,3 +23,7 @@ The initial custom-price probe omitted the transaction company's findUnique dele
 No authenticated real browser, Android device/Compose interaction, real payment, exact visual parity, load test or live role×edition×term matrix was executed. The mocked price mismatch is confirmed; actual production configured price values were neither read nor changed. Existing pending-order reuse and checkout validation belong to upcoming checkout audits rather than being newly attributed to the A124 page without further evidence.
 
 Next: A125 — Add Sales Team, preserving the current UI.
+
+## Owner purchase-policy update — 12 November 2026
+
+Account-only admins must not create or renew subscriptions. Earlier source/probe evidence describing currently allowed Account Admin creation is not an endorsement of that permission. A129-F01 now tracks this conflict with the explicit owner rule. Price/selection findings remain relevant to the eventual authorized purchase flow; no permission or UI code was changed. Read-only subscription/history access remains a separate undecided policy.

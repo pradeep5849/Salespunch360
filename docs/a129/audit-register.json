@@ -1,0 +1,44 @@
+{
+  "page_id": "A129",
+  "title": "Billing & Subscription hub",
+  "route": "/workspace/billing",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-12",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "owner_policy_reference": "docs/billing-audit-owner-policy.json",
+  "findings": [
+    {
+      "finding_id": "A129-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Account-only admin order creation violates clarified owner policy"
+    },
+    {
+      "finding_id": "A129-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Inherited error-map key can break hub rendering"
+    },
+    {
+      "finding_id": "A129-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Ancillary billing-data failure blocks hub navigation"
+    }
+  ],
+  "cross_references": [
+    "A128-F01",
+    "A128-F04",
+    "A126-F04"
+  ],
+  "validation": {
+    "passed": 19,
+    "audit_probes": 8,
+    "existing_cases": 11,
+    "failed": 0,
+    "skipped": 0,
+    "production_billing_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A130"
+}

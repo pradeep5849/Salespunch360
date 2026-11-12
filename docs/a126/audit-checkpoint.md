@@ -22,3 +22,7 @@ React SSR, service delegates, user/context and action notifications were mocked.
 ## Next page
 
 A127 — combined Sales/Plus checkout (`/workspace/billing/checkout`). Preserve current UI. Cross-reference shared pending-intent/formatting findings rather than assigning duplicate root-cause findings without a distinct reproduction.
+
+## Owner purchase-policy update — 12 November 2026
+
+Account-only admins must not create or renew subscriptions. Earlier source/probe evidence describing currently allowed Account Admin creation is not an endorsement of that permission. A129-F01 now tracks this conflict with the explicit owner rule. Price/selection findings remain relevant to the eventual authorized purchase flow; no permission or UI code was changed. Read-only subscription/history access remains a separate undecided policy.

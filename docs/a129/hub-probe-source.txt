@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+const m=vi.hoisted(()=>({dashboard:vi.fn(),tele:vi.fn()}));
+vi.mock('@/lib/billing/service',()=>({billingDashboard:m.dashboard}));
+vi.mock('@/lib/billing/telecaller',()=>({getTelecallerBillingOverview:m.tele}));
+import Page from '@/app/workspace/billing/page';
+const context=(patch:any={})=>({company:{productEdition:'SALESPUNCH360_ACCOUNT'},hasSales:false,hasAccount:true,entitlement:null,prices:[],activeEmployees:[],account:{subscriptions:[],packageCount:1,sixMonthUnitPrice:400,yearlyUnitPrice:700},...patch});
+const query=(q:any={})=>({searchParams:Promise.resolve(q)});
+beforeEach(()=>{vi.clearAllMocks();m.dashboard.mockResolvedValue(context());m.tele.mockResolvedValue({prices:{SIX_MONTH:600,YEARLY:1000},used:0,limit:0})});
+it('preserves approved hub links and Account back target without mutation controls',async()=>{const s=renderToStaticMarkup(await Page(query()));expect(s).toContain('href="/workspace/billing/subscription"');expect(s).toContain('href="/workspace/billing/actions"');expect(s).toContain('href="/workspace/account"');expect(s).not.toContain('<form');expect(m.tele).not.toHaveBeenCalled()});
+it('Sales hub uses the Sales workspace back target',async()=>{m.dashboard.mockResolvedValue(context({company:{productEdition:'SALESPUNCH360'},hasSales:true,hasAccount:false}));const s=renderToStaticMarkup(await Page(query()));expect(s).toContain('href="/workspace"');expect(m.tele).toHaveBeenCalledOnce()});
+it('renders known safe error feedback',async()=>{const s=renderToStaticMarkup(await Page(query({orderError:'RATE_LIMITED'})));expect(s).toContain('Too many billing requests')});
+it('unknown ordinary error text uses generic feedback rather than echoing input',async()=>{const s=renderToStaticMarkup(await Page(query({orderError:'<script>audit</script>'})));expect(s).toContain('The payment request could not be created');expect(s).not.toContain('<script>audit</script>')});
+it('reproduces inherited error-map property breaking render',async()=>{await expect(async()=>renderToStaticMarkup(await Page(query({orderError:'__proto__'})))).rejects.toThrow(/Objects are not valid/)});
+it('propagates denied billing authority before rendering links',async()=>{m.dashboard.mockRejectedValue(new Error('Not authorized'));await expect(Page(query())).rejects.toThrow('Not authorized')});
+it('a Telecaller overview failure blocks a hub that only needs its back link',async()=>{m.dashboard.mockResolvedValue(context({company:{productEdition:'SALESPUNCH360'},hasSales:true}));m.tele.mockRejectedValue(new Error('ancillary lookup failed'));await expect(Page(query())).rejects.toThrow('ancillary lookup failed')});
