@@ -1,0 +1,12 @@
+import {beforeEach,afterEach,expect,it,vi} from 'vitest';
+import {Prisma} from '@prisma/client';
+const m=vi.hoisted(()=>({user:vi.fn(),company:vi.fn(),prices:vi.fn(),subs:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({AuthorizationError:class extends Error{},requireUser:m.user,requireUserForMutation:m.user,requireGlobalSuperAdmin:vi.fn(),requireGlobalSuperAdminForMutation:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},billingPrice:{findMany:m.prices},companySubscription:{findMany:m.subs}}}));
+import {quoteBillingOrder} from '@/lib/billing/service';
+const request=(salesSeats=2)=>({billingPeriod:'SIX_MONTH',adminSeats:1,managerSeats:1,salesSeats,telecallerSeats:0,accountPackages:0,retainAdminUserIds:[],retainManagerUserIds:[],retainSalesUserIds:[],idempotencyKey:'audit-quote-key-123456'});
+beforeEach(()=>{vi.clearAllMocks();vi.useFakeTimers();vi.setSystemTime(new Date('2027-04-01T00:00:00Z'));m.user.mockResolvedValue({id:'admin',companyId:'company',role:'COMPANY_ADMIN',isActive:true,salesRole:'PRIMARY_ADMIN',salesAccessActive:true,accountAccessActive:false,accountRole:null});m.company.mockResolvedValue({id:'company',productEdition:'SALESPUNCH360'});m.prices.mockResolvedValue(['ADMIN','MANAGER','SALES'].map(role=>({role,period:'SIX_MONTH',currency:'INR',amount:new Prisma.Decimal(100)})));m.subs.mockResolvedValue([{adminSeats:1,managerSeats:1,salesSeats:2,accountPackages:0,startsAt:new Date('2027-01-01'),endsAt:new Date('2027-07-01'),sourceOrder:{provider:'MANUAL'}}])});
+afterEach(()=>vi.useRealTimers());
+it('reproduces a zero base quote for same-capacity renewal during an active term',async()=>{const q=await quoteBillingOrder(request());expect(q.subtotal.toFixed(2)).toBe('0.00');expect(q.prorated).toBe(true);expect(q.coTermEndsAt?.toISOString()).toBe('2027-07-01T00:00:00.000Z')});
+it('a first or expired-term quote uses the full target price',async()=>{m.subs.mockResolvedValue([]);const q=await quoteBillingOrder(request());expect(q.subtotal.toFixed(2)).toBe('400.00');expect(q.prorated).toBe(false)});
+it('a genuine same-term increase quotes only the increment',async()=>{const q=await quoteBillingOrder(request(3));expect(q.subtotal.gt(0)).toBe(true);expect(q.subtotal.lt(100)).toBe(true);expect(q.coTermEndsAt?.toISOString()).toBe('2027-07-01T00:00:00.000Z')});

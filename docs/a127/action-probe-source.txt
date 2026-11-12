@@ -1,0 +1,13 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({guard:vi.fn(),create:vi.fn(),email:vi.fn(),redirect:vi.fn(),log:vi.fn(),revalidate:vi.fn()}));
+vi.mock('@/lib/security/request',()=>({mutationGuard:m.guard}));
+vi.mock('@/lib/billing/service',()=>({createAccountPackageOrder:m.create,changePrice:vi.fn(),manualOverride:vi.fn()}));
+vi.mock('@/lib/billing/unified-sales-team',()=>({createUnifiedSalesTeamOrder:m.create,confirmUnifiedManualPayment:vi.fn()}));
+vi.mock('@/lib/billing/manual-payment-email',()=>({notifyManualPaymentOrderCreated:m.email,notifyManualPaymentOrderApproved:vi.fn()}));
+vi.mock('@/lib/billing/diagnostics',()=>({logBillingFailure:m.log}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+vi.mock('next/cache',()=>({revalidatePath:m.revalidate}));
+import {createOrderAction} from '@/app/actions/billing';
+const form=()=>{const f=new FormData();f.set('quantity','2');f.set('billingPeriod','SIX_MONTH');f.set('paymentMethod','MANUAL');return f};
+beforeEach(()=>{vi.clearAllMocks();m.create.mockResolvedValue({id:'synthetic-pending'});m.redirect.mockImplementation((path:string)=>{throw new Error(path)})});
+it('reproduces the server action discarding selected purchase mode',async()=>{const f=new FormData();for(const [k,v] of Object.entries({paymentMethod:'MANUAL',purchaseMode:'ADD_TEAM',billingPeriod:'SIX_MONTH',adminSeats:'1',managerSeats:'1',salesSeats:'3',telecallerSeats:'0',accountPackages:'0'}))f.set(k,v);await expect(createOrderAction(f)).rejects.toThrow('/workspace/billing/pending?order=synthetic-pending');expect(m.create.mock.calls[0][0]).not.toHaveProperty('purchaseMode');expect(m.guard).toHaveBeenCalledWith('billing-order',10)});

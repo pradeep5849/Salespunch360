@@ -1,0 +1,43 @@
+{
+  "page_id": "A127",
+  "title": "Sales/Plus checkout",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-12",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A127-F01",
+      "severity": "High",
+      "status": "OPEN",
+      "title": "Renewal/addition intent lost; same-capacity active renewal base quote is zero"
+    },
+    {
+      "finding_id": "A127-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Telecaller order enrichment non-atomic and marker race hazard"
+    },
+    {
+      "finding_id": "A127-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Quote failure lacks local review recovery"
+    }
+  ],
+  "shared_cross_references": [
+    "A125-F02",
+    "A126-F02",
+    "A126-F03"
+  ],
+  "validation": {
+    "passed": 30,
+    "audit_probes": 13,
+    "existing_cases": 17,
+    "failed": 0,
+    "skipped": 0,
+    "real_database_billing_race_verified": false,
+    "production_billing_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A128"
+}

@@ -1,0 +1,18 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {Prisma} from '@prisma/client';
+const m=vi.hoisted(()=>({dashboard:vi.fn(),tele:vi.fn(),quote:vi.fn(),redirect:vi.fn(),create:vi.fn()}));
+vi.mock('@/lib/billing/service',()=>({billingDashboard:m.dashboard}));
+vi.mock('@/lib/billing/telecaller',()=>({getTelecallerBillingOverview:m.tele}));
+vi.mock('@/lib/billing/unified-sales-team',()=>({quoteUnifiedSalesTeam:m.quote}));
+vi.mock('@/app/actions/billing',()=>({createOrderAction:m.create}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+import Page from '@/app/workspace/billing/checkout/page';
+const input=(patch:any={})=>({searchParams:Promise.resolve({billingPeriod:'SIX_MONTH',adminSeats:'1',managerSeats:'1',salesSeats:'2',telecallerSeats:'0',purchaseMode:'RENEW',...patch})});
+beforeEach(()=>{vi.clearAllMocks();m.redirect.mockImplementation(()=>{throw new Error('REDIRECT')});m.dashboard.mockResolvedValue({hasSales:true,company:{productEdition:'SALESPUNCH360'},account:{packageCount:0},entitlement:{paidActive:true,adminLimit:1,managerLimit:1,salesLimit:2,subscription:{billingPeriod:'SIX_MONTH'}}});m.tele.mockResolvedValue({limit:0});m.quote.mockResolvedValue({salesSubtotal:new Prisma.Decimal(100.5),telecallerSubtotal:new Prisma.Decimal(0),accountSubtotal:new Prisma.Decimal(0),subtotal:new Prisma.Decimal(100.5),prorated:true,coTermEndsAt:new Date('2027-07-01')})});
+it('renders the selected renewal mode but omits it from the quote service request',async()=>{const s=renderToStaticMarkup(await Page(input()));expect(s).toContain('Review renewal');expect(s).toContain('name="purchaseMode" value="RENEW"');expect(m.quote.mock.calls[0][0]).not.toHaveProperty('purchaseMode');expect(m.create).not.toHaveBeenCalled()});
+it('unchanged ADD_TEAM is rejected before quotation',async()=>{await expect(Page(input({purchaseMode:'ADD_TEAM'}))).rejects.toThrow('REDIRECT');expect(m.quote).not.toHaveBeenCalled()});
+it('ADD_TEAM rejects a different billing period',async()=>{await expect(Page(input({purchaseMode:'ADD_TEAM',salesSeats:'3',billingPeriod:'YEARLY'}))).rejects.toThrow('REDIRECT');expect(m.quote).not.toHaveBeenCalled()});
+it('Plus Account addition rejects simultaneous Sales target changes',async()=>{m.dashboard.mockResolvedValue({hasSales:true,company:{productEdition:'SALESPUNCH360_PLUS'},account:{packageCount:1},entitlement:{paidActive:true,adminLimit:1,managerLimit:1,salesLimit:2,subscription:{billingPeriod:'SIX_MONTH'}}});await expect(Page(input({purchaseMode:'ADD_ACCOUNT',accountPackages:'2',salesSeats:'3'}))).rejects.toThrow('REDIRECT')});
+it('confirms price rounding extends to final total, cross-referencing A125-F02',async()=>{const s=renderToStaticMarkup(await Page(input()));expect(s).toContain('₹101');expect(s).not.toContain('₹100.50')});
+it('propagates quote errors without local review feedback',async()=>{m.quote.mockRejectedValue(new Error('PRICING_UNAVAILABLE'));await expect(Page(input())).rejects.toThrow('PRICING_UNAVAILABLE');expect(m.create).not.toHaveBeenCalled()});

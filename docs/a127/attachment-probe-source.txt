@@ -1,0 +1,13 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {Prisma} from '@prisma/client';
+const m=vi.hoisted(()=>({base:vi.fn(),marker:vi.fn(),state:vi.fn(),term:vi.fn(),tx:vi.fn(),locked:vi.fn(),update:vi.fn(),audit:vi.fn(),get:vi.fn()}));
+vi.mock('@/lib/billing/service',()=>({createBillingOrder:m.base,createMobileBillingOrder:m.base,quoteBillingOrder:vi.fn(),confirmManualPayment:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({requirePermission:vi.fn()}));
+vi.mock('@/lib/billing/telecaller',()=>({telecallerBillingState:m.state}));
+vi.mock('@/lib/db',()=>({db:{billingAuditEvent:{findFirst:m.marker},companySubscription:{findFirst:m.term},billingOrder:{findUniqueOrThrow:m.get},$transaction:m.tx}}));
+import {createUnifiedSalesTeamOrder} from '@/lib/billing/unified-sales-team';
+const request={billingPeriod:'SIX_MONTH',adminSeats:1,managerSeats:1,salesSeats:2,telecallerSeats:1,accountPackages:0,retainAdminUserIds:[],retainManagerUserIds:[],retainSalesUserIds:[],idempotencyKey:'audit-attach-key-123456'};
+beforeEach(()=>{vi.clearAllMocks();m.base.mockResolvedValue({id:'pending',companyId:'company',createdByUserId:'admin',createdAt:new Date('2027-04-01')});m.marker.mockResolvedValue(null);m.state.mockResolvedValue({used:0,limit:0});m.term.mockResolvedValue({startsAt:new Date('2027-01-01'),endsAt:new Date('2027-07-01')});m.locked.mockResolvedValue({status:'PENDING'});m.update.mockImplementation(async({data}:any)=>({id:'pending',subtotal:data.subtotal.increment}));m.audit.mockResolvedValue({id:'marker'});m.tx.mockImplementation((fn:any)=>fn({billingOrder:{findUnique:m.locked,update:m.update},billingAuditEvent:{create:m.audit}}))});
+it('reproduces two concurrent calls both incrementing one pending Telecaller surcharge',async()=>{await Promise.all([createUnifiedSalesTeamOrder(request),createUnifiedSalesTeamOrder(request)]);expect(m.marker).toHaveBeenCalledTimes(2);expect(m.update).toHaveBeenCalledTimes(2);expect(m.audit).toHaveBeenCalledTimes(2);expect(m.update.mock.calls[0][0].data.subtotal.increment.gt(new Prisma.Decimal(0))).toBe(true)});
+it('attachment failure occurs after the base-order operation already succeeded',async()=>{m.state.mockRejectedValue(new Error('quote unavailable'));await expect(createUnifiedSalesTeamOrder(request)).rejects.toThrow('quote unavailable');expect(m.base).toHaveBeenCalledOnce();expect(m.update).not.toHaveBeenCalled()});
+it('an existing attachment marker avoids another surcharge',async()=>{m.marker.mockResolvedValue({id:'marker'});m.get.mockResolvedValue({id:'pending'});await expect(createUnifiedSalesTeamOrder(request)).resolves.toEqual({id:'pending'});expect(m.update).not.toHaveBeenCalled()});
