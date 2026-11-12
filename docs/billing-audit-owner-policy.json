@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-12",
+  "mode": "AUDIT_ONLY",
+  "account_only_administrator": {
+    "create_subscription": false,
+    "renew_subscription": false,
+    "purchase_additional_account_packages": false,
+    "view_subscription_details": "NOT_YET_SPECIFIED",
+    "view_payment_history": "NOT_YET_SPECIFIED"
+  },
+  "owner_statement": "Account-only admins must not create or renew subscriptions",
+  "authorized_alternative_purchaser": "NOT_YET_SPECIFIED",
+  "implementation_changed": false,
+  "supersedes": "Earlier inferred Account Admin purchase authority/parity assumptions; reassess read access separately"
+}

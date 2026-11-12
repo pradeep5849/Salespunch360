@@ -24,3 +24,7 @@ Web formats creation time in the server's default timezone and native strips the
 All service data was synthetic and Prisma delegates were mocked. React evidence is server-rendered markup, not an interactive browser/device test. Native reachability was inspected in source. The native rejection probe verifies service policy but does not execute the real mobile authentication/token transport. No real database pagination, load/concurrency, payment provider or production operation was used. Passing probes include reproductions of the gaps, not acceptance that those gaps are correct. Temporary executables were removed; sources/output retained as text and application CI unchanged.
 
 Next: A129 — Billing & Subscription hub (`/workspace/billing`). Retain current UI and cross-reference A128's missing history navigation/native billing gate as shared findings.
+
+## Owner permission clarification — 12 November 2026
+
+Account-only admins must not create or renew subscriptions. Native purchase denial is therefore expected, not an access defect. A128-F04 is reclassified NEEDS_READ_ACCESS_DECISION: its history/read aspect cannot be accepted or closed until read permissions are defined; this clarification does not itself forbid viewing history. Earlier statements that assumed Account Admin purchase parity are superseded. The web Account-only order-creation allowance is now tracked as A129-F01 against this explicit policy. No code permission was changed.

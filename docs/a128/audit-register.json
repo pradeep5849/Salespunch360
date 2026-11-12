@@ -27,8 +27,9 @@
     {
       "finding_id": "A128-F04",
       "severity": "Medium",
-      "status": "OPEN",
-      "title": "Native billing rejects Account-only administrators"
+      "status": "NEEDS_READ_ACCESS_DECISION",
+      "title": "Native billing rejects Account-only administrators",
+      "policy_update": "2026-11-12: owner forbids Account-only admins creating/renewing subscriptions. Native purchase denial is expected, not a defect. Permission to view history/subscription details remains unspecified; reevaluate only the read gate."
     }
   ],
   "validation": {
