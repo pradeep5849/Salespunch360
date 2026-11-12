@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+const m=vi.hoisted(()=>({dashboard:vi.fn(),redirect:vi.fn(),submit:vi.fn()}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+vi.mock('@/lib/billing/service',()=>({billingDashboard:m.dashboard}));
+vi.mock('@/app/actions/billing',()=>({createAccountPackageOrderAction:m.submit}));
+import Page from '@/app/workspace/billing/checkout/account/page';
+const query=(q:Record<string,any>)=>({searchParams:Promise.resolve(q)});
+beforeEach(()=>{vi.clearAllMocks();m.redirect.mockImplementation(()=>{throw new Error('REDIRECT')});m.dashboard.mockResolvedValue({hasAccount:true,company:{productEdition:'SALESPUNCH360_ACCOUNT'},account:{sixMonthUnitPrice:900,yearlyUnitPrice:1500}})});
+it('reproduces checkout ignoring supplied configured rates',async()=>{const s=renderToStaticMarkup(await Page(query({quantity:'2',billingPeriod:'SIX_MONTH'})));expect(s).toContain('₹800');expect(s).not.toContain('₹1,800');expect(m.submit).not.toHaveBeenCalled()});
+it('reproduces fractional review quantity silently truncated',async()=>{const s=renderToStaticMarkup(await Page(query({quantity:'1.9',billingPeriod:'YEARLY'})));expect(s).toContain('name="quantity" value="1"');expect(s).not.toContain('value="1.9"')});
+it('reproduces unsupported period silently becoming six months',async()=>{const s=renderToStaticMarkup(await Page(query({quantity:'1',billingPeriod:'WEEKLY'})));expect(s).toContain('name="billingPeriod" value="SIX_MONTH"')});
+it.each(['0','101','NaN'])('redirects an invalid quantity %s',async quantity=>{await expect(Page(query({quantity}))).rejects.toThrow('REDIRECT');expect(m.redirect).toHaveBeenCalledWith('/workspace/billing')});
+it('excludes Plus from standalone Account checkout',async()=>{m.dashboard.mockResolvedValue({hasAccount:true,company:{productEdition:'SALESPUNCH360_PLUS'}});await expect(Page(query({}))).rejects.toThrow('REDIRECT')});
+it('excludes companies without Account billing',async()=>{m.dashboard.mockResolvedValue({hasAccount:false});await expect(Page(query({}))).rejects.toThrow('REDIRECT')});
+it('propagates the billing authority rejection before rendering',async()=>{m.dashboard.mockRejectedValue(new Error('Not authorized'));await expect(Page(query({}))).rejects.toThrow('Not authorized');expect(m.submit).not.toHaveBeenCalled()});

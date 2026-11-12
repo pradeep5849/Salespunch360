@@ -1,0 +1,15 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({guard:vi.fn(),create:vi.fn(),email:vi.fn(),redirect:vi.fn(),log:vi.fn(),revalidate:vi.fn()}));
+vi.mock('@/lib/security/request',()=>({mutationGuard:m.guard}));
+vi.mock('@/lib/billing/service',()=>({createAccountPackageOrder:m.create,changePrice:vi.fn(),manualOverride:vi.fn()}));
+vi.mock('@/lib/billing/unified-sales-team',()=>({createUnifiedSalesTeamOrder:vi.fn(),confirmUnifiedManualPayment:vi.fn()}));
+vi.mock('@/lib/billing/manual-payment-email',()=>({notifyManualPaymentOrderCreated:m.email,notifyManualPaymentOrderApproved:vi.fn()}));
+vi.mock('@/lib/billing/diagnostics',()=>({logBillingFailure:m.log}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+vi.mock('next/cache',()=>({revalidatePath:m.revalidate}));
+import {createAccountPackageOrderAction} from '@/app/actions/billing';
+const form=()=>{const f=new FormData();f.set('quantity','2');f.set('billingPeriod','SIX_MONTH');f.set('paymentMethod','MANUAL');return f};
+beforeEach(()=>{vi.clearAllMocks();m.create.mockResolvedValue({id:'synthetic-pending'});m.redirect.mockImplementation((path:string)=>{throw new Error(path)})});
+it('checks mutation guard before order creation and redirects only to pending',async()=>{await expect(createAccountPackageOrderAction(form())).rejects.toThrow('/workspace/billing/pending?order=synthetic-pending');expect(m.guard).toHaveBeenCalledWith('account-package-order',10);expect(m.create).toHaveBeenCalledWith(2,'SIX_MONTH');expect(m.email).toHaveBeenCalledWith('synthetic-pending');expect(m.guard.mock.invocationCallOrder[0]).toBeLessThan(m.create.mock.invocationCallOrder[0]);expect(m.log).not.toHaveBeenCalled()});
+it('a denied mutation guard prevents creating or notifying an order',async()=>{m.guard.mockRejectedValueOnce(new Error('RATE_LIMITED'));await expect(createAccountPackageOrderAction(form())).rejects.toThrow('orderError=RATE_LIMITED');expect(m.create).not.toHaveBeenCalled();expect(m.email).not.toHaveBeenCalled()});
+it('reproduces generic feedback for a specific package quantity rejection',async()=>{m.create.mockRejectedValueOnce(new Error('INVALID_ACCOUNT_PACKAGE_QUANTITY'));await expect(createAccountPackageOrderAction(form())).rejects.toThrow('orderError=ORDER_CREATE_FAILED');expect(m.email).not.toHaveBeenCalled();expect(m.log).toHaveBeenCalled()});

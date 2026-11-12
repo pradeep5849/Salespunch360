@@ -1,0 +1,45 @@
+{
+  "page_id": "A126",
+  "title": "Review Account package",
+  "route": "/workspace/billing/checkout/account",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-12",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A126-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Checkout hardcoded rates differ from authoritative order quote"
+    },
+    {
+      "finding_id": "A126-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Pending order reused without matching reviewed intent"
+    },
+    {
+      "finding_id": "A126-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Review input silently changes quantity or period"
+    },
+    {
+      "finding_id": "A126-F04",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Specific validation failures lose actionable feedback"
+    }
+  ],
+  "validation": {
+    "passed": 34,
+    "probe_cases": 18,
+    "probe_cases_repeated_from_a124": 2,
+    "existing_shared_cases": 16,
+    "failed": 0,
+    "skipped": 0,
+    "production_billing_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A127"
+}
