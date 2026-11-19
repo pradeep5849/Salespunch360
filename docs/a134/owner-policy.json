@@ -1,17 +1,21 @@
 {
   "date": "2026-11-19",
   "mode": "AUDIT_ONLY",
-  "no_branches_means": "SINGLE_LOCATION_COMPANY",
-  "before_first_explicit_branch": {
+  "revision": 2,
+  "single_location_representation": "ONE_INTERNAL_HEAD_OFFICE_BRANCH",
+  "automatic_head_office_allowed": true,
+  "before_first_additional_branch": {
     "main_admin_only_entry": "Add Branch",
     "all_other_branch_ui": "HIDDEN",
-    "automatic_main_or_head_office_branch": false,
-    "records_scope": "COMPANY"
+    "head_office_labels": "HIDDEN",
+    "records_scope": "COMPANY_EXPERIENCE_WITH_INTERNAL_HEAD_OFFICE"
   },
-  "first_branch_existing_data_choices": [
-    "MOVE_EXISTING_COMPANY_DATA_TO_FIRST_BRANCH",
-    "KEEP_EXISTING_COMPANY_DATA_AT_COMPANY_LEVEL"
+  "first_additional_branch_existing_data_choices": [
+    "MOVE_EXISTING_DATA_TO_NEW_BRANCH",
+    "KEEP_EXISTING_DATA_WITH_COMPANY_INTERNAL_HEAD_OFFICE"
   ],
-  "after_creation": "SHOW_BRANCH_FEATURES_ACCORDING_TO_PERMISSIONS",
-  "implementation_changed": false
+  "after_additional_branch_creation": "SHOW_BRANCH_FEATURES_ACCORDING_TO_PERMISSIONS",
+  "zero_branch_operating_mode_required": false,
+  "implementation_changed": false,
+  "supersedes": "Revision 1 required zero-branch operation; owner explicitly accepts internal Head Office instead."
 }

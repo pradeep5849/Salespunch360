@@ -10,24 +10,26 @@
       "finding_id": "A134-F01",
       "severity": "Medium",
       "title": "Automatic Head Office creation violates explicit opt-in",
-      "status": "OPEN"
+      "status": "SUPERSEDED_BY_OWNER_DECISION",
+      "resolution": "Internal Head Office is accepted; zero-branch operation is not required. No code fix made."
     },
     {
       "finding_id": "A134-F02",
       "severity": "High",
       "title": "Core resolvers do not support zero-branch company operation",
-      "status": "OPEN"
+      "status": "SUPERSEDED_BY_OWNER_DECISION",
+      "resolution": "Internal Head Office is accepted; zero-branch operation is not required. No code fix made."
     },
     {
       "finding_id": "A134-F03",
       "severity": "Medium",
-      "title": "Branch-related UI lacks pre-creation gating",
+      "title": "Branch UI is not hidden during single-location Head Office mode",
       "status": "OPEN"
     },
     {
       "finding_id": "A134-F04",
       "severity": "Medium",
-      "title": "First-branch existing-data decision is missing",
+      "title": "First additional branch lacks move-existing-data or keep-in-Head-Office choice",
       "status": "OPEN"
     }
   ],
@@ -39,7 +41,10 @@
     "existing_cases": 12,
     "production_operations": false,
     "browser_device_verified": false,
-    "real_database_verified": false
+    "real_database_verified": false,
+    "policy_revision_only_no_new_tests": true
   },
-  "next_page": "A135"
+  "next_page": "A135",
+  "owner_policy_revision": 2,
+  "open_findings": 2
 }
