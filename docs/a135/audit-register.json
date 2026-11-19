@@ -1,0 +1,34 @@
+{
+  "page_id": "A135",
+  "title": "Change Password",
+  "route": "/workspace/change-password",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "findings": [
+    {
+      "finding_id": "A135-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "No action-level current-password attempt throttle"
+    },
+    {
+      "finding_id": "A135-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Stale credentials and save failures escape recoverable action state"
+    }
+  ],
+  "validation": {
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "new_audit_probes": 5,
+    "baseline_rechecks": 5,
+    "existing_cases": 12,
+    "production_password_changes": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A136"
+}
