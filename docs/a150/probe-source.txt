@@ -1,0 +1,16 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {transitionLeadForActor} from './service';
+const web=readFileSync('src/app/workspace/leads/page.tsx','utf8');
+const service=readFileSync('src/lib/leads/service.ts','utf8');
+const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/LeadsScreen.kt','utf8');
+const drawer=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/SalesDrawerShell.kt','utf8');
+const mobile=readFileSync('src/lib/mobile/pending-leads.ts','utf8');
+describe('A150 audit observations, not desired-behavior acceptance',()=>{
+ it('web pending queue is capped at 200 with no pagination control',()=>{expect(service).toMatch(/listPendingVisitsScopedForActor[^\n]+take:200/);expect(web).toContain('!isPending&&<ListPagination');});
+ it('mobile pending endpoint has bounded page window and hasMore',()=>{expect(mobile).toContain('skip,take:pageSize+1');expect(mobile).toContain('hasMore=rows.length>pageSize');});
+ it('web restricts search form to non Sales while native search is offered',()=>{expect(web).toContain('user.salesRole!=="SALES"&&<form className="lead-scope-filter"><input name="q"');expect(native).toContain('Search name or phone');});
+ it('web renders stage form unconditionally on lead cards',()=>{expect(web).toContain('<StageForm id={l.id} version={l.version} stage={l.stage}/>');expect(web).not.toContain('telecaller');});
+ it('native Sales drawer explicitly suppresses Telecaller stage actions',()=>{expect(drawer).toContain('allowStageActions = !telecaller');expect(native).toContain('if(allowStageActions&&lead.stage');});
+ it.each(['Telecaller',' telecaller '])('shared mutation rejects %s before parsing/DB',async designation=>{await expect(transitionLeadForActor({id:'user',name:'User',email:'u@example.com',companyId:'company',salesRole:'SALES',managerType:null,designation},{})).rejects.toThrow('NOT_FOUND');});
+});
