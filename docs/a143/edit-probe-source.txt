@@ -1,0 +1,22 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({outer:vi.fn(),find:vi.fn(),update:vi.fn(),remove:vi.fn(),count:vi.fn(),company:vi.fn(),phone:vi.fn()}));
+vi.mock('@/lib/mobile/employees',()=>({MobileEmployeeError:class extends Error{constructor(public code:string,public status=400){super(code)}}}));
+vi.mock('@/lib/users/employee-profile',()=>({assertSalesEmployeePhoneUnique:m.phone}));
+vi.mock('@/lib/users/additional-admin',()=>({editAdditionalAdminForCompany:vi.fn(),setAdditionalAdminActiveForCompany:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{user:{findFirst:m.outer},$transaction:async(fn:any)=>fn({user:{findFirst:m.find,update:m.update},company:{findUnique:m.company},userBranchAccess:{deleteMany:m.remove},branch:{count:m.count}})}}));
+import {mobileEditEmployee} from '@/lib/mobile/employee-admin';
+const p={id:'owner',companyId:'company-A',salesRole:'PRIMARY_ADMIN'};
+const eid='11111111-1111-4111-8111-111111111111';
+const payload={employeeId:eid,name:'Employee',email:'employee@example.test',phone:'',employeeCode:'',managerId:null,managerType:undefined,branchAccessScope:'SELECTED_BRANCHES',branchIds:['22222222-2222-4222-8222-222222222222'],travelAllowanceEnabled:false,travelRatePerKm:null,travelApprovalMode:'MANUAL'};
+beforeEach(()=>{vi.clearAllMocks();m.outer.mockResolvedValue({salesRole:'SALES'});m.find.mockImplementation(async({where}:any)=>where.id==='owner'?{id:'owner'}:{id:eid,companyId:'company-A',salesRole:'SALES',salesAccessActive:true,isActive:true,managerId:null,managerType:null,designation:null,dateOfJoining:null});m.company.mockResolvedValue({teamStructure:'MANAGERS_AND_SALES'});m.count.mockResolvedValue(1)});
+it('native invalid scope silently becomes All Branches and discards selected IDs',async()=>{await mobileEditEmployee(p as any,{...payload,branchAccessScope:'TYPO'});const data=m.update.mock.calls[0][0].data;expect(data.branchAccessScope).toBe('ALL_BRANCHES');expect(data.branchAccesses).toBeUndefined();expect(m.remove).toHaveBeenCalled()});
+it('native legitimate selected-branch edit updates without sessionVersion rotation',async()=>{await mobileEditEmployee(p as any,payload);const data=m.update.mock.calls[0][0].data;expect(data.branchAccessScope).toBe('SELECTED_BRANCHES');expect(data).not.toHaveProperty('sessionVersion');const s=readFileSync('src/lib/mobile/employee-admin.ts','utf8');const body=s.slice(s.indexOf('export async function mobileEditEmployee'),s.indexOf('export async function mobileChangeEmployeeRole'));expect(body).not.toContain('revokeUserAuthentication');expect(body).not.toContain('FOR UPDATE')});
+it('native rejects empty selected branches before user update',async()=>{await expect(mobileEditEmployee(p as any,{...payload,branchIds:[]})).rejects.toThrow('BRANCH_REQUIRED');expect(m.update).not.toHaveBeenCalled()});
+it('native foreign/inactive selected branches reject',async()=>{m.count.mockResolvedValue(0);await expect(mobileEditEmployee(p as any,payload)).rejects.toThrow('INVALID_BRANCH');expect(m.update).not.toHaveBeenCalled()});
+it('native non-Primary caller rejects before target read',async()=>{await expect(mobileEditEmployee({...p,salesRole:'ADMIN'} as any,payload)).rejects.toThrow('FORBIDDEN');expect(m.outer).not.toHaveBeenCalled()});
+it('web role options unconditionally include Manager roles',()=>{const s=readFileSync('src/app/workspace/employees/sales/edit/[id]/page.tsx','utf8');const select=s.slice(s.indexOf('<select name="role"'),s.indexOf('</select>',s.indexOf('<select name="role"')));expect(select).toContain('value="SALES_MANAGER"');expect(select).toContain('value="OFFICE_MANAGER"');expect(select).not.toContain('teamStructure')});
+it('web Sales editor has no local action-state consumer except travel query messages',()=>{const s=readFileSync('src/app/workspace/employees/sales/edit/[id]/page.tsx','utf8');expect(s).toContain('action={manageEmployeeForm as never}');expect(s).not.toContain('useActionState');expect(s).not.toContain('fieldErrors');expect(s).toContain('travelError')});
+it('web branch service locks target and revokes authentication',()=>{const s=readFileSync('src/lib/branches/assignment.ts','utf8');expect(s).toContain('FOR UPDATE');expect(s).toContain('await revokeUserAuthenticationWithLock(tx,target.id)')});
+
+it("explicit native null optional fields are rejected rather than normalized",async()=>{await expect(mobileEditEmployee(p as any,{...payload,phone:null,employeeCode:null,managerType:null})).rejects.toThrow();expect(m.update).not.toHaveBeenCalled()});

@@ -1,0 +1,52 @@
+{
+  "page_id": "A143",
+  "title": "Edit Sales User",
+  "route": "/workspace/employees/sales/edit/[id]",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_MOBILE_SERVICE"
+  ],
+  "findings": [
+    {
+      "finding_id": "A143-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web edit forms lack local returned-state feedback"
+    },
+    {
+      "finding_id": "A143-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Native branch edits omit canonical security rotation and target locking"
+    },
+    {
+      "finding_id": "A143-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Invalid native branch scope defaults to All Branches"
+    },
+    {
+      "finding_id": "A143-F04",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web offers Manager roles for Sales-only company"
+    }
+  ],
+  "cross_references": [
+    "A134 policy revision 3",
+    "A142-F01"
+  ],
+  "validation": {
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 9,
+    "existing_cases": 31,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_race_verified": false
+  },
+  "next_page": "A144"
+}
