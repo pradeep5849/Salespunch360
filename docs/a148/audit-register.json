@@ -1,0 +1,46 @@
+{
+  "page_id": "A148",
+  "title": "Lead Follow-up",
+  "route": "/workspace/leads/[id]/follow-up",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A148-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Telecaller Call assignment omits new-task notification"
+    },
+    {
+      "finding_id": "A148-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Android dismisses scheduling draft before confirmed save"
+    },
+    {
+      "finding_id": "A148-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Uncertain creation retries can duplicate follow-up tasks"
+    }
+  ],
+  "cross_references": [
+    "A146 reminder workflow",
+    "A147-F03"
+  ],
+  "validation": {
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 8,
+    "existing_cases": 20,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A149"
+}
