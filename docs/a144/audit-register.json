@@ -1,0 +1,41 @@
+{
+  "page_id": "A144",
+  "title": "New Sales Employee / Verify your email",
+  "route": "/workspace/employees/sales/new/[kind]",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A144-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Travel save failure follows committed Sales employee creation"
+    },
+    {
+      "finding_id": "A144-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Verification token lacks destination-email binding"
+    }
+  ],
+  "cross_references": [
+    "A134 revision 3",
+    "A143-F01"
+  ],
+  "validation": {
+    "passed": 31,
+    "failed": 0,
+    "skipped": 0,
+    "new_audit_probes": 5,
+    "baseline_rechecks": 7,
+    "existing_cases": 19,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A145"
+}

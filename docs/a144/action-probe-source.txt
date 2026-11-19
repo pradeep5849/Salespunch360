@@ -1,0 +1,11 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({create:vi.fn(),travel:vi.fn(),refresh:vi.fn()}));
+vi.mock('@/lib/employees/service',()=>({createSalesEmployee:m.create,createManager:vi.fn(),deactivateEmployee:vi.fn(),editEmployee:vi.fn(),reactivateEmployee:vi.fn(),resetEmployeePassword:vi.fn(),changeSalesRole:vi.fn()}));
+vi.mock('@/lib/travel/service',()=>({updateEmployeeTravelSettings:m.travel}));
+vi.mock('next/cache',()=>({revalidatePath:m.refresh}));
+import {manageEmployee} from '@/app/actions/employees';
+const form=()=>{const f=new FormData();Object.entries({operation:'create-sales',name:'Employee',email:'employee@example.test',phone:'',employeeCode:'',designation:'',dateOfJoining:'',password:'StrongPassword12',confirmPassword:'StrongPassword12',branchAccessScope:'ALL_BRANCHES',managerId:'',configureTravel:'yes',travelRatePerKm:'2',travelApprovalMode:'MANUAL'}).forEach(([k,v])=>f.set(k,v));return f};
+beforeEach(()=>{vi.clearAllMocks();m.create.mockResolvedValue({id:'synthetic-created-employee'})});
+it('travel failure returns overall error after employee creation already succeeded',async()=>{m.travel.mockRejectedValueOnce(new Error('travel database failed'));const r=await manageEmployee({},form());expect(r).toHaveProperty('error');expect(m.create).toHaveBeenCalledOnce();expect(m.travel).toHaveBeenCalledWith('synthetic-created-employee',false,'2','MANUAL');expect(m.refresh).not.toHaveBeenCalled()});
+it('invalid travel rate prevents initial creation',async()=>{const f=form();f.set('travelRatePerKm','invalid');expect(await manageEmployee({},f)).toMatchObject({fieldErrors:{travelRatePerKm:expect.any(Array)}});expect(m.create).not.toHaveBeenCalled()});
+it('valid composite save returns explicit Sales creation success',async()=>{expect(await manageEmployee({},form())).toMatchObject({success:'Sales employee created successfully.'});expect(m.travel).toHaveBeenCalledOnce();expect(m.refresh).toHaveBeenCalled()});
