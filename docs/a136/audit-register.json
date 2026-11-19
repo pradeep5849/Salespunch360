@@ -1,0 +1,49 @@
+{
+  "page_id": "A136",
+  "title": "Check-ins",
+  "route": "/workspace/check-ins",
+  "related_scope": "/workspace/reports/check-ins",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "owner_policy": "docs/a136/owner-policy.json",
+  "findings": [
+    {
+      "finding_id": "A136-F01",
+      "severity": "Medium",
+      "title": "Own-record check-in deletion is missing",
+      "status": "OPEN"
+    },
+    {
+      "finding_id": "A136-F02",
+      "severity": "Low",
+      "title": "Report cards lack agreed contact and visit details",
+      "status": "OPEN"
+    },
+    {
+      "finding_id": "A136-F03",
+      "severity": "Medium",
+      "title": "Report overwrites stored existing-lead relationship",
+      "status": "OPEN"
+    },
+    {
+      "finding_id": "A136-F04",
+      "severity": "Medium",
+      "title": "Web new-prospect action drops branch selection",
+      "status": "OPEN"
+    }
+  ],
+  "cross_references": [
+    "A134 owner policy revision 2"
+  ],
+  "validation": {
+    "passed": 38,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 12,
+    "existing_cases": 26,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A137"
+}

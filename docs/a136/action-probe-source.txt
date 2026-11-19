@@ -1,0 +1,13 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({checkin:vi.fn(),checkout:vi.fn(),phone:vi.fn(),refresh:vi.fn()}));
+vi.mock('@/lib/visits/service',()=>({fieldCheckIn:m.checkin,checkout:m.checkout,addPhoneToVisit:m.phone,checkIn:m.checkin}));
+vi.mock('next/cache',()=>({revalidatePath:m.refresh}));
+vi.mock('@/lib/visits/field-checkin-errors',()=>({logFieldCheckInFailure:vi.fn(),fieldCheckInErrorMessage:()=> 'Unable to check in'}));
+import {fieldCheckInAction,checkoutAction} from '@/app/actions/visits';
+import {resolveWriteBranch} from '@/lib/branches/operational-scope';
+beforeEach(()=>vi.clearAllMocks());
+const form=()=>{const f=new FormData();for(const [k,v] of Object.entries({visitType:'NEW',name:'Prospect',latitude:'12',longitude:'77',accuracyMeters:'10',branchId:'branch-B'}))f.set(k,v);return f};
+it('web NEW action drops an explicitly supplied branchId',async()=>{await fieldCheckInAction(form());expect(m.checkin.mock.calls[0][0]).not.toHaveProperty('branchId')});
+it('ambiguous multi-branch write cannot auto-select a new prospect branch',()=>{const choices=['A','B'].map(id=>({id,companyId:'company',isActive:true}));expect(()=>resolveWriteBranch(choices)).toThrow('BRANCH_REQUIRED');expect(resolveWriteBranch(choices,'B')).toBe('B')});
+it('failed check-in returns failure rather than success and skips refresh',async()=>{m.checkin.mockRejectedValueOnce(new Error('failure'));expect(await fieldCheckInAction(form())).toMatchObject({ok:false});expect(m.refresh).not.toHaveBeenCalled()});
+it('checkout backend rejection returns failure and skips refresh',async()=>{m.checkout.mockRejectedValueOnce(new Error('VISIT_NOT_FOUND'));expect(await checkoutAction({visitId:'other',sentiment:'NEUTRAL',location:{latitude:12,longitude:77,accuracyMeters:10}})).toMatchObject({ok:false});expect(m.refresh).not.toHaveBeenCalled()});

@@ -11,3 +11,7 @@ Source observations:
 - Web hides the entry even for field Managers although the page accepts them; Android includes it for field Managers. This source-level parity gap needs focused A136 validation.
 
 UI distinction: do not send an Admin to a field-creation screen simply to expose historical visits. Preserve route authorization, role scope and the reference behavior (excluding Unlink). No Android device or deployed account session tested; source establishes available navigation logic, not a live installed-build claim. Findings and full A136 probes remain pending.
+
+## Subsequent owner decision
+
+Owner accepted current role navigation and Check-ins UI. The menu/Manager parity observations above are not open defects or implementation requests. Reference cards apply to Check-in Reports. See audit-checkpoint.md and owner-policy.json for final scope.

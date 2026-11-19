@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-19",
+  "mode": "AUDIT_ONLY",
+  "checkins_creation_ui": "KEEP_CURRENT",
+  "role_navigation": "KEEP_CURRENT",
+  "reference_applies_to": "CHECK_IN_REPORT_CARDS",
+  "history_below_creation_form_required": false,
+  "unlink_with_lead": "EXCLUDED",
+  "salesperson_delete": "OWN_RECORDS_ONLY_WITH_CONFIRMATION",
+  "implementation_changed": false
+}
