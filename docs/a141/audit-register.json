@@ -1,0 +1,41 @@
+{
+  "page_id": "A141",
+  "title": "Add Account Employee",
+  "route": "/workspace/employees/account/new/[role]",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICE"
+  ],
+  "findings": [
+    {
+      "finding_id": "A141-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Native temporary password is unmasked"
+    },
+    {
+      "finding_id": "A141-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Native creation hardcodes All Branches without restricted scope option"
+    }
+  ],
+  "cross_references": [
+    "A140-F01",
+    "A140-F03",
+    "A134-F03"
+  ],
+  "validation": {
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 9,
+    "existing_cases": 23,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A142"
+}
