@@ -1,0 +1,14 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({find:vi.fn(),update:vi.fn(),sync:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:async(fn:(tx:{$queryRaw:typeof m.find;followUpTask:{findFirst:typeof m.find;update:typeof m.update}})=>unknown)=>fn({$queryRaw:vi.fn(),followUpTask:{findFirst:m.find,update:m.update}})}}));
+vi.mock('@/lib/billing/entitlement',()=>({assertOperationalWrite:vi.fn()}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:async()=>({branchId:{in:['allowed']}})}));
+vi.mock('./service',()=>({FollowUpTaskError:class extends Error{constructor(public code:string){super(code)}},syncLeadFollowUpAt:m.sync,taskScope:(a:{companyId:string;id:string})=>({companyId:a.companyId,assignedUserId:a.id})}));
+import {completeCallFollowUpTaskForActor} from './call-completion';
+const actor={id:'sales',companyId:'company',salesRole:'SALES' as const};
+beforeEach(()=>{vi.clearAllMocks();m.find.mockResolvedValue({id:'task',leadId:'lead',assignedUserId:'sales',status:'PENDING',notes:'[[SP360_FOLLOW_UP:CALL]]',completedVisitId:null})});
+it.each([{...actor},{...actor,designation:'Telecaller'}])('closes assigned Call after an outcome and reconciles next pending task',async(a)=>{await completeCallFollowUpTaskForActor(a,'task','Spoke with customer');expect(m.update).toHaveBeenCalledWith({where:{id:'task'},data:{status:'COMPLETED',completedAt:expect.any(Date),notes:expect.stringContaining('Call outcome: Spoke with customer')}});expect(m.sync).toHaveBeenCalledWith(expect.anything(),'lead')});
+it('does not let another person complete the Call',async()=>{m.find.mockResolvedValue({assignedUserId:'other'});await expect(completeCallFollowUpTaskForActor(actor,'task','done')).rejects.toThrow('NOT_FOUND');expect(m.update).not.toHaveBeenCalled()});
+it('keeps unattended Call pending without an outcome',async()=>{await expect(completeCallFollowUpTaskForActor(actor,'task',' ')).rejects.toThrow('INVALID_STATE');expect(m.update).not.toHaveBeenCalled()});
+it('does not treat a Visit as an attended Call',async()=>{m.find.mockResolvedValue({id:'task',assignedUserId:'sales',status:'PENDING',notes:'[[SP360_FOLLOW_UP:VISIT]]'});await expect(completeCallFollowUpTaskForActor(actor,'task','done')).rejects.toThrow('INVALID_TYPE');expect(m.update).not.toHaveBeenCalled()});
+it('rejects already closed Call without overwriting its outcome',async()=>{m.find.mockResolvedValue({assignedUserId:'sales',status:'COMPLETED'});await expect(completeCallFollowUpTaskForActor(actor,'task','different')).rejects.toThrow('INVALID_STATE');expect(m.update).not.toHaveBeenCalled()});
