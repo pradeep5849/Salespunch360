@@ -1,0 +1,13 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({create:vi.fn(),edit:vi.fn(),refresh:vi.fn()}));
+vi.mock('@/lib/customers/service',()=>({createCustomer:m.create,editCustomer:m.edit,assignCustomer:vi.fn()}));
+vi.mock('next/cache',()=>({revalidatePath:m.refresh}));
+import {manageCustomer} from '@/app/actions/customers';
+const form=(name='Test customer')=>{const f=new FormData();Object.entries({operation:'create',name,phone:'+12025550110',branchId:'',assignedUserId:''}).forEach(([k,v])=>f.set(k,v));return f};
+beforeEach(()=>vi.clearAllMocks());
+it('invalid customer name returns generic branch/assignment message without field errors',async()=>{const r=await manageCustomer({},form('x'));expect(r.error).toBe('Unable to save this customer. Check the branch, assignment, and details.');expect(r).not.toHaveProperty('fieldErrors');expect(m.create).not.toHaveBeenCalled()});
+it('branch-required error is specifically explained',async()=>{m.create.mockRejectedValueOnce(new Error('BRANCH_REQUIRED'));expect(await manageCustomer({},form())).toMatchObject({error:'Choose a branch and try again.'})});
+it('valid save gives explicit success and refresh',async()=>{expect(await manageCustomer({},form())).toMatchObject({success:'Customer saved.'});expect(m.refresh).toHaveBeenCalledWith('/workspace/customers')});
+it('native validation errors are not mapped to field-specific guidance',()=>{const s=readFileSync('android/app/src/main/java/com/salespunch360/mobile/CustomerAdminViewModel.kt','utf8');expect(s).not.toContain('"INVALID_INPUT"');expect(s).toContain('Customer change could not be completed.')});
+it('native add form exposes branch picker even for one internal branch',()=>{const s=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/CustomerAdminScreen.kt','utf8');const dialog=s.slice(s.indexOf('private fun AddCustomerDialog'));expect(dialog).toContain('Choose branch');expect(dialog).not.toContain('branches.size>1');expect(dialog).not.toContain('branches.size > 1')});

@@ -1,0 +1,17 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({actor:vi.fn(),branch:vi.fn(),create:vi.fn(),user:vi.fn(),lead:vi.fn(),activity:vi.fn(),findLead:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({requirePermissionForMutation:m.actor,requirePermission:m.actor}));
+vi.mock('@/lib/branches/operational-scope',()=>({resolveOperationalWriteBranch:m.branch,operationalBranchContext:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:async(fn:any)=>fn({customer:{create:m.create},user:{findFirst:m.user},lead:{create:m.lead,findFirst:m.findLead},leadActivity:{create:m.activity}})}}));
+import {createCustomer} from '@/lib/customers/service';
+import {mobileCreateCustomer} from '@/lib/mobile/customers';
+const owner={id:'admin',companyId:'company-A',salesRole:'PRIMARY_ADMIN'};
+const input={name:'Test customer',phone:'+12025550110',branchId:'11111111-1111-4111-8111-111111111111'};
+beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue(owner);m.branch.mockResolvedValue(input.branchId);m.create.mockImplementation(async({data}:any)=>({id:'synthetic-'+m.create.mock.calls.length,...data}));m.findLead.mockResolvedValue(null);m.lead.mockResolvedValue({id:'lead'});m.user.mockResolvedValue(null)});
+it('web repeated identical requests each create another customer',async()=>{const a=await createCustomer(input),b=await createCustomer(input);expect(a.id).not.toBe(b.id);expect(m.create).toHaveBeenCalledTimes(2);expect(m.lead).not.toHaveBeenCalled()});
+it('mobile repeated identical requests also each create another customer',async()=>{await mobileCreateCustomer(owner as any,input);await mobileCreateCustomer(owner as any,input);expect(m.create).toHaveBeenCalledTimes(2)});
+it.each(['SALES','MANAGER'])('web service itself rejects %s even if general permission resolved',async(salesRole)=>{m.actor.mockResolvedValue({...owner,salesRole});await expect(createCustomer(input)).rejects.toThrow('NOT_AUTHORIZED');expect(m.create).not.toHaveBeenCalled()});
+it.each(['SALES','MANAGER'])('mobile service rejects %s before branch/create',async(salesRole)=>{await expect(mobileCreateCustomer({...owner,salesRole} as any,input)).rejects.toMatchObject({code:'FORBIDDEN'});expect(m.branch).not.toHaveBeenCalled();expect(m.create).not.toHaveBeenCalled()});
+it('foreign or inactive assignee cannot create customer or lead',async()=>{await expect(createCustomer({...input,assignedUserId:'22222222-2222-4222-8222-222222222222'})).rejects.toThrow('INVALID_ASSIGNMENT');expect(m.user.mock.calls[0][0].where).toMatchObject({companyId:'company-A',isActive:true,salesAccessActive:true});expect(m.create).not.toHaveBeenCalled()});
+it('branch denial prevents writes',async()=>{m.branch.mockRejectedValueOnce(new Error('BRANCH_FORBIDDEN'));await expect(createCustomer(input)).rejects.toThrow('BRANCH_FORBIDDEN');expect(m.create).not.toHaveBeenCalled()});
+it('authenticated company is used and normalized name is stored',async()=>{await createCustomer({...input,name:' Test customer '});expect(m.create.mock.calls[0][0].data).toMatchObject({name:'Test customer',companyId:'company-A',branchId:input.branchId})});
