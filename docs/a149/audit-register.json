@@ -1,0 +1,54 @@
+{
+  "page_id": "A149",
+  "title": "Lead Details",
+  "route": "/workspace/leads/[id]",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "linkage_result": "EXPLICIT_TELECALLER_TASKS_LINKED_ORDINARY_CALLBACKS_SEPARATE",
+  "findings": [
+    {
+      "finding_id": "A149-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Telecalling callbacks bypass shared task lifecycle and overdue reminders"
+    },
+    {
+      "finding_id": "A149-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Saving call and completing linked task are separate commits"
+    },
+    {
+      "finding_id": "A149-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web Lead Details omit phone and email"
+    },
+    {
+      "finding_id": "A149-F04",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web follow-up history has unpaged 100-task cap"
+    }
+  ],
+  "cross_references": [
+    "A146",
+    "A147",
+    "A148"
+  ],
+  "validation": {
+    "passed": 23,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 9,
+    "existing_cases": 14,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A150"
+}

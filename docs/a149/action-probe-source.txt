@@ -1,0 +1,12 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({record:vi.fn(),complete:vi.fn(),actor:vi.fn(),refresh:vi.fn()}));
+vi.mock('@/lib/telecalling/service',()=>({recordLeadCall:m.record,updateSalesAction:vi.fn()}));
+vi.mock('@/lib/follow-up-tasks/telecaller-assignment',()=>({completeAssignedTelecallerCallForActor:m.complete}));
+vi.mock('@/lib/auth/authorization',()=>({requirePermissionForMutation:m.actor}));
+vi.mock('next/cache',()=>({revalidatePath:m.refresh}));
+import {saveLeadCall} from '@/app/actions/telecalling';
+const form=()=>{const f=new FormData();f.set('leadId','lead');f.set('followUpTaskId','task');f.set('result','CONNECTED');f.set('notes','Spoke with customer');return f};
+beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue({id:'tele',companyId:'company-A'});m.record.mockResolvedValue({id:'saved-call'})});
+it('call can be saved before follow-up completion fails, yielding overall error',async()=>{m.complete.mockRejectedValueOnce(new Error('completion database failed'));expect(await saveLeadCall({},form())).toHaveProperty('error');expect(m.record).toHaveBeenCalledOnce();expect(m.complete).toHaveBeenCalledWith({id:'tele',companyId:'company-A'},'task','lead');expect(m.refresh).not.toHaveBeenCalled()});
+it('successful explicit linkage records call then closes task and refreshes both views',async()=>{expect(await saveLeadCall({},form())).toMatchObject({success:'Call result saved.'});expect(m.record.mock.invocationCallOrder[0]).toBeLessThan(m.complete.mock.invocationCallOrder[0]);expect(m.refresh).toHaveBeenCalledWith('/workspace/follow-up-tasks')});
+it('call-save rejection prevents follow-up completion',async()=>{m.record.mockRejectedValueOnce(new Error('invalid call'));expect(await saveLeadCall({},form())).toHaveProperty('error');expect(m.complete).not.toHaveBeenCalled()});
