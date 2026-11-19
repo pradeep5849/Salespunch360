@@ -1,0 +1,52 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "fast-xml-parser": {
+      "name": "fast-xml-parser",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1246029,
+          "name": "fast-xml-parser",
+          "dependency": "fast-xml-parser",
+          "title": "fast-xml-parser: Quadratic CPU consumption scanning unterminated stop-node tags",
+          "url": "https://github.com/advisories/GHSA-474x-hrwr-fgx4",
+          "severity": "low",
+          "cwe": [
+            "CWE-407"
+          ],
+          "cvss": {
+            "score": 3.7,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+          },
+          "range": "<=5.11.2"
+        }
+      ],
+      "effects": [],
+      "range": "<=5.11.2",
+      "nodes": [
+        "node_modules/fast-xml-parser"
+      ],
+      "fixAvailable": true
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 1,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 1
+    },
+    "dependencies": {
+      "prod": 235,
+      "dev": 430,
+      "optional": 205,
+      "peer": 2,
+      "peerOptional": 0,
+      "total": 797
+    }
+  }
+}
