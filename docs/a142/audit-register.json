@@ -1,0 +1,48 @@
+{
+  "page_id": "A142",
+  "title": "Employees",
+  "route": "/workspace/employees",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_MOBILE_CONTEXT"
+  ],
+  "findings": [
+    {
+      "finding_id": "A142-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Native directory mislabels active Telecaller as inactive Sales employee"
+    },
+    {
+      "finding_id": "A142-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web employee directory lacks text search"
+    },
+    {
+      "finding_id": "A142-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web Telecaller lifecycle lacks confirmation and local result feedback"
+    }
+  ],
+  "cross_references": [
+    "A140",
+    "A141",
+    "A133-F01",
+    "A134 owner policy revision 3"
+  ],
+  "validation": {
+    "passed": 44,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 7,
+    "existing_cases": 37,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A143"
+}
