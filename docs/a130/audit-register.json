@@ -1,0 +1,39 @@
+{
+  "page_id": "A130",
+  "title": "Pending order confirmation",
+  "route": "/workspace/billing/pending",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "owner_policy_reference": "docs/billing-audit-owner-policy.json",
+  "findings": [
+    {
+      "finding_id": "A130-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Expired pending order still invites payment"
+    },
+    {
+      "finding_id": "A130-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Confirmation and contact message omit Telecaller target"
+    }
+  ],
+  "cross_references": [
+    "A125-F02",
+    "A127",
+    "A129-F01"
+  ],
+  "validation": {
+    "passed": 24,
+    "audit_probes": 15,
+    "existing_cases": 9,
+    "failed": 0,
+    "skipped": 0,
+    "production_billing_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A131"
+}

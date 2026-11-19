@@ -1,0 +1,11 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({actor:vi.fn(),company:vi.fn(),find:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({AuthorizationError:class extends Error{},requireUser:m.actor,requireUserForMutation:m.actor,requireGlobalSuperAdmin:vi.fn(),requireGlobalSuperAdminForMutation:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},billingOrder:{findFirst:m.find}}}));
+import {billingOrderForCurrentCompany} from '@/lib/billing/service';
+beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue({id:'admin',companyId:'company-A',role:'ACCOUNT_USER',accountRole:'ACCOUNT_ADMIN',accountAccessActive:true,salesAccessActive:false});m.company.mockResolvedValue({id:'company-A',productEdition:'SALESPUNCH360_ACCOUNT'});m.find.mockResolvedValue({id:'synthetic-order',status:'PENDING',expiresAt:new Date('2020-01-01')})});
+it('binds lookup to authenticated company rather than query-provided company',async()=>{await billingOrderForCurrentCompany('order-B');expect(m.find.mock.calls[0][0].where).toEqual({id:'order-B',companyId:'company-A'})});
+it('does not return a missing or other-company order',async()=>{m.find.mockResolvedValue(null);await expect(billingOrderForCurrentCompany('other')).rejects.toThrow('NOT_FOUND')});
+it('rejects global super admin on tenant confirmation route before order access',async()=>{m.actor.mockResolvedValue({role:'SUPER_ADMIN',companyId:'company-A'});await expect(billingOrderForCurrentCompany('other')).rejects.toThrow();expect(m.find).not.toHaveBeenCalled()});
+it('returns expired pending snapshot without effective expiry check',async()=>{const o=await billingOrderForCurrentCompany('synthetic-order');expect(o.status).toBe('PENDING');expect(o.expiresAt!.getTime()).toBeLessThan(Date.now())});
+it('loader omits Telecaller order enrichment',async()=>{await billingOrderForCurrentCompany('synthetic-order');const select=m.find.mock.calls[0][0].select;expect(select).not.toHaveProperty('telecallerSeats');expect(select).not.toHaveProperty('auditEvents')});
