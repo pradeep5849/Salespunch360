@@ -1,0 +1,10 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({edit:vi.fn(),refresh:vi.fn(),redirect:vi.fn()}));
+vi.mock('@/lib/users/product-user-management',()=>({editAccountUser:m.edit,createAccountUser:vi.fn()}));
+vi.mock('next/cache',()=>({revalidatePath:m.refresh}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+import {manageAccountUser,manageAccountUserForm} from '@/app/actions/product-users';
+const form=()=>{const f=new FormData();f.set('operation','edit-account');f.set('userId','synthetic');f.set('accountRole','ACCOUNTANT');f.set('branchAccessScope','ALL_BRANCHES');return f};
+beforeEach(()=>vi.clearAllMocks());
+it('inner action gives useful seat-limit error',async()=>{m.edit.mockRejectedValueOnce(new Error('ACCOUNT_SEAT_LIMIT'));expect(await manageAccountUser({},form())).toMatchObject({error:expect.stringContaining('subscription limit')})});
+it('form wrapper discards the same error state and resolves undefined',async()=>{m.edit.mockRejectedValueOnce(new Error('ACCOUNT_SEAT_LIMIT'));expect(await manageAccountUserForm(form())).toBeUndefined();expect(m.refresh).not.toHaveBeenCalled()});

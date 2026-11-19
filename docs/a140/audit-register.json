@@ -1,0 +1,45 @@
+{
+  "page_id": "A140",
+  "title": "Edit Account Employee",
+  "route": "/workspace/employees/account/edit/[id]",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_MOBILE_SERVICE"
+  ],
+  "findings": [
+    {
+      "finding_id": "A140-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web form wrapper discards handled edit errors"
+    },
+    {
+      "finding_id": "A140-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Android lacks existing Account employee role and branch editor"
+    },
+    {
+      "finding_id": "A140-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Account role seat enforcement diverges from billing package capacity"
+    }
+  ],
+  "cross_references": [
+    "A134 branch-mode policy revision 3"
+  ],
+  "validation": {
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 9,
+    "existing_cases": 23,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A141"
+}
