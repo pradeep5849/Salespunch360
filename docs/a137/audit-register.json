@@ -41,5 +41,7 @@
     "browser_device_verified": false,
     "real_database_verified": false
   },
-  "next_page": "A138"
+  "next_page": "A138",
+  "owner_policy_reference": "docs/a134/owner-policy.json revision 3",
+  "company_details_branch_mode_choice": "AGREED_NOT_IMPLEMENTED"
 }

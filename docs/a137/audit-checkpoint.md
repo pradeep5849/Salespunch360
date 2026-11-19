@@ -31,3 +31,9 @@ Both platforms expose business identity, address/contact, website, GSTIN/PAN, re
 32 passed, zero failed/skipped: 9 new probes and 23 existing profile-security, logo-processing and mobile-company cases. Logo processing tests exercise synthetic images; action storage/DB calls are mocks. No live browser, installed Android build, real database or object-storage operations. No application/permission/schema/UI implementation made. Evidence stored as text and executable audit fixture removed.
 
 Next A138 — New Customer (`/workspace/customers/new`).
+
+## Owner decision — Company Details branch-mode selection
+
+On 2026-11-19 owner approved choosing Single-location (default) or Multiple-location in Company Details, Main Admin only. Single-location retains internal Head Office and hides branch UI except Main Admin Add Branch. Multiple-location selection opens setup but does not itself create branches, move data or expose branch UI. Enable branch features only after additional branch setup succeeds. The first-additional-branch move/keep data choices remain required. Switching back must not silently remove branches or records; detailed eligibility/reassignment workflow remains a later implementation design task. Existing explicitly created branches must not be silently reset by a default selection.
+
+Audit requirement only, not implemented. Cross-reference A134 policy revision 3 and F03/F04; Company Details placement is an extension of those existing gaps, not a duplicate defect count. No new tests run for this documentation-only policy update.

@@ -1,7 +1,7 @@
 {
   "date": "2026-11-19",
   "mode": "AUDIT_ONLY",
-  "revision": 2,
+  "revision": 3,
   "single_location_representation": "ONE_INTERNAL_HEAD_OFFICE_BRANCH",
   "automatic_head_office_allowed": true,
   "before_first_additional_branch": {
@@ -17,5 +17,16 @@
   "after_additional_branch_creation": "SHOW_BRANCH_FEATURES_ACCORDING_TO_PERMISSIONS",
   "zero_branch_operating_mode_required": false,
   "implementation_changed": false,
-  "supersedes": "Revision 1 required zero-branch operation; owner explicitly accepts internal Head Office instead."
+  "supersedes": "Revision 1 required zero-branch operation; owner explicitly accepts internal Head Office instead.",
+  "company_details_choice": {
+    "editable_by": "MAIN_ADMIN_ONLY",
+    "options": [
+      "SINGLE_LOCATION",
+      "MULTIPLE_LOCATION"
+    ],
+    "default": "SINGLE_LOCATION",
+    "multiple_location_selection": "OPEN_BRANCH_SETUP_WITHOUT_CREATING_BRANCH_OR_MOVING_DATA",
+    "activation": "AFTER_ADDITIONAL_BRANCH_SETUP_SUCCEEDS",
+    "switch_back": "MUST_NOT_SILENTLY_REMOVE_BRANCHES_OR_RECORDS"
+  }
 }
