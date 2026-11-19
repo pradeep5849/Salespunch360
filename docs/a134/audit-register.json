@@ -1,0 +1,45 @@
+{
+  "page_id": "A134",
+  "title": "Branches",
+  "route": "/workspace/branches",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "owner_policy": "docs/a134/owner-policy.json",
+  "findings": [
+    {
+      "finding_id": "A134-F01",
+      "severity": "Medium",
+      "title": "Automatic Head Office creation violates explicit opt-in",
+      "status": "OPEN"
+    },
+    {
+      "finding_id": "A134-F02",
+      "severity": "High",
+      "title": "Core resolvers do not support zero-branch company operation",
+      "status": "OPEN"
+    },
+    {
+      "finding_id": "A134-F03",
+      "severity": "Medium",
+      "title": "Branch-related UI lacks pre-creation gating",
+      "status": "OPEN"
+    },
+    {
+      "finding_id": "A134-F04",
+      "severity": "Medium",
+      "title": "First-branch existing-data decision is missing",
+      "status": "OPEN"
+    }
+  ],
+  "validation": {
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 18,
+    "existing_cases": 12,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A135"
+}

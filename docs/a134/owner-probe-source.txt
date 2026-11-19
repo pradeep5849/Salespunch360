@@ -1,0 +1,11 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({actor:vi.fn(),company:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({AuthorizationError:class extends Error{},requireUser:m.actor,requireUserForMutation:m.actor}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company}}}));
+import {requirePrimaryOwner} from '@/lib/company/owner-authorization';
+const owner={id:'main',companyId:'company-A',isActive:true,role:'COMPANY_ADMIN',salesRole:'PRIMARY_ADMIN',salesAccessActive:true,accountRole:null,accountAccessActive:false};
+beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue(owner);m.company.mockResolvedValue({id:'company-A',productEdition:'SALESPUNCH360'})});
+it('permits active Main Admin in authorized company',async()=>{expect((await requirePrimaryOwner(true)).actor.id).toBe('main')});
+it.each(['ADMIN','MANAGER','SALES'])('rejects other Sales role %s',async(salesRole)=>{m.actor.mockResolvedValue({...owner,salesRole});await expect(requirePrimaryOwner(true)).rejects.toThrow();expect(m.company).not.toHaveBeenCalled()});
+it('rejects inactive Main Admin',async()=>{m.actor.mockResolvedValue({...owner,isActive:false});await expect(requirePrimaryOwner(true)).rejects.toThrow()});
+it('allows Account-edition Main Admin with Account access',async()=>{m.actor.mockResolvedValue({...owner,salesAccessActive:false,accountRole:'ACCOUNT_ADMIN',accountAccessActive:true});m.company.mockResolvedValue({id:'company-A',productEdition:'SALESPUNCH360_ACCOUNT'});expect((await requirePrimaryOwner(true)).actor.id).toBe('main')});

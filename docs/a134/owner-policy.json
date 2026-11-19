@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-19",
+  "mode": "AUDIT_ONLY",
+  "no_branches_means": "SINGLE_LOCATION_COMPANY",
+  "before_first_explicit_branch": {
+    "main_admin_only_entry": "Add Branch",
+    "all_other_branch_ui": "HIDDEN",
+    "automatic_main_or_head_office_branch": false,
+    "records_scope": "COMPANY"
+  },
+  "first_branch_existing_data_choices": [
+    "MOVE_EXISTING_COMPANY_DATA_TO_FIRST_BRANCH",
+    "KEEP_EXISTING_COMPANY_DATA_AT_COMPANY_LEVEL"
+  ],
+  "after_creation": "SHOW_BRANCH_FEATURES_ACCORDING_TO_PERMISSIONS",
+  "implementation_changed": false
+}
