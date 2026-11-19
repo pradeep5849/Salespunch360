@@ -1,0 +1,45 @@
+{
+  "page_id": "A137",
+  "title": "Company Details",
+  "route": "/workspace/company-profile",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_MOBILE_SERVICE"
+  ],
+  "findings": [
+    {
+      "finding_id": "A137-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Logo storage overwrite precedes fallible database pointer save"
+    },
+    {
+      "finding_id": "A137-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Android omits team-structure conflict recovery guidance"
+    },
+    {
+      "finding_id": "A137-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Android lacks web-equivalent view-only company details"
+    }
+  ],
+  "cross_references": [
+    "A134-F03"
+  ],
+  "validation": {
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 9,
+    "existing_cases": 23,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A138"
+}
