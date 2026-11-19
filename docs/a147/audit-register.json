@@ -1,0 +1,46 @@
+{
+  "page_id": "A147",
+  "title": "Edit Lead",
+  "route": "/workspace/leads/[id]/edit",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICE"
+  ],
+  "findings": [
+    {
+      "finding_id": "A147-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Optional saved fields cannot reliably be cleared"
+    },
+    {
+      "finding_id": "A147-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web stale-version errors lack recovery guidance"
+    },
+    {
+      "finding_id": "A147-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Follow-up reassignment omits owner handover notifications"
+    }
+  ],
+  "cross_references": [
+    "A146 notification workflow"
+  ],
+  "validation": {
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0,
+    "new_audit_probes": 8,
+    "baseline_rechecks": 5,
+    "existing_cases": 15,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A148"
+}
