@@ -1,0 +1,15 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({actor:vi.fn(),preflight:vi.fn(),hash:vi.fn(),raw:vi.fn(),company:vi.fn(),create:vi.fn(),phone:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({requirePermission:m.actor,requirePermissionForMutation:m.actor}));
+vi.mock('@/lib/auth/crypto',()=>({hashPassword:m.hash}));
+vi.mock('@/lib/billing/telecaller',()=>({assertTelecallerSeatAvailable:m.preflight}));
+vi.mock('@/lib/users/employee-profile',()=>({assertSalesEmployeePhoneUnique:m.phone}));
+vi.mock('@/lib/db',()=>({db:{$transaction:async(fn:any)=>fn({$queryRaw:m.raw,company:{findUnique:m.company},user:{create:m.create}})}}));
+import {createTelecallerEmployee} from '@/lib/telecalling/team';
+const input={name:' Telecaller ',email:' TELE@example.test ',phone:'',employeeCode:'',password:'StrongPassword12',confirmPassword:'StrongPassword12'};
+beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue({id:'owner',companyId:'company-A',salesRole:'PRIMARY_ADMIN'});m.company.mockResolvedValue({productEdition:'SALESPUNCH360'});m.raw.mockResolvedValueOnce([]).mockResolvedValueOnce([{seats:1}]).mockResolvedValueOnce([{count:0n}]);m.hash.mockResolvedValue('synthetic-hash');m.create.mockImplementation(async({data}:any)=>({id:'synthetic-telecaller',...data}))});
+it('creates independent paid Telecaller identity and no field Sales/Account access',async()=>{const u=await createTelecallerEmployee(input);expect(u).toMatchObject({companyId:'company-A',name:'Telecaller',email:'tele@example.test',salesRole:'SALES',designation:'Telecaller',isActive:true,salesAccessActive:false,accountAccessActive:false});expect(u).not.toHaveProperty('password')});
+it('full capacity under transactional recount prevents create',async()=>{m.raw.mockReset().mockResolvedValueOnce([]).mockResolvedValueOnce([{seats:1}]).mockResolvedValueOnce([{count:1n}]);await expect(createTelecallerEmployee(input)).rejects.toThrow('TELECALLER_SEAT_LIMIT');expect(m.create).not.toHaveBeenCalled()});
+it('missing paid term under transaction prevents create after preflight',async()=>{m.raw.mockReset().mockResolvedValueOnce([]).mockResolvedValueOnce([]);await expect(createTelecallerEmployee(input)).rejects.toThrow('TELECALLER_SUBSCRIPTION_REQUIRED');expect(m.create).not.toHaveBeenCalled()});
+it('preflight denial prevents hashing and transaction queries',async()=>{m.preflight.mockRejectedValueOnce(new Error('TELECALLER_SUBSCRIPTION_REQUIRED'));await expect(createTelecallerEmployee(input)).rejects.toThrow('TELECALLER_SUBSCRIPTION_REQUIRED');expect(m.hash).not.toHaveBeenCalled();expect(m.raw).not.toHaveBeenCalled()});
+it('mismatched password rejects before preflight',async()=>{await expect(createTelecallerEmployee({...input,confirmPassword:'different'})).rejects.toThrow();expect(m.preflight).not.toHaveBeenCalled()});

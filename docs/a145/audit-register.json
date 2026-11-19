@@ -1,0 +1,42 @@
+{
+  "page_id": "A145",
+  "title": "New Telecaller / no-seat gate",
+  "route": "/workspace/employees/sales/new/telecaller",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_MOBILE_CREATION_PATHS"
+  ],
+  "findings": [
+    {
+      "finding_id": "A145-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Android lacks dedicated paid Telecaller employee creation flow"
+    },
+    {
+      "finding_id": "A145-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Inherited error query property breaks Telecaller page render"
+    }
+  ],
+  "cross_references": [
+    "A129-F02 pattern",
+    "A133-F01",
+    "A142-F01",
+    "A142-F03"
+  ],
+  "validation": {
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 12,
+    "existing_cases": 6,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A146"
+}

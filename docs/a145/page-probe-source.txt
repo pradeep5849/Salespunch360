@@ -1,0 +1,17 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({context:vi.fn(),overview:vi.fn()}));
+vi.mock('@/lib/users/product-user-management',()=>({getProductUserManagementContext:m.context}));
+vi.mock('@/lib/billing/telecaller',()=>({getTelecallerBillingOverviewForCompany:m.overview}));
+vi.mock('@/app/actions/telecaller-team',()=>({createTelecallerEmployeeAction:async()=>{}}));
+import Page from '@/app/workspace/employees/sales/new/telecaller/page';
+const render=async(error?:string)=>renderToStaticMarkup(await Page({searchParams:Promise.resolve({error})}));
+beforeEach(()=>{vi.clearAllMocks();m.context.mockResolvedValue({actor:{salesRole:'PRIMARY_ADMIN',companyId:'company-A'}});m.overview.mockResolvedValue({available:1,used:0,limit:1})});
+it('no paid availability gates creation form',async()=>{m.overview.mockResolvedValue({available:0,used:0,limit:0});const s=await render();expect(s).toContain('No Telecaller seat available');expect(s).not.toContain('Save Telecaller');expect(s).toContain('/workspace/billing/telecaller')});
+it('paid availability shows masked password and creation form',async()=>{const s=await render();expect(s).toContain('Save Telecaller');expect(s).toContain('type="password"');expect(s).toContain('cannot change lead stage or ownership')});
+it('non-primary actor rejects before billing read',async()=>{m.context.mockResolvedValue({actor:{salesRole:'ADMIN',companyId:'company-A'}});await expect(render()).rejects.toThrow('Not authorized');expect(m.overview).not.toHaveBeenCalled()});
+it('known duplicate email error is actionable',async()=>{expect(await render('EMAIL_IN_USE')).toContain('That email address is already in use')});
+it('ordinary unknown error uses safe generic fallback',async()=>{expect(await render('<script>')).toContain('Could not add the Telecaller')});
+it('inherited error-map key breaks server rendering',async()=>{await expect(render('__proto__')).rejects.toThrow(/Objects are not valid/)});
+it('native add employee only exposes generic Sales role and no dedicated Telecaller create',()=>{const ui=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/EmployeesScreen.kt','utf8');const api=readFileSync('android/app/src/main/java/com/salespunch360/mobile/data/ApiClient.kt','utf8');expect(ui).not.toContain('Add Telecaller');expect(api).not.toContain('createTelecallerEmployee');expect(ui).toContain('MobileRole.ADMIN,MobileRole.MANAGER,MobileRole.SALES')});
