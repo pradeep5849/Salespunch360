@@ -1,0 +1,28 @@
+{
+  "page_id": "A133",
+  "title": "Legacy Telecaller billing",
+  "route": "/workspace/billing/telecaller",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "reference_required": false,
+  "findings": [
+    {
+      "finding_id": "A133-F01",
+      "severity": "Low",
+      "title": "Legacy redirect targets missing hub anchor",
+      "status": "OPEN"
+    }
+  ],
+  "shared_validation": {
+    "evidence": "docs/a131/probe-output.txt",
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 12,
+    "existing_cases": 18,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A134"
+}

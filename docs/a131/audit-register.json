@@ -1,0 +1,27 @@
+{
+  "page_id": "A131",
+  "title": "Renewal",
+  "route": "/workspace/billing/renewal",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-19",
+  "owner_ui_decision": "KEEP_CURRENT_UI",
+  "reference_required": false,
+  "findings": [],
+  "shared_validation": {
+    "evidence": "docs/a131/probe-output.txt",
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 12,
+    "existing_cases": 18,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A132",
+  "cross_references": [
+    "A127-F01",
+    "A129-F01",
+    "A124-F01",
+    "A125-F02"
+  ]
+}
