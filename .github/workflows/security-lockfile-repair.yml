@@ -1,0 +1,46 @@
+name: Security dependency lockfile repair
+on:
+  push:
+    branches:
+      - fix/hostinger-four-dependency-advisories-20261120
+    paths:
+      - .github/workflows/security-lockfile-repair.yml
+permissions:
+  contents: write
+jobs:
+  repair-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Update lockfile for targeted security overrides
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Confirm resolved versions
+        run: |
+          node - <<'NODE'
+          const p = require('./package-lock.json').packages;
+          for (const [name, expected] of [['websocket-driver','0.8.0'],['fast-xml-parser','5.12.0']]) {
+            const actual = p['node_modules/'+name]?.version;
+            if (actual !== expected) throw new Error(name + ': expected ' + expected + ', got ' + actual);
+            console.log(name + '@' + actual);
+          }
+          NODE
+      - name: Commit updated lockfile to PR branch
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add package-lock.json
+            git commit -m 'security: refresh lockfile for patched transitive dependencies'
+            git push
+          fi
+      - name: Install and check dependency vulnerabilities
+        run: |
+          npm ci --ignore-scripts
+          npm audit --audit-level=low
+          npm run check:dependencies
