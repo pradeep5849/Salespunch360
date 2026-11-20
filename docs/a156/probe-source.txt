@@ -1,0 +1,21 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {Prisma} from '@prisma/client';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({company:vi.fn(),users:vi.fn(),points:vi.fn(),approvals:vi.fn(),create:vi.fn(),update:vi.fn(),tx:vi.fn(),scope:vi.fn(),options:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},user:{findMany:m.users},locationPoint:{findMany:m.points},dailyTravelApproval:{findMany:m.approvals,create:m.create,update:m.update},$transaction:m.tx}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.options}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch}));
+import {expenseReport} from './expenses';
+const actor={id:'self',name:'Sales',companyId:'tenant',salesRole:'SALES' as const};
+const raw={start:'2026-11-01',end:'2026-11-20'};
+const point=(id:string,longitude:number,seconds:number)=>({id,branchId:'branch',userId:'self',attendanceId:'attendance',latitude:0,longitude,accuracyMeters:5,capturedAt:new Date(Date.UTC(2026,10,19,6,0,seconds)),sequenceNumber:seconds});
+const snapshot={id:'saved',branchId:'branch',employeeId:'self',businessDate:new Date('2026-11-19Z'),distanceMeters:1000,ratePerKm:new Prisma.Decimal(10),amount:new Prisma.Decimal(10),status:'APPROVED',reviewedAt:new Date()};
+describe('A156 expense linkage observations',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.company.mockResolvedValue({travelRatePerKm:new Prisma.Decimal(10)});m.users.mockResolvedValue([{id:'self',name:'Sales',travelRatePerKm:null,travelApprovalMode:'MANUAL'}]);m.points.mockResolvedValue([point('a',0,0),point('b',0.001,60)]);m.approvals.mockResolvedValue([snapshot]);m.scope.mockResolvedValue(['self']);m.options.mockResolvedValue([]);m.branch.mockResolvedValue({branchId:'branch'});m.tx.mockResolvedValue([]);});
+ it('saved approval disappears from rows when GPS points absent',async()=>{m.points.mockResolvedValue([]);const r=await expenseReport(raw,actor);expect(m.approvals).toHaveBeenCalledTimes(2);expect(r.rows).toEqual([]);});
+ it('saved approval disappears when user is no longer travel eligible',async()=>{m.users.mockResolvedValue([]);expect((await expenseReport(raw,actor)).rows).toEqual([]);});
+ it('displayed live distance differs from frozen approved distance used for amount',async()=>{const r=await expenseReport(raw,actor);expect(r.rows[0].distanceMeters).toBeLessThan(200);expect(r.rows[0].amount?.toNumber()).toBe(10);expect(r.rows[0].ratePerKm?.toNumber()).toBe(10);expect(r.rows[0].distanceMeters).not.toBe(snapshot.distanceMeters);expect(m.update).not.toHaveBeenCalled();});
+ it('Sales report read creates AUTO approval without an explicit review action',async()=>{m.approvals.mockResolvedValue([]);m.users.mockResolvedValue([{id:'self',name:'Sales',travelRatePerKm:new Prisma.Decimal(10),travelApprovalMode:'AUTO'}]);await expenseReport(raw,actor);expect(m.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({status:'APPROVED',employeeId:'self'})}));expect(m.tx).toHaveBeenCalledOnce();});
+ it('report read refreshes pending snapshots',async()=>{m.approvals.mockResolvedValue([{...snapshot,status:'PENDING'}]);await expenseReport(raw,actor);expect(m.update).toHaveBeenCalledWith(expect.objectContaining({where:{id:'saved'},data:expect.objectContaining({distanceMeters:expect.any(Number)})}));});
+ it('interactive UI ignores source truncation flag while export checks it',()=>{expect(readFileSync('src/app/workspace/reports/expenses/page.tsx','utf8')).not.toContain('pointLimitExceeded');expect(readFileSync('src/app/api/reports/[report]/excel/route.ts','utf8')).toContain('r.pointLimitExceeded');});
+});

@@ -1,0 +1,45 @@
+{
+  "page_id": "A156",
+  "title": "Expense Report",
+  "route": "/workspace/reports/expenses",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "owner_report": "Missing entry not linked to daily travel expense",
+  "findings": [
+    {
+      "finding_id": "A156-F01",
+      "severity": "High",
+      "status": "OPEN",
+      "title": "Saved daily approvals omitted without current GPS or enabled travel settings"
+    },
+    {
+      "finding_id": "A156-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Stored approved amount displayed with recalculated GPS distance"
+    },
+    {
+      "finding_id": "A156-F03",
+      "severity": "High",
+      "status": "OPEN",
+      "title": "Report reads create and update financial approval state"
+    },
+    {
+      "finding_id": "A156-F04",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Interactive report ignores GPS source truncation before calculation and writes"
+    }
+  ],
+  "validation": {
+    "passed": 44,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 6,
+    "existing_cases": 38,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A157"
+}
