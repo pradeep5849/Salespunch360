@@ -1,0 +1,12 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({complete:vi.fn(),cancel:vi.fn(),refresh:vi.fn(),guard:vi.fn()}));
+vi.mock('@/lib/follow-up-tasks/call-completion',()=>({completeCallFollowUpTask:m.complete}));
+vi.mock('@/lib/follow-up-tasks/service',()=>({cancelFollowUpTask:m.cancel,createFollowUpTask:vi.fn()}));
+vi.mock('@/lib/security/request',()=>({mutationGuard:m.guard}));
+vi.mock('next/cache',()=>({revalidatePath:m.refresh}));
+import {followUpTaskFeedback} from './follow-up-tasks';
+const form=(operation:string)=>{const f=new FormData();f.set('operation',operation);f.set('taskId','task');f.set('outcomeNote','Spoke with customer');return f};
+beforeEach(()=>vi.clearAllMocks());
+it('returns authoritative closed confirmation only after successful completion',async()=>{expect(await followUpTaskFeedback({},form('CALL'))).toMatchObject({success:expect.stringContaining('Closed')});expect(m.complete).toHaveBeenCalledWith('task','Spoke with customer');expect(m.refresh).toHaveBeenCalled()});
+it('failed attendance action stays a visible failure, without success refresh',async()=>{m.complete.mockRejectedValueOnce(new Error('NOT_FOUND'));expect(await followUpTaskFeedback({},form('CALL'))).toHaveProperty('error');expect(m.refresh).not.toHaveBeenCalled()});
+it('security guard denial prevents cancellation',async()=>{m.guard.mockRejectedValueOnce(new Error('RATE_LIMITED'));expect(await followUpTaskFeedback({},form('CANCEL'))).toHaveProperty('error');expect(m.cancel).not.toHaveBeenCalled()});
