@@ -13,9 +13,9 @@ Owner explicitly requested implementation during the audit on 2026-11-19. Admin 
 
 ## Background operation
 
-The existing internal field-jobs endpoint already invokes follow-up reminders. A dedicated `/api/internal/follow-up-reminders` POST runs only follow-up reminders and uses the existing FIELD_JOB_SECRET authentication. A fifteen-minute GitHub schedule targets it after deployment. It fails visibly if unconfigured rather than pretending delivery is active. No secrets, real reminders or production job were invoked during development.
+The production Hostinger Node application now owns the daily 08:00 India reminder schedule through Next.js instrumentation. A durable database run record, renewable lease and existing notification keys protect multi-worker execution and restart recovery. GitHub tests/deploys the application but does not schedule or dispatch production reminders. See [server-owned reminder operation](../hosted-reminders.md).
 
-GitHub integration denied reading repository secret configuration (HTTP 403, Resource not accessible by integration). Actual secret presence and matching hosting value are therefore UNVERIFIED. Before claiming automatic delivery live, configure/confirm matching FIELD_JOB_SECRET in hosting and GitHub, deploy the endpoint and verify a scheduled run. No secret values should be shared in chat.
+The authenticated internal endpoint remains an optional operator tool. `FIELD_JOB_SECRET` is required only for that HTTP caller, not for the hosted scheduler. No GitHub production secret is needed. Local/CI tests use isolated databases and mocked reminder generation; they do not dispatch production notifications.
 
 ## Scope and validation
 
