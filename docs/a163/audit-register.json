@@ -1,0 +1,36 @@
+{
+  "page_id": "A163",
+  "title": "Sales Targets",
+  "route": "/workspace/targets",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A163-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Monthly save silently clamps negative and truncates fractional counts"
+    },
+    {
+      "finding_id": "A163-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Monthly upserts lack expected-version conflict protection"
+    }
+  ],
+  "validation": {
+    "passed": 36,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 32,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A164"
+}

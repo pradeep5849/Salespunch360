@@ -1,0 +1,14 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({assignee:vi.fn(),upsert:vi.fn(),tx:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{user:{findFirst:m.assignee},salesTarget:{upsert:m.upsert},$transaction:m.tx}}));
+vi.mock('@/lib/billing/entitlement',()=>({assertOperationalWrite:vi.fn()}));
+vi.mock('@/lib/branches/operational-scope',()=>({resolveOperationalWriteBranch:vi.fn().mockResolvedValue('branch'),operationalBranchContext:vi.fn()}));
+import {saveMonthlyTargetsForActor} from './service';
+const actor={id:'admin',name:'Admin',companyId:'tenant',salesRole:'PRIMARY_ADMIN' as const};
+describe('A163 monthly target save probes',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.assignee.mockResolvedValue({id:'sales'});m.upsert.mockResolvedValue({});m.tx.mockResolvedValue([]);});
+ it('negative and fractional counts are silently clamped/truncated',async()=>{await saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:-2,wonTarget:3.8});expect(m.upsert.mock.calls[0][0].update.targetValue.toNumber()).toBe(0);expect(m.upsert.mock.calls[1][0].update.targetValue.toNumber()).toBe(3);});
+ it('nonfinite input rejects before persistence',async()=>{await expect(saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:NaN,wonTarget:1})).rejects.toThrow('INVALID_TARGET');expect(m.upsert).not.toHaveBeenCalled();});
+ it('successive stale saves replace previous values with no expected version predicate',async()=>{await saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:10,wonTarget:2});await saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:5,wonTarget:1});const second=m.upsert.mock.calls[2][0];expect(second.update.targetValue.toNumber()).toBe(5);expect(second.update.version).toEqual({increment:1});expect(JSON.stringify(second.where)).not.toContain('version');});
+ it('Sales cannot set monthly target before database calls',async()=>{await expect(saveMonthlyTargetsForActor({...actor,salesRole:'SALES'},{assignedUserId:'sales',leadTarget:1,wonTarget:1})).rejects.toBeTruthy();expect(m.assignee).not.toHaveBeenCalled();expect(m.upsert).not.toHaveBeenCalled();});
+});
