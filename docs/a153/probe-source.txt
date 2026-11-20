@@ -1,0 +1,18 @@
+import {readFileSync} from 'node:fs';
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({count:vi.fn(),many:vi.fn(),scope:vi.fn(),options:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{attendance:{count:m.count,findMany:m.many}}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.options}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch}));
+import {attendanceReport} from './attendance';
+const page=readFileSync('src/app/workspace/reports/attendance/page.tsx','utf8');
+const actor={id:'self',name:'Sales',companyId:'tenant',salesRole:'SALES' as const};
+describe('A153 audit probes',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.count.mockResolvedValue(501);m.many.mockResolvedValue([]);m.scope.mockResolvedValue(['self']);m.options.mockResolvedValue([]);m.branch.mockResolvedValue({branchId:'branch'});});
+ it('Sales default requests 500 sessions but advertises more pages when larger',async()=>{const r=await attendanceReport({},actor);expect(r.filters.pageSize).toBe(500);expect(r.totalPages).toBe(2);expect(m.many).toHaveBeenCalledWith(expect.objectContaining({take:500,skip:0,where:expect.objectContaining({companyId:'tenant',branchId:'branch',userId:{in:['self']}})}));});
+ it('shared service supports page two and preserves status/date filters',async()=>{const r=await attendanceReport({start:'2026-11-01',end:'2026-11-20',page:'2',pageSize:'50',status:'OPEN'},actor);expect(r.status).toBe('OPEN');expect(m.many).toHaveBeenCalledWith(expect.objectContaining({skip:50,take:50,where:expect.objectContaining({endedAt:null,startedAt:{gte:new Date('2026-10-31T18:30Z'),lt:new Date('2026-11-20T18:30Z')}})}));});
+ it('Sales card renderer has no pager and selected employee returns before team pager',()=>{const cards=page.slice(page.indexOf('function AttendanceCards'));expect(cards).not.toContain('<Pagination');expect(page.indexOf('if(selected)return')).toBeLessThan(page.indexOf('<Pagination'));expect(page.slice(page.indexOf('if(selected)return'),page.indexOf('return <main className="reports-content"'))).not.toContain('<Pagination');});
+ it('Android Sales attendance renderer likewise has no paging control',()=>{const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/SalesReportScreens.kt','utf8');const section=native.slice(native.indexOf('private fun SalesAttendanceReport'),native.indexOf('private fun SalesAttendanceDayStats'));expect(section).not.toMatch(/totalPages|hasMore|Next|vm\.load/);});
+ it('web day end reducer loses earlier open session when later closed row exists',()=>{const expression=page.match(/const last=(ordered\.reduce\([^;]+);/)![1];const reduce=new Function('ordered',`return ${expression}`);const open={startedAt:new Date('2026-11-01T01:00Z'),endedAt:null};const closed={startedAt:new Date('2026-11-01T02:00Z'),endedAt:new Date('2026-11-01T03:00Z')};expect(reduce([open,closed]).endedAt).toEqual(closed.endedAt);});
+ it('web day reducer retains open when it is last while native explicitly detects any open',()=>{const expression=page.match(/const last=(ordered\.reduce\([^;]+);/)![1];const reduce=new Function('ordered',`return ${expression}`);expect(reduce([{endedAt:new Date()},{endedAt:null}]).endedAt).toBeNull();expect(readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/SalesReportScreens.kt','utf8')).toContain('val hasOpen=rows.any{it.salesText("endedAt")==null}');});
+});

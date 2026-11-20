@@ -1,0 +1,36 @@
+{
+  "page_id": "A153",
+  "title": "Attendance Report",
+  "route": "/workspace/reports/attendance",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A153-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Attendance card history omits pagination and can show page-partial day totals"
+    },
+    {
+      "finding_id": "A153-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web day end reducer can conceal an earlier open session"
+    }
+  ],
+  "validation": {
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 6,
+    "existing_cases": 41,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A154"
+}
