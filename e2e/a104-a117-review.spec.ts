@@ -431,13 +431,11 @@ test("Save and New clears receipt and files only after one confirmed posting", a
   await dialog.getByLabel("Account type").selectOption("CASH");
   await dialog.getByRole("button", { name: "Save and select" }).click();
   await expect(dialog).not.toBeVisible();
-  await page
-    .getByLabel("Attachment", { exact: false })
-    .setInputFiles({
-      name: "new.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from("%PDF-1.7\nnew receipt"),
-    });
+  await page.getByLabel("Attachment", { exact: false }).setInputFiles({
+    name: "new.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.7\nnew receipt"),
+  });
   const before = await db.accountSettlement.count({ where: { companyId } });
   await page.getByRole("button", { name: "Save & New", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
