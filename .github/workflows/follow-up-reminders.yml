@@ -1,7 +1,7 @@
 name: Follow-up reminders
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "30 2 * * *"
   workflow_dispatch:
 permissions: {}
 concurrency:
