@@ -1,0 +1,18 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({count:vi.fn(),many:vi.fn(),scope:vi.fn(),options:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{geofenceEvent:{count:m.count,findMany:m.many}}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.options}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch}));
+import {geofenceReport} from './geofence';
+const actor={id:'self',name:'Sales',companyId:'tenant',salesRole:'SALES' as const};
+const raw={start:'2026-11-01',end:'2026-11-20',type:'OUTSIDE_RADIUS',action:'ATTENDANCE_START'};
+describe('A157 audit query behavior',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.count.mockResolvedValue(0);m.many.mockResolvedValue([]);m.scope.mockResolvedValue(['self']);m.options.mockResolvedValue([]);m.branch.mockResolvedValue({branchId:'branch'});});
+ it('rows keep company branch self date and selected type/action',async()=>{await geofenceReport(raw,actor);expect(m.many).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({companyId:'tenant',branchId:'branch',employeeId:{in:['self']},type:'OUTSIDE_RADIUS',action:'ATTENDANCE_START'}),take:25,skip:0}));});
+ it('accuracy count overwrites selected outside type',async()=>{await geofenceReport(raw,actor);expect(m.count.mock.calls[0][0].where.type).toBe('OUTSIDE_RADIUS');expect(m.count.mock.calls[2][0].where.type).toBe('INSUFFICIENT_ACCURACY');});
+ it('customer count overwrites selected attendance action',async()=>{await geofenceReport(raw,actor);expect(m.count.mock.calls[0][0].where.action).toBe('ATTENDANCE_START');expect(m.count.mock.calls[4][0].where.action).toBe('CUSTOMER_CHECK_IN');});
+ it('summary can contradict zero selected total under consistent scoped DB responses',async()=>{m.count.mockImplementation(async({where})=>where.action==='CUSTOMER_CHECK_IN'||where.type==='INSUFFICIENT_ACCURACY'?4:0);const r=await geofenceReport(raw,actor);expect(r.summary.total).toBe(0);expect(r.summary.accuracy).toBe(4);expect(r.summary.customer).toBe(4);});
+ it('customer name predicate and page offset are scoped',async()=>{await geofenceReport({...raw,q:'Acme',page:'2'},actor);expect(m.many.mock.calls[0][0]).toMatchObject({skip:25,where:{customer:{name:{contains:'Acme',mode:'insensitive'}}}});});
+ it('native request omits geofence action/type/name search supported on web',()=>{const vm=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ReportsViewModel.kt','utf8');expect(vm).toContain('api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page)');const web=readFileSync('src/app/workspace/reports/geofence-breaches/page.tsx','utf8');for(const name of ['action','type','q'])expect(web).toContain(`name="${name}"`);});
+});
