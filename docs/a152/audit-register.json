@@ -1,0 +1,36 @@
+{
+  "page_id": "A152",
+  "title": "Complete your company setup",
+  "route": "/workspace?setup=1",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A152-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Setup presentation additionally requires legacy COMPANY_ADMIN role"
+    },
+    {
+      "finding_id": "A152-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Completion predicate accepts malformed nonblank required profile fields"
+    }
+  ],
+  "validation": {
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 17,
+    "existing_cases": 30,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A153"
+}

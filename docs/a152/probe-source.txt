@@ -1,0 +1,14 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {profileComplete,companyProfileSchema} from './profile';
+import {dashboardPresentation} from '../workspace/dashboard-presentation';
+const base={name:'Acme',addressLine1:'1 Road',addressLine2:'',locality:'',city:'Pune',state:'MH',postalCode:'411001',country:'India',primaryContactName:'Owner',primaryPhone:'9999999999',contactEmail:'a@example.com',alternatePhone:'',website:'',gstin:'',pan:'',registrationNumber:'',description:'',teamStructure:'SALES_ONLY',enabledModules:[]};
+describe('A152 audit observations and completion baseline',()=>{
+ it('valid complete profile passes readiness and save validation',()=>{expect(profileComplete(base)).toBe(true);expect(companyProfileSchema.safeParse(base).success).toBe(true);});
+ it.each(['name','addressLine1','city','state','postalCode','country','primaryContactName','primaryPhone','contactEmail'])('blank required %s blocks readiness',key=>expect(profileComplete({...base,[key]:'  '})).toBe(false));
+ it('unknown team structure blocks readiness',()=>expect(profileComplete({...base,teamStructure:'OTHER'})).toBe(false));
+ it.each([{contactEmail:'bad-email'},{primaryPhone:'x'},{postalCode:'x'}])('nonblank malformed legacy data is marked complete despite save rejection: %j',change=>{expect(profileComplete({...base,...change})).toBe(true);expect(companyProfileSchema.safeParse({...base,...change}).success).toBe(false);});
+ it('canonical owner with nonlegacy role misses setup presentation gate',()=>{expect(dashboardPresentation({role:'SALES',salesRole:'PRIMARY_ADMIN',managerType:null}).canAccessLegacyOwnerRoutes).toBe(false);const page=readFileSync('src/app/workspace/page.tsx','utf8');expect(page).toContain('presentation.canAccessLegacyOwnerRoutes&&params.setup==="1"');});
+ it('legacy owner does receive setup presentation',()=>expect(dashboardPresentation({role:'COMPANY_ADMIN',salesRole:'PRIMARY_ADMIN',managerType:null}).canAccessLegacyOwnerRoutes).toBe(true));
+ it('setup uses authoritative company values and current actor verification',()=>{const page=readFileSync('src/app/workspace/page.tsx','utf8');expect(page).toContain('users:{where:{id:d.actor.id},select:{emailVerifiedAt:true},take:1}');expect(page).toContain('profileComplete(setup');});
+});
