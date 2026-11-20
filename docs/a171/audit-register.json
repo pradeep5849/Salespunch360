@@ -1,0 +1,32 @@
+{
+  "page_id": "A171",
+  "title": "Services",
+  "route": "/workspace/account/services",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A171-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web service cards omit pricing/unit detail and edit access"
+    },
+    {
+      "finding_id": "A171-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Category dropdown offers product-only categories rejected for services"
+    }
+  ],
+  "validation": {
+    "passed": 39,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 3,
+    "existing_cases": 36,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A172"
+}
