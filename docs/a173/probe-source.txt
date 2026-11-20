@@ -1,0 +1,11 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {workPackageSchema} from './validation';
+const web=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');
+const service=readFileSync('src/lib/account/service.ts','utf8');
+describe('A173 work package audit',()=>{
+ it('work cards omit category unit rates and edit entry',()=>{const cards=web.slice(web.indexOf('{rows.map((x)'),web.indexOf('<nav>',web.indexOf('{rows.map((x)')));expect(cards).not.toMatch(/workCategory|unit|sellingRate|estimatedCost|Edit|href=/);});
+ it('work-category choices capped 200 and selector has no separate option search',()=>{const options=service.slice(service.indexOf(': master === "work-packages"'),service.indexOf('master === "work-packages"\n      ? db.workPackage'));expect(options).toContain('take: 200');expect(web).toContain('d.workCategories.map((x)');expect(web).not.toMatch(/workCategorySearch|loadMoreCategories/);});
+ it('valid work input retains unit rate and category',()=>{const id='11111111-1111-4111-8111-111111111111';const d=workPackageSchema.parse({name:'Painting',workCategoryId:id,unitId:id,sellingRate:'100',cost:'50'});expect(d.sellingRate?.toString()).toBe('100');expect(d.workCategoryId).toBe(id);});
+ it('invalid category identity rejects and writer scopes unit and category',()=>{expect(()=>workPackageSchema.parse({name:'Painting',workCategoryId:'bad'})).toThrow();const writer=service.slice(service.indexOf('export async function createWorkPackage'),service.indexOf('export async function createCustomField'));expect(writer).toContain('where: { id: d.unitId, companyId: a.companyId!, isActive: true }');expect(writer).toContain('where: { id: d.workCategoryId, companyId: a.companyId!, isActive: true }');});
+});

@@ -1,0 +1,35 @@
+{
+  "page_id": "A173",
+  "title": "Work / Packages",
+  "route": "/workspace/account/work-packages",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A173-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Work cards omit category/unit/rate detail and edit access"
+    },
+    {
+      "finding_id": "A173-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Work category dropdown options capped at 200 without further access"
+    }
+  ],
+  "cross_references": [
+    "A172"
+  ],
+  "validation": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 10,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A174"
+}
