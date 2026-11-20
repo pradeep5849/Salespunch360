@@ -51,7 +51,7 @@ fun FollowUpsScreen(
                 }
             }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(listOf("TODAY" to "Due Today", "OVERDUE" to "Overdue", "PENDING" to "Pending", "COMPLETED" to "Completed", "CANCELLED" to "Cancelled")) { (value, label) ->
+                items(listOf("ALL" to "All", "TODAY" to "Due Today", "UPCOMING" to "Upcoming", "OVERDUE" to "Overdue", "PENDING" to "Pending", "CLOSED" to "Closed", "CANCELLED" to "Cancelled")) { (value, label) ->
                     FilterChip(state.filter == value, { vm.select(value) }, { Text(label) })
                 }
             }
@@ -111,7 +111,7 @@ private fun FollowUpTaskCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row {
                 Text(task.subjectName, Modifier.weight(1f), fontWeight = FontWeight.Bold, color = SalesInk)
-                StatusChip(task.status)
+                StatusChip(if(task.status == "COMPLETED") "Closed" else task.status)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 Text("Type:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = SalesInk)

@@ -1,0 +1,28 @@
+name: Follow-up reminders
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: follow-up-reminders
+  cancel-in-progress: false
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send authenticated follow-up reminders
+        env:
+          FIELD_JOB_SECRET: ${{ secrets.FIELD_JOB_SECRET }}
+        run: |
+          if [ -z "$FIELD_JOB_SECRET" ]; then
+            echo "::error::Follow-up reminders require the same FIELD_JOB_SECRET in GitHub Actions and hosting. No request was sent."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 240 \
+            --request POST --header "Authorization: Bearer $FIELD_JOB_SECRET" \
+            --output "$RUNNER_TEMP/follow-up-reminders.json" \
+            https://www.salespunch360.com/api/internal/follow-up-reminders
+          jq -e '(.processed | type == "number") and (.created | type == "number")' "$RUNNER_TEMP/follow-up-reminders.json" > /dev/null
+          echo "Follow-up reminder sweep completed." >> "$GITHUB_STEP_SUMMARY"

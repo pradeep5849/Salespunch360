@@ -11,14 +11,14 @@ describe("Sales follow-up workflow regressions",()=>{
   expect(detail).toContain("listLeadFollowUpTasks");
   expect(detail).toContain("<h2>Follow-up History</h2>");
  });
- it("keeps Due Today, Overdue and future Pending disjoint and scopes check-in to scheduled Visit follow-ups",()=>{
+ it("keeps due views distinct and unfinished tasks pending and scopes check-in to scheduled Visit follow-ups",()=>{
   const web=read("src/app/workspace/follow-up-tasks/page.tsx");
   const checkIns=read("src/app/workspace/check-ins/page.tsx");
   const visitWorkspace=read("src/app/workspace/check-ins/visit-workspace.tsx");
   const mobile=read("src/lib/mobile/follow-ups.ts");
   const androidField=read("android/app/src/main/java/com/salespunch360/mobile/ui/FieldScreen.kt");
-  expect(web).toContain('listFollowUpTasks({...q,status:selected})');
-  expect(web).toContain('selected==="PENDING"?rawTasks.filter(task=>task.dueDate>=tomorrow)');
+  expect(web).toContain('listFollowUpTasks({...q,status:selected,page})');
+  expect(web).toContain('rawTasks.slice(0,50)');
   expect(checkIns).toContain('task.type==="VISIT"');
   expect(checkIns).toContain('bucket:"Overdue"');
   expect(checkIns).toContain('bucket:"Due Today"');
@@ -27,7 +27,7 @@ describe("Sales follow-up workflow regressions",()=>{
   expect(visitWorkspace).toContain('name="followUpTaskId"');
   expect(androidField).toContain("Scheduled visit follow-up");
   expect(androidField).toContain("FollowUpSelector(state.followUps");
-  expect(mobile).toContain("dueDate:{gte:tomorrow}");
+  expect(mobile).toContain("followUpStatusWhere(status)");
   expect(mobile).toContain("canStartCheckIn:isVisit");
  });
  it("requires the assigned salesperson to save a Call outcome note",()=>{
@@ -36,7 +36,7 @@ describe("Sales follow-up workflow regressions",()=>{
   const mobile=read("src/lib/mobile/follow-ups.ts");
   const android=read("android/app/src/main/java/com/salespunch360/mobile/ui/FollowUpsScreen.kt");
   const mutation=read("android/app/src/main/java/com/salespunch360/mobile/data/FollowUpMutationClient.kt");
-  expect(web).toContain('name="outcomeNote"');
+  expect(read("src/app/workspace/follow-up-tasks/task-action-form.tsx")).toContain('name="outcomeNote"');
   expect(web).toContain('isCall&&own&&t.status==="PENDING"');
   expect(completion).toContain("task.assignedUserId!==actor.id");
   expect(completion).toContain("Call outcome:");

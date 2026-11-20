@@ -18,7 +18,7 @@ export default async function CheckInsPage({searchParams}:{searchParams:Promise<
   getOwnPendingVisits(),
   listFollowUpTasks({status:"OVERDUE",employeeId}),
   listFollowUpTasks({status:"TODAY",employeeId}),
-  listFollowUpTasks({status:"PENDING",employeeId}),
+  listFollowUpTasks({status:"UPCOMING",employeeId}),
  ]);
  const followUps=[
   ...overdue.map(task=>({task,bucket:"Overdue"})),
