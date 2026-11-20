@@ -1,0 +1,19 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({count:vi.fn(),many:vi.fn(),lead:vi.fn(),customers:vi.fn(),query:vi.fn(),scope:vi.fn(),options:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{customerVisit:{count:m.count,findMany:m.many},lead:{count:m.lead},customer:{findMany:m.customers},$queryRaw:m.query}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.options}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch}));
+import {checkInReport} from './check-ins';
+const actor={id:'11111111-1111-4111-8111-111111111111',name:'Sales',companyId:'22222222-2222-4222-8222-222222222222',salesRole:'SALES' as const};
+const customerId='33333333-3333-4333-8333-333333333333';
+const visit={id:'44444444-4444-4444-8444-444444444444',companyId:actor.companyId,customerId:null,checkedInAt:new Date('2026-11-01T00:00Z'),checkedOutAt:null,checkInLatitude:0,checkInLongitude:0,customer:null,sourceLeads:[],_count:{sourceLeads:0}};
+const text=(q:{strings:string[]})=>q.strings.join('?');
+describe('A154 current query behavior audit',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.count.mockResolvedValue(1);m.lead.mockResolvedValue(0);m.many.mockResolvedValue([visit]);m.customers.mockResolvedValue([]);m.scope.mockResolvedValue([actor.id]);m.options.mockResolvedValue([]);m.branch.mockResolvedValue({branchId:'branch',branchIds:['branch']});m.query.mockResolvedValueOnce([]).mockResolvedValueOnce([{first:0n,repeat:0n}]);});
+ it('row query retains company branch and scoped user IDs',async()=>{await checkInReport({start:'2026-11-01',end:'2026-11-20'},true,actor);expect(m.many).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({companyId:actor.companyId,branchId:'branch',userId:{in:[actor.id]}}),take:25,skip:0}));});
+ it('customerId filters row query but summary SQL lacks customer identity filter',async()=>{await checkInReport({start:'2026-11-01',end:'2026-11-20',customerId},true,actor);expect(m.many.mock.calls[0][0].where.customerId).toBe(customerId);const summary=m.query.mock.calls[1][0];expect(summary.values).not.toContain(customerId);expect(text(summary)).not.toMatch(/v\."customerId"\s*=/);});
+ it('default Sales rows omit date bound while kind summary still imposes dates',async()=>{await checkInReport({},true,actor);expect(m.many.mock.calls[0][0].where).not.toHaveProperty('checkedInAt');expect(text(m.query.mock.calls[1][0])).toContain('v."checkedInAt">=');});
+ it('row prior lookup is branch-specific while summary prior lookup is company-wide',async()=>{await checkInReport({start:'2026-11-01',end:'2026-11-20'},true,actor);expect(text(m.query.mock.calls[0][0])).toContain('previous."branchId"=current."branchId"');const summary=text(m.query.mock.calls[1][0]);expect(summary).toContain('prior."companyId"=v."companyId"');expect(summary).not.toContain('prior."branchId"=v."branchId"');});
+ it('unlinked customer row is labeled first but summary excludes null customers',async()=>{const r=await checkInReport({start:'2026-11-01',end:'2026-11-20'},true,actor);expect(r.rows[0].visitKind).toBe('FIRST VISIT');expect(r.summary.total).toBe(1);expect(r.summary.firstVisits+r.summary.repeatVisits).toBe(0);expect(text(m.query.mock.calls[1][0])).toContain('JOIN "customers" c ON c."id"=v."customerId"');});
+ it('status and sentiment are applied to both row and kind summary queries',async()=>{await checkInReport({start:'2026-11-01',end:'2026-11-20',status:'ACTIVE',sentiment:'POSITIVE'},true,actor);expect(m.many.mock.calls[0][0].where).toMatchObject({checkedOutAt:null,checkoutSentiment:'POSITIVE'});const sql=text(m.query.mock.calls[1][0]);expect(sql).toContain('v."checkedOutAt" IS NULL');expect(sql).toContain('v."checkoutSentiment"::text=');});
+});

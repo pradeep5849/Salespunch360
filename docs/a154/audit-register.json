@@ -1,0 +1,42 @@
+{
+  "page_id": "A154",
+  "title": "Advanced Check-in Report",
+  "route": "/workspace/reports/check-ins/advanced",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A154-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Kind summary omits customer selection and differs from Sales default date scope"
+    },
+    {
+      "finding_id": "A154-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Row and aggregate prior-visit branch scopes disagree"
+    },
+    {
+      "finding_id": "A154-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Customerless visits labeled first are excluded from kind totals"
+    }
+  ],
+  "validation": {
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 6,
+    "existing_cases": 41,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A155"
+}
