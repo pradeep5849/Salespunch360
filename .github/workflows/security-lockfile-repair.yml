@@ -1,0 +1,47 @@
+name: Security dependency validation
+on:
+  push:
+    branches:
+      - fix/hostinger-four-dependency-advisories-20261120
+    paths:
+      - .github/workflows/security-lockfile-repair.yml
+      - package-lock.json
+      - package.json
+permissions:
+  contents: read
+jobs:
+  repair-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Confirm resolved versions
+        run: |
+          node - <<'NODE'
+          const p = require('./package-lock.json').packages;
+          for (const [name, expected] of [['websocket-driver','0.8.0'],['fast-xml-parser','5.12.0']]) {
+            const copies = Object.entries(p).filter(([path]) => path.endsWith('/node_modules/'+name) || path === 'node_modules/'+name);
+            if (!copies.length) throw new Error(name + ': no locked copies found');
+            for (const [path, metadata] of copies) {
+              if (metadata.version !== expected) throw new Error(path + ': expected ' + expected + ', got ' + metadata.version);
+              console.log(path + '@' + metadata.version);
+            }
+          }
+          NODE
+      - name: Install and check dependency vulnerabilities
+        run: |
+          npm audit --audit-level=low
+          npm run check:dependencies
+      - name: Verify application types and unit tests
+        run: |
+          npm run typecheck
+          npm test
