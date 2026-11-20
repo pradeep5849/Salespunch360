@@ -1,0 +1,32 @@
+{
+  "page_id": "A168",
+  "title": "Units",
+  "route": "/workspace/account/units",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A168-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web Units cards lack edit entry"
+    },
+    {
+      "finding_id": "A168-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web name-only unit search omits symbol matching"
+    }
+  ],
+  "validation": {
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 18,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A169"
+}

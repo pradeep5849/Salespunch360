@@ -1,0 +1,9 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {unitSchema} from './validation';
+describe('A168 Units audit',()=>{
+ it('web lists symbol but has no unit edit action',()=>{const page=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');const cards=page.slice(page.indexOf('{rows.map((x)'),page.indexOf('<nav>',page.indexOf('{rows.map((x)')));expect(cards).toContain('"symbol" in x');expect(cards).not.toMatch(/Edit|edit|href=/);expect(readFileSync('src/lib/account/units.ts','utf8')).toContain('await tx.accountUnit.update');});
+ it('web unit search only name while mobile supports symbol',()=>{const service=readFileSync('src/lib/account/service.ts','utf8');expect(service).toContain('const nameWhere = q\n    ? { name: { contains: q, mode: "insensitive" as const } }');const mobile=readFileSync('src/lib/mobile/account-master-data.ts','utf8');const units=mobile.slice(mobile.indexOf('if (kind === "units")'),mobile.indexOf('if (kind === "categories")'));expect(units).toContain('{ symbol: { contains: q, mode: "insensitive" } }');});
+ it('unit name/symbol trim and reject empty values',()=>{expect(unitSchema.parse({name:' Pieces ',symbol:' pcs '})).toEqual({name:'Pieces',symbol:'pcs'});expect(()=>unitSchema.parse({name:' ',symbol:'pcs'})).toThrow();});
+ it('unit writer keeps tenant-bound update lookup and audit event',()=>{const source=readFileSync('src/lib/account/units.ts','utf8');expect(source).toContain('where: { id, companyId: actor.companyId }');expect(source).toContain('"UNIT_UPDATED" : "UNIT_CREATED"');expect(source).toContain('UNIT_NAME_OR_SYMBOL_EXISTS');});
+});
