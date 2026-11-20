@@ -5,6 +5,7 @@ on:
       - fix/hostinger-four-dependency-advisories-20261120
     paths:
       - .github/workflows/security-lockfile-repair.yml
+      - package-lock.json
 permissions:
   contents: write
 jobs:
@@ -44,3 +45,7 @@ jobs:
           npm ci --ignore-scripts
           npm audit --audit-level=low
           npm run check:dependencies
+      - name: Verify application types and unit tests
+        run: |
+          npm run typecheck
+          npm test
