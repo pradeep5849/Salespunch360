@@ -1,0 +1,30 @@
+{
+  "page_id": "A160",
+  "title": "Reports entry/menu",
+  "route": "/workspace/reports",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE"
+  ],
+  "findings": [
+    {
+      "finding_id": "A160-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web report entry and main menus omit discoverable Lead and Advanced Check-in reports"
+    }
+  ],
+  "validation": {
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 24,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A161"
+}

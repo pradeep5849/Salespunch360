@@ -1,0 +1,13 @@
+import {readFileSync} from 'node:fs';
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({actor:vi.fn(),redirect:vi.fn()}));
+vi.mock('@/lib/reports/scope',()=>({reportActor:m.actor}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+import Page from './page';
+describe('A160 Reports entry audit',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue({id:'self'});m.redirect.mockImplementation(()=>{throw new Error('REDIRECT')});});
+ it('authorizes then redirects straight to check-ins',async()=>{await expect(Page()).rejects.toThrow('REDIRECT');expect(m.actor).toHaveBeenCalledOnce();expect(m.redirect).toHaveBeenCalledWith('/workspace/reports/check-ins');});
+ it('denied report access never reaches redirect',async()=>{m.actor.mockRejectedValue(new Error('FORBIDDEN'));await expect(Page()).rejects.toThrow('FORBIDDEN');expect(m.redirect).not.toHaveBeenCalled();});
+ it('web entry has no report selection links',()=>{const page=readFileSync('src/app/workspace/reports/page.tsx','utf8');expect(page).not.toContain('<Link');expect(page).not.toContain('/workspace/reports/leads');expect(page).not.toContain('/workspace/reports/check-ins/advanced');});
+ it('native exposes lead and advanced report choices absent from main web menus',()=>{const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/ReportsScreen.kt','utf8');expect(native).toContain('"advanced-check-ins" to "Advanced Check-in"');expect(native).toContain('"leads" to "Lead Report"');for(const path of ['src/components/workspace/workspace-header.tsx','src/app/workspace/page.tsx']){const text=readFileSync(path,'utf8');expect(text).not.toContain('/workspace/reports/leads');expect(text).not.toContain('/workspace/reports/check-ins/advanced');}});
+});
