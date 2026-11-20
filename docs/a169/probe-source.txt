@@ -1,0 +1,8 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {categorySchema} from './validation';
+describe('A169 category audit',()=>{
+ it('all supported category scopes validate and unknown scope rejects',()=>{for(const scope of ['PRODUCT','SERVICE','BOTH'])expect(categorySchema.parse({name:'Category',scope}).scope).toBe(scope);expect(()=>categorySchema.parse({name:'Category',scope:'OTHER'})).toThrow();});
+ it('web collects scope/description but cards omit them and edit entry',()=>{const web=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');expect(web).toContain('name="scope"');expect(web).toContain('input("description", "Description")');const cards=web.slice(web.indexOf('{rows.map((x)'),web.indexOf('<nav>',web.indexOf('{rows.map((x)')));expect(cards).not.toMatch(/scope|description|Edit|href=/);});
+ it('blank category rejected and omitted scope defaults Both',()=>{expect(()=>categorySchema.parse({name:' '})).toThrow();expect(categorySchema.parse({name:' General '}).scope).toBe('BOTH');});
+});
