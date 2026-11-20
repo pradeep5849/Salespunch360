@@ -100,6 +100,8 @@
         ".": "14.0.2",
         "minimatch": "11.0.4"
       }
-    }
+    },
+    "websocket-driver": "0.8.0",
+    "fast-xml-parser": "5.12.0"
   }
 }
