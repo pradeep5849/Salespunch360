@@ -1,0 +1,17 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({company:vi.fn(),user:vi.fn(),sessions:vi.fn(),scope:vi.fn(),options:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},user:{findFirst:m.user},attendance:{findMany:m.sessions}}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.options}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch}));
+import {gpsReport} from './gps';
+const actor={id:'11111111-1111-4111-8111-111111111111',name:'Sales',companyId:'tenant',salesRole:'SALES' as const};
+const p=(id:string,seq:number,time:string,accuracy=5)=>({id,sequenceNumber:seq,capturedAt:new Date(time),latitude:0,longitude:seq*.001,accuracyMeters:accuracy});
+const s=(points:ReturnType<typeof p>[])=>({id:'session',startedAt:new Date('2026-11-19T01:00Z'),endedAt:null,startLatitude:0,startLongitude:0,locationPoints:points,customerVisits:[]});
+describe('A158 GPS report probes',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.company.mockResolvedValue(null);m.user.mockResolvedValue({id:actor.id,name:'Sales',salesRole:'SALES'});m.scope.mockResolvedValue([actor.id]);m.options.mockResolvedValue([]);m.branch.mockResolvedValue({branchId:'branch'});m.sessions.mockResolvedValue([s([p('a',1,'2026-11-19T02:00Z')])]);});
+ it('open attendance still receives GPS ended event and stopped detail',async()=>{const r=await gpsReport({date:'2026-11-19'},actor);expect(r.events.find(x=>x.type==='GPS_ENDED')?.detail).toBe('GPS stopped with attendance');expect(r.events.some(x=>x.type==='ATTENDANCE_ENDED')).toBe(false);});
+ it('poor accuracy points stay in drawn segment while contributing zero distance',async()=>{m.sessions.mockResolvedValue([s([p('a',1,'2026-11-19T02:00Z',100),p('b',2,'2026-11-19T02:01Z',100)])]);const r=await gpsReport({date:'2026-11-19'},actor);expect(r.segments[0]).toHaveLength(2);expect(r.routeDistanceMeters).toBe(0);});
+ it('last spotted follows sequence order rather than maximum timestamp',async()=>{m.sessions.mockResolvedValue([s([p('new',1,'2026-11-19T03:00Z'),p('old',2,'2026-11-19T02:00Z')])]);const r=await gpsReport({date:'2026-11-19'},actor);expect(r.lastSpottedAt?.toISOString()).toBe('2026-11-19T02:00:00.000Z');});
+ it('data query retains company branch self and India day boundaries',async()=>{await gpsReport({date:'2026-11-19'},actor);expect(m.sessions.mock.calls[0][0]).toMatchObject({where:{companyId:'tenant',branchId:'branch',userId:actor.id},include:{locationPoints:{where:{capturedAt:{gte:new Date('2026-11-18T18:30Z'),lt:new Date('2026-11-19T18:30Z')}}}}});});
+ it('no date returns selection state without loading sessions',async()=>{expect((await gpsReport({},actor)).points).toEqual([]);expect(m.sessions).not.toHaveBeenCalled();});
+});

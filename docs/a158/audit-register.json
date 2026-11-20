@@ -1,0 +1,42 @@
+{
+  "page_id": "A158",
+  "title": "GPS Route Report",
+  "route": "/workspace/reports/gps",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A158-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Open attendance receives false GPS-ended timeline event"
+    },
+    {
+      "finding_id": "A158-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Drawn raw route differs from cleaned distance policy"
+    },
+    {
+      "finding_id": "A158-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Last spotted follows sequence position instead of maximum timestamp"
+    }
+  ],
+  "validation": {
+    "passed": 57,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 5,
+    "existing_cases": 52,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A159"
+}
