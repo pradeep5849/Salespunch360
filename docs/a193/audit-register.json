@@ -1,0 +1,17 @@
+{
+  "page_id": "A193",
+  "title": "customer-ledger",
+  "route": "/workspace/account/reports/customer-ledger",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SOURCE_AND_SHARED_BASELINES_NOT_LIVE_FINANCIAL_RECONCILIATION",
+  "findings": [],
+  "validation": {
+    "shared_batch": "A188-A205",
+    "passed": 68,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A194"
+}

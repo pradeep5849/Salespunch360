@@ -1,0 +1,11 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {aging,profitAndLoss,balanceSheet,trialBalance} from '../financial-reports';
+import {Prisma} from '@prisma/client';
+const s=readFileSync('src/lib/account/reports/service.ts','utf8');
+describe('A188-A205 report review probes',()=>{
+ it('general ledger tie ordering lacks deterministic ID secondary key',()=>{const part=s.slice(s.indexOf('if (name === "general-ledger")'),s.indexOf('if (name === "cash-flow")'));expect(part).toContain('orderBy: { journalEntry: { entryDate: "asc" } }');});
+ it('branch report is scoped P&L not per-branch comparative rows',()=>{expect(s).toContain('name === "profit-loss" || name === "branches"');expect(s).toContain('title: name === "branches" ? "Branch Profit & Loss"');});
+ it('project reports intentionally delegate separate lifetime service',()=>expect(s).toContain('return projectReport(name, raw, actor)'));
+ it('aging boundary exact thirty days remains 1-30',()=>{const r=aging([{id:'i',partyId:'p',issueDate:new Date('2026-10-21Z'),dueDate:new Date('2026-10-21Z'),outstanding:new Prisma.Decimal(10)}],new Date('2026-11-20Z'));expect(r['1_30'].toString()).toBe('10');});
+});

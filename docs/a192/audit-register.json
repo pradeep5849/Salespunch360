@@ -1,0 +1,24 @@
+{
+  "page_id": "A192",
+  "title": "general-ledger",
+  "route": "/workspace/account/reports/general-ledger",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SOURCE_AND_SHARED_BASELINES_NOT_LIVE_FINANCIAL_RECONCILIATION",
+  "findings": [
+    {
+      "finding_id": "A192-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "General ledger same-date rows lack deterministic secondary order"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A188-A205",
+    "passed": 68,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A193"
+}

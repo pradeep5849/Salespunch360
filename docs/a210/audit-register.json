@@ -1,0 +1,25 @@
+{
+  "page_id": "A210",
+  "title": "Add Account Project Manager",
+  "route": "/workspace/employees/account/new/project-manager",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SOURCE_AND_SHARED_BASELINES",
+  "findings": [
+    {
+      "finding_id": "A210-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Account user create unconditionally exposes branch controls in single-location mode",
+      "cross_reference": "A134 branch UI policy"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A206-A214",
+    "passed": 53,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A211"
+}

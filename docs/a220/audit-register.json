@@ -1,0 +1,17 @@
+{
+  "page_id": "A220",
+  "title": "quotations-sales",
+  "route": "/features/quotations-sales",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SHARED_MARKETING_SOURCE_AND_CONTENT_BASELINES",
+  "findings": [],
+  "validation": {
+    "shared_batch": "A215-A227",
+    "passed": 25,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A221"
+}

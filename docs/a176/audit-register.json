@@ -1,0 +1,23 @@
+{
+  "page_id": "A176",
+  "title": "New Manual Journal",
+  "route": "/workspace/account/accounting/new",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A176-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Closed years offered for posting"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A176-A179",
+    "passed": 45,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A177"
+}

@@ -1,0 +1,17 @@
+{
+  "page_id": "A233",
+  "title": "PURCHASE_ORDER",
+  "route": "/workspace/account/transactions/new?type=PURCHASE_ORDER",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SHARED_SOURCE_AND_COMMERCIAL_BASELINES_NOT_LIVE_POSTING",
+  "findings": [],
+  "validation": {
+    "shared_batch": "A228-A236",
+    "passed": 100,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A234"
+}

@@ -1,0 +1,24 @@
+{
+  "page_id": "A239",
+  "title": "VENDOR_PAYMENT",
+  "route": "/workspace/account/transactions/money?type=VENDOR_PAYMENT",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SOURCE_AND_SHARED_PAYMENT_BASELINES",
+  "findings": [
+    {
+      "finding_id": "A239-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Unavailable requested payment type silently falls back to first allowed type",
+      "shared_issue": "A237-F01"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A237-A242",
+    "passed": 16,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "page_id": "A182",
+  "title": "Stock",
+  "route": "/workspace/account/inventory/stock",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A182-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Stock page lacks controls for supported branch/as-of query"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A180-A187",
+    "passed": 31,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A183"
+}

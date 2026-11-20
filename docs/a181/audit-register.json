@@ -1,0 +1,23 @@
+{
+  "page_id": "A181",
+  "title": "Warehouses",
+  "route": "/workspace/account/inventory/warehouses",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A181-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Warehouse list exposes deactivate but no edit"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A180-A187",
+    "passed": 31,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A182"
+}

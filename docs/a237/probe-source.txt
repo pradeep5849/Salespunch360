@@ -1,0 +1,9 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {resolveInitialMoneyType} from './payment-discount';
+describe('A237-A242 entry/fallback review',()=>{
+ it('unavailable requested money type silently falls back to first allowed type',()=>expect(resolveInitialMoneyType(['CUSTOMER_RECEIPT'],'VENDOR_PAYMENT')).toBe('CUSTOMER_RECEIPT'));
+ it('money form has persistent replay identity',()=>{expect(readFileSync('src/app/workspace/account/transactions/money/money-form.tsx','utf8')).toContain('useState(() => crypto.randomUUID())');});
+ it('global error avoids echoing raw exception and offers reset',()=>{const error=readFileSync('src/app/error.tsx','utf8');expect(error).toContain('onClick={reset}');expect(error).not.toContain('error.message');expect(error).toContain('No changes should be assumed');});
+ it('not found avoids exposing record existence',()=>expect(readFileSync('src/app/not-found.tsx','utf8')).toContain('unavailable or outside your authorized scope'));
+});

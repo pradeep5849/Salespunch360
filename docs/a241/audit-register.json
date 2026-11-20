@@ -1,0 +1,16 @@
+{
+  "page_id": "A241",
+  "title": "error",
+  "route": "GLOBAL_ERROR",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "review_depth": "SOURCE_AND_SHARED_PAYMENT_BASELINES",
+  "findings": [],
+  "validation": {
+    "shared_batch": "A237-A242",
+    "passed": 16,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  }
+}

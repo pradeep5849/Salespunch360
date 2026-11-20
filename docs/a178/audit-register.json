@@ -1,0 +1,23 @@
+{
+  "page_id": "A178",
+  "title": "Opening Balances",
+  "route": "/workspace/account/accounting/opening",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A178-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Party selector not synchronized with party type"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A176-A179",
+    "passed": 45,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A179"
+}

@@ -1,0 +1,23 @@
+{
+  "page_id": "A179",
+  "title": "Period Lock Settings",
+  "route": "/workspace/account/accounting/periods",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A179-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Existing period locks omitted from settings page"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A176-A179",
+    "passed": 45,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A180"
+}

@@ -1,0 +1,23 @@
+{
+  "page_id": "A183",
+  "title": "Opening Stock",
+  "route": "/workspace/account/inventory/opening",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A183-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Opening retry generates fresh source identity"
+    }
+  ],
+  "validation": {
+    "shared_batch": "A180-A187",
+    "passed": 31,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false
+  },
+  "next_page": "A184"
+}

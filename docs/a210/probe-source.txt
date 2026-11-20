@@ -1,0 +1,9 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {taxPreferencesSchema} from './tax-preferences';
+describe('A206-A214 settings/user entry review',()=>{
+ it('tax preference schema rejects nonboolean switches',()=>expect(()=>taxPreferencesSchema.parse({gst:'on'})).toThrow());
+ it('legacy tax report route preserves scoped date filters via redirect',()=>{const page=readFileSync('src/app/workspace/account/tax/[section]/page.tsx','utf8');expect(page).toContain('redirect(`/workspace/account/reports/gst-party${query?`?${query}`:""}`)');});
+ it('Account role creation page shows branch controls unconditionally',()=>{const page=readFileSync('src/app/workspace/employees/account/new/[role]/page.tsx','utf8');expect(page).toContain('<legend>Selected Branches</legend>');expect(page).toContain('defaultValue="ALL_BRANCHES"');expect(page).not.toMatch(/multiBranch|singleLocation/);});
+ it('Account user page conflates access role validity and capacity failure',()=>{const page=readFileSync('src/app/workspace/employees/account/new/[role]/page.tsx','utf8');expect(page).toContain('!role||!ctx.canManageAccountUsers||ctx.accountUsage[role]>=ctx.accountLimits[role]');expect(page).toContain('throw new Error("No Account seat available")');});
+});

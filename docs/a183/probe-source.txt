@@ -1,0 +1,12 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+const page=readFileSync('src/app/workspace/account/inventory/[section]/page.tsx','utf8'),s=readFileSync('src/lib/account/inventory.ts','utf8');
+describe('A180-A187 inventory audit source checks',()=>{
+ it('A180 direct inventory settings form lacks explicit feedback state',()=>{expect(page).toContain('action={inventoryProductAction}');expect(page).not.toContain('useActionState');});
+ it('A181 warehouse cards offer deactivate but no update form',()=>{const part=page.slice(page.indexOf('section === "warehouses"'),page.indexOf('section === "items"'));expect(part).toContain('value="deactivate"');expect(part).not.toContain('value="update"');});
+ it('A182 scoped stock view accepts query but lacks branch/asOf controls',()=>{const part=page.slice(page.indexOf('section === "stock" ||'),page.indexOf('const action ='));expect(part).toContain('query.asOf');expect(part).not.toContain('<form');});
+ it('A183 opening and A185 adjustment generate new source identity per call',()=>{const part=s.slice(s.indexOf('export async function recordOpeningStock'));expect(part.match(/sourceId: crypto.randomUUID\(\)/g)?.length).toBeGreaterThanOrEqual(2);expect(page).not.toContain('name="sourceId"');});
+ it('A184 transfer likewise generates identity per call',()=>expect(s).toContain('const transferId = crypto.randomUUID()'));
+ it('A186 low-stock enumerates existing positions only',()=>{const part=s.slice(s.indexOf('export async function lowStockSnapshotForActor'),s.indexOf('export async function lowStockSnapshot()'));expect(part).toContain('return snapshot');expect(part).toContain('.filter(');expect(part).not.toContain('products.flatMap');});
+ it('A187 displayed batch and serial lists omit product identity',()=>{const part=page.slice(page.indexOf('{batches.map'),page.indexOf('section === "stock" ||'));expect(part).toContain('x.batchNumber');expect(part).toContain('x.serialNumber');expect(part).not.toMatch(/product\.name|productId/);});
+});

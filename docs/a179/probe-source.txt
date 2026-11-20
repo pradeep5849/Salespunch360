@@ -1,0 +1,12 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {postingSchema,periodLockSchema,costCentreSchema} from './validation';
+const page=readFileSync('src/app/workspace/account/accounting/[section]/page.tsx','utf8');
+describe('A176-A179 focused audit',()=>{
+ it('A176 offers active closed years to manual journal selector',()=>{expect(page).toContain('years={d.financialYears}');const source=readFileSync('src/lib/accounting/service.ts','utf8');expect(source).toContain('financialYears: {\n          where: { isActive: true }');expect(readFileSync('src/components/account/manual-journal-form.tsx','utf8')).toContain('defaultValue={years[0]?.id ?? ""}');});
+ it('A176 form supplies stable source key for safe retry',()=>{const form=readFileSync('src/components/account/manual-journal-form.tsx','utf8');expect(form).toContain('useState(() => crypto.randomUUID())');expect(form).toContain('name="sourceId" value={requestKey}');});
+ it('A177 cost centre display has no edit or description',()=>{const section=page.slice(page.indexOf('section === "cost-centres" &&'),page.indexOf('(section === "new"'));expect(section).not.toMatch(/Edit|description|href/);expect(costCentreSchema.parse({name:'Site',code:' site '})).toMatchObject({name:'Site',code:'SITE'});});
+ it('A178 party type and party options are independent in web opening form',()=>{const section=page.slice(page.indexOf('{opening &&'),page.indexOf('{section === "accounts"'));expect(section).toContain('<optgroup label="Customers">');expect(section).toContain('<optgroup label="Vendors">');expect(section).not.toMatch(/onChange|useState/);});
+ it('A179 period form has no existing lock display despite loaded lock records',()=>{expect(page).not.toContain('d.accountingPeriodLocks');expect(readFileSync('src/lib/accounting/service.ts','utf8')).toContain('accountingPeriodLocks: true');});
+ it('A179 lock reason rejects too short input',()=>expect(()=>periodLockSchema.parse({financialYearId:'11111111-1111-4111-8111-111111111111',lockedThrough:'2026-11-01',reason:'x'})).toThrow());
+});
