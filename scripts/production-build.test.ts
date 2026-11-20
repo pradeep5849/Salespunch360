@@ -6,7 +6,7 @@ describe("production migration release gate", () => {
   it("keeps the hosting build entrypoint bound to the migration gate",()=>{
     const pkg=JSON.parse(readFileSync("package.json","utf8"));
     expect(pkg.scripts.build).toBe("node scripts/production-build.mjs");
-    expect(pkg.scripts.prebuild).toBe("prisma generate");
+    expect(pkg.scripts.prebuild).toBe("node scripts/public-styles.mjs --check && prisma generate");
   });
   it("applies and verifies migrations and runtime columns before compiling the app", () => {
     const run = vi.fn().mockReturnValue({status:0});
