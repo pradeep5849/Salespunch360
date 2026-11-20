@@ -1,3 +1,5 @@
+import "../globals.css";
+import "../functional-polish.css";
 import { requireUser } from "@/lib/auth/authorization";
 import { WorkspaceHeader } from "@/components/workspace/workspace-header";
 import { SalesHandoffBanner } from "@/components/telecalling/sales-handoff-banner";

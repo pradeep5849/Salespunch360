@@ -21,7 +21,7 @@ describe("A15-A17 migration and deployment contracts", () => {
     );
   });
   it("uses the migration-gated build and preserves explicit deployment commands and Prisma versions", () => {
-    expect(pkg.scripts.prebuild).toBe("prisma generate");
+    expect(pkg.scripts.prebuild).toBe("node scripts/public-styles.mjs --check && prisma generate");
     expect(pkg.scripts.build).toBe("node scripts/production-build.mjs");
     expect(pkg.scripts.postbuild).toBeUndefined();
     expect(pkg.scripts["db:migrate:deploy"]).toBe("prisma migrate deploy");

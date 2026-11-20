@@ -1,3 +1,5 @@
+import "../globals.css";
+import "../functional-polish.css";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/actions/auth";

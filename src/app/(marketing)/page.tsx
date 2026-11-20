@@ -90,7 +90,7 @@ export default async function Home() {
             alt="SalesPunch360 field sales tracking on mobile and web"
             fill
             priority
-            sizes="(max-width: 900px) 100vw, 50vw"
+            sizes="(max-width: 760px) calc(100vw - 48px), (max-width: 1000px) calc(100vw - 72px), 480px"
           />
           <div className="hero-note">
             On the Field.
@@ -124,7 +124,7 @@ export default async function Home() {
               src="/marketing/sales-tracking.png"
               alt="Field sales representative using SalesPunch360 tracking"
               fill
-              sizes="(max-width: 900px) 100vw, 50vw"
+              sizes="(max-width: 760px) calc(100vw - 80px), (max-width: 1000px) calc(40vw - 50px), 260px"
             />
             <div className="sales-checkin-card">
               <b>Check-in Successful</b>
@@ -160,7 +160,7 @@ export default async function Home() {
               src="/marketing/account-business.png"
               alt="Business administrator using SalesPunch360 account management"
               fill
-              sizes="(max-width: 900px) 100vw, 50vw"
+              sizes="(max-width: 760px) calc(100vw - 80px), (max-width: 1000px) calc(40vw - 50px), 260px"
             />
             <div className="account-menu-float">
               <b>Business Overview</b>

@@ -1,6 +1,5 @@
+import "./(marketing)/public-shared.css";
 import type { Metadata, Viewport } from "next";
-import "./globals.css";
-import "./functional-polish.css";
 import "./pwa.css";
 import { PwaRegister } from "./pwa-register";
 import { PwaInstall } from "./pwa-install";
