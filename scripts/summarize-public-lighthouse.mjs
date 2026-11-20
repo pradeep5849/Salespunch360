@@ -8,5 +8,7 @@ const summary={url:report.finalDisplayedUrl??report.finalUrl,fetchedAt:report.fe
   opportunities:Object.entries(report.audits).filter(([,audit])=>audit.score!==null&&audit.score<1&&(audit.details?.overallSavingsMs||audit.metricSavings?.LCP||audit.metricSavings?.FCP||audit.numericValue))
     .map(([id,audit])=>({id,title:audit.title,display:audit.displayValue,savingsMs:audit.details?.overallSavingsMs??audit.metricSavings?.LCP??audit.metricSavings?.FCP??0,details:audit.details?.items?.slice(0,5)}))
     .sort((a,b)=>b.savingsMs-a.savingsMs).slice(0,12)};
+const buildScope=process.argv[4]==='build';
+if(buildScope)summary.measurementScope='ci-production-build';
 await fs.writeFile(process.argv[3],JSON.stringify(summary,null,2)+'\n');
-console.log('PUBLIC_AUDIT_SUMMARY '+JSON.stringify(summary));
+console.log((buildScope?'BUILD_AUDIT_SUMMARY ':'PUBLIC_AUDIT_SUMMARY ')+JSON.stringify(summary));

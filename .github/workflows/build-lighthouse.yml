@@ -1,0 +1,115 @@
+name: Production build Lighthouse
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Build Lighthouse ${{ matrix.device }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [mobile, desktop]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lighthouse_fixture
+          POSTGRES_PASSWORD: ci-only-lighthouse-password
+          POSTGRES_DB: lighthouse_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lighthouse_fixture -d lighthouse_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://lighthouse_fixture:ci-only-lighthouse-password@127.0.0.1:5432/lighthouse_ci
+      DIRECT_URL: postgresql://lighthouse_fixture:ci-only-lighthouse-password@127.0.0.1:5432/lighthouse_ci
+      APP_URL: https://www.salespunch360.com
+      HOSTINGER_STORAGE_PATH: /tmp/lighthouse-private-files
+      SMTP_HOST: smtp.hostinger.com
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_USER: fixture@example.invalid
+      MAIL_FROM: fixture@example.invalid
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Verify report scope and failed-audit handling
+        run: npx vitest run scripts/build-lighthouse-summary.test.ts
+      - name: Configure isolated build credentials
+        run: |
+          echo "AUTH_SECRET=$(openssl rand -hex 48)" >> "$GITHUB_ENV"
+          echo "SMTP_PASSWORD=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+      - name: Migration-gated production build
+        env:
+          NODE_ENV: production
+        run: npm run build
+      - name: Audit the local production server
+        env:
+          NODE_ENV: production
+          DEVICE: ${{ matrix.device }}
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          npm run start -- --hostname 127.0.0.1 > "$RUNNER_TEMP/lighthouse-server.log" 2>&1 &
+          task_server_pid=$!
+          trap 'kill "$task_server_pid" 2>/dev/null || true' EXIT
+          task_ready=false
+          for task_attempt in $(seq 1 30); do
+            if curl --fail --silent --max-time 5 http://127.0.0.1:3000/ > /dev/null; then
+              task_ready=true
+              break
+            fi
+            if ! kill -0 "$task_server_pid" 2>/dev/null; then
+              echo "::error::Local production server stopped before becoming ready."
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$task_ready" != true ]; then
+            echo "::error::Local production server did not become ready."
+            exit 1
+          fi
+          task_device_flags=()
+          if [ "$DEVICE" = desktop ]; then
+            task_device_flags+=(--preset=desktop)
+          fi
+          npm exec --yes --package=lighthouse@13.6.0 -- lighthouse http://127.0.0.1:3000/ \
+            "${task_device_flags[@]}" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" \
+            --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
+          node scripts/summarize-public-lighthouse.mjs reports/lighthouse.report.json reports/summary.json build
+          {
+            echo "### Production build Lighthouse — $DEVICE"
+            echo "Measured http://127.0.0.1:3000/ on the CI runner with an isolated fixture database."
+            echo "This measures the application build. Live Hostinger/CDN results remain in the separate public-site audit."
+            echo "Scores and diagnostics are available in the build-lighthouse-$DEVICE artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Inspect browser network responses
+        if: always()
+        run: node scripts/inspect-lighthouse-network.mjs reports
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: build-lighthouse-${{ matrix.device }}
+          path: reports/
+          retention-days: 7
