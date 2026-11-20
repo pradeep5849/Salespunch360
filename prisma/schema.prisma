@@ -3715,6 +3715,22 @@ model PublicVideoTutorial {
   @@map("public_video_tutorials")
 }
 
+// Global execution metadata for server-owned schedules; not tenant business data.
+model HostedJobRun {
+  jobName String @db.VarChar(64)
+  businessDate String @db.VarChar(10)
+  ownerToken String @db.Uuid
+  leaseUntil DateTime
+  completedAt DateTime?
+  attempts Int @default(1)
+  lastErrorCode String? @db.VarChar(64)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([jobName, businessDate])
+  @@map("hosted_job_runs")
+}
+
 model FieldJob {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid

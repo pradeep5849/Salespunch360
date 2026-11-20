@@ -89,7 +89,6 @@ jobs:
         working-directory: android
         run: ./gradlew testReleaseUnitTest lintRelease --no-daemon
 
-
   migration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -140,6 +139,11 @@ jobs:
         env:
           RESTORE_TEST_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
         run: npx vitest run src/lib/account/recycle-retention.integration.test.ts src/lib/account/project-archive-release.integration.test.ts src/lib/account/company-restore.integration.test.ts src/lib/account/allocated-payment.integration.test.ts src/lib/account/close-books.integration.test.ts src/lib/account/numbering-restart.integration.test.ts src/lib/account/payment-submission.integration.test.ts src/lib/account/transaction-list.integration.test.ts src/lib/account/tax-settings.integration.test.ts src/lib/account/imports.integration.test.ts --maxWorkers=1
+      - name: Hosted reminder claims, restart recovery and schedule
+        # No production notification sweep is dispatched by CI.
+        env:
+          HOSTED_REMINDER_TEST_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci
+        run: npx vitest run src/lib/field-jobs/hosted-reminders.test.ts src/lib/field-jobs/hosted-reminders.integration.test.ts --maxWorkers=1
       - name: Backup tenant isolation and reusable expense item retention
         env:
           ACCOUNT_CHECKPOINT_DATABASE_URL: postgresql://migration_fixture:ci-only-migration-password@127.0.0.1:5432/migration_rehearsal_ci

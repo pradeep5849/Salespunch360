@@ -1,4 +1,18 @@
 import { logEvent } from "./lib/logging";
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { hostedRemindersEnabled, startHostedReminderScheduler } =
+      await import("./lib/field-jobs/hosted-reminders");
+    if (
+      hostedRemindersEnabled(
+        { ...process.env, NEXT_RUNTIME: "nodejs" },
+        process.argv,
+      )
+    )
+      startHostedReminderScheduler();
+  }
+}
+
 export function onRequestError(error: unknown) {
   const code =
     typeof error === "object" &&
