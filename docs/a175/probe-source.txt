@@ -1,0 +1,13 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({journals:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{journalEntry:{findMany:m.journals},branch:{findFirst:m.branch}}}));
+import {journalHistoryForActor} from './service';
+const actor={id:'admin',companyId:'tenant',accountRole:'ACCOUNT_ADMIN',branchAccessScope:'ALL_BRANCHES'} as never;
+describe('A175 journal history probes',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.journals.mockResolvedValue([]);});
+ it('blank optional browser filter values fail validation',async()=>{await expect(journalHistoryForActor(actor,{q:'',branchId:'',from:'',to:''})).rejects.toBeTruthy();expect(m.journals).not.toHaveBeenCalled();});
+ it('omitting optional filters loads scoped history',async()=>{await journalHistoryForActor(actor,{});expect(m.journals).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:'tenant'},take:51,skip:0}));});
+ it('selected branches restrict history and out of scope selection rejects',async()=>{const scoped={id:'admin',companyId:'tenant',accountRole:'ACCOUNT_ADMIN',branchAccessScope:'SELECTED_BRANCHES',branchIds:['11111111-1111-4111-8111-111111111111']} as never;await journalHistoryForActor(scoped,{});expect(m.journals.mock.calls[0][0].where.branchId).toEqual({in:['11111111-1111-4111-8111-111111111111']});await expect(journalHistoryForActor(scoped,{branchId:'22222222-2222-4222-8222-222222222222'})).rejects.toThrow('INVALID_BRANCH');});
+ it('web history cards have no journal detail link or ledger lines',()=>{const web=readFileSync('src/app/workspace/account/accounting/[section]/page.tsx','utf8');const cards=web.slice(web.indexOf('history?.items.map'),web.indexOf('{history &&'));expect(cards).not.toMatch(/href|lines|debit|credit/);expect(readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/account/accounting/JournalScreen.kt','utf8')).toContain('vm.openJournal(x.str("id"))');});
+});
