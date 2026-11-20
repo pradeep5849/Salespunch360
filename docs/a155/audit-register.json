@@ -1,0 +1,42 @@
+{
+  "page_id": "A155",
+  "title": "Check-in Report",
+  "route": "/workspace/reports/check-ins",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A155-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Agreed report visit Details/Delete actions and phone display missing"
+    },
+    {
+      "finding_id": "A155-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Android Sales cards omit checkout timestamp and outcome notes"
+    },
+    {
+      "finding_id": "A155-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Sales report paging drops supported non-date query filters"
+    }
+  ],
+  "validation": {
+    "passed": 49,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 7,
+    "existing_cases": 42,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A156"
+}

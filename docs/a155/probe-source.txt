@@ -1,0 +1,15 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+const web=readFileSync('src/app/workspace/reports/check-ins/page.tsx','utf8');
+const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/SalesReportScreens.kt','utf8');
+const sales=native.slice(native.indexOf('private fun SalesCheckInReport'),native.indexOf('private fun SalesAttendanceReport'));
+const cards=web.slice(web.indexOf('function CheckInCards'),web.indexOf('function SalesCheckInReport'));
+describe('A155 audit source and link behavior probes',()=>{
+ it('web cards omit requested Delete and visit Details actions',()=>{expect(cards).not.toMatch(/Delete|delete|visit-details|Visit Details/);expect(cards).toContain('Open Lead Details');});
+ it('native Sales report likewise lacks delete and visit-detail action',()=>{expect(sales).not.toMatch(/Delete|delete|Visit Details|visitDetails/);expect(sales).toContain('linkedLeadsVm.open(leadId)');});
+ it('web cards omit phone despite contactPhone available in raw visit response',()=>{expect(cards).not.toContain('contactPhone');expect(readFileSync('src/lib/reports/check-ins.ts','utf8')).toContain('const{sourceLeads,...visit}=v');});
+ it('native Sales cards omit checkout timestamp and outcome text',()=>{expect(sales).toContain('row.salesText("checkedOutAt")==null');expect(sales).not.toContain('salesReportDateTime(it),style=MaterialTheme.typography.bodySmall,color=SalesMuted');expect(sales).not.toContain('checkoutSentiment');expect(sales).not.toContain('checkoutRemarks');expect(sales).not.toContain('visitNotes');expect(cards).toContain('Checkout ${dateTime(v.checkedOutAt)}');expect(cards).toContain('v.checkoutSentiment,v.checkoutRemarks,v.visitNotes');});
+ it('Sales pagination link preserves date only and drops other effective filters',()=>{const expr=web.match(/const salesPageHref=([^;]+);/)![1].replace('(next:number)','(next)');const link=new Function('selectedDate',`return (${expr})(2)`)('2026-11-20');expect(link).toBe('?date=2026-11-20&page=2');expect(link).not.toMatch(/status|sentiment|customerId|start|end/);});
+ it('non-Sales pager preserves arbitrary current query values',()=>{expect(web).toContain('Object.entries(raw)');expect(web).toContain('pageHref(raw,r.filters.page+1)');});
+ it('report cards do not introduce excluded Unlink With Lead',()=>{expect(cards).not.toMatch(/Unlink|unlink/);expect(sales).not.toMatch(/Unlink|unlink/);});
+});
