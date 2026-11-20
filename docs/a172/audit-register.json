@@ -1,0 +1,27 @@
+{
+  "page_id": "A172",
+  "title": "Work Categories",
+  "route": "/workspace/account/work-categories",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "owner_requirement": "Each Work Category provides Add Work with category context; not merely Add Category",
+  "findings": [
+    {
+      "finding_id": "A172-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Category cards lack Add Work and category-specific work navigation"
+    }
+  ],
+  "validation": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 10,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A173"
+}
