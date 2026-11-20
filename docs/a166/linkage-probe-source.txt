@@ -1,0 +1,13 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({auth:vi.fn(),create:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({requirePermission:m.auth,requirePermissionForMutation:m.auth}));
+vi.mock('@/lib/branches/operational-scope',()=>({resolveOperationalWriteBranch:vi.fn().mockResolvedValue('branch'),operationalBranchContext:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:async(fn:Function)=>fn({customer:{create:m.create}})}}));
+import {createCustomer} from './service';
+describe('A166 Sales to Account customer linkage',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({id:'admin',companyId:'tenant',salesRole:'PRIMARY_ADMIN'});m.create.mockResolvedValue({id:'shared-customer'});});
+ it('Sales create uses shared customer table but does not enable Account visibility',async()=>{await createCustomer({name:'Shared Customer',phone:'9999999999'});expect(m.create).toHaveBeenCalledWith({data:expect.objectContaining({companyId:'tenant',branchId:'branch',name:'Shared Customer'})});expect(m.create.mock.calls[0][0].data).not.toHaveProperty('isAccountCustomer');expect(readFileSync('prisma/schema.prisma','utf8')).toMatch(/isAccountCustomer\s+Boolean\s+@default\(false\)/);});
+ it('both web and mobile Account lists require Account visibility marker',()=>{expect(readFileSync('src/lib/account/service.ts','utf8')).toContain('isAccountCustomer: true');expect(readFileSync('src/lib/mobile/account-master-data.ts','utf8')).toContain('isAccountCustomer: true');});
+ it('won-project conversion can promote existing identity instead of cloning',()=>{expect(readFileSync('src/lib/leads/won-project.ts','utf8')).toContain('await tx.customer.update({ where: { id: customerId }, data: { isAccountCustomer: true } })');});
+});

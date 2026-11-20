@@ -1,0 +1,39 @@
+{
+  "page_id": "A166",
+  "title": "Account Customers and Sales linkage",
+  "route": "/workspace/account/customers",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "owner_requirement": "Sales and Account customers share one identity with scoped access and preserved history",
+  "findings": [
+    {
+      "finding_id": "A166-F01",
+      "severity": "High",
+      "status": "OPEN",
+      "title": "Ordinary Sales customers excluded from Account visibility despite shared table"
+    },
+    {
+      "finding_id": "A166-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web customer cards omit contact/details/edit access"
+    },
+    {
+      "finding_id": "A166-F03",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web customer creation lacks authorized branch choice"
+    }
+  ],
+  "validation": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 7,
+    "existing_cases": 8,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A167"
+}

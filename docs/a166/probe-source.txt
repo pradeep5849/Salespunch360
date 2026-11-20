@@ -1,0 +1,11 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+const web=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');
+const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt','utf8');
+const service=readFileSync('src/lib/account/service.ts','utf8');
+describe('A166 customer UI audit source probes',()=>{
+ it('web customer cards show no contact/details/edit entry',()=>{const cards=web.slice(web.indexOf('{rows.map((x)'),web.indexOf('<nav>',web.indexOf('{rows.map((x)')));expect(cards).not.toMatch(/phone|email|contactPerson|address|Edit|Details|href=/);});
+ it('native has party detail and contact summary absent from web cards',()=>{expect(native).toContain('private fun PartyDetail');expect(native).toContain('listOfNotNull(r.contactPerson,r.phone,r.email,r.gstin)');expect(native).toContain('Text("Edit")');});
+ it('web create form lacks explicit branch field while shared service defaults branch',()=>{expect(web).not.toContain('name="branchId"');expect(service).toContain('orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }]');expect(service).toContain('branchId: branch.id');});
+ it('native customer editor offers branch choice',()=>{expect(native).toContain('if(kind=="customers")item{SimpleSelect("Branch"');});
+});
