@@ -1,0 +1,36 @@
+{
+  "page_id": "A161",
+  "title": "Target Analysis",
+  "route": "/workspace/reports/targets",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A161-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Lead count metric mislabeled Check-ins on web and native analysis"
+    },
+    {
+      "finding_id": "A161-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Employee metric target ignores branch while actuals aggregate selected branches"
+    }
+  ],
+  "validation": {
+    "passed": 35,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 31,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A162"
+}

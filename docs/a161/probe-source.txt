@@ -1,0 +1,14 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({users:vi.fn(),targets:vi.fn(),groups:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{user:{findMany:m.users},salesTarget:{findMany:m.targets},lead:{groupBy:m.groups}}}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch,resolveOperationalWriteBranch:vi.fn()}));
+import {monthlyTargetRowsForActor} from './service';
+const actor={id:'admin',name:'Admin',companyId:'tenant',salesRole:'PRIMARY_ADMIN' as const};
+describe('A161 audit probes',()=>{
+ beforeEach(()=>{vi.clearAllMocks();m.users.mockResolvedValue([{id:'sales',name:'Sales',salesRole:'SALES',managerType:null}]);m.branch.mockResolvedValue({branchId:{in:['a','b']}});m.targets.mockResolvedValue([]);m.groups.mockResolvedValue([]);});
+ it('actual lead count appears under web check-in labels',async()=>{m.groups.mockResolvedValueOnce([{assignedUserId:'sales',_count:{_all:7}}]).mockResolvedValueOnce([]);const r=await monthlyTargetRowsForActor(actor);expect(r.rows[0].created).toBe(7);expect(m.groups.mock.calls[0][0].where).toHaveProperty('createdAt');const web=readFileSync('src/app/workspace/reports/targets/page.tsx','utf8');expect(web).toContain('Check-ins Target');expect(web).toContain("s+x.created");});
+ it('two branch targets collapse to one employee metric target while actual spans both',async()=>{m.targets.mockResolvedValue([{assignedUserId:'sales',metric:'LEADS_CREATED_COUNT',branchId:'a',targetValue:10},{assignedUserId:'sales',metric:'LEADS_CREATED_COUNT',branchId:'b',targetValue:20}]);m.groups.mockResolvedValueOnce([{assignedUserId:'sales',_count:{_all:25}}]).mockResolvedValueOnce([]);const r=await monthlyTargetRowsForActor(actor);expect(r.rows[0]).toMatchObject({leadTarget:10,created:25});expect(m.groups.mock.calls[0][0].where.branchId).toEqual({in:['a','b']});});
+ it('preserves tenant and active non-office user selection',async()=>{await monthlyTargetRowsForActor(actor);expect(m.users.mock.calls[0][0].where).toMatchObject({companyId:'tenant',isActive:true,salesAccessActive:true,NOT:{salesRole:'MANAGER',managerType:'MANAGER_ONLY'}});});
+ it('native target analysis repeats check-in label for lead metric',()=>{expect(readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/AdminTargetAnalysisScreen.kt','utf8')).toContain('TargetMetric("Check-ins Target"');expect(readFileSync('src/lib/mobile/reports.ts','utf8')).toContain('rows.reduce((sum,row)=>sum+row.created,0)');});
+});
