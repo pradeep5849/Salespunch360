@@ -23,10 +23,7 @@ test("public images load at responsive sizes and public/sign-in styles survive n
   await expect(page.locator("body")).toHaveCSS("margin", "0px");
   // Follow a real link so this also exercises the CSS transition from public
   // routes to the independently styled authentication layout.
-  await page
-    .getByRole("link", { name: /login/i })
-    .first()
-    .click();
+  await page.getByRole("link", { name: /login/i }).first().click();
   await expect(page).toHaveURL(/\/sign-in/);
   await expect(page.locator(".login-page")).toHaveCSS("display", "flex");
   await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
