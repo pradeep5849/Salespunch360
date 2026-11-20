@@ -1,0 +1,14 @@
+import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({find:vi.fn(),update:vi.fn(),create:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{financialYear:{findFirst:m.find,updateMany:m.update,create:m.create}}}));
+import {ensureOpenFinancialYearForDate} from './financial-year';
+import {financialYearSchema} from './validation';
+describe('A165 financial year audit',()=>{
+ beforeEach(()=>{vi.clearAllMocks();vi.useFakeTimers();vi.setSystemTime(new Date('2026-11-20T06:00Z'));m.find.mockResolvedValue(null);m.update.mockResolvedValue({count:1});m.create.mockResolvedValue({id:'new'});});afterEach(()=>vi.useRealTimers());
+ it('failed standalone bootstrap clears current marker before failed creation',async()=>{m.create.mockRejectedValue(new Error('CREATE_FAILED'));await expect(ensureOpenFinancialYearForDate('tenant',new Date('2026-11-20Z'))).rejects.toThrow('CREATE_FAILED');expect(m.update).toHaveBeenCalledWith({where:{companyId:'tenant',isCurrent:true},data:{isCurrent:false}});expect(m.update.mock.invocationCallOrder[0]).toBeLessThan(m.create.mock.invocationCallOrder[0]);});
+ it('closed existing year rejects without reopening',async()=>{m.find.mockResolvedValue({isActive:true,status:'CLOSED'});await expect(ensureOpenFinancialYearForDate('tenant',new Date('2026-11-20Z'))).rejects.toThrow('INVALID_FINANCIAL_YEAR');expect(m.create).not.toHaveBeenCalled();expect(m.update).not.toHaveBeenCalled();});
+ it('valid creation input preserves chosen date bounds',()=>{const r=financialYearSchema.parse({name:'FY',startDate:'2026-04-01',endDate:'2027-03-31',isCurrent:true});expect(r.startDate.toISOString()).toBe('2026-04-01T00:00:00.000Z');});
+ it('reversed year dates reject',()=>expect(()=>financialYearSchema.parse({name:'FY',startDate:'2027-03-31',endDate:'2026-04-01'})).toThrow());
+ it('web generic financial-year cards omit range and status unlike native',()=>{const web=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');const cards=web.slice(web.indexOf('{rows.map((x)'),web.indexOf('<nav>',web.indexOf('{rows.map((x)')));expect(cards).not.toMatch(/startDate|endDate|status/);const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/account/accounting/FinancialYearScreen.kt','utf8');expect(native).toContain('year.str("startDate")');expect(native).toContain('year.str("endDate")');expect(native).toContain('year.str("status")');});
+});

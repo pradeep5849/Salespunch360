@@ -1,0 +1,36 @@
+{
+  "page_id": "A165",
+  "title": "Financial Years",
+  "route": "/workspace/account/financial-years",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A165-F01",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web financial-year cards omit period bounds and open/closed state"
+    },
+    {
+      "finding_id": "A165-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Standalone year bootstrap clears current marker before potentially failed create"
+    }
+  ],
+  "validation": {
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 5,
+    "existing_cases": 5,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A166"
+}
