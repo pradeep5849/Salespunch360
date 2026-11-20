@@ -1,0 +1,30 @@
+{
+  "page_id": "A162",
+  "title": "Operational Settings",
+  "route": "/workspace/settings",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A162-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web operations save silently swallows authorization and persistence errors"
+    }
+  ],
+  "validation": {
+    "passed": 39,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 35,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A163"
+}

@@ -1,0 +1,13 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({update:vi.fn(),revalidate:vi.fn()}));
+vi.mock('@/lib/attendance/service',()=>({updateCompanyOperations:m.update,startAttendance:vi.fn(),endAttendance:vi.fn(),uploadLocationPoint:vi.fn()}));
+vi.mock('next/cache',()=>({revalidatePath:m.revalidate}));
+import {updateOperationsAction} from './attendance';
+describe('A162 operation setting feedback audit',()=>{
+ beforeEach(()=>vi.clearAllMocks());
+ it('persistence failure is swallowed and returns no error result',async()=>{m.update.mockRejectedValue(new Error('DB_FAILED'));await expect(updateOperationsAction(new FormData())).resolves.toBeUndefined();expect(m.revalidate).not.toHaveBeenCalled();});
+ it('authorization failure is likewise silent to caller',async()=>{m.update.mockRejectedValue(new Error('FORBIDDEN'));await expect(updateOperationsAction(new FormData())).resolves.toBeUndefined();});
+ it('successful action converts checkboxes and revalidates scoped pages',async()=>{m.update.mockResolvedValue({count:1});const f=new FormData();f.set('attendanceEnabled','on');f.set('checkoutRequiredBeforeNextCheckIn','on');await updateOperationsAction(f);expect(m.update).toHaveBeenCalledWith({attendanceEnabled:true,gpsTrackingEnabled:false,checkoutRequiredBeforeNextCheckIn:true});expect(m.revalidate).toHaveBeenCalledWith('/workspace/settings');});
+ it('web has no action-state save feedback while native shows saving',()=>{const web=readFileSync('src/app/workspace/settings/page.tsx','utf8');expect(web).toContain('action={updateOperationsAction}');expect(web).not.toMatch(/useActionState|aria-live|settingsSaved/);expect(readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/CompanyManagementScreens.kt','utf8')).toContain('if(state.saving)"Saving…"');});
+});
