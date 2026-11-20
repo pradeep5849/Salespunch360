@@ -23,6 +23,8 @@ const publicSource = [
   ...sources(path.join(root, "src/app/(marketing)")),
   ...sources(path.join(root, "src/components/public")),
   ...[
+    "src/app/error.tsx",
+    "src/app/not-found.tsx",
     "src/components/brand-logo.tsx",
     "src/app/pwa-install.tsx",
     "src/app/pwa.css",

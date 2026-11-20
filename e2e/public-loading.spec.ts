@@ -24,7 +24,7 @@ test("public images load at responsive sizes and public/sign-in styles survive n
   // Follow a real link so this also exercises the CSS transition from public
   // routes to the independently styled authentication layout.
   await page
-    .getByRole("link", { name: /sign in/i })
+    .getByRole("link", { name: /login/i })
     .first()
     .click();
   await expect(page).toHaveURL(/\/sign-in/);
