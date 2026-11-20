@@ -1,0 +1,19 @@
+import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
+import {Prisma} from '@prisma/client';
+import {readFileSync} from 'node:fs';
+const m=vi.hoisted(()=>({count:vi.fn(),many:vi.fn(),scope:vi.fn(),options:vi.fn(),branch:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{lead:{count:m.count,findMany:m.many}}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.options}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branch}));
+import {leadReport} from './leads';
+const actor={id:'self',name:'Sales',companyId:'tenant',salesRole:'SALES' as const};
+const raw={start:'2026-11-01',end:'2026-11-20'};
+const lead={stage:'NEW',estimatedValue:new Prisma.Decimal(100),sourceVisitId:null,followUpAt:new Date('2026-11-19T18:30Z')};
+describe('A159 audit probes',()=>{
+ beforeEach(()=>{vi.clearAllMocks();vi.useFakeTimers();vi.setSystemTime(new Date('2026-11-20T06:00Z'));m.count.mockResolvedValue(1);m.many.mockImplementation(async q=>q.select?[lead]:[]);m.scope.mockResolvedValue(['self']);m.options.mockResolvedValue([]);m.branch.mockResolvedValue({branchId:'branch'});});afterEach(()=>vi.useRealTimers());
+ it('today due date is counted overdue by summary',async()=>{expect((await leadReport(raw,actor)).summary.overdue).toBe(1);});
+ it('OVERDUE filter correctly uses day boundary inconsistent with summary',async()=>{await leadReport({...raw,followUp:'OVERDUE'},actor);expect(m.count.mock.calls[0][0].where.followUpAt).toEqual({lt:new Date('2026-11-19T18:30Z')});});
+ it('summary query omits currency and sums all values into one amount',async()=>{m.count.mockResolvedValue(2);m.many.mockImplementation(async q=>q.select?[lead,{...lead,estimatedValue:new Prisma.Decimal(200)}]:[]);const r=await leadReport(raw,actor);expect(r.summary.pipelineValue).toBe('300.00');expect(m.many.mock.calls[0][0].select).not.toHaveProperty('currencyCode');expect(readFileSync('src/app/workspace/reports/leads/page.tsx','utf8')).toContain('INR ${r.summary.pipelineValue}');});
+ it('retains tenant branch employee stage source and dates',async()=>{await leadReport({...raw,stage:'NEW',source:'PHONE',page:'2'},actor);expect(m.many.mock.calls[1][0]).toMatchObject({where:{companyId:'tenant',branchId:'branch',assignedUserId:{in:['self']},stage:'NEW',source:'PHONE'},skip:25,take:25});});
+ it('native report request omits lead stage/source/followUp/search filters',()=>{const vm=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ReportsViewModel.kt','utf8');expect(vm).toContain('api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page)');const web=readFileSync('src/app/workspace/reports/leads/page.tsx','utf8');for(const key of ['stage','source','followUp','q'])expect(web).toContain(`name="${key}"`);});
+});

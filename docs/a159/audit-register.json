@@ -1,0 +1,42 @@
+{
+  "page_id": "A159",
+  "title": "Leads Report",
+  "route": "/workspace/reports/leads",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A159-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Summary counts today-due leads overdue unlike date filter"
+    },
+    {
+      "finding_id": "A159-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Currency-blind pipeline and won sums labeled INR"
+    },
+    {
+      "finding_id": "A159-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Native omits web lead stage/source/follow-up/search filters"
+    }
+  ],
+  "validation": {
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 5,
+    "existing_cases": 41,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A160"
+}
