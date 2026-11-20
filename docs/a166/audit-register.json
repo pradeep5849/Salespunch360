@@ -4,7 +4,7 @@
   "route": "/workspace/account/customers",
   "mode": "AUDIT_ONLY",
   "date": "2026-11-20",
-  "owner_requirement": "Sales and Account customers share one identity with scoped access and preserved history",
+  "owner_requirement": "One-way visibility: all Sales customers appear in Accounts on same identity; Account-only customers need not appear in Sales; preserve assignment/branch/role and eligible Won-project conversion",
   "findings": [
     {
       "finding_id": "A166-F01",

@@ -23,3 +23,7 @@ Web generic customer form has no branchId field; action does not supply an expli
 Company/customer branch predicates remain present in inspected lists. Current Sales assignment visibility and Account permissions must remain distinct even with shared identity. Native has transaction/settlement detail view; no native ledger/financial balance correctness asserted by source alone. No browser/installed Android, production customer lookup, migration, merge, duplicate resolution, actual invoice or sync/transaction tested. Current UI unchanged.
 
 Next A167 — Vendors (`/workspace/account/vendors`).
+
+## Owner clarification — one-way visibility
+
+All Sales customers must be available in Accounts on the same identity. Account-only customers need not appear in Sales. Preserve existing Sales assignment/branch/role visibility; do not broaden reverse visibility as a side effect. Won-lead project conversion reuses that identity when eligible (Plus with Projects enabled); this clarification does not remove package/module gates. Audit requirement only; no implementation.

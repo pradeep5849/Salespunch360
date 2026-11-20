@@ -1,0 +1,36 @@
+{
+  "page_id": "A167",
+  "title": "Vendors",
+  "route": "/workspace/account/vendors",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A167-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web vendor cards omit contact details and edit access"
+    },
+    {
+      "finding_id": "A167-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Web vendor name-only search differs from native contact search"
+    }
+  ],
+  "validation": {
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 4,
+    "existing_cases": 8,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A168"
+}

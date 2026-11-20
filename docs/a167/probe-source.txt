@@ -1,0 +1,10 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {partySchema} from './validation';
+const web=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');
+describe('A167 vendor parity audit',()=>{
+ it('web vendor cards omit contact details and edit access',()=>{const cards=web.slice(web.indexOf('{rows.map((x)'),web.indexOf('<nav>',web.indexOf('{rows.map((x)')));expect(cards).not.toMatch(/phone|email|address|gstin|Edit|Details|href=/);});
+ it('native vendor summary includes contact data and party details',()=>{const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt','utf8');expect(native).toContain('"customers","vendors"->listOfNotNull(r.contactPerson,r.phone,r.email,r.gstin)');expect(native).toContain('private fun PartyDetail');});
+ it('web vendor name-only search differs from native contact search',()=>{const service=readFileSync('src/lib/account/service.ts','utf8');expect(service).toContain('where: { companyId, ...nameWhere }');const mobile=readFileSync('src/lib/mobile/account-master-data.ts','utf8');const vendor=mobile.slice(mobile.indexOf('if (kind === "vendors")'),mobile.indexOf('if (kind === "units")'));expect(vendor).toContain('{ phone: { contains: q } }');expect(vendor).toContain('{ email: { contains: q, mode: "insensitive" } }');});
+ it('shared party schema rejects malformed email and normalizes valid email',()=>{expect(()=>partySchema.parse({name:'Vendor',email:'bad'})).toThrow();expect(partySchema.parse({name:'Vendor',email:'A@EXAMPLE.COM'}).email).toBe('a@example.com');});
+});
