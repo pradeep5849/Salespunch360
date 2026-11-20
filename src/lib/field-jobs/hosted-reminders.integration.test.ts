@@ -5,7 +5,7 @@ import { runHostedFollowUpReminders } from "./hosted-reminders";
 const url = process.env.HOSTED_REMINDER_TEST_DATABASE_URL;
 const suite = url ? describe : describe.skip;
 suite("hosted reminder durable leases", () => {
-  const client = new PrismaClient({ datasources: { db: { url } } });
+  let client: PrismaClient;
   const dates = ["2098-01-01", "2098-01-02", "2098-01-03"];
   beforeAll(() => {
     const target = new URL(url!);
@@ -14,8 +14,10 @@ suite("hosted reminder durable leases", () => {
       !target.pathname.endsWith("_ci")
     )
       throw new Error("Isolated local *_ci database required");
+    client = new PrismaClient({ datasources: { db: { url } } });
   });
   afterAll(async () => {
+    if (!client) return;
     await client.hostedJobRun.deleteMany({
       where: {
         jobName: "daily-follow-up-reminders",

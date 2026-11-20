@@ -85,7 +85,7 @@ export async function runHostedFollowUpReminders(
   logEvent("info", { category: "HOSTED_REMINDERS", code: "SWEEP_STARTED" });
   try {
     await generate(now);
-    await client.hostedJobRun.updateMany({
+    const completed = await client.hostedJobRun.updateMany({
       where: owner,
       data: {
         completedAt: new Date(),
@@ -93,6 +93,13 @@ export async function runHostedFollowUpReminders(
         lastErrorCode: null,
       },
     });
+    if (!completed.count) {
+      logEvent("warn", {
+        category: "HOSTED_REMINDERS",
+        code: "LEASE_LOST_RETRY_PENDING",
+      });
+      return "lease-lost";
+    }
     logEvent("info", { category: "HOSTED_REMINDERS", code: "SWEEP_COMPLETED" });
     return "completed";
   } catch {

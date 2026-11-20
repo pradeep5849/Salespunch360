@@ -96,6 +96,16 @@ it("loses a simultaneous claim without running a second sweep", async () => {
   expect(m.generate).not.toHaveBeenCalled();
 });
 
+it("does not report completion after ownership of the lease is lost", async () => {
+  m.updateMany.mockResolvedValue({ count: 0 });
+  expect(
+    await runHostedFollowUpReminders(new Date("2026-11-20T03:00:00Z")),
+  ).toBe("lease-lost");
+  expect(
+    m.log.mock.calls.some(([, context]) => context.code === "SWEEP_COMPLETED"),
+  ).toBe(false);
+});
+
 it("recovers an expired lease after a worker restart", async () => {
   m.findUnique.mockResolvedValue({
     completedAt: null,
