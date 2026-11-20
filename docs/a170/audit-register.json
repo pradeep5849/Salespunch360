@@ -1,0 +1,32 @@
+{
+  "page_id": "A170",
+  "title": "Products",
+  "route": "/workspace/account/products",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "findings": [
+    {
+      "finding_id": "A170-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Generic product form omits tracking controls and defaults untracked"
+    },
+    {
+      "finding_id": "A170-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web cards omit pricing/stock detail and edit entry"
+    }
+  ],
+  "validation": {
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 3,
+    "existing_cases": 38,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A171"
+}

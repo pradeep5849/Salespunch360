@@ -1,0 +1,9 @@
+import {readFileSync} from 'node:fs';
+import {describe,it,expect} from 'vitest';
+import {itemSchema} from './validation';
+const page=readFileSync('src/app/workspace/account/[master]/page.tsx','utf8');
+describe('A170 product master audit',()=>{
+ it('generic create omits inventory tracking so defaults untracked',()=>{expect(page).not.toMatch(/name="trackInventory"|name="trackingMode"|name="lowStockThreshold"/);const r=itemSchema.parse({name:'Product',sellingRate:'100',cost:'50'});expect(r.trackInventory).toBe(false);expect(r.trackingMode).toBe('NONE');});
+ it('product cards omit rates stock and edit entry',()=>{const cards=page.slice(page.indexOf('{rows.map((x)'),page.indexOf('<nav>',page.indexOf('{rows.map((x)')));expect(cards).not.toMatch(/salePrice|costPrice|trackInventory|taxRate|Edit|href=/);});
+ it('native editor includes inventory controls absent from generic web form',()=>{const native=readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/account/AccountMasterScreen.kt','utf8');expect(native).toContain('Text("Track inventory"');expect(native).toContain('SimpleSelect("Tracking mode"');expect(native).toContain('put("trackInventory",track)');});
+});
