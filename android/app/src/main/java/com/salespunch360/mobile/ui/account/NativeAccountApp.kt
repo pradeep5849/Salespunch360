@@ -404,6 +404,7 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
     var reportsOpen by rememberSaveable{mutableStateOf(false)}
     var utilitiesOpen by rememberSaveable{mutableStateOf(false)}
     var backupOpen by rememberSaveable{mutableStateOf(false)}
+    var advancedOpen by rememberSaveable{mutableStateOf(false)}
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
         contentPadding=PaddingValues(16.dp),
@@ -423,10 +424,11 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
             val reports=group.label.equals("Reports",ignoreCase=true)
             val utilities=group.label=="Utilities"
             val backup=group.label=="Backup/Restore"
-            val expanded=if(utilities)utilitiesOpen else if(backup)backupOpen else reportsOpen
-            if(reports||utilities||backup){
+            val advanced=group.label=="Advanced Accounting"
+            val expanded=if(utilities)utilitiesOpen else if(backup)backupOpen else if(advanced)advancedOpen else reportsOpen
+            if(reports||utilities||backup||advanced){
                 item(key="account-group-$groupIndex-${group.label}"){
-                    OutlinedButton(onClick={if(utilities)utilitiesOpen=!utilitiesOpen else if(backup)backupOpen=!backupOpen else reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
+                    OutlinedButton(onClick={if(utilities)utilitiesOpen=!utilitiesOpen else if(backup)backupOpen=!backupOpen else if(advanced)advancedOpen=!advancedOpen else reportsOpen=!reportsOpen},modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                             Text(accountLabel(group.label),fontWeight=FontWeight.Bold)
                             Text(if(expanded)"⌃" else "⌄")
