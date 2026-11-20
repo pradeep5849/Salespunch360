@@ -1,0 +1,17 @@
+import {readFileSync} from 'node:fs';
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({db:{salesNotification:{findMany:vi.fn(),count:vi.fn(),updateMany:vi.fn()}},actor:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:mocks.db}));
+vi.mock('@/lib/auth/authorization',()=>({requireSalesWorkspace: mocks.actor,requireSalesWorkspaceForMutation:mocks.actor}));
+import {listSalesNotificationsForActor,markSalesNotificationRead,markAllSalesNotificationsRead} from './service';
+const read=(p:string)=>readFileSync(p,'utf8');
+describe('A151 audit observations',()=>{
+ beforeEach(()=>{vi.clearAllMocks();mocks.actor.mockResolvedValue({id:'self',companyId:'tenant'});mocks.db.salesNotification.findMany.mockResolvedValue([]);mocks.db.salesNotification.count.mockResolvedValue(75);mocks.db.salesNotification.updateMany.mockResolvedValue({count:0});});
+ it('default list reads 50 while unread count covers all scoped records',async()=>{expect((await listSalesNotificationsForActor({id:'self',companyId:'tenant'})).unreadCount).toBe(75);expect(mocks.db.salesNotification.findMany).toHaveBeenCalledWith(expect.objectContaining({take:50,where:{companyId:'tenant',recipientUserId:'self'}}));expect(mocks.db.salesNotification.count).toHaveBeenCalledWith({where:{companyId:'tenant',recipientUserId:'self',readAt:null}});});
+ it.each([[0,1],[500,100]])('bounds requested take %s to %s',async(input,expected)=>{await listSalesNotificationsForActor({id:'self',companyId:'tenant'},input);expect(mocks.db.salesNotification.findMany).toHaveBeenCalledWith(expect.objectContaining({take:expected}));});
+ it('single read retains recipient, tenant and unread guards',async()=>{await markSalesNotificationRead('other-record');expect(mocks.db.salesNotification.updateMany).toHaveBeenCalledWith({where:{id:'other-record',companyId:'tenant',recipientUserId:'self',readAt:null},data:{readAt:expect.any(Date)}});});
+ it('read all remains recipient and tenant scoped',async()=>{await markAllSalesNotificationsRead();expect(mocks.db.salesNotification.updateMany).toHaveBeenCalledWith({where:{companyId:'tenant',recipientUserId:'self',readAt:null},data:{readAt:expect.any(Date)}});});
+ it('web and native expose no notification history paging',()=>{expect(read('src/app/workspace/notifications/page.tsx')).not.toMatch(/ListPagination|Load more|searchParams/);expect(read('android/app/src/main/java/com/salespunch360/mobile/ui/SalesNotificationsScreen.kt')).not.toMatch(/Load more|loadMore|hasMore/);});
+ it('native follow-up Open discards saved navigation target and entity id',()=>{const drawer=read('android/app/src/main/java/com/salespunch360/mobile/ui/SalesDrawerShell.kt');expect(drawer).toContain('"FOLLOW_UP"->navigate("Follow-ups")');expect(read('android/app/src/main/java/com/salespunch360/mobile/data/Models.kt')).toContain('navigationTarget:String?=null');});
+ it('native initiates read then navigates immediately outside async read result',()=>{expect(read('android/app/src/main/java/com/salespunch360/mobile/ui/SalesNotificationsScreen.kt')).toContain('read(n.id);open(n)');const vm=read('android/app/src/main/java/com/salespunch360/mobile/SalesNotificationsViewModel.kt');expect(vm).toContain('viewModelScope.launch');expect(vm).toContain('Notification could not be updated.');});
+});

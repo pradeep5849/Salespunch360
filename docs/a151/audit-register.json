@@ -1,0 +1,42 @@
+{
+  "page_id": "A151",
+  "title": "Notifications",
+  "route": "/workspace/notifications",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A151-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Notification history has unpaged 50-record default window"
+    },
+    {
+      "finding_id": "A151-F02",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Android follow-up notification Open discards destination context"
+    },
+    {
+      "finding_id": "A151-F03",
+      "severity": "Low",
+      "status": "OPEN",
+      "title": "Native Open navigates before mark-read result feedback"
+    }
+  ],
+  "validation": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 8,
+    "existing_cases": 7,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A152"
+}
