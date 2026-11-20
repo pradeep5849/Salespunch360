@@ -1,0 +1,22 @@
+{
+  "page_id": "A174",
+  "title": "Chart of Accounts",
+  "route": "/workspace/account/accounting/accounts",
+  "date": "2026-11-20",
+  "mode": "AUDIT_WITH_EXPLICIT_NAVIGATION_IMPLEMENTATION_EXCEPTION",
+  "findings": [],
+  "implementation": {
+    "pr": 205,
+    "state": "OPEN",
+    "deployed": false,
+    "scope": "Restricted collapsed Advanced Accounting navigation only"
+  },
+  "validation": {
+    "passed": 32,
+    "failed": 0,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A175"
+}
