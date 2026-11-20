@@ -227,11 +227,6 @@ const groups: AccountNavGroup[] = [
     items: [
       {label:"Audit History",href:"/workspace/account/utilities/audit",permission:"ACCOUNT_SETTINGS",roles:["ACCOUNT_ADMIN"]},
       {
-        label: "Chart of Accounts",
-        href: "/workspace/account/accounting/accounts",
-        permission: "ACCOUNT_LEDGER_VIEW",
-      },
-      {
         label: "Journals",
         href: "/workspace/account/accounting/journals",
         permission: "ACCOUNT_LEDGER_VIEW",
@@ -240,6 +235,18 @@ const groups: AccountNavGroup[] = [
         label: "Financial Years",
         href: "/workspace/account/utilities/financial-year",
         permission: "ACCOUNT_PERIOD_LOCK",
+      },
+    ],
+  },
+  {
+    label: "Advanced Accounting",
+    expandable: true,
+    items: [
+      {
+        label: "Chart of Accounts",
+        href: "/workspace/account/accounting/accounts",
+        permission: "ACCOUNT_LEDGER_VIEW",
+        roles: ["ACCOUNT_ADMIN", "ACCOUNTANT"],
       },
     ],
   },
