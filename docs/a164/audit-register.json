@@ -1,0 +1,39 @@
+{
+  "page_id": "A164",
+  "title": "Telecalling",
+  "route": "/workspace/telecalling",
+  "mode": "AUDIT_ONLY",
+  "date": "2026-11-20",
+  "platforms_reviewed": [
+    "WEB",
+    "ANDROID_SOURCE_AND_SHARED_SERVICES"
+  ],
+  "findings": [
+    {
+      "finding_id": "A164-F01",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Date-only assigned Call tasks overdue too early in timestamp queue"
+    },
+    {
+      "finding_id": "A164-F02",
+      "severity": "Medium",
+      "status": "OPEN",
+      "title": "Web callback buckets cap display at 100 with no paging; service queues cap at 500"
+    }
+  ],
+  "cross_references": [
+    "A149"
+  ],
+  "validation": {
+    "passed": 19,
+    "failed": 0,
+    "skipped": 0,
+    "audit_probes": 5,
+    "existing_cases": 14,
+    "production_operations": false,
+    "browser_device_verified": false,
+    "real_database_verified": false
+  },
+  "next_page": "A165"
+}

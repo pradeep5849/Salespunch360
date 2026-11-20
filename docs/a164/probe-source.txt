@@ -1,0 +1,10 @@
+import {describe,it,expect} from 'vitest';
+import {readFileSync} from 'node:fs';
+import {splitCallbackQueue} from './service';
+describe('A164 audit observations',()=>{
+ it('date-only task due today is already bucketed overdue at daytime',()=>{const task={id:'task',nextCallbackAt:new Date('2026-11-19T18:30Z')};const groups=splitCallbackQueue([task as never],new Date('2026-11-20T06:00Z'));expect(groups[0][1]).toHaveLength(1);expect(groups[1][1]).toHaveLength(0);});
+ it('timestamp callback in future today remains Today',()=>{const groups=splitCallbackQueue([{id:'callback',nextCallbackAt:new Date('2026-11-20T07:00Z')} as never],new Date('2026-11-20T06:00Z'));expect(groups[1][1]).toHaveLength(1);});
+ it('web combines assigned date-only tasks and timestamp callbacks before bucketing',()=>{expect(readFileSync('src/app/workspace/telecalling/page.tsx','utf8')).toContain('splitCallbackQueue([...callbacks,...assignedCalls])');});
+ it('web shows only first hundred per bucket with no queue paging',()=>{const page=readFileSync('src/app/workspace/telecalling/page.tsx','utf8');expect(page).toContain('items.slice(0,100)');expect(page).not.toMatch(/ListPagination|Load more|hasMore/);expect(readFileSync('src/lib/telecalling/service.ts','utf8')).toContain('ORDER BY c."nextCallbackAt" ASC LIMIT 500');});
+ it('native renders all received callback items unlike web hundred cap',()=>{expect(readFileSync('android/app/src/main/java/com/salespunch360/mobile/ui/TelecallingScreen.kt','utf8')).toContain('else items(callbacks,key=');});
+});
