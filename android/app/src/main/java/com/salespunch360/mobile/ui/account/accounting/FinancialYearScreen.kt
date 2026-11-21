@@ -59,6 +59,7 @@ fun FinancialYearScreen(
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 
         LazyColumn {
             items(years, key = { it.str("id") }) { year ->
@@ -92,8 +93,10 @@ fun FinancialYearScreen(
         FinancialDialog(
             kind = kind,
             review = state.closeReview,
+            locks = state.data.array("accountingPeriodLocks").map { it.jsonObject },
+            error = state.error,
             busy = state.saving || state.loading,
-            years = years,
+            years = if (kind == "period-locks") years.filter { it.str("status") == "OPEN" } else years,
             close = vm::close,
             save = { target, payload -> vm.save(target, payload) }
         )
@@ -104,6 +107,8 @@ fun FinancialYearScreen(
 private fun FinancialDialog(
     kind: String,
     review: JsonObject?,
+    locks: List<JsonObject>,
+    error: String?,
     busy: Boolean,
     years: List<JsonObject>,
     close: () -> Unit,
@@ -116,11 +121,21 @@ private fun FinancialDialog(
     var reason by remember { mutableStateOf("") }
     var confirmed by remember { mutableStateOf(false) }
 
+    val selectedYear = years.firstOrNull { it.str("id") == year }
+    val currentLock = locks.firstOrNull { it.str("financialYearId") == year }?.str("lockedThrough").orEmpty()
+    val validLockDate = runCatching {
+        val date = java.time.LocalDate.parse(to)
+        val start = java.time.LocalDate.parse(selectedYear?.str("startDate").orEmpty().take(10))
+        val end = java.time.LocalDate.parse(selectedYear?.str("endDate").orEmpty().take(10))
+        !date.isBefore(start) && !date.isAfter(end) && (currentLock.isBlank() || !date.isBefore(java.time.LocalDate.parse(currentLock.take(10))))
+    }.getOrDefault(false)
+
     AlertDialog(
         onDismissRequest = close,
         title = { Text(kind.substringBefore(':').replace('-', ' ')) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 when (kind) {
                     "financial-years" -> {
                         OutlinedTextField(name, { name = it }, label = { Text("Name") })
@@ -128,8 +143,12 @@ private fun FinancialDialog(
                         OutlinedTextField(to, { to = it }, label = { Text("End date") })
                     }
                     "period-locks" -> {
-                        Option("Financial year", year, years) { year = it }
-                        OutlinedTextField(to, { to = it }, label = { Text("Lock through") })
+                        Option("Financial year", year, years) { year = it; confirmed = false }
+                        selectedYear?.let { Text("${it.str("name")}: ${accountDate(it.str("startDate"))} – ${accountDate(it.str("endDate"))}") }
+                        Text("Current lock: ${if(currentLock.isBlank()) "Not set" else accountDate(currentLock)}")
+                        Text("Posting and corrections through the selected date will be blocked. This lock cannot be moved backward.")
+                        Row { Checkbox(confirmed,{confirmed=it}); Text("I confirm the selected year and lock date.") }
+                        OutlinedTextField(to, { to = it; confirmed = false }, enabled = !busy, label = { Text("Lock through (YYYY-MM-DD)") }, isError = to.isNotBlank() && !validLockDate)
                         OutlinedTextField(reason, { reason = it }, label = { Text("Reason") })
                     }
                     else -> {
@@ -155,7 +174,7 @@ private fun FinancialDialog(
         },
         confirmButton = {
             Button(
-                enabled = !busy && (!kind.startsWith("close:") || (review?.get("canClose")?.jsonPrimitive?.booleanOrNull==true && confirmed && (review["earlyClose"]?.jsonPrimitive?.booleanOrNull!=true || reason.isNotBlank()))),
+                enabled = !busy && (kind != "period-locks" || (confirmed && selectedYear != null && validLockDate && reason.isNotBlank())) && (!kind.startsWith("close:") || (review?.get("canClose")?.jsonPrimitive?.booleanOrNull==true && confirmed && (review["earlyClose"]?.jsonPrimitive?.booleanOrNull!=true || reason.isNotBlank()))),
                 onClick = {
                     when (kind) {
                         "financial-years" -> save(
