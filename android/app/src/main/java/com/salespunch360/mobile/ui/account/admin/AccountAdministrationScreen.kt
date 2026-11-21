@@ -18,6 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -441,7 +444,7 @@ private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
     Column {
         OutlinedTextField(name, { name = it }, label = { Text("Name") })
         OutlinedTextField(email, { email = it }, label = { Text("Email") })
-        OutlinedTextField(password, { password = it }, label = { Text("Temporary password") })
+        OutlinedTextField(password, { password = it }, label = { Text("Temporary password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)
         OutlinedTextField(role, { role = it }, label = { Text("Account role") })
         Button(onClick = {
             vm.saveUser(buildJsonObject {

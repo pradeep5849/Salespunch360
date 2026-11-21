@@ -566,12 +566,19 @@ export async function createBatchForActor(a: ProjectActor, raw: unknown) {
 export async function createBatch(raw: unknown) {
   return createBatchForActor(await actor(true), raw);
 }
+async function inventoryRowsWithProducts<T extends {productId:string}>(companyId:string,rows:T[]){
+ if(!rows.length)return [] as (T & {product:{id:string;name:string;code:string|null}|null})[];
+ const products=await db.accountProduct.findMany({where:{companyId,id:{in:[...new Set(rows.map(row=>row.productId))]}},select:{id:true,name:true,code:true}});
+ const byId=new Map(products.map(product=>[product.id,product]));
+ return rows.map(row=>({...row,product:byId.get(row.productId)??null}));
+}
 export async function listBatchesForActor(a: ProjectActor, productId?: string) {
   await assertInventoryAvailable(a);
-  return db.inventoryBatch.findMany({
+  const rows=await db.inventoryBatch.findMany({
     where: { companyId: a.companyId, ...(productId ? { productId } : {}) },
     orderBy: { createdAt: "desc" },
   });
+  return inventoryRowsWithProducts(a.companyId!,rows);
 }
 export async function listBatches(productId?: string) {
   return listBatchesForActor(await actor(), productId);
@@ -615,12 +622,12 @@ export async function listSerialNumbersForActor(
       },
       orderBy: [{ movementDate: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
-  return rows.map((row) => ({
+  return inventoryRowsWithProducts(a.companyId!,rows.map((row) => ({
     ...row,
     quantity: movements
       .filter((x) => x.serialNumberId === row.id)
       .reduce((n, x) => n.add(signedQuantity(x.movementType, x.quantity)), Z),
-  }));
+  })));
 }
 export async function listSerialNumbers(productId?: string) {
   return listSerialNumbersForActor(await actor(), productId);

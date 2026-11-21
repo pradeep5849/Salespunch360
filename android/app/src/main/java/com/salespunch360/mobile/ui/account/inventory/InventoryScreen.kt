@@ -10,6 +10,12 @@ import androidx.compose.foundation.clickable;import androidx.compose.foundation.
  if(mode=="prices"){
   val customer=options.array("customers").map{it.jsonObject}.firstOrNull{it.str("id")==x.str("customerId")}
   ListItem(headlineContent={Text(product?.str("name")?:"Unavailable item",fontWeight=FontWeight.Bold)},supportingContent={Column{Text(x.str("priceType").replace('_',' '));if(x.str("priceType")=="CUSTOMER")Text(customer?.str("name")?:"Unavailable customer");if(x.str("effectiveFrom").isNotBlank())Text("From "+accountDate(x.str("effectiveFrom")));if(x.str("effectiveTo").isNotBlank())Text("To "+accountDate(x.str("effectiveTo")));if(x["isActive"]?.jsonPrimitive?.booleanOrNull==false)Text("Inactive")}},trailingContent={Text(accountMoney(x.str("rate")))})
+ }else if(mode=="batches"||mode=="serials"){
+  ListItem(headlineContent={Text(product?.str("name")?.ifBlank{null}?:"Unavailable item",fontWeight=FontWeight.Bold)},supportingContent={Column{
+   Text(if(mode=="batches")"Batch ${x.str("batchNumber")}" else "Serial ${x.str("serialNumber")}")
+   product?.str("code")?.takeIf{it.isNotBlank()}?.let{Text("Item code $it")}
+   if(x.str("expiryDate").isNotBlank())Text("Expiry ${accountDate(x.str("expiryDate"))}")
+  }},trailingContent={if(mode=="serials")Text("Qty ${x.str("quantity")}")})
  }else ListItem(headlineContent={Text(product?.str("name")?.ifBlank{null}?:x.str("batchNumber").ifBlank{x.str("serialNumber").ifBlank{x.str("sourceType")}},fontWeight=FontWeight.Bold)},supportingContent={Text(listOf(warehouse?.str("name"),accountDate(x.str("movementDate")),x.str("reason")).filterNot{it.isNullOrBlank()}.joinToString(" · "))},trailingContent={Column{Text("Qty ${x.str("quantity")}");if(mode=="stock"||mode=="low-stock")Text("Value ${accountMoney(x.str("stockValue"))}")}})
 }
 

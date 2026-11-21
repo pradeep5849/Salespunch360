@@ -260,13 +260,13 @@ export default async function Page({
         </form>
         {batches.map((x) => (
           <p key={x.id}>
-            Batch {x.batchNumber} · Expiry{" "}
+            {x.product?.name??`Unavailable item (${x.productId})`}{x.product?.code?` (${x.product.code})`:""} · Batch {x.batchNumber} · Expiry{" "}
             {x.expiryDate ? <AccountDate value={x.expiryDate.toISOString()}/> : "—"}
           </p>
         ))}
         {serials.map((x) => (
           <p key={x.id}>
-            Serial {x.serialNumber} · Stock {x.quantity.toString()}
+            {x.product?.name??`Unavailable item (${x.productId})`}{x.product?.code?` (${x.product.code})`:""} · Serial {x.serialNumber} · Stock {x.quantity.toString()}
           </p>
         ))}
       </Shell>
