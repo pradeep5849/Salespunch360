@@ -1,0 +1,13 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({user:vi.fn(),company:vi.fn(),transaction:vi.fn(),find:vi.fn(),update:vi.fn(),audit:vi.fn(),permission:vi.fn()}));
+vi.mock('@/lib/auth/authorization',()=>({AuthorizationError:class extends Error{},requireUser:m.user,requireUserForMutation:m.user,requireGlobalSuperAdmin:vi.fn(),requireGlobalSuperAdminForMutation:vi.fn()}));
+vi.mock('@/lib/auth/permissions',()=>({canUsePermission:m.permission}));
+vi.mock('@/lib/billing/company-lock',()=>({lockBillingCompany:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},$transaction:m.transaction}}));
+import {cancelCurrentCompanyPendingOrder} from './service';
+beforeEach(()=>{vi.clearAllMocks();m.permission.mockReturnValue(true);m.user.mockResolvedValue({id:'owner',companyId:'company',role:'COMPANY_ADMIN',isActive:true,salesRole:'PRIMARY_ADMIN',salesAccessActive:true,accountAccessActive:false});m.company.mockResolvedValue({productEdition:'SALESPUNCH360'});m.find.mockResolvedValue({id:'order',status:'PENDING'});m.update.mockResolvedValue({count:1});m.transaction.mockImplementation(work=>work({billingOrder:{findFirst:m.find,updateMany:m.update},billingAuditEvent:{create:m.audit}}));});
+it('cancels only the authorized company pending order and records the actor',async()=>{await cancelCurrentCompanyPendingOrder('order');expect(m.find).toHaveBeenCalledWith({where:{id:'order',companyId:'company'}});expect(m.update).toHaveBeenCalledWith({where:{id:'order',companyId:'company',status:'PENDING'},data:{status:'CANCELLED'}});expect(m.audit).toHaveBeenCalledWith({data:expect.objectContaining({actorUserId:'owner',type:'ORDER_CANCELLED',entityId:'order'})});});
+it('rejects another company order without a write',async()=>{m.find.mockResolvedValue(null);await expect(cancelCurrentCompanyPendingOrder('foreign')).rejects.toThrow('NOT_FOUND');expect(m.update).not.toHaveBeenCalled()});
+it('does not cancel a paid order',async()=>{m.find.mockResolvedValue({id:'order',status:'PAID'});await expect(cancelCurrentCompanyPendingOrder('order')).rejects.toThrow('ORDER_NOT_PENDING');expect(m.update).not.toHaveBeenCalled()});
+it('does not audit a lost pending-state race',async()=>{m.update.mockResolvedValue({count:0});await expect(cancelCurrentCompanyPendingOrder('order')).rejects.toThrow('ORDER_NOT_PENDING');expect(m.audit).not.toHaveBeenCalled()});
+it('blocks Account-only admins before order lookup',async()=>{m.permission.mockReturnValue(false);m.user.mockResolvedValue({id:'admin',companyId:'company',role:'ACCOUNT_USER',accountRole:'ACCOUNT_ADMIN',accountAccessActive:true,salesAccessActive:false,salesRole:null});await expect(cancelCurrentCompanyPendingOrder('order')).rejects.toThrow();expect(m.find).not.toHaveBeenCalled()});
