@@ -1,3 +1,4 @@
+import { mismatchedTransferSources } from "./verification-transfers";
 import {redactAuditMetadata} from "./audit-redaction";
 import {readRestoreSnapshot} from "./restore-snapshot";
 import {isCompanyRestoreOwner,requireCompanyRestoreOwner} from "./restore-owner";
@@ -142,22 +143,9 @@ export async function verifyAccountDataForActor(actor: {
   const duplicateLedgers = systemLedgers.filter((x) => x._count !== 1),
     unmappedMoney = moneyAccounts.filter((x) => !x.ledgerAccountId);
   const badMovement = movements.filter(
-      (m) => m.quantity.lte(0) || !m.warehouseId || !m.productId,
-    ),
-    transferGroups = new Map<string, Set<string>>();
-  movements
-    .filter(
-      (m) =>
-        m.movementType === "TRANSFER_IN" || m.movementType === "TRANSFER_OUT",
-    )
-    .forEach((m) => {
-      const key = m.sourceId ?? m.id;
-      transferGroups.set(
-        key,
-        (transferGroups.get(key) ?? new Set()).add(m.movementType),
-      );
-    });
-  const unpaired = [...transferGroups].filter(([, x]) => x.size !== 2);
+    (m) => m.quantity.lte(0) || !m.warehouseId || !m.productId,
+  );
+  const unpaired = mismatchedTransferSources(movements);
   const branches = new Set(
       (
         await client.branch.findMany({ where: { companyId }, select: { id: true } })
@@ -227,7 +215,7 @@ export async function verifyAccountDataForActor(actor: {
     result(
       "Inventory transfers are paired",
       unpaired.length,
-      unpaired.map(([x]) => x),
+      unpaired,
       "Complete the matching transfer leg.",
     ),
     result(
@@ -772,9 +760,13 @@ export async function createAccountBackupForActor(actor: {
   };
 }
 
+export async function verifyCompanyAccountDataForActor(a: { id: string; companyId: string; accountRole?: string | null; branchAccessScope?: string | null }) {
+  if (a.accountRole !== "ACCOUNT_ADMIN" || a.branchAccessScope !== "ALL_BRANCHES") throw new AuthorizationError();
+  return db.$transaction(tx => verifyAccountDataForActor(a, tx), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+}
 export async function verifyAccountData() {
-  const a = await requirePermission("ACCOUNT_REPORTS");
-  return verifyAccountDataForActor({ id: a.id, companyId: a.companyId! });
+  const a = await requirePermission("ACCOUNT_SETTINGS");
+  return verifyCompanyAccountDataForActor({ ...a, companyId: a.companyId! });
 }
 export async function closeFinancialYear(input: {
   financialYearId: string;
