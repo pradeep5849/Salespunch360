@@ -1,12 +1,12 @@
 # A118–A201 implementation status
 
-Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Latest ten-finding batch is documented in a147-a150-implementation and employee-inventory-implementation.
+Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Each recently changed finding links its implementation checkpoint in register.json.
 
 | Status | Findings |
 |---|---:|
-| IMPLEMENTED — ACCEPTANCE PENDING | 52 |
-| PARTIAL | 22 |
-| NOT STARTED | 81 |
+| IMPLEMENTED — ACCEPTANCE PENDING | 61 |
+| PARTIAL | 23 |
+| NOT STARTED | 71 |
 | REQUIREMENT SUPERSEDED | 3 |
 | AUDIT CORRECTION — WITHDRAWN | 1 |
 | DISCLOSED LIMITATION | 1 |
@@ -111,7 +111,7 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A152-F01 | NOT STARTED |
 | A152-F02 | NOT STARTED |
 | A153-F01 | NOT STARTED |
-| A153-F02 | NOT STARTED |
+| A153-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A154-F01 | PARTIAL |
 | A154-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A154-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
@@ -126,19 +126,19 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A156-F04 | PARTIAL |
 | A157-F01 | NOT STARTED |
 | A157-F02 | NOT STARTED |
-| A158-F01 | NOT STARTED |
-| A158-F02 | NOT STARTED |
-| A158-F03 | NOT STARTED |
-| A159-F01 | NOT STARTED |
+| A158-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A158-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A158-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A159-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A159-F02 | NOT STARTED |
 | A159-F03 | NOT STARTED |
-| A160-F01 | NOT STARTED |
-| A161-F01 | NOT STARTED |
+| A160-F01 | PARTIAL |
+| A161-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A161-F02 | NOT STARTED |
-| A162-F01 | NOT STARTED |
-| A163-F01 | NOT STARTED |
+| A162-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A163-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A163-F02 | NOT STARTED |
-| A164-F01 | NOT STARTED |
+| A164-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A164-F02 | NOT STARTED |
 | A165-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A165-F02 | IMPLEMENTED — ACCEPTANCE PENDING |

@@ -34,7 +34,8 @@ export async function uploadLocationPointAction(point: LocationMeasurement & { c
 export async function updateOperationsAction(formData: FormData) {
   try {
     await updateCompanyOperations({ attendanceEnabled: formData.get("attendanceEnabled") === "on", gpsTrackingEnabled: formData.get("gpsTrackingEnabled") === "on", checkoutRequiredBeforeNextCheckIn: formData.get("checkoutRequiredBeforeNextCheckIn") === "on" });
-  } catch { return; }
+  } catch { return {saveError:"OPERATIONS_SAVE_FAILED"}; }
   revalidatePath("/workspace/settings");
   revalidatePath("/workspace/attendance");
+  return {saved:true};
 }
