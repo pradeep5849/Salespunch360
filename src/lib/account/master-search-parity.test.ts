@@ -1,10 +1,12 @@
 import {beforeEach,expect,it,vi} from "vitest";
-const m=vi.hoisted(()=>({auth:vi.fn(),vendors:vi.fn(),units:vi.fn(),categories:vi.fn(),find:vi.fn()}));
+const m=vi.hoisted(()=>({auth:vi.fn(),vendors:vi.fn(),units:vi.fn(),categories:vi.fn(),find:vi.fn(),work:vi.fn(),packages:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class extends Error{},requirePermission:m.auth,requirePermissionForMutation:m.auth}));
 vi.mock("@/lib/account/units",()=>({assertUnitAccess:vi.fn()}));
-vi.mock("@/lib/db",()=>({db:{vendor:{findMany:m.vendors},accountUnit:{findMany:m.units},accountCategory:{findMany:m.categories},accountService:{findMany:m.find},accountProduct:{findMany:m.find},accountSettings:{findUnique:m.find},customFieldDefinition:{findMany:m.find}}}));
+vi.mock("@/lib/db",()=>({db:{vendor:{findMany:m.vendors},accountUnit:{findMany:m.units},accountCategory:{findMany:m.categories},accountService:{findMany:m.find},accountProduct:{findMany:m.find},workCategory:{findMany:m.work},workPackage:{findMany:m.packages},accountSettings:{findUnique:m.find},customFieldDefinition:{findMany:m.find}}}));
 import {accountMasterOverview} from "./service";
-beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({id:"u",companyId:"company",accountRole:"ACCOUNT_ADMIN",branchAccessScope:"ALL_BRANCHES"});for(const f of[m.vendors,m.units,m.categories,m.find])f.mockResolvedValue([])});
+beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({id:"u",companyId:"company",accountRole:"ACCOUNT_ADMIN",branchAccessScope:"ALL_BRANCHES"});for(const f of[m.vendors,m.units,m.categories,m.find,m.work,m.packages])f.mockResolvedValue([])});
 it("keeps vendor tenant/paging scope while matching name or phone",async()=>{await accountMasterOverview("vendors",{q:"987",page:"2"});expect(m.vendors).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",OR:[{name:{contains:"987",mode:"insensitive"}},{phone:{contains:"987",mode:"insensitive"}}]},skip:50,take:51}))});
 it("matches unit name or saved symbol",async()=>{await accountMasterOverview("units",{q:"kg"});expect(m.units).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",OR:[{name:{contains:"kg",mode:"insensitive"}},{symbol:{contains:"kg",mode:"insensitive"}}]}}))});
 it.each([['services','SERVICE'],['products','PRODUCT']])("limits %s creation choices to compatible categories",async(master,scope)=>{await accountMasterOverview(master as never);expect(m.categories).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",isActive:true,scope:{in:[scope,"BOTH"]}}}))});
+
+it("keeps explicit category work navigation tenant-scoped and selects only its active creation choice",async()=>{const id="11111111-1111-4111-8111-111111111111";await accountMasterOverview("work-packages",{workCategoryId:id});expect(m.work).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",isActive:true,id}}));expect(m.packages).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:"company",workCategoryId:id}}))});
