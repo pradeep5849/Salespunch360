@@ -8,7 +8,7 @@ type TelecallerPrices=Record<Period,number>;
 type AccountPrices=Record<Period,number>;
 type Employee={id:string;name:string;salesRole:'ADMIN'|'MANAGER'|'SALES';managerType?:string|null};
 const labels:Record<Period,string>={SIX_MONTH:'6 Months',YEARLY:'Yearly'};
-const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);
+const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(n);
 const clamp=(n:number)=>Math.max(0,Math.min(10000,Math.trunc(n)||0));
 const packageCount=(value:string)=>Math.max(1,Math.min(100,Math.trunc(Number(value))||1));
 const packageContents=(count:number)=>`${count} package${count===1?'':'s'} = ${count} Account Admin, ${count} Accountant, ${count} Project Manager, ${count} Data Entry`;
@@ -25,10 +25,10 @@ export function AddTeamCalculator({managersEnabled,adminLimit,managerLimit,sales
   <p className="muted">Add Admin, Manager, Sales or Telecaller seats to the current team without renewing. Only added seats are charged for the remaining time and every Sales-team seat keeps the same expiry date.</p>
   <div className="billing-total"><span>Current billing period</span><strong>{labels[period]}</strong></div>{endsAt&&<div className="billing-total"><span>Common Sales-team expiry</span><strong>{endsAt.toLocaleDateString('en-IN')}</strong></div>}
   <div className="included-admin"><strong>Primary Admin</strong><span>Included / Free</span></div>
-  <label>Add Additional Admin Seats<input type="number" min="0" max="10000" value={addAdmin} onChange={e=>setAddAdmin(clamp(Number(e.target.value)))}/><span>{money(p.admin)} full-period rate each · new total {adminTarget}</span></label>
-  {managersEnabled?<label>Add Manager Seats<input type="number" min="0" max="10000" value={addManager} onChange={e=>setAddManager(clamp(Number(e.target.value)))}/><span>{money(p.manager)} full-period rate each · new total {managerTarget}</span></label>:null}
-  <label>Add Sales Seats<input type="number" min="0" max="10000" value={addSales} onChange={e=>setAddSales(clamp(Number(e.target.value)))}/><span>{money(p.sales)} full-period rate each · new total {salesTarget}</span></label>
-  <label>Add Telecaller Seats<input type="number" min="0" max="10000" value={addTelecaller} onChange={e=>setAddTelecaller(clamp(Number(e.target.value)))}/><span>{money(telecallerPrices[period])} full-period rate each · new total {telecallerTarget}</span></label>
+  <label>Add Additional Admin Seats<input type="number" min="0" max={Math.max(0,10000-adminLimit)} value={addAdmin} onChange={e=>setAddAdmin(Math.min(Math.max(0,10000-adminLimit),clamp(Number(e.target.value))))}/><span>{money(p.admin)} full-period rate each · new total {adminTarget}</span></label>
+  {managersEnabled?<label>Add Manager Seats<input type="number" min="0" max={Math.max(0,10000-managerLimit)} value={addManager} onChange={e=>setAddManager(Math.min(Math.max(0,10000-managerLimit),clamp(Number(e.target.value))))}/><span>{money(p.manager)} full-period rate each · new total {managerTarget}</span></label>:null}
+  <label>Add Sales Seats<input type="number" min="0" max={Math.max(0,10000-salesLimit)} value={addSales} onChange={e=>setAddSales(Math.min(Math.max(0,10000-salesLimit),clamp(Number(e.target.value))))}/><span>{money(p.sales)} full-period rate each · new total {salesTarget}</span></label>
+  <label>Add Telecaller Seats<input type="number" min="0" max={Math.max(0,10000-telecallerLimit)} value={addTelecaller} onChange={e=>setAddTelecaller(Math.min(Math.max(0,10000-telecallerLimit),clamp(Number(e.target.value))))}/><span>{money(telecallerPrices[period])} full-period rate each · new total {telecallerTarget}</span></label>
   {isPlus&&<p className="muted">Your existing {Math.max(1,accountPackages)} Account package{Math.max(1,accountPackages)===1?'':'s'} stay unchanged and are not added again.</p>}
   {!hasAddition&&<p className="muted">Enter at least one additional team seat to continue.</p>}<button disabled={!hasAddition}>Review Prorated Price</button>
  </form>;

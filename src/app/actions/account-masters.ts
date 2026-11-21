@@ -37,7 +37,7 @@ export async function saveAccountMaster(formData: FormData) {
     "financial-years": createFinancialYear,
     currency: setCurrency,
   };
-  const call = calls[type];
+  const call = Object.hasOwn(calls,type) ? calls[type] : undefined;
   if (!call) throw new Error("INVALID_MASTER_TYPE");
   await call(raw);
   revalidatePath(`/workspace/account/${type}`);

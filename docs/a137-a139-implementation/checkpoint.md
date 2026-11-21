@@ -1,0 +1,7 @@
+# Logo safety and approved Sales creator wording
+
+Continuing PR212. Sales Admin creator entry/dialog/name labels now say Create Lead / Lead Name on web and Android, with name/phone, existing admin guard, assignment and Sales check-in workflow unchanged. Customer directory naming, internal models/routes and Account Add Customer remain unchanged. Web assignment now has pending/success/conflict feedback, including the existing atomic-assignment conflict. Customer create retry idempotency and remaining paging/parity work remain open.
+
+Web/native logo replacement now writes a new immutable private company object before saving its pointer, so a failed pointer write cannot overwrite the old logo bytes. Registration's legacy deterministic key remains compatible. Old/new objects are not blindly deleted after an uncertain database result, because it may have committed. Cleanup/orphan retention is a separate storage follow-up. Company-private namespace stays compatible with private-file scope checks. Existing owner authorization and image validation retained.
+
+39 focused company/logo/assignment/customer checks passed, including fresh-object replacement ordering and failure safety. Combined with journal tests: 69 passing cases (overlapping, not additive). Full TypeScript/lint passed. Native build/browser/file storage acceptance still requires final-head CI/device work; no real logo/customer changed.

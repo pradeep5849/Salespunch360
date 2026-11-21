@@ -100,9 +100,10 @@ const masterKinds = new Set([
 ]);
 export async function accountMasterOverview(
   master: string,
-  raw: { q?: string; page?: string | number;branchId?:string;scope?:string } = {},
+  raw: { q?: string; page?: string | number;branchId?:string;scope?:string;workCategoryId?:string } = {},
 ) {
   if (!masterKinds.has(master)) throw new Error("INVALID_MASTER_TYPE");
+  const selectedWorkCategory = raw.workCategoryId ? z.string().guid().parse(raw.workCategoryId) : undefined;
   let a = await readActor();
   if(master==="customers"&&(raw.branchId||raw.scope)){
     const query=z.object({branchId:z.string().guid().optional(),scope:z.literal("all").optional()}).refine(v=>!(v.branchId&&v.scope)).parse({branchId:raw.branchId,scope:raw.scope});
@@ -149,14 +150,14 @@ export async function accountMasterOverview(
       : Promise.resolve([]),
     master === "vendors"
       ? db.vendor.findMany({
-          where: { companyId, ...nameWhere },
+          where: { companyId, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q, mode: "insensitive" as const } }] } : {}) },
           orderBy: { name: "asc" },
           ...paged,
         })
       : Promise.resolve([]),
     master === "units"
       ? db.accountUnit.findMany({
-          where: { companyId, ...nameWhere },
+          where: { companyId, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { symbol: { contains: q, mode: "insensitive" as const } }] } : {}) },
           orderBy: { name: "asc" },
           ...paged,
         })
@@ -176,7 +177,7 @@ export async function accountMasterOverview(
         })
       : ["products", "services"].includes(master)
         ? db.accountCategory.findMany({
-            where: { companyId, isActive: true },
+            where: { companyId, isActive: true, scope: { in: [master === "services" ? "SERVICE" : "PRODUCT", "BOTH"] } },
             select: { id: true, name: true, scope: true },
             orderBy: { name: "asc" },
             take: 200,
@@ -206,7 +207,7 @@ export async function accountMasterOverview(
         })
       : master === "work-packages"
         ? db.workCategory.findMany({
-            where: { companyId, isActive: true },
+            where: { companyId, isActive: true, ...(selectedWorkCategory ? { id: selectedWorkCategory } : {}) },
             select: { id: true, name: true },
             orderBy: { name: "asc" },
             take: 200,
@@ -214,7 +215,7 @@ export async function accountMasterOverview(
         : Promise.resolve([]),
     master === "work-packages"
       ? db.workPackage.findMany({
-          where: { companyId, ...nameWhere },
+          where: { companyId, ...nameWhere, ...(selectedWorkCategory ? {workCategoryId:selectedWorkCategory} : {}) },
           orderBy: { name: "asc" },
           include: { unit: true, workCategory: true },
           ...paged,
@@ -275,6 +276,7 @@ export async function accountMasterOverview(
                     : financialYears;
   const hasMore = primary.length > MASTER_PAGE_SIZE;
   return {
+    canViewCosts: !!a.accountRole && ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes("ACCOUNT_MONEY_VIEW"),
     canCreate:
       !!a.accountRole &&
       ACCOUNT_ROLE_PERMISSIONS[a.accountRole].includes(

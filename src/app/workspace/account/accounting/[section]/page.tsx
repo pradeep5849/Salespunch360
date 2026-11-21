@@ -190,7 +190,7 @@ export default async function Page({
         {(section === "new" || section === "opening") && mayPost && (
           <ManualJournalForm
             opening={section === "opening"}
-            years={d.financialYears}
+            years={d.financialYears.filter(year=>year.status==="OPEN"&&year.isActive)}
             branches={d.branches}
             accounts={d.ledgerAccounts.filter(
               (x) => x.allowPosting && x.isActive,
@@ -230,7 +230,7 @@ export default async function Page({
           history?.items.map((x) => (
             <article key={x.id}>
               <strong>
-                {x.journalNumber} · {x.status}
+                <Link href={`/workspace/account/accounting/journals/${x.id}`}>{x.journalNumber}</Link> · {x.status}
               </strong>
               <p>
                 {<AccountDate value={x.entryDate.toISOString()}/>} · {x.narration}

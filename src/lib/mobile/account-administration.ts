@@ -34,7 +34,6 @@ import {
   updateGeneralSettingsForActor,
 } from "@/lib/account/settings";
 import { taxProfileInput } from "@/lib/account/tax";
-import { verifyAccountDataForActor } from "@/lib/account/utilities";
 import { mobileAccountActor } from "./account-transactions";
 import type { MobileAppPrincipal } from "./auth";
 import { PREFIX_TYPES } from "@/lib/account/transaction-settings";
@@ -408,7 +407,10 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string,query:
     const result = await recycleListForCompany(a.companyId, query);
     return result.hasMore ? [...result.items, { hasMore: true }] : result.items;
   }
-  if (kind === "verification") return verifyAccountDataForActor(a);
+  if (kind === "verification") {
+    const { verifyCompanyAccountDataForActor } = await import("@/lib/account/utilities");
+    return verifyCompanyAccountDataForActor(a);
+  }
   if(kind==="export-types")return (await import("@/lib/account/transfer-access")).availableTransferTypes(a);
   if (kind === "imports")
     return db.accountImportJob.findMany({

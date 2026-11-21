@@ -7,14 +7,15 @@ import {createOrderAction} from '@/app/actions/billing';
 
 type Search=Promise<Record<string,string|string[]|undefined>>;
 const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v;
-const count=(v:string|string[]|undefined)=>Math.max(0,Math.trunc(Number(one(v)??0))||0);
-const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);
+const count=(v:string|string[]|undefined)=>Number(one(v)??0);
+const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(n);
 
 export default async function Page({searchParams}:{searchParams:Search}){
  const q=await searchParams,r=await billingDashboard();if(!r.hasSales)redirect('/workspace/billing');
  const period=one(q.billingPeriod);if(period!=='SIX_MONTH'&&period!=='YEARLY')redirect('/workspace/billing');
- const admin=count(q.adminSeats),manager=count(q.managerSeats),sales=count(q.salesSeats),telecallerSeats=count(q.telecallerSeats);if(manager+sales===0)redirect('/workspace/billing');
- const isPlus=r.company?.productEdition==='SALESPUNCH360_PLUS',accountPackages=isPlus?Math.max(1,count(q.accountPackages)||1):0,purchaseMode=one(q.purchaseMode),isAddTeam=purchaseMode==='ADD_TEAM',isAddAccount=purchaseMode==='ADD_ACCOUNT',e=r.entitlement,currentAccountPackages=Math.max(1,r.account.packageCount),telecaller=await getTelecallerBillingOverview();
+ const admin=count(q.adminSeats),manager=count(q.managerSeats),sales=count(q.salesSeats),telecallerSeats=count(q.telecallerSeats);if([admin,manager,sales,telecallerSeats].some(value=>!Number.isInteger(value)||value<0||value>10000)||manager+sales===0)redirect('/workspace/billing');
+ const isPlus=r.company?.productEdition==='SALESPUNCH360_PLUS',accountPackages=isPlus?count(q.accountPackages??'1'):0,purchaseMode=one(q.purchaseMode),isAddTeam=purchaseMode==='ADD_TEAM',isAddAccount=purchaseMode==='ADD_ACCOUNT',e=r.entitlement,currentAccountPackages=Math.max(1,r.account.packageCount),telecaller=await getTelecallerBillingOverview();
+ if(isPlus&&(!Number.isInteger(accountPackages)||accountPackages<1||accountPackages>100))redirect('/workspace/billing');
  if(isAddTeam){if(!e?.paidActive||!e.subscription||period!==e.subscription.billingPeriod||admin<e.adminLimit||manager<e.managerLimit||sales<e.salesLimit||telecallerSeats<telecaller.limit||(admin===e.adminLimit&&manager===e.managerLimit&&sales===e.salesLimit&&telecallerSeats===telecaller.limit)||(isPlus&&accountPackages!==currentAccountPackages))redirect('/workspace/billing');}
  if(isAddAccount){if(!isPlus||!e?.paidActive||!e.subscription||period!==e.subscription.billingPeriod||admin!==e.adminLimit||manager!==e.managerLimit||sales!==e.salesLimit||telecallerSeats!==telecaller.limit||accountPackages<=currentAccountPackages)redirect('/workspace/billing');}
  const retainAdmin=(Array.isArray(q.retainAdminUserIds)?q.retainAdminUserIds:q.retainAdminUserIds?[q.retainAdminUserIds]:[]),retainManager=(Array.isArray(q.retainManagerUserIds)?q.retainManagerUserIds:q.retainManagerUserIds?[q.retainManagerUserIds]:[]),retainSales=(Array.isArray(q.retainSalesUserIds)?q.retainSalesUserIds:q.retainSalesUserIds?[q.retainSalesUserIds]:[]);

@@ -20,6 +20,7 @@ data class UtilityState(
     val restoreReview: JsonObject? = null,
     val file: Pair<String, ByteArray>? = null,
     val error: String? = null,
+    val verificationCompletedAt: String? = null,
     val message: String? = null
 )
 
@@ -47,7 +48,7 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }.onSuccess {
                 val rows = if(mode == "recycle") JsonArray(it.filterNot { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true }) else it
-                _state.value = _state.value.copy(rows = if(more) JsonArray(_state.value.rows.toList() + rows.toList()) else rows, loading = false, error = null, recyclePage = page, recycleHasMore = mode == "recycle" && it.any { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true })
+                _state.value = _state.value.copy(rows = if(more) JsonArray(_state.value.rows.toList() + rows.toList()) else rows, loading = false, error = null, verificationCompletedAt = if(mode == "verification") java.time.Instant.now().toString() else _state.value.verificationCompletedAt, recyclePage = page, recycleHasMore = mode == "recycle" && it.any { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true })
             }.onFailure {
                 _state.value = _state.value.copy(loading = false, error = it.message)
             }

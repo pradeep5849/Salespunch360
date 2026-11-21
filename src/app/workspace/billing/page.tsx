@@ -11,7 +11,7 @@ export default async function Page({searchParams}:{searchParams:Search}){
  const q=await searchParams,orderError=one(q.orderError);
  const {backHref}=await loadBillingPageData();
  return <main className="billing-content"><WorkspacePageHeader title="Billing & Subscription" backHref={backHref}/>
-  {orderError&&<section className="billing-card"><p className="form-error">{orderErrors[orderError]??orderErrors.ORDER_CREATE_FAILED}</p></section>}
+  {orderError&&<section className="billing-card"><p className="form-error">{Object.hasOwn(orderErrors,orderError)?orderErrors[orderError]:orderErrors.ORDER_CREATE_FAILED}</p></section>}
   <section className="billing-card"><div style={hubGrid}><Link href="/workspace/billing/subscription" style={hubButton}>Subscription</Link><Link href="/workspace/billing/actions" style={hubButton}>Billing</Link></div></section>
  </main>;
 }
