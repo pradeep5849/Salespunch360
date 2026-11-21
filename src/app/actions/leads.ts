@@ -5,7 +5,7 @@ import { LeadError } from "@/lib/leads/policy";
 import { requirePermissionForMutation } from "@/lib/auth/authorization";
 import { transitionLeadWithProjectForActor } from "@/lib/leads/transition-with-project";
 
-export type LeadActionState = { error?: string; success?: string };
+export type LeadActionState = { error?: string; success?: string; stale?: boolean };
 
 const fields = (f: FormData) => ({
   title: f.get("title"),
@@ -40,6 +40,7 @@ export async function saveLead(_: LeadActionState, f: FormData): Promise<LeadAct
     if(leadId)revalidatePath(`/workspace/leads/${leadId}`);
     return { success: leadId?"Lead updated":"Lead saved." };
   } catch (error) {
+    if(error instanceof LeadError && error.code === "STALE") return {stale:true,error:"This lead changed since you opened it. Your draft has not been saved. Copy any unsaved changes, then reload the latest lead and review before saving again."};
     return {
       error: error instanceof LeadError && error.code === "ACTIVE_FOLLOW_UP"
         ? "Complete the active follow-up checkout before reassigning this lead."
