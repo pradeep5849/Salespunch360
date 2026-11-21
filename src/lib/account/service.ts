@@ -149,14 +149,14 @@ export async function accountMasterOverview(
       : Promise.resolve([]),
     master === "vendors"
       ? db.vendor.findMany({
-          where: { companyId, ...nameWhere },
+          where: { companyId, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q, mode: "insensitive" as const } }] } : {}) },
           orderBy: { name: "asc" },
           ...paged,
         })
       : Promise.resolve([]),
     master === "units"
       ? db.accountUnit.findMany({
-          where: { companyId, ...nameWhere },
+          where: { companyId, ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { symbol: { contains: q, mode: "insensitive" as const } }] } : {}) },
           orderBy: { name: "asc" },
           ...paged,
         })
@@ -176,7 +176,7 @@ export async function accountMasterOverview(
         })
       : ["products", "services"].includes(master)
         ? db.accountCategory.findMany({
-            where: { companyId, isActive: true },
+            where: { companyId, isActive: true, scope: { in: [master === "services" ? "SERVICE" : "PRODUCT", "BOTH"] } },
             select: { id: true, name: true, scope: true },
             orderBy: { name: "asc" },
             take: 200,
