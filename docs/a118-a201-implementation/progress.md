@@ -10,3 +10,11 @@ Owner selected one continuing draft PR (#212) for remaining findings after PR210
 - Remaining A120: full independent reconciliations, bounded scan strategy, complete transfer-model invariants and authorized record drill-down remain open. A121–A201 other retained findings are not yet implemented in this PR.
 
 Latest local validation: 39 tests, changed-file ESLint and full TypeScript passed. New native changes require final-head CI and device acceptance; previous head CI is not final-head evidence. No production writes, migrations or deployment executed here.
+
+## Continuing slices — 21 November 2026
+
+Additional separate commits in PR212 implement web/native persisted attendance confirmation, web branch/GPS recovery and team refresh; billing-entry authorization/explanations; Account-only admin mutation denial; configured checkout prices/paise/strict quantities and seat ceilings; expired pending-payment and Telecaller target display; corrected legacy billing redirect; password-change throttle/recovery; vendor name/phone and unit-symbol search; compatible product/service category options; atomic customer assignment; advanced check-in UUID/kind/status scoping; deterministic same-date General Ledger order; explicit Contract Revenue/Billed Profit labels.
+
+These are slices, not blanket closure of their pages. Per-batch checkpoints preserve tests and limitations. Full suite at ed8593d5: 4045 passed, 395 skipped. Subsequent SQL fixes: 14 focused passed against disposable local PostgreSQL. Subsequent report clarity: 20 passed. Full TypeScript/lint passed for the SQL changes before the final small report ordering/label change; fresh final-head CI still required. Native/browser/device parity and many retained findings remain open.
+
+Product decision requested before A156 automatic-travel finalization: provisional during IST day and final after day-end (recommended), or final when attendance stops. Report reads currently approve/freeze too early; no new policy implemented without that decision. Other independent slices completed while waiting. No production operations.
