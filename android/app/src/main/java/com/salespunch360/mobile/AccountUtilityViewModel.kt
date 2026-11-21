@@ -12,6 +12,8 @@ import kotlinx.serialization.json.*
 
 data class UtilityState(
     val loading: Boolean = false,
+    val recyclePage: Int = 1,
+    val recycleHasMore: Boolean = false,
     val exportTypes:List<String> = emptyList(),
     val rows: JsonArray = JsonArray(emptyList()),
     val preview: JsonObject? = null,
@@ -26,22 +28,26 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(UtilityState())
     val state = _state.asStateFlow()
 
-    fun load(mode: String) {
+    fun load(mode: String, more: Boolean = false) {
+        if (_state.value.loading) return
+        val page = if (mode == "recycle" && more) _state.value.recyclePage + 1 else 1
         if(mode == "backup") { _state.value = _state.value.copy(rows=JsonArray(emptyList()),loading=false,error=null); return }
         if(mode=="export"){
             _state.value=_state.value.copy(loading=true,error=null,exportTypes=emptyList())
             viewModelScope.launch {runCatching{api.accountUtility("export-types").map{it.jsonPrimitive.content}}.onSuccess{_state.value=_state.value.copy(loading=false,exportTypes=it)}.onFailure{_state.value=_state.value.copy(loading=false,error="Could not load authorized exports. Retry.")}}
             return
         }
+        _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             runCatching {
                 if (mode == "import") {
                     api.accountImports()
                 } else {
-                    api.accountUtility(if (mode == "recycle") "recycle-bin" else mode)
+                    api.accountUtility(if (mode == "recycle") "recycle-bin" else mode, page)
                 }
             }.onSuccess {
-                _state.value = _state.value.copy(rows = it, loading = false, error = null)
+                val rows = if(mode == "recycle") JsonArray(it.filterNot { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true }) else it
+                _state.value = _state.value.copy(rows = if(more) JsonArray(_state.value.rows.toList() + rows.toList()) else rows, loading = false, error = null, recyclePage = page, recycleHasMore = mode == "recycle" && it.any { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true })
             }.onFailure {
                 _state.value = _state.value.copy(loading = false, error = it.message)
             }
@@ -115,9 +121,11 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun restored(id: String) {
+        if (_state.value.loading) return
+        _state.value = _state.value.copy(loading=true,error=null,message=null)
         viewModelScope.launch {
             runCatching { api.restoreAccountRecycle(id) }
-                .onSuccess { load("recycle") }
+                .onSuccess { _state.value = _state.value.copy(loading=false,message="Record restored successfully."); load("recycle") }
                 .onFailure { _state.value = _state.value.copy(loading=false,error = it.message) }
         }
     }

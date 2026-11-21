@@ -20,6 +20,11 @@ export async function archiveProjectAction(fd: FormData) {
   redirect("/workspace/account/projects");
 }
 
+export async function restoreMasterWithFeedback(_previous: { ok: boolean; message: string }, fd: FormData) {
+  try { await restoreMasterAction(fd); return { ok: true, message: "Record restored successfully." }; }
+  catch { return { ok: false, message: "Restore was not confirmed. Refresh the list: the record may already be restored, unavailable, or conflict with an existing record." }; }
+}
+
 export async function advancePeriodLockWithFeedback(_previous: { message: string; ok: boolean }, fd: FormData) {
   if (fd.get("confirmed") !== "on") return { ok: false, message: "Confirm that posting and corrections through this date will be blocked." };
   try {

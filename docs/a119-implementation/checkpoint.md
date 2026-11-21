@@ -1,0 +1,7 @@
+# A119 Recycle Bin implementation checkpoint
+
+21 November 2026. Separate branch based on 09fb3fc7. Web uses company-scoped 50-record pages with archivedAt/id tie-breaking and name search; updated Android requests the paged array protocol and handles its hasMore sentinel internally. Old mobile callers retain the prior 100-row array (with stable ordering); they require an app update for further paging. No sentinel is returned to legacy callers. Server query validation rejects invalid page/search bounds.
+
+Web restore form now shows pending, success and recoverable failure state. Android guards duplicate restore taps and shows success/error through existing state; record cards/confirmation include record identity, type, archive date and reason. Existing transactional restore authorization/conflict/history safeguards unchanged. Offset pagination is stable for a fixed dataset but concurrent cleanup/restore may change page membership; refresh before repeating uncertain outcomes.
+
+Nine focused tests passed (seven list query/model cases and two existing retention cases). Changed web/backend lint and full TypeScript passed. No new SQL fixture, native compile/device or browser acceptance in this checkpoint; final-head CI required. A119 findings remain implemented but not fully verified; native search/type filtering remains a follow-up, while paging and web name search are provided. No production restore/purge or scheduler configuration changed.
