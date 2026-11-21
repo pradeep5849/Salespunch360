@@ -11,7 +11,7 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
   const salesUnfiltered=actor.salesRole==="SALES"&&raw.start===undefined&&raw.end===undefined;
   const where:Prisma.CustomerVisitWhereInput={companyId:actor.companyId,branchId:branches.branchId,userId:{in:userIds},...(salesUnfiltered?{}:{checkedInAt:{gte:filters.start,lt:filters.endExclusive}}),...(status==="COMPLETED"?{checkedOutAt:{not:null}}:status==="ACTIVE"?{checkedOutAt:null}:{}),...(sentiment!=="ALL"?{checkoutSentiment:sentiment}:{}),...(customerId?{customerId}:{}),...(advanced&&filters.q?{customer:{name:{contains:filters.q,mode:"insensitive"}}}:{})};
   const [total,completed,pending,leadAgg,visits,employees,customers]=await Promise.all([
-    db.customerVisit.count({where}), db.customerVisit.count({where:{...where,checkedOutAt:{not:null}}}), db.customerVisit.count({where:{...where,checkedOutAt:null}}),
+    db.customerVisit.count({where}), db.customerVisit.count({where:{AND:[where,{checkedOutAt:{not:null}}]}}), db.customerVisit.count({where:{AND:[where,{checkedOutAt:null}]}}),
     db.lead.count({where:{companyId:actor.companyId,sourceVisit:{is:where}}}),
     db.customerVisit.findMany({where,include:{photo:{select:{id:true}},user:{select:{name:true,salesRole:true}},customer:{select:{name:true,checkInReferenceLatitude:true,checkInReferenceLongitude:true}},sourceLeads:{select:{id:true},take:1},_count:{select:{sourceLeads:true}}},orderBy:[{checkedInAt:"desc"},{id:"desc"}],skip:(filters.page-1)*filters.pageSize,take:filters.pageSize}),
     reportEmployeeOptions(actor), db.customer.findMany({where:{companyId:actor.companyId,branchId:branches.branchId},select:{id:true,name:true},orderBy:{name:"asc"}})
@@ -25,17 +25,18 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
   let firstVisits=0,repeatVisits=0;
   if(advanced && userIds.length){
     const statusSql=status==="COMPLETED"?Prisma.sql`AND v."checkedOutAt" IS NOT NULL`:status==="ACTIVE"?Prisma.sql`AND v."checkedOutAt" IS NULL`:Prisma.empty;const sentimentSql=sentiment!=="ALL"?Prisma.sql`AND v."checkoutSentiment"::text=${sentiment}`:Prisma.empty;
+    const selectedCustomerSql=customerId?Prisma.sql`AND v."customerId"=${customerId}::uuid`:Prisma.empty;
     const customerSql=filters.q?Prisma.sql`AND c."name" ILIKE ${`%${filters.q}%`}`:Prisma.empty;
     const [kinds]=await db.$queryRaw<{first:bigint;repeat:bigint}[]>(Prisma.sql`
       SELECT COUNT(*) FILTER (WHERE NOT EXISTS (
-        SELECT 1 FROM "customer_visits" prior WHERE prior."companyId"=v."companyId" AND prior."customerId"=v."customerId"
+        SELECT 1 FROM "customer_visits" prior WHERE prior."companyId"=v."companyId" AND prior."branchId"=v."branchId" AND prior."customerId"=v."customerId"
           AND (prior."checkedInAt" < v."checkedInAt" OR (prior."checkedInAt"=v."checkedInAt" AND prior."id" < v."id"))
       )) AS first, COUNT(*) FILTER (WHERE EXISTS (
-        SELECT 1 FROM "customer_visits" prior WHERE prior."companyId"=v."companyId" AND prior."customerId"=v."customerId"
+        SELECT 1 FROM "customer_visits" prior WHERE prior."companyId"=v."companyId" AND prior."branchId"=v."branchId" AND prior."customerId"=v."customerId"
           AND (prior."checkedInAt" < v."checkedInAt" OR (prior."checkedInAt"=v."checkedInAt" AND prior."id" < v."id"))
-      )) AS repeat FROM "customer_visits" v JOIN "customers" c ON c."id"=v."customerId"
-      WHERE v."companyId"=${actor.companyId}::uuid AND v."branchId" IN (${Prisma.join(branches.branchIds.map(id=>Prisma.sql`${id}::uuid`))}) AND v."userId" IN (${Prisma.join(userIds)})
-        AND v."checkedInAt">=${filters.start} AND v."checkedInAt"<${filters.endExclusive} ${statusSql} ${sentimentSql} ${customerSql}`);
+      )) AS repeat FROM "customer_visits" v LEFT JOIN "customers" c ON c."id"=v."customerId"
+      WHERE v."companyId"=${actor.companyId}::uuid AND v."branchId" IN (${Prisma.join(branches.branchIds.map(id=>Prisma.sql`${id}::uuid`))}) AND v."userId" IN (${Prisma.join(userIds.map(id=>Prisma.sql`${id}::uuid`))})
+        AND v."checkedInAt">=${filters.start} AND v."checkedInAt"<${filters.endExclusive} ${statusSql} ${sentimentSql} ${customerSql} ${selectedCustomerSql}`);
     firstVisits=Number(kinds.first);repeatVisits=Number(kinds.repeat);
   }
   return {actor,filters,status,sentiment,customerId,customers,employees,rows,totalPages:Math.max(1,Math.ceil(total/filters.pageSize)),summary:{total,completed,pending,leadsGenerated:leadAgg,firstVisits,repeatVisits}};
