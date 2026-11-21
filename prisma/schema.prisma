@@ -1019,6 +1019,7 @@ model EmailVerificationToken {
   userId    String    @db.Uuid
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   tokenHash String    @unique @db.Char(64)
+  destinationEmail String? @db.VarChar(320)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())

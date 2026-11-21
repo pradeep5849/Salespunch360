@@ -16,7 +16,7 @@ export async function issueEmailVerification(userId: string, email: string, deli
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`email-verification:${userId}`}))`;
     await tx.emailVerificationToken.updateMany({ where: { userId, usedAt: null }, data: { usedAt: now } });
-    await tx.emailVerificationToken.create({ data: { userId, tokenHash: digest(token), expiresAt: new Date(now.getTime() + TOKEN_HOURS * 3_600_000) } });
+    await tx.emailVerificationToken.create({ data: { userId, destinationEmail:email.trim().toLowerCase(), tokenHash: digest(token), expiresAt: new Date(now.getTime() + TOKEN_HOURS * 3_600_000) } });
   });
 }
 
@@ -25,9 +25,9 @@ export async function verifyEmailToken(token: string) {
   const now = new Date();
   try {
     return await db.$transaction(async (tx) => {
-      const record = await tx.emailVerificationToken.findUnique({ where: { tokenHash: digest(token) }, select: { id: true, userId: true, expiresAt: true, usedAt: true } });
-      if (!record || record.usedAt || record.expiresAt <= now) return false;
-      const verified = await tx.user.updateMany({ where: { id: record.userId, role: "COMPANY_ADMIN", emailVerifiedAt: null }, data: { emailVerifiedAt: now } });
+      const record = await tx.emailVerificationToken.findUnique({ where: { tokenHash: digest(token) }, select: { id: true, userId: true, expiresAt: true, usedAt: true, destinationEmail:true } });
+      if (!record || !record.destinationEmail || record.usedAt || record.expiresAt <= now) return false;
+      const verified = await tx.user.updateMany({ where: { id: record.userId, role: "COMPANY_ADMIN", email:{equals:record.destinationEmail,mode:"insensitive"}, emailVerifiedAt: null }, data: { emailVerifiedAt: now } });
       if (verified.count !== 1) throw new Error("VERIFICATION_USER_MISMATCH");
       const used = await tx.emailVerificationToken.updateMany({ where: { id: record.id, userId:record.userId, usedAt: null, expiresAt: { gt: now } }, data: { usedAt: now } });
       if (used.count !== 1) throw new Error("VERIFICATION_TOKEN_RACE");

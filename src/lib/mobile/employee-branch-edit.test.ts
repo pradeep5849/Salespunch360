@@ -1,0 +1,20 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({outside:vi.fn(),user:vi.fn(),update:vi.fn(),raw:vi.fn(),replace:vi.fn(),telecaller:vi.fn()}));
+vi.mock('@/lib/telecalling/team',()=>({setTelecallerActiveForCompany:m.telecaller}));
+vi.mock('@/lib/branches/assignment',()=>({replaceBranchAssignment:m.replace}));
+vi.mock('@/lib/users/employee-profile',()=>({assertSalesEmployeePhoneUnique:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{user:{findFirst:m.outside},$transaction:async(work:(tx:unknown)=>unknown)=>work({$queryRaw:m.raw,user:{findFirst:m.user,update:m.update},company:{findUnique:async()=>({teamStructure:'MANAGERS_AND_SALES'})}})}}));
+import {mobileEditEmployee,mobileSetAnyEmployeeActive} from './employee-admin';
+import type {MobilePrincipal} from './auth';
+const actor={id:'admin',companyId:'company',salesRole:'PRIMARY_ADMIN'} as MobilePrincipal;
+const employeeId='11111111-1111-4111-8111-111111111111',branchId='22222222-2222-4222-8222-222222222222';
+const input={employeeId,name:'Sales user',email:'sales@example.test',travelApprovalMode:'MANUAL'};
+beforeEach(()=>{vi.clearAllMocks();m.user.mockReset();m.outside.mockResolvedValue({salesRole:'SALES'});m.user.mockResolvedValueOnce({id:'admin'}).mockResolvedValue({id:employeeId,companyId:'company',salesRole:'SALES',managerId:null,managerType:null,isActive:true,salesAccessActive:true,branchAccessScope:'SELECTED_BRANCHES',branchAccesses:[{branchId}]})});
+it('preserves branch scope and assignments when branch fields are omitted',async()=>{await mobileEditEmployee(actor,input);expect(m.replace).not.toHaveBeenCalled();const data=m.update.mock.calls[0][0].data;expect(data).not.toHaveProperty('branchAccessScope');expect(data).not.toHaveProperty('branchAccesses')});
+it('rejects a misspelled scope instead of broadening to All Branches',async()=>{await expect(mobileEditEmployee(actor,{...input,branchAccessScope:'SELECTED_BRANCH'})).rejects.toMatchObject({code:'INVALID_INPUT'});expect(m.update).not.toHaveBeenCalled();expect(m.replace).not.toHaveBeenCalled()});
+it('routes actual changes through canonical security rotation under the target lock',async()=>{await mobileEditEmployee(actor,{...input,branchAccessScope:'ALL_BRANCHES',branchIds:[]});expect(m.raw).toHaveBeenCalled();expect(m.replace).toHaveBeenCalledWith(expect.anything(),'company',{employeeId,branchAccessScope:'ALL_BRANCHES'});expect(m.raw.mock.invocationCallOrder[0]).toBeLessThan(m.replace.mock.invocationCallOrder[0]);expect(m.replace.mock.invocationCallOrder[0]).toBeLessThan(m.update.mock.invocationCallOrder[0])});
+it('does not rotate sessions for unchanged branch assignment',async()=>{await mobileEditEmployee(actor,{...input,branchAccessScope:'SELECTED_BRANCHES',branchIds:[branchId]});expect(m.replace).not.toHaveBeenCalled()});
+it('rejects empty Selected Branches before any profile write',async()=>{await expect(mobileEditEmployee(actor,{...input,branchAccessScope:'SELECTED_BRANCHES',branchIds:[]})).rejects.toThrow();expect(m.update).not.toHaveBeenCalled()});
+it('rejects malformed branch IDs rather than filtering them out',async()=>{await expect(mobileEditEmployee(actor,{...input,branchAccessScope:'SELECTED_BRANCHES',branchIds:[branchId,10]})).rejects.toThrow();expect(m.update).not.toHaveBeenCalled()});
+
+it('dispatches Telecaller lifecycle without restoring field Sales access',async()=>{m.outside.mockResolvedValue({salesRole:'SALES',designation:'Telecaller'});await mobileSetAnyEmployeeActive(actor,employeeId,true);expect(m.telecaller).toHaveBeenCalledWith('company',employeeId,true,'admin');expect(m.update).not.toHaveBeenCalled()});
