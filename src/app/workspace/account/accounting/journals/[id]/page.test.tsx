@@ -1,0 +1,11 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const m=vi.hoisted(()=>({auth:vi.fn(),find:vi.fn()}));
+vi.mock("@/lib/auth/authorization",()=>({requirePermission:m.auth}));
+vi.mock("@/lib/db",()=>({db:{journalEntry:{findFirst:m.find}}}));
+vi.mock("next/navigation",()=>({notFound:()=>{throw new Error("NOT_FOUND")}}));
+import Page from "./page";
+const id="11111111-1111-4111-8111-111111111111";
+beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue({companyId:"company",branchAccessScope:"SELECTED_BRANCHES",branchIds:["allowed"]});m.find.mockResolvedValue(null)});
+it("scopes detail to the authenticated company and authorized branches",async()=>{await expect(Page({params:Promise.resolve({id})})).rejects.toThrow("NOT_FOUND");expect(m.auth).toHaveBeenCalledWith("ACCOUNT_LEDGER_VIEW");expect(m.find).toHaveBeenCalledWith(expect.objectContaining({where:{id,companyId:"company",branchId:{in:["allowed"]}}}))});
+it("an empty branch assignment never broadens the detail query",async()=>{m.auth.mockResolvedValue({companyId:"company",branchAccessScope:"SELECTED_BRANCHES",branchIds:[]});await expect(Page({params:Promise.resolve({id})})).rejects.toThrow("NOT_FOUND");expect(m.find.mock.calls[0][0].where.branchId).toEqual({in:[]})});
+it("rejects invalid identity and denied permission before reading journal lines",async()=>{await expect(Page({params:Promise.resolve({id:"invalid"})})).rejects.toThrow("NOT_FOUND");expect(m.find).not.toHaveBeenCalled();m.auth.mockRejectedValueOnce(new Error("DENIED"));await expect(Page({params:Promise.resolve({id})})).rejects.toThrow("DENIED");expect(m.find).not.toHaveBeenCalled()});
