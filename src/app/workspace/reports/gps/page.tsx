@@ -9,6 +9,7 @@ const names:Record<GpsTimelineEvent["type"],string>={
  GPS_STARTED:"GPS Started",
  VISIT:"Customer Visit",
  GPS_ENDED:"GPS Ended",
+ GPS_LAST_RECORDED:"Last GPS Recorded",
  ATTENDANCE_ENDED:"Attendance Ended",
 };
 
@@ -26,14 +27,14 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
   {r.employee&&<>
    <Summary items={[
     {label:"Employee",value:r.employee.name},
-    {label:"Accepted GPS points",value:r.points.length},
+    {label:"Measured GPS points",value:r.points.length},
     {label:"Customer visits",value:r.visitCount},
     {label:"Total Distance Covered",value:distance(r.routeDistanceMeters)},
    ]}/>
-   <section className="gps-warning"><strong>Last spotted</strong><p>{r.lastSpottedAt?dateTime(r.lastSpottedAt):"No accepted GPS point recorded for this day."}</p></section>
+   <section className="gps-warning"><strong>Last spotted</strong><p>{r.lastSpottedAt?dateTime(r.lastSpottedAt):"No GPS point recorded for this day."}</p></section>
    <GoogleRouteMap points={r.points} segments={r.segments} markers={r.markers}/>
    <section className="gps-timeline"><h2>Daily timeline</h2>{r.events.length?r.events.map((e,index)=><article key={e.id}><i>{index+1}</i><div><strong>{names[e.type]}{e.customer?` · ${e.customer}`:""}</strong><time>{dateTime(e.at)}</time>{e.detail&&<p>{e.detail}</p>}{e.latitude!=null&&e.longitude!=null&&<small>{e.latitude.toFixed(6)}, {e.longitude.toFixed(6)}</small>}</div></article>):<div className="empty-state">No stored attendance, GPS, or visit events exist for this date.</div>}</section>
-   <section className="gps-warning"><strong>Attendance-linked GPS</strong><p>Distance is summed only from accepted GPS points captured while attendance was ON. Movement between separate attendance-active periods is not counted and those route segments are not connected.</p></section>
+   <section className="gps-warning"><strong>Attendance-linked GPS</strong><p>The map and distance use the same quality-filtered GPS points captured while attendance was ON. Poor accuracy, jitter and implausible movement are excluded. Separate attendance periods and long recording gaps are not connected. Last spotted uses the latest stored GPS timestamp; it does not confirm current tracking.</p></section>
   </>}
   {!r.employee&&<div className="empty-state">Choose an employee and date to view the authorized daily GPS report.</div>}
  </main>;
