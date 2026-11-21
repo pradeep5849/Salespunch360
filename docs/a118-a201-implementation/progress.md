@@ -18,3 +18,9 @@ Additional separate commits in PR212 implement web/native persisted attendance c
 These are slices, not blanket closure of their pages. Per-batch checkpoints preserve tests and limitations. Full suite at ed8593d5: 4045 passed, 395 skipped. Subsequent SQL fixes: 14 focused passed against disposable local PostgreSQL. Subsequent report clarity: 20 passed. Full TypeScript/lint passed for the SQL changes before the final small report ordering/label change; fresh final-head CI still required. Native/browser/device parity and many retained findings remain open.
 
 Product decision requested before A156 automatic-travel finalization: provisional during IST day and final after day-end (recommended), or final when attendance stops. Report reads currently approve/freeze too early; no new policy implemented without that decision. Other independent slices completed while waiting. No production operations.
+
+## Travel decision implemented
+
+Owner selected update-on-attendance-stop with same-day cumulative sessions: morning 10km + evening 10km = 20km. Shared web/native stops now save cumulative closed-session daily snapshots; report reads are read-only. Accepted late native GPS updates stopped-day snapshots. Saved expense visibility no longer depends on current GPS/eligibility. See docs/a156-implementation/checkpoint.md for exact tests and remaining backfill/device/performance limits. No pending owner decision remains on this rule.
+
+Latest cumulative-travel head: full suite 4049 passed/409 skipped; four separately enabled travel SQL cases passed; TypeScript and changed-file lint passed. Owner travel decision resolved. Final GitHub/platform acceptance and remaining finding slices still pending.
