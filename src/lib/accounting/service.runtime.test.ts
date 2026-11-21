@@ -407,3 +407,11 @@ it.each(["OFFICE_EXPENSE","LOAN_RECEIPT","CUSTOMER_ADVANCE","CAPITAL_WITHDRAWAL"
  m.findJournal.mockResolvedValueOnce({id:"66666666-6666-4666-8666-666666666666",companyId:COMPANY,branchId:BRANCH,financialYearId:FY,status:"POSTED",sourceType:"REVERSAL",reversalOfId:"77777777-7777-4777-8777-777777777777",lines:[{ledgerAccountId:A,debit:"0",credit:"10"},{ledgerAccountId:B,debit:"10",credit:"0"}]}).mockResolvedValueOnce({sourceType,reversalOfId:null});
  await expect(reverseJournal({journalEntryId:"66666666-6666-4666-8666-666666666666",entryDate:"2026-04-02",reason:"Undo correction"})).rejects.toThrow("MANAGED_CORRECTION_REVERSAL_REQUIRED");expect(m.create).not.toHaveBeenCalled();expect(m.update).not.toHaveBeenCalled();
 });
+
+it("refuses changing a closed financial year's period lock without writing", async () => {
+  const { setPeriodLockForActor } = await import("./service");
+  m.fy.mockResolvedValue({ id: FY, status: "CLOSED", startDate: new Date("2026-04-01"), endDate: new Date("2027-03-31") });
+  await expect(setPeriodLockForActor({ id: "actor", companyId: COMPANY } as never, { financialYearId: FY, lockedThrough: "2026-05-01", reason: "Review" })).rejects.toThrow("FINANCIAL_YEAR_CLOSED");
+  expect(tx.accountingPeriodLock.upsert).not.toHaveBeenCalled();
+  expect(m.audit).not.toHaveBeenCalled();
+});
