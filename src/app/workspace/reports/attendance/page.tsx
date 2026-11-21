@@ -1,3 +1,4 @@
+import {latestAttendanceDayEnd} from "@/lib/reports/attendance-day";
 import {DownloadExcel,reportQueryWasRun} from "@/components/workspace/download-excel";
 import { attendanceReport } from "@/lib/reports/attendance";
 import type { SearchParams } from "@/lib/reports/validation";
@@ -34,10 +35,10 @@ function SessionCard({row}:{row:AttendanceRow}){
 function DayStats({rows}:{rows:AttendanceRow[]}){
  const ordered=[...rows].sort((a,b)=>a.startedAt.getTime()-b.startedAt.getTime());
  const first=ordered[0];
- const last=ordered.reduce((latest,row)=>!latest.endedAt||!row.endedAt?row:(row.endedAt.getTime()>latest.endedAt.getTime()?row:latest),ordered[0]);
+ const last=latestAttendanceDayEnd(ordered);
  const total=ordered.reduce((sum,row)=>sum+sessionDurationMs(row),0);
  const points=ordered.reduce((sum,row)=>sum+row.gpsPointCount,0),travel=ordered.reduce((sum,row)=>sum+(row.routeDistanceMeters??0),0);
- return <><div className={styles.dayStats}><div><small>Start Time</small><strong>{timeOnly(first.startedAt)}</strong></div><div><small>End Time</small><strong>{last.endedAt?timeOnly(last.endedAt):"Now"}</strong></div><div><small>Total Duration</small><strong>{workDuration(total)}</strong></div></div><div className={styles.dayStats}><div><small>GPS points</small><strong>{points}</strong></div><div><small>Travel distance</small><strong>{distance(travel)}</strong></div><div><small>Sessions</small><strong>{ordered.length}</strong></div></div></>
+ return <><div className={styles.dayStats}><div><small>Start Time</small><strong>{timeOnly(first.startedAt)}</strong></div><div><small>End Time</small><strong>{last?timeOnly(last):"Now"}</strong></div><div><small>Total Duration</small><strong>{workDuration(total)}</strong></div></div><div className={styles.dayStats}><div><small>GPS points</small><strong>{points}</strong></div><div><small>Travel distance</small><strong>{distance(travel)}</strong></div><div><small>Sessions</small><strong>{ordered.length}</strong></div></div></>
 }
 
 function AttendanceCards({r,title,description,pastLabel,embedded=false}:{r:AttendanceResult;title:string;description:string;pastLabel:string;embedded?:boolean}){

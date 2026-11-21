@@ -15,7 +15,7 @@ export type LeadCallHistoryItem={
 export type TelecallingQueueLead={
  id:string; title:string; contactName:string|null; phone:string|null; stage:string; assignedUserId:string; ownerName:string; calls:number;
 };
-export type CallbackQueueItem=LeadCallHistoryItem&{leadTitle:string;phone:string|null;ownerName:string};
+export type CallbackQueueItem=LeadCallHistoryItem&{leadTitle:string;phone:string|null;ownerName:string;followUpTaskId?:string};
 export type SalesActionItem={
  id:string;leadId:string;leadTitle:string;phone:string|null;leadCallId:string;assignedUserId:string;ownerName:string;createdByUserId:string;callerName:string;
  trigger:"INTERESTED"|"WANTS_VISIT"|"WANTS_QUOTATION";status:"PENDING"|"ACKNOWLEDGED"|"ACTION_TAKEN";notes:string|null;calledAt:Date;createdAt:Date;
@@ -56,9 +56,10 @@ function assertResult(value:string):TelecallingResult{
 
 export function splitCallbackQueue(callbacks:CallbackQueueItem[],now=new Date()){
  const todayKey=indiaDayKey(now),nowMs=now.getTime();
- const overdue=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()<nowMs);
- const today=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&indiaDayKey(x.nextCallbackAt)===todayKey);
- const upcoming=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&indiaDayKey(x.nextCallbackAt)!==todayKey);
+ const isOverdue=(x:CallbackQueueItem)=>Boolean(x.nextCallbackAt&&(x.followUpTaskId?indiaDayKey(x.nextCallbackAt)<todayKey:x.nextCallbackAt.getTime()<nowMs));
+ const overdue=callbacks.filter(isOverdue);
+ const today=callbacks.filter(x=>x.nextCallbackAt&&!isOverdue(x)&&indiaDayKey(x.nextCallbackAt)===todayKey);
+ const upcoming=callbacks.filter(x=>x.nextCallbackAt&&!isOverdue(x)&&indiaDayKey(x.nextCallbackAt)!==todayKey);
  return [["Overdue",overdue],["Today",today],["Upcoming",upcoming]] as const;
 }
 
