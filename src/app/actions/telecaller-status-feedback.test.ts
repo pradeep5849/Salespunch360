@@ -1,0 +1,12 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({toggle:vi.fn(),guard:vi.fn(),revalidate:vi.fn()}));
+vi.mock('@/lib/telecalling/team',()=>({createTelecallerEmployee:vi.fn(),setTelecallerActive:m.toggle}));
+vi.mock('@/lib/security/request',()=>({mutationGuard:m.guard}));
+vi.mock('next/cache',()=>({revalidatePath:m.revalidate}));
+vi.mock('next/navigation',()=>({redirect:vi.fn()}));
+import {setTelecallerActiveWithFeedback} from './telecaller-team';
+const form=()=>{const f=new FormData();f.set('userId','target');f.set('active','false');f.set('confirmStatusChange','yes');return f};
+beforeEach(()=>{vi.clearAllMocks();m.toggle.mockResolvedValue({})});
+it('requires explicit confirmation before a lifecycle request',async()=>{expect(await setTelecallerActiveWithFeedback(new FormData())).toEqual({saveError:'CONFIRMATION_REQUIRED'});expect(m.toggle).not.toHaveBeenCalled()});
+it('reports confirmed completion after the guarded service saves',async()=>{expect(await setTelecallerActiveWithFeedback(form())).toEqual({saved:true});expect(m.guard).toHaveBeenCalled();expect(m.toggle).toHaveBeenCalledWith('target',false)});
+it('keeps capacity failure visible without success refresh',async()=>{m.toggle.mockRejectedValue(new Error('TELECALLER_SEAT_LIMIT'));expect(await setTelecallerActiveWithFeedback(form())).toEqual({saveError:'TELECALLER_SEAT_LIMIT'});expect(m.revalidate).not.toHaveBeenCalled()});

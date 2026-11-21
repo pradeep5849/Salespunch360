@@ -1,12 +1,12 @@
 # A118–A201 implementation status
 
-Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Each recently changed finding links its implementation checkpoint in register.json.
+Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Each changed finding links its implementation checkpoint in register.json.
 
 | Status | Findings |
 |---|---:|
-| IMPLEMENTED — ACCEPTANCE PENDING | 61 |
-| PARTIAL | 23 |
-| NOT STARTED | 71 |
+| IMPLEMENTED — ACCEPTANCE PENDING | 70 |
+| PARTIAL | 24 |
+| NOT STARTED | 61 |
 | REQUIREMENT SUPERSEDED | 3 |
 | AUDIT CORRECTION — WITHDRAWN | 1 |
 | DISCLOSED LIMITATION | 1 |
@@ -75,20 +75,20 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A139-F01 | NOT STARTED |
 | A139-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A139-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A140-F01 | NOT STARTED |
+| A140-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A140-F02 | NOT STARTED |
-| A140-F03 | NOT STARTED |
+| A140-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A141-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A141-F02 | NOT STARTED |
-| A142-F01 | NOT STARTED |
-| A142-F02 | NOT STARTED |
-| A142-F03 | NOT STARTED |
-| A143-F01 | NOT STARTED |
-| A143-F02 | NOT STARTED |
-| A143-F03 | NOT STARTED |
+| A142-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A142-F02 | PARTIAL |
+| A142-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A143-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A143-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A143-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A143-F04 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A144-F01 | NOT STARTED |
-| A144-F02 | NOT STARTED |
+| A144-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A144-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A145-F01 | NOT STARTED |
 | A145-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A147-F01 | IMPLEMENTED — ACCEPTANCE PENDING |

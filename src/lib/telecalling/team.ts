@@ -1,3 +1,4 @@
+import {revokeUserAuthenticationWithLock} from "@/lib/auth/session-generation";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -6,7 +7,7 @@ import { hashPassword } from "@/lib/auth/crypto";
 import { strongPasswordSchema } from "@/lib/auth/validation";
 import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { phoneSchema } from "@/lib/employees/validation";
-import { assertTelecallerSeatAvailable } from "@/lib/billing/telecaller";
+import { assertTelecallerSeatAvailable,telecallerBillingState } from "@/lib/billing/telecaller";
 import { TELECALLER_DESIGNATION } from "./policy";
 
 const createTelecallerSchema = z.object({
@@ -88,20 +89,22 @@ export async function createTelecallerEmployee(raw: unknown) {
   }
 }
 
-export async function setTelecallerActive(userId: string, active: boolean) {
-  const actor = await requirePermissionForMutation("SALES_USER_ADMIN");
-  const companyId = actor.companyId;
-  if (!companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
-  if (active) await assertTelecallerSeatAvailable(companyId, userId);
-  return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
-    const telecaller = await tx.user.findFirst({ where: { id: userId, companyId, salesRole: "SALES", designation: { equals: TELECALLER_DESIGNATION, mode: "insensitive" } }, select: { id: true } });
-    if (!telecaller) throw new Error("NOT_FOUND");
-    const updated = await tx.user.update({ where: { id: userId }, data: { isActive: active, salesAccessActive: false, sessionVersion: { increment: 1 } }, select: { id: true, isActive: true } });
-    if (!active) {
-      await tx.session.deleteMany({ where: { userId } });
-      await tx.pushDevice.deleteMany({ where: { userId } });
-    }
-    return updated;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+export async function setTelecallerActive(userId:string,active:boolean){
+ const actor=await requirePermissionForMutation("SALES_USER_ADMIN");
+ if(!actor.companyId||actor.salesRole!=="PRIMARY_ADMIN")throw new Error("NOT_AUTHORIZED");
+ return setTelecallerActiveForCompany(actor.companyId,userId,active,actor.id);
+}
+export async function setTelecallerActiveForCompany(companyId:string,userId:string,active:boolean,actorId:string){
+ return db.$transaction(async tx=>{
+  await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
+  const actor=await tx.user.findFirst({where:{id:actorId,companyId,salesRole:"PRIMARY_ADMIN",isActive:true,salesAccessActive:true},select:{id:true}});
+  if(!actor)throw new Error("NOT_AUTHORIZED");
+  await tx.$queryRaw`SELECT id FROM "users" WHERE id=${userId}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
+  const target=await tx.user.findFirst({where:{id:userId,companyId,salesRole:"SALES",designation:{equals:TELECALLER_DESIGNATION,mode:"insensitive"}},select:{id:true,isActive:true}});
+  if(!target)throw new Error("NOT_FOUND");
+  if(active){const state=await telecallerBillingState(tx,companyId);if(!state.subscription)throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");if(state.used-(target.isActive?1:0)>=state.limit)throw new Error("TELECALLER_SEAT_LIMIT");}
+  const updated=await tx.user.update({where:{id:userId},data:{isActive:active,salesAccessActive:false},select:{id:true,isActive:true}});
+  await revokeUserAuthenticationWithLock(tx,userId);
+  return updated;
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
 }

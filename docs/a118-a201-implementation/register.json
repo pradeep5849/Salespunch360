@@ -3,7 +3,7 @@
   "date": "2026-11-21",
   "mode": "IMPLEMENTATION_RECONCILIATION",
   "application_revision": "f3b9be71",
-  "status": "Implementation slices reconciled through the report/settings continuation after 66dd3e72; acceptance and partial work remain open.",
+  "status": "Implementation slices reconciled through security/employee continuation after 842b1988; partial and acceptance limits remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -2401,7 +2401,7 @@
         "status": "OPEN",
         "title": "Web form wrapper discards handled edit errors"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2411,6 +2411,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2443,7 +2448,7 @@
         "status": "OPEN",
         "title": "Account role seat enforcement diverges from billing package capacity"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2453,6 +2458,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2511,7 +2521,7 @@
         "status": "OPEN",
         "title": "Native directory mislabels active Telecaller as inactive Sales employee"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2521,6 +2531,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2532,7 +2547,7 @@
         "status": "OPEN",
         "title": "Web employee directory lacks text search"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "PARTIAL",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2542,6 +2557,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Synthetic focused tests plus guarded local SQL. Final CI/browser/device acceptance and deployment remain separate. Search paging/native Account search remain open."
       }
     },
     {
@@ -2553,7 +2573,7 @@
         "status": "OPEN",
         "title": "Web Telecaller lifecycle lacks confirmation and local result feedback"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2563,6 +2583,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2574,7 +2599,7 @@
         "status": "OPEN",
         "title": "Web edit forms lack local returned-state feedback"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2584,6 +2609,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2595,7 +2625,7 @@
         "status": "OPEN",
         "title": "Native branch edits omit canonical security rotation and target locking"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2605,6 +2635,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2616,7 +2651,7 @@
         "status": "OPEN",
         "title": "Invalid native branch scope defaults to All Branches"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2626,6 +2661,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2663,7 +2703,7 @@
         "status": "OPEN",
         "title": "Travel save failure follows committed Sales employee creation"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2673,6 +2713,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -2684,7 +2729,7 @@
         "status": "OPEN",
         "title": "Verification token lacks destination-email binding"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2694,6 +2739,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_evidence": {
+        "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
+        "limits": "Focused tests and guarded local SQL where applicable; final CI/browser/device acceptance and deployment remain separate."
       }
     },
     {
@@ -6034,9 +6084,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 61,
-    "PARTIAL": 23,
-    "NOT STARTED": 71,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 70,
+    "PARTIAL": 24,
+    "NOT STARTED": 61,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 1,
     "DISCLOSED LIMITATION": 1

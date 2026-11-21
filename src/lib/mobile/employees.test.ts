@@ -1,3 +1,4 @@
+vi.mock("@/lib/billing/telecaller",()=>({telecallerBillingState:async()=>({used:0,limit:0})}));
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 const mocks=vi.hoisted(()=>({context:vi.fn(),entitlement:vi.fn(),manager:vi.fn(),sales:vi.fn(),admins:vi.fn(),company:vi.fn(),branches:vi.fn(),setActive:vi.fn()}));
 vi.mock('@/lib/employees/service',()=>({getEmployeeManagementContextForCompany:mocks.context,createManagerForCompany:mocks.manager,createSalesEmployeeForCompany:mocks.sales}));
