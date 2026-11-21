@@ -1,0 +1,17 @@
+import {beforeEach,describe,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({number:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{}}));
+vi.mock('@/lib/account/numbering',()=>({allocateDocumentNumberInTx:m.number}));
+import {ensureWonLeadProjectInTx} from './won-project';
+import type {Prisma} from '@prisma/client';
+const lead={id:'lead',branchId:'branch',title:'Won site',companyName:'Company',contactName:'Contact',phone:'9999999999',email:'a@example.test',estimatedValue:100,customerId:'customer',assignedUserId:'sales',assignedUser:{managerId:null},customer:{id:'customer',name:'Company',address:'site',isAccountCustomer:false}};
+function fixture(edition='SALESPUNCH360_PLUS',modules:string[]=[]){return {$queryRaw:vi.fn(),company:{findUnique:vi.fn().mockResolvedValue({productEdition:edition,accountSettings:{enabledModules:modules}})},lead:{findFirst:vi.fn().mockResolvedValue(lead),update:vi.fn()},customer:{update:vi.fn(),create:vi.fn().mockResolvedValue({id:'new-customer'})},project:{findFirst:vi.fn().mockResolvedValue(null),create:vi.fn().mockResolvedValue({id:'project',projectNumber:'PRJ-1'})},projectAuditEvent:{create:vi.fn()}};}
+const actor={id:'admin',companyId:'company'};
+beforeEach(()=>{vi.clearAllMocks();m.number.mockResolvedValue('PRJ-1')});
+describe('Won Account customer handoff without Projects',()=>{
+ it('promotes the existing Sales identity without creating a project or new customer',async()=>{const tx=fixture();await ensureWonLeadProjectInTx(tx as unknown as Prisma.TransactionClient,actor,'lead');expect(tx.customer.update).toHaveBeenCalledWith({where:{id:'customer'},data:{isAccountCustomer:true}});expect(tx.customer.create).not.toHaveBeenCalled();expect(tx.project.create).not.toHaveBeenCalled();expect(m.number).not.toHaveBeenCalled();});
+ it('creates and links one Account customer when the Won lead has no identity',async()=>{const tx=fixture();tx.lead.findFirst.mockResolvedValue({...lead,customerId:null,customer:null} as unknown as typeof lead);await ensureWonLeadProjectInTx(tx as unknown as Prisma.TransactionClient,actor,'lead');expect(tx.customer.create).toHaveBeenCalledWith({data:expect.objectContaining({companyId:'company',branchId:'branch',name:'Company',phone:lead.phone,isAccountCustomer:true})});expect(tx.lead.update).toHaveBeenCalledWith({where:{id:'lead'},data:{customerId:'new-customer'}});expect(tx.project.create).not.toHaveBeenCalled();});
+ it('keeps Sales-only companies out of Account',async()=>{const tx=fixture('SALESPUNCH360');await ensureWonLeadProjectInTx(tx as unknown as Prisma.TransactionClient,actor,'lead');expect(tx.lead.findFirst).not.toHaveBeenCalled();expect(tx.customer.update).not.toHaveBeenCalled();expect(tx.customer.create).not.toHaveBeenCalled();});
+ it('requires the company-scoped Won lead before promotion',async()=>{const tx=fixture();tx.lead.findFirst.mockResolvedValue(null as unknown as typeof lead);await ensureWonLeadProjectInTx(tx as unknown as Prisma.TransactionClient,actor,'lead');expect(tx.lead.findFirst).toHaveBeenCalledWith(expect.objectContaining({where:{id:'lead',companyId:'company',stage:'WON'}}));expect(tx.customer.update).not.toHaveBeenCalled();});
+ it('preserves project creation when the module is enabled',async()=>{const tx=fixture('SALESPUNCH360_PLUS',['PROJECTS']);await ensureWonLeadProjectInTx(tx as unknown as Prisma.TransactionClient,actor,'lead');expect(tx.customer.update).toHaveBeenCalled();expect(tx.project.create).toHaveBeenCalledWith({data:expect.objectContaining({customerId:'customer',sourceLeadId:'lead'})});});
+});
