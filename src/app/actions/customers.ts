@@ -16,7 +16,12 @@ export async function manageCustomer(_: CustomerActionState, formData: FormData)
   } catch(error) { const code=error instanceof Error?error.message:"";return { error: code==="BRANCH_REQUIRED"?"Choose a branch and try again.":"Unable to save this customer. Check the branch, assignment, and details." }; }
   revalidatePath("/workspace/customers");
   revalidatePath("/workspace/leads");
-  return { success: "Customer saved." };
+  return { success: formData.get("operation") === "create" ? "Lead details saved." : "Customer saved." };
 }
 
 export async function createCustomerAction(formData:FormData){const parsed=createCustomerSchema.parse({name:formData.get("name"),phone:formData.get("phone"),assignedUserId:formData.get("assignedUserId"),branchId:formData.get("branchId")});await createCustomer(parsed);revalidatePath("/workspace/customers");revalidatePath("/workspace/leads");redirect("/workspace/customers");}
+
+export async function assignCustomerWithFeedback(formData:FormData){
+ try{await assignCustomerAction(formData);return {saved:true};}
+ catch(error){return {saveError:error instanceof Error&&error.message==="CUSTOMER_ALREADY_ASSIGNED"?"CUSTOMER_ALREADY_ASSIGNED":"ASSIGNMENT_FAILED"};}
+}
