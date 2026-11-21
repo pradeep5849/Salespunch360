@@ -1,0 +1,10 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({edit:vi.fn(),revalidate:vi.fn()}));
+vi.mock('@/lib/users/product-user-management',()=>({createAccountUser:vi.fn(),editAccountUser:m.edit}));
+vi.mock('next/cache',()=>({revalidatePath:m.revalidate}));
+vi.mock('next/navigation',()=>({redirect:vi.fn()}));
+import {manageAccountUser} from './product-users';
+const form=()=>{const f=new FormData();f.set('operation','edit-account');f.set('userId','target');return f};
+beforeEach(()=>vi.clearAllMocks());
+it('returns the handled Account seat error to the edit action state without success',async()=>{m.edit.mockRejectedValue(new Error('ACCOUNT_SEAT_LIMIT'));const result=await manageAccountUser({},form());expect(result.error).toContain('subscription limit');expect(result.success).toBeUndefined();expect(m.revalidate).not.toHaveBeenCalled()});
+it('does not render inherited error-map properties',async()=>{m.edit.mockRejectedValue(new Error('constructor'));expect((await manageAccountUser({},form())).error).toBe('Unable to update Account access.')});

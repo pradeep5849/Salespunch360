@@ -1,0 +1,10 @@
+import {it,expect} from 'vitest';
+import {effectiveAccountCapacity} from './account-capacity';
+const now=new Date('2026-11-21T06:00Z');
+const company={productEdition:'SALESPUNCH360_PLUS',subscriptionStatus:'ACTIVE',trialEndsAt:new Date('2026-12-01')};
+it('does not add a permanent free package to paid Account capacity',()=>expect(effectiveAccountCapacity(company,[{accountPackages:1,adminSeats:0,sourceOrder:{provider:'ACCOUNT_PACKAGE'}}],now).packageCount).toBe(1));
+it('includes combined Plus package capacity without counting Sales Admin seats',()=>expect(effectiveAccountCapacity(company,[{accountPackages:3,adminSeats:10,sourceOrder:{provider:'PLUS_COMBINED'}}],now).packageCount).toBe(3));
+it('supports legacy Account package records stored in adminSeats',()=>expect(effectiveAccountCapacity(company,[{adminSeats:2,sourceOrder:{provider:'ACCOUNT_PACKAGE'}}],now).packageCount).toBe(2));
+it('uses trial capacity as a floor rather than a paid bonus',()=>expect(effectiveAccountCapacity({...company,subscriptionStatus:'TRIAL'},[{adminSeats:0,accountPackages:2}],now).packageCount).toBe(2));
+it('provides one package for an unexpired trial only',()=>{expect(effectiveAccountCapacity({...company,subscriptionStatus:'TRIAL'},[],now).packageCount).toBe(1);expect(effectiveAccountCapacity({...company,subscriptionStatus:'TRIAL',trialEndsAt:new Date('2026-11-01')},[],now).packageCount).toBe(0)});
+it('provides no Account capacity to a Sales-only edition',()=>expect(effectiveAccountCapacity({...company,productEdition:'SALESPUNCH360'},[{adminSeats:9,accountPackages:9}],now).packageCount).toBe(0));

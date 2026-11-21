@@ -1,3 +1,4 @@
+import {effectiveAccountCapacity} from "@/lib/billing/account-capacity";
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
 import {currentPrices,createMobileAccountPackageOrder} from "@/lib/billing/service";
@@ -29,9 +30,8 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
   hasSales?db.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},select:{id:true,name:true,salesRole:true},orderBy:[{salesRole:"asc"},{name:"asc"}]}):Promise.resolve([])
  ]);
  const accountSubs=activeSubs.filter(sub=>sub.accountPackages>0||sub.sourceOrder?.provider==="ACCOUNT_PACKAGE");
- const paidAccountPackages=accountSubs.reduce((sum,sub)=>sum+(sub.accountPackages||(sub.sourceOrder?.provider==="ACCOUNT_PACKAGE"?sub.adminSeats:0)),0);
- const trialAccountPackages=hasAccount&&company.subscriptionStatus==="TRIAL"&&company.trialEndsAt&&company.trialEndsAt>now?1:0;
- const accountPackageCount=Math.max(paidAccountPackages,trialAccountPackages),accountLimits=accountPackageLimits(accountPackageCount);
+ const accountCapacity=effectiveAccountCapacity(company,accountSubs,now,hasAccount),trialAccountPackages=accountCapacity.trialPackages;
+ const accountPackageCount=accountCapacity.packageCount,accountLimits=accountPackageLimits(accountPackageCount);
  const accountUsage=Object.fromEntries(ACCOUNT_PACKAGE_ROLES.map(role=>[role,accountSeatUsers.filter(user=>user.accountRole===role).length])) as Record<(typeof ACCOUNT_PACKAGE_ROLES)[number],number>;
  const accountCurrent=accountSubs[0]??null;
  return{

@@ -1,0 +1,11 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({create:vi.fn(),travel:vi.fn(),revalidate:vi.fn(),redirect:vi.fn()}));
+vi.mock('@/lib/employees/service',()=>({createSalesEmployee:m.create,createManager:vi.fn(),deactivateEmployee:vi.fn(),editEmployee:vi.fn(),reactivateEmployee:vi.fn(),resetEmployeePassword:vi.fn(),changeSalesRole:vi.fn()}));
+vi.mock('@/lib/travel/service',()=>({updateEmployeeTravelSettings:m.travel}));
+vi.mock('next/cache',()=>({revalidatePath:m.revalidate}));
+vi.mock('next/navigation',()=>({redirect:m.redirect}));
+import {manageEmployee} from './employees';
+const form=()=>{const f=new FormData();for(const[k,v]of Object.entries({operation:'create-sales',name:'Sales user',email:'sales@example.invalid',phone:'',employeeCode:'',designation:'',dateOfJoining:'',password:'Password1234',confirmPassword:'Password1234',managerId:'',branchAccessScope:'ALL_BRANCHES',configureTravel:'yes',travelRatePerKm:'5',travelApprovalMode:'MANUAL'}))f.set(k,v);return f};
+beforeEach(()=>{vi.clearAllMocks();m.create.mockResolvedValue({id:'saved-employee'});m.travel.mockResolvedValue({})});
+it('acknowledges committed employee creation and offers targeted travel recovery',async()=>{m.travel.mockRejectedValue(new Error('DB_DOWN'));const result=await manageEmployee({},form());expect(result.success).toContain('created');expect(result.error).toBeUndefined();expect(result.warning).toContain('Do not create the employee again');expect(result.createdEmployeeId).toBe('saved-employee');expect(m.create).toHaveBeenCalledOnce();expect(m.revalidate).toHaveBeenCalledWith('/workspace/employees');expect(m.redirect).not.toHaveBeenCalled()});
+it('does not report a saved employee if creation failed',async()=>{m.create.mockRejectedValue(new Error('EMAIL_IN_USE'));const result=await manageEmployee({},form());expect(result.error).toContain('already in use');expect(result.createdEmployeeId).toBeUndefined();expect(m.travel).not.toHaveBeenCalled()});

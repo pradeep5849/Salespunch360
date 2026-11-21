@@ -14,16 +14,16 @@ export function SalesCreateForm({ branches, managers, managersEnabled }: { branc
   const fieldError = (name: string) => state.fieldErrors?.[name]?.[0];
 
   useEffect(() => {
-    if (!state.success) return;
+    if (!state.success||state.warning) return;
     router.replace("/workspace/employees?filter=sales");
     router.refresh();
-  }, [router, state.success]);
+  }, [router, state.success,state.warning]);
 
   return <form action={formAction} className="employee-form">
     <input type="hidden" name="operation" value="create-sales"/>
     <input type="hidden" name="configureTravel" value="yes"/>
     {state.error ? <p className="form-error" role="alert">{state.error}</p> : null}
-    {state.success ? <p className="form-success" role="status">{state.success}</p> : null}
+    {state.success ? <p className="form-success" role="status">{state.success}</p> : null}{state.warning&&<div className="form-error" role="alert"><p>{state.warning}</p>{state.createdEmployeeId&&<Link href={`/workspace/employees/sales/edit/${state.createdEmployeeId}`}>Review saved employee and travel settings</Link>}</div>}
     <label>Name<input name="name" required/>{fieldError("name")&&<span className="form-error">{fieldError("name")}</span>}</label>
     <label>Email<input name="email" type="email" required/>{fieldError("email")&&<span className="form-error">{fieldError("email")}</span>}</label>
     <label>Phone<input name="phone"/>{fieldError("phone")&&<span className="form-error">{fieldError("phone")}</span>}</label>
@@ -41,6 +41,6 @@ export function SalesCreateForm({ branches, managers, managersEnabled }: { branc
     </fieldset>
     <label>Password<input name="password" type="password" minLength={12} required/>{fieldError("password")&&<span className="form-error">{fieldError("password")}</span>}</label>
     <label>Confirm password<input name="confirmPassword" type="password" minLength={12} required/>{fieldError("confirmPassword")&&<span className="form-error">{fieldError("confirmPassword")}</span>}</label>
-    <div><button type="submit" disabled={pending}>{pending?"Saving...":"Save"}</button>{" "}<Link href="/workspace/employees">Cancel</Link></div>
+    <div><button type="submit" disabled={pending||Boolean(state.createdEmployeeId)}>{pending?"Saving...":"Save"}</button>{" "}<Link href="/workspace/employees">Cancel</Link></div>
   </form>;
 }
