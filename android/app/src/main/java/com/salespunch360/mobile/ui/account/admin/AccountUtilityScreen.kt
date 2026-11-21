@@ -223,6 +223,27 @@ fun AccountUtilityScreen(
                 Button(enabled=!state.loading && !fileBusy,onClick = {vm.backup(true)}) { Text(if(backupMode=="phone") "Save records and private files" else "Share records and private files") }
                 }
             }
+            "verification" -> Column {
+                Text("Company-wide read-only checks. A PASS applies only to the named check.")
+                Text("Not checked: bank statements, physical stock, complete allocation reconciliation and every lock anomaly.")
+                state.verificationCompletedAt?.let { Text("Completed: $it") }
+                if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if(!state.loading && state.rows.isEmpty()) Text("No verification result available. Refresh to run checks.")
+                Button(enabled=!state.loading,onClick={vm.load("verification")}) { Text("Refresh verification") }
+                LazyColumn {
+                    items(state.rows.toList()) { element ->
+                        val check=element.jsonObject
+                        Card(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("${check["status"]?.jsonPrimitive?.content.orEmpty()} · ${check["check"]?.jsonPrimitive?.content.orEmpty()}")
+                                Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
+                                Text(check["recommendation"]?.jsonPrimitive?.content.orEmpty())
+                                check["samples"]?.jsonArray?.takeIf { it.isNotEmpty() }?.let { samples -> Text("Sample identifiers: " + samples.joinToString { it.jsonPrimitive.content }) }
+                            }
+                        }
+                    }
+                }
+            }
             else -> Column {
                 if(state.recycleHasMore) Button(enabled=!state.loading,onClick={vm.load("recycle",true)}) { Text("Load more archived records") }
                 JsonList(state.rows, !state.loading) { id -> confirmRestore = id }

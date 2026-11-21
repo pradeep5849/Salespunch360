@@ -1,3 +1,4 @@
+import { missingCanonicalLedgerKeys } from "./verification-ledgers";
 import { mismatchedTransferSources } from "./verification-transfers";
 import {redactAuditMetadata} from "./audit-redaction";
 import {readRestoreSnapshot} from "./restore-snapshot";
@@ -194,6 +195,13 @@ export async function verifyAccountDataForActor(actor: {
       negative.map((x) => x.documentNumber),
       "Review settlement and advance allocations.",
     ),
+    ...(!scope ? [result(
+      "Canonical system-ledger readiness",
+      missingCanonicalLedgerKeys(systemLedgers).length,
+      missingCanonicalLedgerKeys(systemLedgers),
+      "Account initialization may be incomplete. Ask an authorized administrator to review the canonical ledger setup; verification does not create ledgers.",
+      true,
+    )] : []),
     result(
       "System ledgers are unique",
       duplicateLedgers.length,
