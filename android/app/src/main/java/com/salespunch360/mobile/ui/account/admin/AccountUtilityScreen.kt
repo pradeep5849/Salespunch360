@@ -223,7 +223,10 @@ fun AccountUtilityScreen(
                 Button(enabled=!state.loading && !fileBusy,onClick = {vm.backup(true)}) { Text(if(backupMode=="phone") "Save records and private files" else "Share records and private files") }
                 }
             }
-            else -> JsonList(state.rows) { id -> confirmRestore = id }
+            else -> Column {
+                if(state.recycleHasMore) Button(enabled=!state.loading,onClick={vm.load("recycle",true)}) { Text("Load more archived records") }
+                JsonList(state.rows, !state.loading) { id -> confirmRestore = id }
+            }
         }
     }
 
@@ -231,7 +234,7 @@ fun AccountUtilityScreen(
         AlertDialog(
             onDismissRequest = { confirmRestore = null },
             title = { Text("Restore record?") },
-            text = { Text("The server will verify conflicts and permissions before restoring.") },
+            text = { val record=state.rows.firstOrNull { it.jsonObject["id"]?.jsonPrimitive?.content == id }?.jsonObject; Text("Restore ${record?.get("displayName")?.jsonPrimitive?.content.orEmpty()} (${record?.get("entityType")?.jsonPrimitive?.content.orEmpty()})? The server will verify conflicts and permissions.") },
             confirmButton = { Button(onClick = { vm.restored(id); confirmRestore = null }) { Text("Restore") } },
             dismissButton = { TextButton(onClick = { confirmRestore = null }) { Text("Cancel") } }
         )
@@ -239,7 +242,7 @@ fun AccountUtilityScreen(
 }
 
 @Composable
-private fun JsonList(rows: JsonArray, onRestore: ((String) -> Unit)? = null) {
+private fun JsonList(rows: JsonArray, enabled: Boolean = true, onRestore: ((String) -> Unit)? = null) {
     LazyColumn {
         items(rows.toList()) { element ->
             val item = element.jsonObject
@@ -247,12 +250,14 @@ private fun JsonList(rows: JsonArray, onRestore: ((String) -> Unit)? = null) {
                 Column(Modifier.padding(12.dp)) {
                     Text(item["displayName"]?.jsonPrimitive?.content ?: item["fileName"]?.jsonPrimitive?.content ?: item.toString())
                     if(onRestore!=null) {
+                        Text("${item["entityType"]?.jsonPrimitive?.content.orEmpty()} · ${item["archivedAt"]?.jsonPrimitive?.content.orEmpty()}")
+                        Text(item["reason"]?.jsonPrimitive?.content.orEmpty())
                         Text("Scheduled cleanup permanently deletes unlinked records after seven days; linked history is retained.")
                         item["purgeBlockedReason"]?.jsonPrimitive?.contentOrNull?.let { Text("Retained: " + it.replace('_', ' ').lowercase()) }
                     }
                     onRestore?.let { restore ->
                         val id = item["id"]?.jsonPrimitive?.contentOrNull
-                        if (id != null) Button(onClick = { restore(id) }) { Text("Restore") }
+                        if (id != null) Button(enabled=enabled,onClick = { restore(id) }) { Text("Restore") }
                     }
                 }
             }

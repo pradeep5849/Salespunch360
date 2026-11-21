@@ -400,12 +400,14 @@ export async function mobileUtilities(u: MobileAppPrincipal, kind: string,query:
     const {auditHistoryPageForActor}=await import("@/lib/account/audit-history");
     return auditHistoryPageForActor(a,query);
   }
-  if (kind === "recycle-bin")
-    return db.accountRecycleRecord.findMany({
-      where: { companyId: a.companyId, restoredAt: null, purgedAt: null },
-      orderBy: { archivedAt: "desc" },
-      take: 100,
-    });
+  if (kind === "recycle-bin") {
+    if (!query || typeof query !== "object" || !("paged" in query) || query.paged !== "true") {
+      return db.accountRecycleRecord.findMany({ where: { companyId: a.companyId, restoredAt: null, purgedAt: null }, orderBy: [{ archivedAt: "desc" }, { id: "desc" }], take: 100 });
+    }
+    const { recycleListForCompany } = await import("@/lib/account/recycle-list");
+    const result = await recycleListForCompany(a.companyId, query);
+    return result.hasMore ? [...result.items, { hasMore: true }] : result.items;
+  }
   if (kind === "verification") return verifyAccountDataForActor(a);
   if(kind==="export-types")return (await import("@/lib/account/transfer-access")).availableTransferTypes(a);
   if (kind === "imports")

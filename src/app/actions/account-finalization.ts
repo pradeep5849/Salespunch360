@@ -19,3 +19,8 @@ export async function archiveProjectAction(fd: FormData) {
   revalidatePath("/workspace/account/utilities/recycle-bin");
   redirect("/workspace/account/projects");
 }
+
+export async function restoreMasterWithFeedback(_previous: { ok: boolean; message: string }, fd: FormData) {
+  try { await restoreMasterAction(fd); return { ok: true, message: "Record restored successfully." }; }
+  catch { return { ok: false, message: "Restore was not confirmed. Refresh the list: the record may already be restored, unavailable, or conflict with an existing record." }; }
+}

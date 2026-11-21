@@ -280,7 +280,7 @@ class ApiClient(private val session:SecureSession,private val pinnedToken:String
  suspend fun previewNumberingRestart(seriesId:String,prefix:String,reason:String)=json.decodeFromString<NumberingRestartReview>(call("api/v1/mobile/account/numbering-restart","POST",json.encodeToString(buildJsonObject{put("action","PREVIEW");put("input",buildJsonObject{put("seriesId",seriesId);put("prefix",prefix);put("reason",reason)})})))
  suspend fun confirmNumberingRestart(token:String)=call("api/v1/mobile/account/numbering-restart","POST",json.encodeToString(buildJsonObject{put("action","CONFIRM");put("input",buildJsonObject{put("token",token);put("confirmed",true)})}))
  suspend fun accountAuditHistory(query:String="")=json.decodeFromString<AccountAuditPage>(call("api/v1/mobile/account/utilities/audit"+(if(query.isBlank())""else"?$query")))
- suspend fun accountUtility(kind:String)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}")).jsonArray
+ suspend fun accountUtility(kind:String,page:Int=1)=json.parseToJsonElement(call("api/v1/mobile/account/utilities/${enc(kind)}?page=$page&paged=true")).jsonArray
  suspend fun setAccountReportFavourite(reportKey:String,favourite:Boolean)=json.parseToJsonElement(call("api/v1/mobile/account/reports/favourites","POST",buildJsonObject{put("reportKey",reportKey);put("favourite",favourite)}.toString())).jsonObject
  suspend fun accountReportOptions()=json.parseToJsonElement(call("api/v1/mobile/account/reports/options")).jsonObject
  suspend fun accountReport(name:String,filters:Map<String,String>)=json.parseToJsonElement(call("api/v1/mobile/account/reports/${enc(name)}"+filters.entries.joinToString("&",prefix=if(filters.isEmpty())"" else "?"){"${enc(it.key)}=${enc(it.value)}"})).jsonObject
