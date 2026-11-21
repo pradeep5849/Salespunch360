@@ -416,7 +416,7 @@ export async function runFinancialReportForActor(
           },
         },
         include: { journalEntry: true },
-        orderBy: { journalEntry: { entryDate: "asc" } },
+        orderBy: [{ journalEntry: { entryDate: "asc" } }, { journalEntry: { id: "asc" } }, { lineNumber: "asc" }, { id: "asc" }],
       }),
     ]);
     const opening = new D(openingAgg._sum.debit ?? 0).sub(
@@ -1040,9 +1040,9 @@ async function projectReport(name: string, raw: unknown, actor: ProjectActor) {
     columns: [
       "Project",
       "Name",
-      "Revenue Base",
+      "Contract Revenue",
       "Actual Cost",
-      "Profit",
+      "Billed Profit",
       "Budget Variance",
     ],
     rows: projects.map((p, index) => {
@@ -1056,7 +1056,7 @@ async function projectReport(name: string, raw: unknown, actor: ProjectActor) {
         n(x.metrics.budgetVariance),
       ];
     }),
-    note: "Lifetime-to-date project values. Date filters do not apply.",
+    note: "Lifetime-to-date project values. Date filters do not apply. Contract Revenue is the agreed project value; Billed Profit uses posted invoice revenue less Actual Cost. Unbilled contract revenue is not included in Billed Profit.",
   };
 }
 
