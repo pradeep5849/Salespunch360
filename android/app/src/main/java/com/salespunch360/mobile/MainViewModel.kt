@@ -96,8 +96,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (_state.value.submitting) return
         _state.value = _state.value.copy(submitting = true, message = null)
         viewModelScope.launch {
+            var confirmation = ""
             try {
                 val saved = api.attendance(if (start) "START" else "END", location).attendance
+                val confirmedAt = if(start) saved.startedAt else saved.endedAt
+                confirmation = confirmedAt?.let { value ->
+                    val time = runCatching { java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, h:mm a")) + " IST" }.getOrDefault(value)
+                    "Attendance ${if(start) "started" else "stopped"} successfully at $time."
+                } ?: "Attendance saved. Refresh to verify its confirmed time."
                 val bootstrap = _state.value.bootstrap
                 if (bootstrap != null) _state.value = _state.value.copy(bootstrap = bootstrap.copy(attendance = if (start) saved else null))
                 if (start && bootstrap?.features?.gpsTrackingEnabled == true) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
@@ -107,7 +113,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 throw e
             } catch (e: Exception) {
                 if (e is IOException) {
-                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
+                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES); _state.value = _state.value.copy(message=confirmation) }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR) }
                 }
@@ -116,9 +122,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 _state.value = _state.value.copy(submitting = false)
             }
-            try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
+            try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES); _state.value = _state.value.copy(message=confirmation) }
             catch (e: CancellationException) { throw e }
-            catch (_: Exception) { _state.value = _state.value.copy(message = "Attendance saved; refresh pending. Refresh when connected.") }
+            catch (_: Exception) { _state.value = _state.value.copy(message = "$confirmation Refresh pending; refresh when connected.") }
         }
     }
 

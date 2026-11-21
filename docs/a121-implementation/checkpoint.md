@@ -1,0 +1,7 @@
+# A121 attendance implementation slice
+
+21 November 2026, continuing PR212. Web actions return persisted start/stop timestamps; controls show explicit success with IST date/time only after successful response, recover rejected transport without unhandled promises, retain location permission guidance, and provide GPS retry. Geofence-only starts obtain a position without enabling continuous browser GPS tracking; geofence-only stops do not demand a position. Multi-authorized-branch starts have a branch selector populated from server authority; service validation remains unchanged. Single branch selector stays hidden.
+
+Web team attendance has visible-tab 60-second refresh, a manual refresh and scoped empty state. Native MainViewModel now shows saved server start/stop confirmation times in IST, retaining confirmed-save distinction when bootstrap refresh fails. Remaining native optional-location/branch selection and tracking recovery coverage still need implementation/verification. No A121 full closure.
+
+16 focused attendance cases passed including three new persisted-time/failure tests and existing security/overview/page checks. Broader combined attendance+billing run: 29 passing tests (not an additional independent count). Full TypeScript and changed-file lint passed before new entry test; Android compile/device and browser/geolocation acceptance remain CI/manual limitations. No actual attendance or location record created during implementation.
