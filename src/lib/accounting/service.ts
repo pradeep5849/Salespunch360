@@ -305,6 +305,7 @@ export async function setPeriodLockForActor(
           where: { companyId: a.companyId, financialYearId: d.financialYearId },
         }),
       ]);
+      if (fy && fy.status !== "OPEN") throw new Error("FINANCIAL_YEAR_CLOSED");
       if (
         !fy ||
         (d.lockedThrough &&

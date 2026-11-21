@@ -93,7 +93,7 @@ fun FinancialYearScreen(
             kind = kind,
             review = state.closeReview,
             busy = state.saving || state.loading,
-            years = years,
+            years = if (kind == "period-locks") years.filter { it.str("status") == "OPEN" } else years,
             close = vm::close,
             save = { target, payload -> vm.save(target, payload) }
         )
@@ -128,7 +128,9 @@ private fun FinancialDialog(
                         OutlinedTextField(to, { to = it }, label = { Text("End date") })
                     }
                     "period-locks" -> {
-                        Option("Financial year", year, years) { year = it }
+                        Option("Financial year", year, years) { year = it; confirmed = false }
+                        Text("Posting and corrections through this date will be blocked. This lock cannot be moved backward.")
+                        Row { Checkbox(confirmed,{confirmed=it}); Text("I confirm the selected year and lock date.") }
                         OutlinedTextField(to, { to = it }, label = { Text("Lock through") })
                         OutlinedTextField(reason, { reason = it }, label = { Text("Reason") })
                     }
@@ -155,7 +157,7 @@ private fun FinancialDialog(
         },
         confirmButton = {
             Button(
-                enabled = !busy && (!kind.startsWith("close:") || (review?.get("canClose")?.jsonPrimitive?.booleanOrNull==true && confirmed && (review["earlyClose"]?.jsonPrimitive?.booleanOrNull!=true || reason.isNotBlank()))),
+                enabled = !busy && (kind != "period-locks" || (confirmed && year.isNotBlank() && to.isNotBlank() && reason.isNotBlank())) && (!kind.startsWith("close:") || (review?.get("canClose")?.jsonPrimitive?.booleanOrNull==true && confirmed && (review["earlyClose"]?.jsonPrimitive?.booleanOrNull!=true || reason.isNotBlank()))),
                 onClick = {
                     when (kind) {
                         "financial-years" -> save(

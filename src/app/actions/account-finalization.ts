@@ -19,3 +19,15 @@ export async function archiveProjectAction(fd: FormData) {
   revalidatePath("/workspace/account/utilities/recycle-bin");
   redirect("/workspace/account/projects");
 }
+
+export async function advancePeriodLockWithFeedback(_previous: { message: string; ok: boolean }, fd: FormData) {
+  if (fd.get("confirmed") !== "on") return { ok: false, message: "Confirm that posting and corrections through this date will be blocked." };
+  try {
+    await advancePeriodLockAction(fd);
+    return { ok: true, message: "Period lock advanced successfully." };
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    const message = code === "FINANCIAL_YEAR_CLOSED" ? "This financial year is closed and cannot be changed." : code === "PERIOD_UNLOCK_NOT_SUPPORTED" ? "A lock can only move forward. Refresh to review the current lock." : code === "INVALID_LOCK_DATE" ? "Choose a date within the open financial year." : "The lock could not be saved. Refresh the current lock before trying again.";
+    return { ok: false, message };
+  }
+}
