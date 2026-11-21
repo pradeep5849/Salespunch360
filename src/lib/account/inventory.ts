@@ -99,6 +99,7 @@ async function balance(
 }
 const movement = z
   .object({
+    requestKey: z.string().guid().optional(),
     warehouseId: z.string().guid(),
     productId: z.string().guid(),
     quantity: qty,
@@ -118,7 +119,8 @@ export async function createStockMovementForActor(
   raw: unknown,
 ) {
   await assertInventoryAvailable(a);
-  const d = movement.parse(raw);
+  const {requestKey,...d} = movement.parse(raw);
+  if(requestKey)d.sourceId=requestKey;
   return db.$transaction(
     async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${a.companyId}::uuid FOR UPDATE`;
@@ -129,6 +131,13 @@ export async function createStockMovementForActor(
         tx.accountSettings.findUnique({ where: { companyId: a.companyId! } }),
       ]);
       const q = new D(d.quantity);
+      if(requestKey){
+        const saved=await tx.stockMovement.findFirst({where:{companyId:a.companyId,sourceType:d.sourceType,sourceId:requestKey}});
+        if(saved){
+          if(saved.movementType!==type||saved.warehouseId!==w.id||saved.productId!==p.id||!saved.quantity.equals(q)||!saved.unitCost.equals(d.unitCost)||saved.movementDate.toISOString().slice(0,10)!==d.movementDate.toISOString().slice(0,10)||(saved.batchId??undefined)!==d.batchId||(saved.serialNumberId??undefined)!==d.serialNumberId||(saved.reason??undefined)!==d.reason)throw new Error("IDEMPOTENCY_CONFLICT");
+          return saved;
+        }
+      }
       if (p.trackingMode === "BATCH" && !d.batchId)
         throw new Error("BATCH_REQUIRED");
       if (p.trackingMode === "SERIAL" && (!d.serialNumberId || !q.equals(1)))
@@ -209,6 +218,7 @@ export const adjustStock = (direction: "IN" | "OUT", raw: unknown) =>
   );
 export const transferInput = z
   .object({
+    requestKey: z.string().guid().optional(),
     sourceWarehouseId: z.string().guid(),
     destinationWarehouseId: z.string().guid(),
     productId: z.string().guid(),
@@ -250,6 +260,14 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
         }),
         valuation = stockValuation(sourceRows),
         q = new D(d.quantity);
+      if(d.requestKey){
+        const saved=await tx.stockMovement.findMany({where:{companyId:a.companyId,sourceType:"TRANSFER",sourceId:d.requestKey}});
+        if(saved.length){
+          const out=saved.find(row=>row.movementType==="TRANSFER_OUT"),incoming=saved.find(row=>row.movementType==="TRANSFER_IN");
+          if(saved.length!==2||!out||!incoming||out.warehouseId!==source.id||incoming.warehouseId!==destination.id||saved.some(row=>row.productId!==p.id||!row.quantity.equals(q)||row.movementDate.toISOString().slice(0,10)!==d.movementDate.toISOString().slice(0,10)||(row.batchId??undefined)!==d.batchId||(row.serialNumberId??undefined)!==d.serialNumberId||row.reason!==d.reason))throw new Error("IDEMPOTENCY_CONFLICT");
+          return [out,incoming];
+        }
+      }
       if (
         !(settings?.negativeStockAllowed ?? false) &&
         valuation.quantity.lt(q)
@@ -257,7 +275,7 @@ export async function transferStockForActor(a: ProjectActor, raw: unknown) {
         throw new Error("INSUFFICIENT_STOCK");
       if (d.serialNumberId && (!q.equals(1) || !valuation.quantity.equals(1)))
         throw new Error("SERIAL_NOT_AVAILABLE");
-      const transferId = crypto.randomUUID(),
+      const transferId = d.requestKey ?? crypto.randomUUID(),
         unitCost = valuation.quantity.gt(0)
           ? valuation.stockValue.div(valuation.quantity)
           : valuation.averageUnitCost,
@@ -1013,6 +1031,7 @@ export async function lowStockSnapshot() {
 export async function recordOpeningStock(raw: unknown) {
   const d = z
     .object({
+      requestKey: z.string().guid().optional(),
       warehouseId: z.string().guid(),
       productId: z.string().guid(),
       quantity: qty,
@@ -1026,12 +1045,13 @@ export async function recordOpeningStock(raw: unknown) {
   return createOpeningStock({
     ...d,
     sourceType: "OPENING_STOCK",
-    sourceId: crypto.randomUUID(),
+    sourceId: d.requestKey ?? crypto.randomUUID(),
   });
 }
 export async function recordAdjustment(raw: unknown) {
   const d = z
     .object({
+      requestKey: z.string().guid().optional(),
       direction: z.enum(["IN", "OUT"]),
       warehouseId: z.string().guid(),
       productId: z.string().guid(),
@@ -1048,6 +1068,6 @@ export async function recordAdjustment(raw: unknown) {
   return adjustStock(direction, {
     ...movementInput,
     sourceType: "STOCK_ADJUSTMENT",
-    sourceId: crypto.randomUUID(),
+    sourceId: d.requestKey ?? crypto.randomUUID(),
   });
 }

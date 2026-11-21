@@ -11,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 
 data class InventoryState(
+ val requestKey:String=java.util.UUID.randomUUID().toString(),
  val loading:Boolean=false,
  val saving:Boolean=false,
  val mode:String="stock",
@@ -36,7 +37,7 @@ class AccountInventoryViewModel(app:Application):AndroidViewModel(app){
  fun context(query:String){contextQuery=query}
  fun show(mode:String){_state.value=_state.value.copy(mode=mode,editing=null);load()}
  fun search(q:String){_state.value=_state.value.copy(query=q)}
- fun create(kind:String){_state.value=_state.value.copy(editing=kind)}
+ fun create(kind:String){_state.value=_state.value.copy(editing=kind,requestKey=java.util.UUID.randomUUID().toString())}
  fun dismiss(){_state.value=_state.value.copy(editing=null)}
  fun load(){
  loadJob?.cancel();val request=++generation;val mode=_state.value.mode;val query=contextQuery
@@ -59,9 +60,11 @@ class AccountInventoryViewModel(app:Application):AndroidViewModel(app){
   }catch(e:CancellationException){throw e}catch(e:Exception){if(request==generation)fail(e)}
  }}
  fun save(kind:String,payload:JsonObject)=viewModelScope.launch{
+  if(_state.value.saving)return@launch
+  val submitted=if(kind in setOf("opening","adjustments","transfers")) buildJsonObject{payload.forEach{(key,value)->put(key,value)};put("requestKey",_state.value.requestKey)} else payload
   _state.value=_state.value.copy(saving=true,error=null)
   try{
-   api.inventoryMutation(kind,payload)
+   api.inventoryMutation(kind,submitted)
    _state.value=_state.value.copy(saving=false,editing=null,message="Inventory movement confirmed by the server.")
    show(kind)
   }catch(e:Exception){fail(e)}
@@ -69,6 +72,7 @@ class AccountInventoryViewModel(app:Application):AndroidViewModel(app){
  private fun fail(e:Exception){
   _state.value=_state.value.copy(loading=false,saving=false,error=when{
    e is IOException->"You're offline. No inventory change was confirmed."
+   e is ApiException&&e.code=="IDEMPOTENCY_CONFLICT"->"This request was already saved with different details. Refresh and review the movement before starting a new one."
    e is ApiException&&e.status==403->"Permission or subscription entitlement does not allow this action."
    else->"The server rejected the inventory action."
   })

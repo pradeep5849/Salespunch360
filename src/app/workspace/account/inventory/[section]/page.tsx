@@ -1,3 +1,5 @@
+import {StockMovementForm} from "@/components/account/stock-movement-form";
+import {SaveSubmitButton} from "@/components/account/save-feedback";
 import { AccountDate } from "@/components/account/display-preferences";
 import { Money } from "@/components/account/account-ui";
 import { ProductPriceForm } from "@/components/account/product-price-form";
@@ -327,7 +329,7 @@ export default async function Page({
         : transferAction;
   return (
     <Shell title={section.replaceAll("-", " ")}>
-      <form action={action} className="stack">
+      <StockMovementForm action={action} initialRequestKey={crypto.randomUUID()}>
         {section === "transfers" ? (
           <>
             <Warehouse o={o} name="sourceWarehouseId" label="Source" />
@@ -395,8 +397,8 @@ export default async function Page({
             required
           />
         )}
-        <button>Save {section}</button>
-      </form>
+        <SaveSubmitButton pendingLabel="Saving…">Save {section}</SaveSubmitButton>
+      </StockMovementForm>
     </Shell>
   );
 }

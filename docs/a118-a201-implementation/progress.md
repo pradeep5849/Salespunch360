@@ -26,3 +26,7 @@ Owner selected update-on-attendance-stop with same-day cumulative sessions: morn
 Latest cumulative-travel head: full suite 4049 passed/409 skipped; four separately enabled travel SQL cases passed; TypeScript and changed-file lint passed. Owner travel decision resolved. Final GitHub/platform acceptance and remaining finding slices still pending.
 
 Financial-year/master continuation: transactional standalone year bootstrap, year bounds/status cards, explicit saved master detail fields with cost-view gating, category-specific Work list/Add flow and safe master action dispatch. Latest slice TypeScript/lint and focused suites passed; details/edit workflows remain open. Android retry on earlier travel head passed after dependency resolution failure; final-head CI still required.
+
+Inventory retry continuation: stable web/native draft keys and backend payload-checked replay for openings, adjustments and paired transfers. Six SQL tests passed, including concurrent attempts and replay after source depletion; 20 existing inventory tests passed. Final latest-head full regression/CI remains required. Legacy clients without keys require an app update for retry protection. See docs/a183-a185-implementation/checkpoint.md.
+
+Latest stock/master/year full local regression: 4056 passed, 415 skipped, zero failed. Six stock SQL cases passed separately. TypeScript/lint passed. Native stock draft key changes still require latest-head CI; no production stock operations.

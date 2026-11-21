@@ -114,7 +114,7 @@ export async function mobileOpening(u: MobileAppPrincipal, raw: unknown) {
   return createStockMovementForActor(a, "OPENING", {
     ...d,
     sourceType: "OPENING_STOCK",
-    sourceId: crypto.randomUUID(),
+    sourceId: typeof d.requestKey === "string" ? d.requestKey : crypto.randomUUID(),
   });
 }
 export async function mobileAdjustment(u: MobileAppPrincipal, raw: unknown) {
