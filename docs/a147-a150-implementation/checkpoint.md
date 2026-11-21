@@ -1,0 +1,12 @@
+# Lead editing, pending queue and Won customer handoff
+
+Continuing draft PR212; no production lead/customer operations.
+
+- A150-F04: Won handoff separates Account capability from Projects availability. A Plus company promotes its existing Sales customer (preserving identity) or creates/links a customer for the Won lead even with Projects off. Projects still require their module; Sales-only companies do not enter Account. Existing lead lock, company/Won query and shared serializable transition retained. Historical missing-customer backfill not run. Five transaction-client tests passed with ten existing project handoff/workflow contracts; real SQL and installed-device acceptance remain pending.
+- A147-F01: explicit blank/null optional edit fields become null; omitted fields remain untouched. Android no longer restores saved fields over explicit nulls. Estimated value follows the same supplied/omitted distinction. Shared validation, scoped lock, optimistic version and assignment checks retained. Tests cover actual service update payload and mobile forwarding as well as parser boundary cases.
+- A147-F02: stale web edits retain the draft and give specific copy/reload/review guidance. Explicit reload requires confirmation before discarding unsaved input. No automatic stale overwrite/retry. Action test verifies no success/revalidation on conflict.
+- A150-F01: web pending phone queue uses bounded 50-row paging with a next-page sentinel and stable checkedInAt/id order. Company/actor/branch predicates remain. Search/employee/view parameters survive pagination. Legacy list helper and existing native paging unchanged. Offset pages may shift under concurrent edits; no snapshot/export guarantee.
+- A150-F02: name/phone search is available to Sales and Telecallers independently of privileged employee selection. Existing stage and pending filters are retained.
+- A150-F03: Telecallers do not see stage mutation controls; shared server denial is unchanged.
+
+Focused lead/employee/inventory run: 62 passed, including shared edit/assignment safeguards, mobile forwarding and server-rendered search/stage/paging checks. Separate inventory product tests and employee contract correction documented in the related checkpoint. Full batched regression/typecheck/lint and final CI recorded in progress.md. No browser/geolocation/device certification claimed. A147-F03 handover notifications remain open.
