@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.salespunch360.mobile.accountUserMatches
 import com.salespunch360.mobile.AccountAdministrationViewModel
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.ui.account.sales.SelectField
@@ -451,6 +452,9 @@ private fun UserView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boo
  val root=data as? JsonObject?:return
  val branches=root["branches"]?.jsonArray?.map{it.jsonObject}.orEmpty()
  val canManage=root["canManageAccountUsers"]?.jsonPrimitive?.booleanOrNull==true
+ var search by remember{mutableStateOf("")}
+ val directory=root["users"]?.jsonArray?.toList().orEmpty()
+ val matches=directory.filter{accountUserMatches(it.jsonObject,search)}
  var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var role by remember{mutableStateOf("ACCOUNTANT")};var scope by remember{mutableStateOf("ALL_BRANCHES")};val selected=remember{mutableStateListOf<String>()}
  LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
   if(canManage)item{
@@ -463,8 +467,8 @@ private fun UserView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boo
     Button({vm.saveUser(buildJsonObject{put("name",name.trim());put("email",email.trim());put("password",password);put("confirmPassword",password);put("accountRole",role);put("branchAccessScope",scope);putJsonArray("branchIds"){if(scope=="SELECTED_BRANCHES")selected.forEach{add(it)}}})},enabled=!busy&&name.isNotBlank()&&email.isNotBlank()&&password.isNotBlank()&&(scope=="ALL_BRANCHES"||selected.isNotEmpty())){Text("Create Account user")}
    }
   }
-  item{Text("Effective roles and access",fontWeight=FontWeight.Bold)}
-  items(root["users"]?.jsonArray?.toList().orEmpty(),key={it.jsonObject.str("id")}){element->AccountUserEditor(element.jsonObject,branches,canManage,busy,vm)}
+  item{Text("Effective roles and access",fontWeight=FontWeight.Bold);OutlinedTextField(search,{search=it},label={Text("Search name, email, phone or role")},singleLine=true,modifier=Modifier.fillMaxWidth());Text("${matches.size} of ${directory.size} loaded employees");if(matches.isEmpty()&&!busy)Text("No employees match this search.")}
+  items(matches,key={it.jsonObject.str("id")}){element->AccountUserEditor(element.jsonObject,branches,canManage,busy,vm)}
  }
 }
 
