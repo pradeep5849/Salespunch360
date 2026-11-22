@@ -8,6 +8,7 @@ vi.mock('@/lib/db',()=>({db:new Proxy({},{get:(_,key)=>{
  }})),{maxWait:10000,timeout:10000,...options});
  const value=client[key as keyof PrismaClient];return typeof value==='function'?value.bind(client):value;
 }})}));
+import {verifyAccountDataForActor} from '@/lib/account/utilities';
 import {createTelecallerEmployeeForActor} from '@/lib/telecalling/team';
 import {callbackPageForActor} from '@/lib/telecalling/callback-page';
 import {createCustomerForActor} from '@/lib/customers/service';
@@ -61,4 +62,22 @@ it.skipIf(!databaseUrl)('allows one concurrent paid Telecaller creation into the
  const denied=results.find(result=>result.status==='rejected') as PromiseRejectedResult;expect(denied.reason.message).toBe('TELECALLER_SEAT_LIMIT');
  const created=(results.find(result=>result.status==='fulfilled') as PromiseFulfilledResult<{id:string}>).value;
  expect(await client.user.findUnique({where:{id:created.id},select:{companyId:true,salesRole:true,designation:true,salesAccessActive:true,accountRole:true,accountAccessActive:true}})).toEqual({companyId,salesRole:'SALES',designation:'Telecaller',salesAccessActive:false,accountRole:null,accountAccessActive:false});
+},30000);
+
+it.skipIf(!databaseUrl)('returns an explicit incomplete scan before loading an oversized real company collection',async()=>{
+ await client.$executeRaw(Prisma.sql`INSERT INTO "customers" (id,"companyId","branchId",name,"createdAt","updatedAt") SELECT gen_random_uuid(),${companyId}::uuid,${branchId}::uuid,'Verification fixture '||n,NOW(),NOW() FROM generate_series(1,10001) n`);
+ const checks=await client.$transaction(tx=>verifyAccountDataForActor({id:ownerId,companyId},tx),{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:15000});
+ expect(checks).toHaveLength(1);expect(checks[0]).toMatchObject({status:'ERROR',affected:0,incomplete:true});expect(checks[0].samples).toContain('Customers: 10001 (limit 10000)');
+},30000);
+
+it.skipIf(!databaseUrl)('verifies stored warehouse transfer precision and reports an unmatched source',async()=>{
+ const unit=await client.accountUnit.create({data:{companyId,name:'Fixture unit',symbol:'FX'}});
+ const product=await client.accountProduct.create({data:{companyId,name:'Fixture product',unitId:unit.id,trackInventory:true}});
+ const source=await client.warehouse.create({data:{companyId,branchId,name:'Fixture source',code:`S-${randomUUID().slice(0,8)}`}}),destination=await client.warehouse.create({data:{companyId,branchId,name:'Fixture destination',code:`D-${randomUUID().slice(0,8)}`}});
+ const sourceId=randomUUID(),base={companyId,branchId,productId:product.id,quantity:new Prisma.Decimal(2),unitCost:new Prisma.Decimal('1.2345'),totalCost:new Prisma.Decimal('2.47'),sourceType:'TRANSFER',sourceId,movementDate:new Date('2026-11-22T00:00:00Z'),createdById:ownerId};
+ await client.stockMovement.createMany({data:[{...base,warehouseId:source.id,movementType:'TRANSFER_OUT'},{...base,warehouseId:destination.id,movementType:'TRANSFER_IN'}]});
+ const scan=()=>client.$transaction(tx=>verifyAccountDataForActor({id:ownerId,companyId},tx),{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:15000});
+ expect((await scan()).find(row=>row.check==='Warehouse transfer legs reconcile')).toMatchObject({status:'PASS',affected:0});
+ const broken=randomUUID();await client.stockMovement.create({data:{...base,sourceId:broken,warehouseId:source.id,movementType:'TRANSFER_OUT'}});
+ expect((await scan()).find(row=>row.check==='Warehouse transfer legs reconcile')).toMatchObject({status:'ERROR',affected:1,samples:[broken]});
 },30000);

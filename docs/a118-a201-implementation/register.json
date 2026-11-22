@@ -3,7 +3,7 @@
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
   "application_revision": "99d7dde6",
-  "status": "Implementation continued through native Account users, paid Telecaller creation and complete-day attendance history; retained work and acceptance remain.",
+  "status": "Implementation continued through bounded company verification and canonical warehouse transfers; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1066,7 +1066,7 @@
         "status": "OPEN",
         "title": "Transfer mismatch false pass"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
@@ -1079,12 +1079,11 @@
           "src/app/workspace/account/utilities/verification/page.tsx"
         ]
       },
-      "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
-      },
-      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
+      "implementation_evidence": [
+        "docs/verification-guard-implementation/checkpoint.md"
+      ],
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_limits": "Interactive scan budgets: 10000 parent records per collection, 50000 journal-line/branch-assignment rows. Oversized or timed-out scans do not produce clean results and cannot authorize financial-year closure. Offline/background audit execution and physical/native final-head acceptance are not claimed."
     },
     {
       "finding_id": "A120-F04",
@@ -1125,7 +1124,13 @@
         "title": "Verification results and actionability"
       },
       "reconciliation_status": "PARTIAL",
-      "evidence_updates": [],
+      "evidence_updates": [
+        {
+          "checkpoint": "docs/verification-guard-implementation/checkpoint.md",
+          "status": "PARTIAL",
+          "detail": "Incomplete/zero-count errors are explicit; stale native PASS cards hidden after refresh failure; passing checks do not recommend repairs. Record drill-down/actionability remains open."
+        }
+      ],
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
         "date": "2026-11-21",
@@ -1153,7 +1158,7 @@
         "status": "OPEN",
         "title": "Unbounded non-snapshot scan"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
@@ -1166,12 +1171,11 @@
           "src/app/workspace/account/utilities/verification/page.tsx"
         ]
       },
-      "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
-      },
-      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
+      "implementation_evidence": [
+        "docs/verification-guard-implementation/checkpoint.md"
+      ],
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_limits": "Interactive scan budgets: 10000 parent records per collection, 50000 journal-line/branch-assignment rows. Oversized or timed-out scans do not produce clean results and cannot authorize financial-year closure. Offline/background audit execution and physical/native final-head acceptance are not claimed."
     },
     {
       "finding_id": "A121-F01",
@@ -6324,9 +6328,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 128,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 130,
     "NOT STARTED": 11,
-    "PARTIAL": 15,
+    "PARTIAL": 13,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1

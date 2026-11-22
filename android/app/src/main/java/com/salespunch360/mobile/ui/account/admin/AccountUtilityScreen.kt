@@ -227,18 +227,20 @@ fun AccountUtilityScreen(
             "verification" -> Column {
                 Text("Company-wide read-only checks. A PASS applies only to the named check.")
                 Text("Not checked: bank statements, physical stock, complete allocation reconciliation and every lock anomaly.")
-                state.verificationCompletedAt?.let { Text("Completed: $it") }
+                Text("Interactive limits: 10,000 records per collection; 50,000 journal-line / branch-assignment rows. An incomplete scan is not a clean result.")
+                state.verificationCompletedAt?.let { Text("Last verification response: $it") }
                 if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if(!state.loading && state.rows.isEmpty()) Text("No verification result available. Refresh to run checks.")
+                if(state.error!=null)Text("Current verification did not complete. Previous results are hidden; refresh to retry.")
+                if(!state.loading && state.error==null && state.rows.isEmpty()) Text("No verification result available. Refresh to run checks.")
                 Button(enabled=!state.loading,onClick={vm.load("verification")}) { Text("Refresh verification") }
                 LazyColumn {
-                    items(state.rows.toList()) { element ->
+                    items(if(state.loading||state.error!=null)emptyList()else state.rows.toList()) { element ->
                         val check=element.jsonObject
                         Card(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
                             Column(Modifier.padding(12.dp)) {
                                 Text("${check["status"]?.jsonPrimitive?.content.orEmpty()} · ${check["check"]?.jsonPrimitive?.content.orEmpty()}")
-                                Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
-                                Text(check["recommendation"]?.jsonPrimitive?.content.orEmpty())
+                                if(check["incomplete"]?.jsonPrimitive?.booleanOrNull==true)Text("Scan incomplete; affected count unavailable.")else Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
+                                if(check["status"]?.jsonPrimitive?.content!="PASS")Text(check["recommendation"]?.jsonPrimitive?.content.orEmpty())
                                 check["samples"]?.jsonArray?.takeIf { it.isNotEmpty() }?.let { samples -> Text("Sample identifiers: " + samples.joinToString { it.jsonPrimitive.content }) }
                             }
                         }

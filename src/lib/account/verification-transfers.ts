@@ -1,19 +1,21 @@
-import { Prisma } from "@prisma/client";
-type Movement = { id: string; sourceId: string | null; movementType: string; productId: string; warehouseId: string; quantity: Prisma.Decimal };
-/** Reconcile each product within a source; never offset one product against another. */
-export function mismatchedTransferSources(movements: Movement[]): string[] {
-  const groups = new Map<string, Map<string, Movement[]>>();
-  for (const row of movements) {
-    if (row.movementType !== "TRANSFER_IN" && row.movementType !== "TRANSFER_OUT") continue;
-    const source = row.sourceId ?? row.id;
-    const products = groups.get(source) ?? new Map<string, Movement[]>();
-    products.set(row.productId, [...(products.get(row.productId) ?? []), row]);
-    groups.set(source, products);
-  }
-  return [...groups].filter(([, products]) => [...products.values()].some(rows => {
-    const incoming = rows.filter(x => x.movementType === "TRANSFER_IN");
-    const outgoing = rows.filter(x => x.movementType === "TRANSFER_OUT");
-    const total = (items: Movement[]) => items.reduce((sum, x) => sum.add(x.quantity), new Prisma.Decimal(0));
-    return !incoming.length || !outgoing.length || rows.some(x => x.quantity.lte(0)) || !total(incoming).equals(total(outgoing)) || incoming.some(x => outgoing.some(y => x.warehouseId === y.warehouseId));
-  })).map(([source]) => source);
+import {Prisma} from '@prisma/client';
+type Movement={id:string;sourceType:string;sourceId:string;movementType:string;productId:string;branchId:string;warehouseId:string;quantity:Prisma.Decimal;unitCost:Prisma.Decimal;totalCost:Prisma.Decimal;batchId:string|null;serialNumberId:string|null;movementDate:Date};
+/** The warehouse transfer writer persists exactly one OUT and one IN for one product/lot. */
+export function mismatchedTransferSources(movements:Movement[],warehouses:{id:string;branchId:string}[]):string[]{
+ const groups=new Map<string,Movement[]>(),warehouseBranches=new Map(warehouses.map(row=>[row.id,row.branchId]));
+ for(const row of movements){
+  // Project receipt/issue/return bridges use other source types and are not warehouse transfers.
+  if(row.sourceType!=='TRANSFER')continue;
+  const key=row.sourceId||row.id,rows=groups.get(key)??[];rows.push(row);groups.set(key,rows);
+ }
+ return [...groups].filter(([,rows])=>{
+  if(rows.length!==2)return true;
+  const outgoing=rows.find(row=>row.movementType==='TRANSFER_OUT'),incoming=rows.find(row=>row.movementType==='TRANSFER_IN');
+  if(!outgoing||!incoming)return true;
+  return rows.some(row=>!row.sourceId||row.quantity.lte(0)||row.unitCost.lt(0)||row.totalCost.lt(0)||warehouseBranches.get(row.warehouseId)!==row.branchId)
+   ||outgoing.warehouseId===incoming.warehouseId||outgoing.productId!==incoming.productId
+   ||!outgoing.quantity.equals(incoming.quantity)||!outgoing.unitCost.equals(incoming.unitCost)||!outgoing.totalCost.equals(incoming.totalCost)
+   ||outgoing.batchId!==incoming.batchId||outgoing.serialNumberId!==incoming.serialNumberId
+   ||outgoing.movementDate.getTime()!==incoming.movementDate.getTime();
+ }).map(([source])=>source);
 }

@@ -1,10 +1,12 @@
-import { expect, it } from "vitest";
-import { Prisma } from "@prisma/client";
-import { mismatchedTransferSources } from "./verification-transfers";
-const row = (movementType: string, quantity: number, productId="p", warehouseId=movementType==="TRANSFER_IN"?"dest":"source") => ({id:crypto.randomUUID(),sourceId:"transfer",movementType,quantity:new Prisma.Decimal(quantity),productId,warehouseId});
-it("accepts balanced multi-product and split transfer legs",()=>expect(mismatchedTransferSources([row("TRANSFER_IN",2),row("TRANSFER_OUT",1),row("TRANSFER_OUT",1),row("TRANSFER_IN",3,"q"),row("TRANSFER_OUT",3,"q")])).toEqual([]));
-it("rejects the prior false pass for different products and quantities",()=>expect(mismatchedTransferSources([row("TRANSFER_IN",1,"p"),row("TRANSFER_OUT",99,"q")])).toEqual(["transfer"]));
-it("detects missing legs, excess duplicate quantities, and same warehouse",()=>{
- for(const rows of [[row("TRANSFER_IN",2)],[row("TRANSFER_IN",2),row("TRANSFER_OUT",2),row("TRANSFER_OUT",2)],[row("TRANSFER_IN",2,"p","same"),row("TRANSFER_OUT",2,"p","same")]])expect(mismatchedTransferSources(rows)).toEqual(["transfer"]);
-});
-it("ignores ordinary movements and rejects nonpositive transfer quantities",()=>{expect(mismatchedTransferSources([row("OPENING",1)])).toEqual([]);expect(mismatchedTransferSources([row("TRANSFER_IN",0),row("TRANSFER_OUT",0)])).toEqual(["transfer"])});
+import {expect,it} from 'vitest';
+import {Prisma} from '@prisma/client';
+import {mismatchedTransferSources} from './verification-transfers';
+const warehouses=[{id:'source',branchId:'branch-a'},{id:'dest',branchId:'branch-b'}];
+const row=(movementType:string,quantity=2,productId='product',warehouseId=movementType==='TRANSFER_IN'?'dest':'source')=>({id:crypto.randomUUID(),sourceType:'TRANSFER',sourceId:'transfer',movementType,quantity:new Prisma.Decimal(quantity),unitCost:new Prisma.Decimal('1.2345'),totalCost:new Prisma.Decimal('2.47'),productId,warehouseId,branchId:warehouseId==='source'?'branch-a':'branch-b',batchId:null as string|null,serialNumberId:null as string|null,movementDate:new Date('2026-11-01T00:00:00Z')});
+const check=(rows:ReturnType<typeof row>[])=>mismatchedTransferSources(rows,warehouses);
+it('accepts the canonical two-leg cross-branch transfer with unchanged stored precision',()=>expect(check([row('TRANSFER_OUT'),row('TRANSFER_IN')])).toEqual([]));
+it('rejects balanced split or multi-product legs because one warehouse transfer writes exactly two legs',()=>{expect(check([row('TRANSFER_IN'),row('TRANSFER_OUT',1),row('TRANSFER_OUT',1)])).toEqual(['transfer']);expect(check([row('TRANSFER_OUT'),row('TRANSFER_IN'),row('TRANSFER_OUT',2,'other'),row('TRANSFER_IN',2,'other')])).toEqual(['transfer'])});
+it('rejects different products, quantities, missing legs and nonpositive quantities',()=>{for(const rows of [[row('TRANSFER_IN')],[row('TRANSFER_IN',1),row('TRANSFER_OUT',99,'other')],[row('TRANSFER_OUT',0),row('TRANSFER_IN',0)]])expect(check(rows)).toEqual(['transfer'])});
+it.each(['batchId','serialNumberId','unitCost','totalCost','movementDate'] as const)('detects mismatched %s without offsetting other legs',field=>{const incoming=row('TRANSFER_IN');const changed={...incoming,[field]:field==='batchId'||field==='serialNumberId'?'other':field==='movementDate'?new Date('2026-11-02T00:00:00Z'):new Prisma.Decimal('9')};expect(check([row('TRANSFER_OUT'),changed])).toEqual(['transfer'])});
+it('rejects same warehouses, unknown warehouses, wrong branch attribution and wrong movement directions',()=>{expect(check([row('TRANSFER_OUT'),row('TRANSFER_IN',2,'product','source')])).toEqual(['transfer']);expect(check([row('TRANSFER_OUT'),row('TRANSFER_IN',2,'product','foreign')])).toEqual(['transfer']);expect(check([row('TRANSFER_OUT'),{...row('TRANSFER_IN'),branchId:'branch-a'}])).toEqual(['transfer']);expect(check([row('TRANSFER_OUT'),row('PURCHASE')])).toEqual(['transfer'])});
+it('does not mistake valid project issue/return bridges for missing warehouse transfer legs',()=>{expect(check([{...row('TRANSFER_OUT'),sourceType:'PROJECT_MATERIAL_ISSUE'},{...row('TRANSFER_IN'),sourceType:'PROJECT_MATERIAL_RETURN'}])).toEqual([])});
