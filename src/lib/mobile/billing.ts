@@ -1,3 +1,4 @@
+import {paymentDetailSelect,orderTelecallerTargets} from "@/lib/billing/history-details";
 import {operationalSalesStatus,nextAccountPackageExpiry} from "@/lib/billing/subscription-display";
 import {effectiveAccountCapacity} from "@/lib/billing/account-capacity";
 import {Prisma} from "@prisma/client";
@@ -22,7 +23,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
  const hasSales=editionAllowsSales(company.productEdition),hasAccount=editionAllowsAccount(company.productEdition),isPlus=company.productEdition==="SALESPUNCH360_PLUS";
  const pageSize=10,safePage=Number.isInteger(page)&&page>0?page:1;const [prices,orders,orderCount,entitlement,telecaller,accountSeatUsers,activeSubs,salesSeatUsers]=await Promise.all([
   currentPrices(),
-  db.billingOrder.findMany({where:{companyId},orderBy:[{createdAt:"desc"},{id:"desc"}],skip:(safePage-1)*pageSize,take:pageSize,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,createdAt:true,expiresAt:true}}),
+  db.billingOrder.findMany({where:{companyId},orderBy:[{createdAt:"desc"},{id:"desc"}],skip:(safePage-1)*pageSize,take:pageSize,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,createdAt:true,expiresAt:true,paidAt:true,payments:{where:{companyId},select:paymentDetailSelect}}}),
   db.billingOrder.count({where:{companyId}}),
   hasSales?effectiveEntitlement(companyId,now):Promise.resolve(null),
   hasSales?telecallerBillingState(db,companyId,now):Promise.resolve({subscription:null,used:0,limit:0,available:0}),
@@ -35,10 +36,11 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
  const accountPackageCount=accountCapacity.packageCount,accountLimits=accountPackageLimits(accountPackageCount);
  const accountUsage=Object.fromEntries(ACCOUNT_PACKAGE_ROLES.map(role=>[role,accountSeatUsers.filter(user=>user.accountRole===role).length])) as Record<(typeof ACCOUNT_PACKAGE_ROLES)[number],number>;
  const accountCurrent=accountSubs[0]??null;
+ const telecallerTargets=await orderTelecallerTargets(companyId,orders.map(order=>order.id));
  return{
   hasSales,hasAccount,isPlus,teamStructure:company.teamStructure,
   prices:prices.map(x=>({...x,amount:x.amount.toFixed(2)})),
-  orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2)})),
+  orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2),telecallerSeats:telecallerTargets.get(x.id)??null,payments:x.payments.map(payment=>({...payment,amount:payment.amount.toFixed(2)}))})),
   onlinePaymentAvailable:false,salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
   sales:entitlement?{
    status:operationalSalesStatus(entitlement),

@@ -27,7 +27,7 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
  if(checkout!=null){CheckoutCard(checkout!!){checkout=null;reload()};return}
  when(page){
   "SUBSCRIPTION"->{SubscriptionSummaryPage(data){page=null};return}
-  "BILLING"->{BillingActionsPage({page=null}){page=it};return}
+  "BILLING"->{BillingActionsPage(data,{page=null}){page=it};return}
   null->Unit
   else->{SubscriptionActionPage(data,page!!,{page="BILLING"},{checkout=it},loadingMore,loadMore);return}
  }
@@ -47,11 +47,13 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
  }
 }
 
-@Composable private fun BillingActionsPage(back:()->Unit,open:(String)->Unit){
+@Composable private fun BillingActionsPage(data:MobileBillingContext,back:()->Unit,open:(String)->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{TextButton(back,contentPadding=PaddingValues(0.dp)){Text("← Billing & Subscription")};Text("Billing",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
-  item{Button({open("ADD_SALES")},modifier=Modifier.fillMaxWidth()){Text("Add Sales Team")}}
-  item{Button({open("ADD_ACCOUNT")},modifier=Modifier.fillMaxWidth()){Text("Add Account Team")}}
+  item{if(!data.hasSales)Text("Sales-team billing is unavailable for this company edition.") else if(data.sales?.status!="ACTIVE")Text("Start or renew Sales before adding seats.")}
+  item{if(!data.hasAccount)Text("Account team billing is unavailable for this company edition.") else if(data.isPlus&&(data.sales?.status!="ACTIVE"||data.account?.status!="ACTIVE"))Text("Renew Plus before adding Account capacity.")}
+  item{Button({open("ADD_SALES")},enabled=data.hasSales&&data.sales?.status=="ACTIVE",modifier=Modifier.fillMaxWidth()){Text("Add Sales Team")}}
+  item{Button({open("ADD_ACCOUNT")},enabled=data.hasAccount&&(!data.isPlus||(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")),modifier=Modifier.fillMaxWidth()){Text("Add Account Team")}}
   item{Button({open("RENEWAL")},modifier=Modifier.fillMaxWidth()){Text("Renewal")}}
   item{Button({open("HISTORY")},modifier=Modifier.fillMaxWidth()){Text("Payment History")}}
  }
@@ -68,9 +70,29 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
    "ADD_SALES"->item{if(!data.hasSales)ContentCard("Unavailable","This company edition does not include Sales-team billing.") else if(data.sales?.status!="ACTIVE")ContentCard("Start Sales first","Add Sales Team is for mid-term additions. Use Renewal to start or renew the Sales subscription.") else AddTeamPurchase(data,onQuote,quoteFailed)}
    "ADD_ACCOUNT"->item{if(!data.hasAccount)ContentCard("Unavailable","This company edition does not include Account team billing.") else if(data.isPlus){if(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")AccountIncreasePurchase(data,onQuote,quoteFailed) else ContentCard("Start Plus first","Mid-term Account team additions require an active Plus subscription.")}else AccountPurchase(data,onQuote,quoteFailed)}
    "RENEWAL"->item{if(data.hasSales)SalesPurchase(data,onQuote,quoteFailed) else if(data.hasAccount)AccountPurchase(data,onQuote,quoteFailed) else ContentCard("Unavailable","No renewable subscription is available.")}
-   else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){o->OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Order ${o.id.take(8).uppercase()}",fontWeight=FontWeight.Bold);StatusChip(o.status)};Text("${periodLabel(o.billingPeriod)} · ${o.currency} ${o.totalAmount}");Text("Created ${o.createdAt.replace('T',' ').take(19)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted);FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)){if(o.adminSeats>0)StatusChip("Admin ${o.adminSeats}");if(o.managerSeats>0)StatusChip("Manager ${o.managerSeats}");if(o.salesSeats>0)StatusChip("Sales ${o.salesSeats}");if(o.accountPackages>0)StatusChip("Account packages ${o.accountPackages}")};Text("Provider: ${o.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
+   else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){order->BillingHistoryOrder(order)};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
+
   }
  }
+}
+
+private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorded" else runCatching{java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))+" IST"}.getOrDefault(value)
+@Composable private fun BillingHistoryOrder(order:MobileBillingOrder){
+ var details by remember(order.id){mutableStateOf(false)}
+ OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+  Text("Order ${order.id.take(8).uppercase()}",fontWeight=FontWeight.Bold);StatusChip(order.status)
+  Text("${periodLabel(order.billingPeriod)} · ${order.currency} ${order.totalAmount}")
+  Text("Created ${billingHistoryTime(order.createdAt)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  if(order.provider=="ACCOUNT_PACKAGE")Text("Account packages: ${maxOf(order.accountPackages,order.adminSeats)}") else Text("Admin ${order.adminSeats} · Manager ${order.managerSeats} · Sales ${order.salesSeats} · Account packages ${order.accountPackages}")
+  Text("Telecaller target: ${order.telecallerSeats?.toString()?:"Not recorded"}")
+  Text("Provider: ${order.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  OutlinedButton({details=!details}){Text(if(details)"Hide payment details" else "Order / payment details")}
+  if(details){
+   Text("Order reference: ${order.id}");Text("Order paid at: ${billingHistoryTime(order.paidAt)}")
+   if(order.payments.isEmpty())Text("No payment transaction recorded for this order.")
+   order.payments.forEach{payment->HorizontalDivider();Text("Payment ${payment.id} · ${payment.status}");Text("${payment.currency} ${payment.amount}");Text("Reference: ${payment.manualReference?:payment.providerPaymentId}");Text("Created: ${billingHistoryTime(payment.createdAt)}");Text("Captured: ${billingHistoryTime(payment.capturedAt)}")}
+  }
+ }}
 }
 
 @Composable private fun CompactSalesSummary(s:MobileSalesSubscription?,structure:TeamStructure){OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Sales Subscription",fontWeight=FontWeight.Bold);StatusChip(s?.status?:"INACTIVE")};s?.endsAt?.let{Text("Common expiry ${it.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)};FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){SeatPill("Admin",s?.adminUsage?:0,s?.adminLimit?:0);if(structure!=TeamStructure.SALES_ONLY)SeatPill("Manager",s?.managerUsage?:0,s?.managerLimit?:0);SeatPill("Sales",s?.salesUsage?:0,s?.salesLimit?:0);SeatPill("Telecaller",s?.telecallerUsage?:0,s?.telecallerLimit?:0)};Text("Admin, Manager, Sales and Telecaller share one Sales subscription expiry.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}}}

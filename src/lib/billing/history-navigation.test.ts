@@ -1,10 +1,10 @@
 import {beforeEach,it,expect,vi} from 'vitest';
-const m=vi.hoisted(()=>({user:vi.fn(),company:vi.fn(),orders:vi.fn(),permission:vi.fn()}));
+const m=vi.hoisted(()=>({user:vi.fn(),company:vi.fn(),orders:vi.fn(),permission:vi.fn(),markers:vi.fn()}));
 vi.mock('@/lib/auth/authorization',()=>({AuthorizationError:class extends Error{},requireUser:m.user,requireUserForMutation:vi.fn(),requireGlobalSuperAdmin:vi.fn(),requireGlobalSuperAdminForMutation:vi.fn()}));
 vi.mock('@/lib/auth/permissions',()=>({canUsePermission:m.permission}));
-vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},billingOrder:{findMany:m.orders}}}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},billingOrder:{findMany:m.orders},billingAuditEvent:{findMany:m.markers}}}));
 import {billingHubContext,billingOrderHistory} from './service';
-beforeEach(()=>{vi.clearAllMocks();m.user.mockResolvedValue({id:'owner',companyId:'company',role:'COMPANY_ADMIN',salesRole:'PRIMARY_ADMIN',salesAccessActive:true});m.company.mockResolvedValue({productEdition:'SALESPUNCH360'});m.permission.mockReturnValue(true);m.orders.mockResolvedValue([{id:'a'},{id:'b'},{id:'sentinel'}])});
-it('keeps company authorization and stable pagination for older orders',async()=>{const result=await billingOrderHistory({page:2,pageSize:2});expect(m.orders).toHaveBeenCalledWith({where:{companyId:'company'},include:{payments:true},orderBy:[{createdAt:'desc'},{id:'desc'}],skip:2,take:3});expect(result).toMatchObject({page:2,hasMore:true,items:[{id:'a'},{id:'b'}]})});
+beforeEach(()=>{vi.clearAllMocks();m.user.mockResolvedValue({id:'owner',companyId:'company',role:'COMPANY_ADMIN',salesRole:'PRIMARY_ADMIN',salesAccessActive:true});m.company.mockResolvedValue({productEdition:'SALESPUNCH360'});m.permission.mockReturnValue(true);m.markers.mockResolvedValue([]);m.orders.mockResolvedValue([{id:'a'},{id:'b'},{id:'sentinel'}])});
+it('keeps company authorization and stable pagination for older orders',async()=>{const result=await billingOrderHistory({page:2,pageSize:2});expect(m.orders).toHaveBeenCalledWith({where:{companyId:'company'},include:{payments:{where:{companyId:"company"},select:expect.objectContaining({manualReference:true,capturedAt:true})}},orderBy:[{createdAt:'desc'},{id:'desc'}],skip:2,take:3});expect(result).toMatchObject({page:2,hasMore:true,items:[{id:'a'},{id:'b'}]})});
 it('keeps the hub reachable without prices, orders, entitlement or Telecaller queries',async()=>{expect(await billingHubContext()).toEqual({backHref:'/workspace'});expect(m.orders).not.toHaveBeenCalled()});
 it('denies unentitled history reads before fetching orders',async()=>{m.permission.mockReturnValue(false);m.user.mockResolvedValue({id:'staff',companyId:'company',role:'SALES',salesRole:'SALES',accountRole:null});await expect(billingOrderHistory()).rejects.toThrow();expect(m.orders).not.toHaveBeenCalled()});

@@ -6,6 +6,8 @@ export type BillingPeriod='SIX_MONTH'|'YEARLY';
 export type ActiveSalesEmployee={id:string;name:string;salesRole:'ADMIN'|'MANAGER'|'SALES';managerType?:string|null};
 
 export const orderErrors:Record<string,string>={
+ INVALID_ACCOUNT_PACKAGE_QUANTITY:"Choose a whole number of Account packages from 1 to 100, then review checkout again.",
+ INVALID_BILLING_PERIOD:"Choose the supported six-month or yearly billing period, then review checkout again.",
  SEATS_BELOW_USAGE:'The selected seat count is below your current active users. Keep enough seats for the active team before creating this order.',
  TELECALLER_SEATS_BELOW_USAGE:'Telecaller seats cannot be below the number of active Telecallers. Deactivate the Telecaller first, then renew.',
  INVALID_SEAT_SELECTION:'The selected users to retain do not match the active team. Review the retention selection and try again.',
