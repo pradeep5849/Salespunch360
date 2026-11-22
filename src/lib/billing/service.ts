@@ -66,6 +66,9 @@ export async function platformOrdersPage(raw:unknown){await requireGlobalSuperAd
 
 export async function cancelCurrentCompanyPendingOrder(orderId:string){
  const u=await billingUser(true);
+ return cancelPendingOrderForActor(u,orderId);
+}
+export async function cancelPendingOrderForActor(u:{id:string;companyId:string},orderId:string){
  return db.$transaction(async tx=>{
   await lockBillingCompany(tx,u.companyId);
   const order=await tx.billingOrder.findFirst({where:{id:orderId,companyId:u.companyId}});

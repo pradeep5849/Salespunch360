@@ -1,3 +1,5 @@
+import {z} from "zod";
+import {cancelPendingOrderForActor} from "@/lib/billing/service";
 import {paymentDetailSelect,orderTelecallerTargets} from "@/lib/billing/history-details";
 import {operationalSalesStatus,nextAccountPackageExpiry} from "@/lib/billing/subscription-display";
 import {effectiveAccountCapacity} from "@/lib/billing/account-capacity";
@@ -96,4 +98,12 @@ export async function mobileManualOrder(p:MobilePrincipal,raw:unknown){
  }
  const key=typeof input.idempotencyKey==="string"?input.idempotencyKey:"";
  return createUnifiedMobileSalesTeamOrder({id:p.id,companyId:p.companyId},{billingPeriod:input.billingPeriod as "SIX_MONTH"|"YEARLY",adminSeats:Number(input.adminSeats??0),managerSeats:Number(input.managerSeats??0),salesSeats:Number(input.salesSeats??0),telecallerSeats:Number(input.telecallerSeats??0),accountPackages:Number(input.accountPackages??0),retainAdminUserIds:Array.isArray(input.retainAdminUserIds)?input.retainAdminUserIds.filter((x):x is string=>typeof x==="string"):[],retainManagerUserIds:Array.isArray(input.retainManagerUserIds)?input.retainManagerUserIds.filter((x):x is string=>typeof x==="string"):[],retainSalesUserIds:Array.isArray(input.retainSalesUserIds)?input.retainSalesUserIds.filter((x):x is string=>typeof x==="string"):[],idempotencyKey:key});
+}
+
+export async function mobileCancelPendingOrder(p:MobilePrincipal,raw:unknown){
+ access(p);
+ const parsed=z.object({action:z.literal("CANCEL_PENDING_ORDER"),orderId:z.string().guid(),confirmed:z.literal(true)}).strict().safeParse(raw);
+ if(!parsed.success)throw new MobileCompanyError("INVALID_INPUT",400);
+ try{await cancelPendingOrderForActor(p,parsed.data.orderId);return{ok:true};}
+ catch(error){const code=error instanceof Error?error.message:"";if(code==="NOT_FOUND")throw new MobileCompanyError(code,404);if(code==="ORDER_NOT_PENDING")throw new MobileCompanyError(code,409);throw error;}
 }

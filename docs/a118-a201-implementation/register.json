@@ -1560,7 +1560,7 @@
         "status": "OPEN",
         "title": "Pending order reused without matching reviewed intent"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1571,12 +1571,11 @@
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
       },
-      "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
-      },
-      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
+      "implementation_evidence": [
+        "docs/native-pending-order-implementation/checkpoint.md"
+      ],
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_limits": "Existing web/backend matching-intent guard plus native explicit review/cancellation implemented; final-head native CI and physical role/device acceptance remain pending. No real order/payment mutated."
     },
     {
       "finding_id": "A126-F03",
@@ -6325,9 +6324,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 127,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 128,
     "NOT STARTED": 11,
-    "PARTIAL": 16,
+    "PARTIAL": 15,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1

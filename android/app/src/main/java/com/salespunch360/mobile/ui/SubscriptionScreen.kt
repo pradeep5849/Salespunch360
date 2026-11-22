@@ -16,20 +16,25 @@ import kotlinx.coroutines.launch
 private const val MANUAL_PAYMENT_MOBILE="9611278818"
 
 @Composable fun SubscriptionScreen(){
- val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)};var loadingMore by remember{mutableStateOf(false)}
+ val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope()
+ var data by remember{mutableStateOf<MobileBillingContext?>(null)};var error by remember{mutableStateOf<String?>(null)};var loading by remember{mutableStateOf(true)};var loadingMore by remember{mutableStateOf(false)};var initialPage by remember{mutableStateOf<String?>(null)}
  fun reload(){loading=true;error=null;scope.launch{runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false}}
  LaunchedEffect(Unit){runCatching{api.billing()}.onSuccess{data=it}.onFailure{error="Unable to load subscription."};loading=false}
- when{loading->Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator()};error!=null->RetryScreen(error!!,::reload);else->SubscriptionContent(data!!,::reload,loadingMore){if(!loadingMore&&data?.hasMoreOrders==true){loadingMore=true;scope.launch{runCatching{api.billing((data?.orderPage?:1)+1)}.onSuccess{next->data=next.copy(orders=data!!.orders+next.orders)}.onFailure{error="Unable to load more payment history."};loadingMore=false}}}}
+ when{
+  loading->Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator()}
+  error!=null->RetryScreen(error!!,::reload)
+  else->SubscriptionContent(data!!,::reload,loadingMore,loadMore={if(!loadingMore&&data?.hasMoreOrders==true){loadingMore=true;scope.launch{runCatching{api.billing((data?.orderPage?:1)+1)}.onSuccess{next->data=next.copy(orders=data!!.orders+next.orders)}.onFailure{error="Unable to load more payment history."};loadingMore=false}}},initialPage=initialPage,reviewPending={initialPage="HISTORY";reload()})
+ }
 }
 
-@Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit,loadingMore:Boolean,loadMore:()->Unit){
- var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(null)}
- if(checkout!=null){CheckoutCard(checkout!!){checkout=null;reload()};return}
+@Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit,loadingMore:Boolean,loadMore:()->Unit,initialPage:String?,reviewPending:()->Unit){
+ var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(initialPage)}
+ if(checkout!=null){CheckoutCard(checkout!!,back={checkout=null;reload()},reviewPending={checkout=null;reviewPending()});return}
  when(page){
   "SUBSCRIPTION"->{SubscriptionSummaryPage(data){page=null};return}
   "BILLING"->{BillingActionsPage(data,{page=null}){page=it};return}
   null->Unit
-  else->{SubscriptionActionPage(data,page!!,{page="BILLING"},{checkout=it},loadingMore,loadMore);return}
+  else->{SubscriptionActionPage(data,page!!,{page="BILLING"},{checkout=it},loadingMore,loadMore,reload);return}
  }
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{Text("Billing & Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
@@ -59,7 +64,7 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
  }
 }
 
-@Composable private fun SubscriptionActionPage(data:MobileBillingContext,page:String,back:()->Unit,onQuote:(BillingQuote)->Unit,loadingMore:Boolean,loadMore:()->Unit){
+@Composable private fun SubscriptionActionPage(data:MobileBillingContext,page:String,back:()->Unit,onQuote:(BillingQuote)->Unit,loadingMore:Boolean,loadMore:()->Unit,orderChanged:()->Unit){
  var quoteError by remember(page){mutableStateOf<String?>(null)}
  val quoteFailed:(Throwable)->Unit={quoteError=billingQuoteFailureMessage((it as? ApiException)?.code)}
  val title=when(page){"ADD_SALES"->"Add Sales Team";"ADD_ACCOUNT"->"Add Account Team";"RENEWAL"->"Renewal";else->"Payment History"}
@@ -70,14 +75,17 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
    "ADD_SALES"->item{if(!data.hasSales)ContentCard("Unavailable","This company edition does not include Sales-team billing.") else if(data.sales?.status!="ACTIVE")ContentCard("Start Sales first","Add Sales Team is for mid-term additions. Use Renewal to start or renew the Sales subscription.") else AddTeamPurchase(data,onQuote,quoteFailed)}
    "ADD_ACCOUNT"->item{if(!data.hasAccount)ContentCard("Unavailable","This company edition does not include Account team billing.") else if(data.isPlus){if(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")AccountIncreasePurchase(data,onQuote,quoteFailed) else ContentCard("Start Plus first","Mid-term Account team additions require an active Plus subscription.")}else AccountPurchase(data,onQuote,quoteFailed)}
    "RENEWAL"->item{if(data.hasSales)SalesPurchase(data,onQuote,quoteFailed) else if(data.hasAccount)AccountPurchase(data,onQuote,quoteFailed) else ContentCard("Unavailable","No renewable subscription is available.")}
-   else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){order->BillingHistoryOrder(order)};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
+   else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){order->BillingHistoryOrder(order,orderChanged)};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
 
   }
  }
 }
 
 private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorded" else runCatching{java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))+" IST"}.getOrDefault(value)
-@Composable private fun BillingHistoryOrder(order:MobileBillingOrder){
+@Composable private fun BillingHistoryOrder(order:MobileBillingOrder,orderChanged:()->Unit){
+ val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var confirmCancel by remember(order.id){mutableStateOf(false)};var cancelBusy by remember(order.id){mutableStateOf(false)};var cancelError by remember(order.id){mutableStateOf<String?>(null)}
+ if(confirmCancel)AlertDialog(onDismissRequest={if(!cancelBusy)confirmCancel=false},title={Text("Cancel this unpaid order?")},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("Order ${order.id.take(8).uppercase()} · ${periodLabel(order.billingPeriod)} · ${order.currency} ${order.totalAmount}");Text("Admin ${order.adminSeats} · Manager ${order.managerSeats} · Sales ${order.salesSeats} · Telecaller ${order.telecallerSeats?.toString()?:"Not recorded"} · Account packages ${order.accountPackages}");Text("Cancel this request before reviewing a different selection. An already paid order cannot be canceled here.");cancelError?.let{Text(it,color=MaterialTheme.colorScheme.error)}}},confirmButton={Button({cancelBusy=true;cancelError=null;scope.launch{try{api.cancelPendingBillingOrder(order.id);confirmCancel=false;orderChanged()}catch(e:Exception){cancelError=when((e as? ApiException)?.code){"ORDER_NOT_PENDING"->"This order is no longer pending. Refresh Payment History.";"NOT_FOUND"->"This order is no longer available.";else->"The order could not be canceled. Reload its status and try again."}}finally{cancelBusy=false}}},enabled=!cancelBusy){Text(if(cancelBusy)"Canceling…" else "Cancel unpaid order")}},dismissButton={TextButton({confirmCancel=false},enabled=!cancelBusy){Text("Keep order")}})
+
  var details by remember(order.id){mutableStateOf(false)}
  OutlinedCard(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
   Text("Order ${order.id.take(8).uppercase()}",fontWeight=FontWeight.Bold);StatusChip(order.status)
@@ -86,6 +94,7 @@ private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorde
   if(order.provider=="ACCOUNT_PACKAGE")Text("Account packages: ${maxOf(order.accountPackages,order.adminSeats)}") else Text("Admin ${order.adminSeats} · Manager ${order.managerSeats} · Sales ${order.salesSeats} · Account packages ${order.accountPackages}")
   Text("Telecaller target: ${order.telecallerSeats?.toString()?:"Not recorded"}")
   Text("Provider: ${order.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  if(order.status=="PENDING")OutlinedButton({cancelError=null;confirmCancel=true},enabled=!cancelBusy){Text("Cancel unpaid order")}
   OutlinedButton({details=!details}){Text(if(details)"Hide payment details" else "Order / payment details")}
   if(details){
    Text("Order reference: ${order.id}");Text("Order paid at: ${billingHistoryTime(order.paidAt)}")
@@ -142,11 +151,11 @@ private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorde
 private fun packageContents(count:Int)="$count package${if(count==1)"" else "s"} = $count Account Admin, $count Accountant, $count Project Manager, $count Data Entry"
 private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY"->"Yearly";else->value.replace('_',' ')}
 
-@Composable private fun CheckoutCard(q:BillingQuote,back:()->Unit){
- val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var pending by remember{mutableStateOf<ManualOrderResponse?>(null)};var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)}
+@Composable private fun CheckoutCard(q:BillingQuote,back:()->Unit,reviewPending:()->Unit){
+ val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var pending by remember{mutableStateOf<ManualOrderResponse?>(null)};var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)};var pendingConflict by remember{mutableStateOf(false)}
  pending?.let{order->LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Text("Payment Pending",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Manual Payment","Order ref ${order.id.take(8).uppercase()}"){Text("₹${order.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("Awaiting Super Admin payment verification.",style=MaterialTheme.typography.bodySmall);Text("WhatsApp / Call $MANUAL_PAYMENT_MOBILE",fontWeight=FontWeight.Bold)};Button(back,Modifier.fillMaxWidth()){Text("Back")}}};return}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{TextButton(back){Text("← Back")};Text("Checkout",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Review","${q.kind.replace('_',' ')} · ${periodLabel(q.billingPeriod)}"){q.salesSubtotal?.let{if(it!="0.00")Text("Sales subtotal ₹$it")};q.telecallerSubtotal?.let{if(it!="0.00")Text("Telecaller subtotal ₹$it")};q.accountSubtotal?.let{if(it!="0.00")Text("Account subtotal ₹$it")};if(q.prorated){Text("Only mid-term additions are charged for the remaining time.",style=MaterialTheme.typography.bodySmall,color=SalesMuted);q.coTermEndsAt?.let{Text("Existing expiry stays ${it.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}};Text("Total payable",style=MaterialTheme.typography.bodySmall);Text("₹${q.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}}
-  item{ContentCard("Manual Payment","After creating the request, WhatsApp / call $MANUAL_PAYMENT_MOBILE. Super Admin activates the subscription after verification."){error?.let{Text(it,color=MaterialTheme.colorScheme.error)};Button({busy=true;error=null;scope.launch{val key="android_"+java.util.UUID.randomUUID().toString().replace("-","");val request=ManualOrderRequest(kind=q.kind,billingPeriod=q.billingPeriod,adminSeats=q.adminSeats,managerSeats=q.managerSeats,salesSeats=q.salesSeats,telecallerSeats=q.telecallerSeats,accountPackages=q.accountPackages,quantity=if(q.kind=="ACCOUNT_PACKAGE")q.quantity else null,retainAdminUserIds=q.retainAdminUserIds,retainManagerUserIds=q.retainManagerUserIds,retainSalesUserIds=q.retainSalesUserIds,idempotencyKey=key);runCatching{api.createManualOrder(request)}.onSuccess{pending=it}.onFailure{error=if((it as? ApiException)?.code=="PENDING_ORDER_CONFLICT")"An unpaid order has a different selection. Open Billing on the website to review and explicitly cancel it before creating a new request." else "Unable to create payment request."};busy=false}},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(if(busy)"Creating…" else "Manual Payment")}}}
+  item{ContentCard("Manual Payment","After creating the request, WhatsApp / call $MANUAL_PAYMENT_MOBILE. Super Admin activates the subscription after verification."){error?.let{Text(it,color=MaterialTheme.colorScheme.error)};Button({busy=true;error=null;scope.launch{val key="android_"+java.util.UUID.randomUUID().toString().replace("-","");val request=ManualOrderRequest(kind=q.kind,billingPeriod=q.billingPeriod,adminSeats=q.adminSeats,managerSeats=q.managerSeats,salesSeats=q.salesSeats,telecallerSeats=q.telecallerSeats,accountPackages=q.accountPackages,quantity=if(q.kind=="ACCOUNT_PACKAGE")q.quantity else null,retainAdminUserIds=q.retainAdminUserIds,retainManagerUserIds=q.retainManagerUserIds,retainSalesUserIds=q.retainSalesUserIds,idempotencyKey=key);runCatching{api.createManualOrder(request)}.onSuccess{pending=it}.onFailure{pendingConflict=(it as? ApiException)?.code=="PENDING_ORDER_CONFLICT";error=if(pendingConflict)"An unpaid order has a different selection. Review and explicitly cancel it in Payment History before creating a new request." else "Unable to create payment request."};busy=false}},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(if(busy)"Creating…" else "Manual Payment")};if(pendingConflict)OutlinedButton(reviewPending,enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Review unpaid orders")}}}
  }
 }

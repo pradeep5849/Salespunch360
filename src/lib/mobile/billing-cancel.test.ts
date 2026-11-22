@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({cancel:vi.fn(),can:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{}}));
+vi.mock('./auth',()=>({mobileCan:m.can}));
+vi.mock('@/lib/billing/service',()=>({cancelPendingOrderForActor:m.cancel,currentPrices:vi.fn(),createMobileAccountPackageOrder:vi.fn()}));
+vi.mock('@/lib/billing/unified-sales-team',()=>({createUnifiedMobileSalesTeamOrder:vi.fn(),telecallerQuoteForCompany:vi.fn()}));
+import {mobileCancelPendingOrder} from './billing';
+import type {MobilePrincipal} from './auth';
+const actor={id:'owner',companyId:'company',salesRole:'PRIMARY_ADMIN'} as MobilePrincipal;
+const orderId='00000000-0000-4000-8000-000000000001';
+const request={action:'CANCEL_PENDING_ORDER',orderId,confirmed:true};
+beforeEach(()=>{vi.clearAllMocks();m.can.mockReturnValue(true);m.cancel.mockResolvedValue(undefined)});
+it('cancels only an explicitly confirmed authenticated-company request',async()=>{expect(await mobileCancelPendingOrder(actor,request)).toEqual({ok:true});expect(m.cancel).toHaveBeenCalledWith(actor,orderId)});
+it.each([{...request,confirmed:false},{action:request.action,orderId},{...request,orderId:'invalid'},{...request,companyId:'foreign'}])('rejects unconfirmed or injected input before cancellation',async input=>{await expect(mobileCancelPendingOrder(actor,input)).rejects.toMatchObject({code:'INVALID_INPUT',status:400});expect(m.cancel).not.toHaveBeenCalled()});
+it.each(['ADMIN','SALES','MANAGER',null])('denies non-owner or Account-only role %s before cancellation',async salesRole=>{await expect(mobileCancelPendingOrder({...actor,salesRole} as MobilePrincipal,request)).rejects.toMatchObject({code:'FORBIDDEN',status:403});expect(m.cancel).not.toHaveBeenCalled()});
+it.each([['NOT_FOUND',404],['ORDER_NOT_PENDING',409]])('maps %s without concealing a failed cancellation',async(code,status)=>{m.cancel.mockRejectedValue(new Error(String(code)));await expect(mobileCancelPendingOrder(actor,request)).rejects.toMatchObject({code,status})});
