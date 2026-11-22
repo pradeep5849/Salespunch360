@@ -6336,9 +6336,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 133,
-    "NOT STARTED": 11,
-    "PARTIAL": 10,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 134,
+    "NOT STARTED": 9,
+    "PARTIAL": 11,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
