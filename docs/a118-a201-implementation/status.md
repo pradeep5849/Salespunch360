@@ -1,12 +1,12 @@
 # A118–A201 implementation status
 
-Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Each changed finding links its implementation checkpoint in register.json.
+Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Evidence is recorded per finding in register.json.
 
 | Status | Findings |
 |---|---:|
-| IMPLEMENTED — ACCEPTANCE PENDING | 70 |
+| IMPLEMENTED — ACCEPTANCE PENDING | 80 |
 | PARTIAL | 24 |
-| NOT STARTED | 61 |
+| NOT STARTED | 51 |
 | REQUIREMENT SUPERSEDED | 3 |
 | AUDIT CORRECTION — WITHDRAWN | 1 |
 | DISCLOSED LIMITATION | 1 |
@@ -93,22 +93,22 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A145-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A147-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A147-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A147-F03 | NOT STARTED |
-| A148-F01 | NOT STARTED |
-| A148-F02 | NOT STARTED |
+| A147-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A148-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A148-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A148-F03 | NOT STARTED |
 | A149-F01 | NOT STARTED |
-| A149-F02 | NOT STARTED |
-| A149-F03 | NOT STARTED |
-| A149-F04 | NOT STARTED |
+| A149-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A149-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A149-F04 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A150-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A150-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A150-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A150-F04 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A151-F01 | NOT STARTED |
-| A151-F02 | NOT STARTED |
-| A151-F03 | NOT STARTED |
-| A152-F01 | NOT STARTED |
+| A151-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A151-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A151-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A152-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A152-F02 | NOT STARTED |
 | A153-F01 | NOT STARTED |
 | A153-F02 | IMPLEMENTED — ACCEPTANCE PENDING |

@@ -1,9 +1,9 @@
 {
   "scope": "A118\u2013A201",
-  "date": "2026-11-21",
+  "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
   "application_revision": "f3b9be71",
-  "status": "Implementation slices reconciled through security/employee continuation after 842b1988; partial and acceptance limits remain.",
+  "status": "Implementation reconciled through follow-up/notification continuation after a0e8af4c; acceptance and retained findings remain open.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -2854,7 +2854,7 @@
         "status": "OPEN",
         "title": "Follow-up reassignment omits owner handover notifications"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2864,6 +2864,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -2875,7 +2880,7 @@
         "status": "OPEN",
         "title": "Telecaller Call assignment omits new-task notification"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2885,6 +2890,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -2896,7 +2906,7 @@
         "status": "OPEN",
         "title": "Android dismisses scheduling draft before confirmed save"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2906,6 +2916,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -2959,7 +2974,7 @@
         "status": "OPEN",
         "title": "Saving call and completing linked task are separate commits"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2969,6 +2984,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -2980,7 +3000,7 @@
         "status": "OPEN",
         "title": "Web Lead Details omit phone and email"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2990,6 +3010,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -3001,7 +3026,7 @@
         "status": "OPEN",
         "title": "Web follow-up history has unpaged 100-task cap"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3011,6 +3036,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -3145,7 +3175,7 @@
         "status": "OPEN",
         "title": "Notification history has unpaged 50-record default window"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3155,6 +3185,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -3166,7 +3201,7 @@
         "status": "OPEN",
         "title": "Android follow-up notification Open discards destination context"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3176,6 +3211,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -3187,7 +3227,7 @@
         "status": "OPEN",
         "title": "Native Open navigates before mark-read result feedback"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3197,6 +3237,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -3208,7 +3253,7 @@
         "status": "OPEN",
         "title": "Setup presentation additionally requires legacy COMPANY_ADMIN role"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3218,6 +3263,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after a0e8af4c",
+        "progress": "docs/a147-a152-implementation/checkpoint.md",
+        "acceptance": "Six isolated SQL cases passed; full regression recorded in progress.md. Native/browser/live acceptance remains pending."
       }
     },
     {
@@ -6084,9 +6134,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 70,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 80,
     "PARTIAL": 24,
-    "NOT STARTED": 61,
+    "NOT STARTED": 51,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 1,
     "DISCLOSED LIMITATION": 1
