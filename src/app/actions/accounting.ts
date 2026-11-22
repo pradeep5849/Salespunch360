@@ -3,6 +3,7 @@ import { accountAction } from "@/lib/account/action-feedback";
 import { revalidatePath } from "next/cache";
 import {
   createCostCentre,
+  updateCostCentre,
   createLedgerAccount,
   postJournal,
   postOpeningBalances,
@@ -16,6 +17,7 @@ export async function accountingAction(fd: FormData) {
       raw = Object.fromEntries(fd.entries());
     if (operation === "account") await createLedgerAccount(raw);
     else if (operation === "cost-centre") await createCostCentre(raw);
+    else if (operation === "edit-cost-centre") await updateCostCentre(raw);
     else if (operation === "period-lock")
       await setPeriodLock({ ...raw, lockedThrough: raw.lockedThrough || null });
     else if (operation === "register-party-opening")
