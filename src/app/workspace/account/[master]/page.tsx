@@ -133,6 +133,8 @@ export default async function MasterPage({
         {work && (
           <label>
             Work category
+            <Link href="/workspace/account/work-categories">Browse all work categories / choose category</Link>
+            <small>The quick selector shows up to 200 categories. Browse all categories to choose any active category and add work.</small>
             <select name="workCategoryId" required defaultValue={query.workCategoryId ?? ""}>
               <option value="">Select</option>
               {d.workCategories.map((x) => (

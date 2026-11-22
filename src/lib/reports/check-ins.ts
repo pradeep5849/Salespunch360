@@ -25,6 +25,7 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
   let firstVisits=0,repeatVisits=0;
   if(advanced && userIds.length){
     const statusSql=status==="COMPLETED"?Prisma.sql`AND v."checkedOutAt" IS NOT NULL`:status==="ACTIVE"?Prisma.sql`AND v."checkedOutAt" IS NULL`:Prisma.empty;const sentimentSql=sentiment!=="ALL"?Prisma.sql`AND v."checkoutSentiment"::text=${sentiment}`:Prisma.empty;
+    const dateSql=salesUnfiltered?Prisma.empty:Prisma.sql`AND v."checkedInAt">=${filters.start} AND v."checkedInAt"<${filters.endExclusive}`;
     const selectedCustomerSql=customerId?Prisma.sql`AND v."customerId"=${customerId}::uuid`:Prisma.empty;
     const customerSql=filters.q?Prisma.sql`AND c."name" ILIKE ${`%${filters.q}%`}`:Prisma.empty;
     const [kinds]=await db.$queryRaw<{first:bigint;repeat:bigint}[]>(Prisma.sql`
@@ -36,7 +37,7 @@ export async function checkInReport(raw:SearchParams, advanced=false,providedAct
           AND (prior."checkedInAt" < v."checkedInAt" OR (prior."checkedInAt"=v."checkedInAt" AND prior."id" < v."id"))
       )) AS repeat FROM "customer_visits" v LEFT JOIN "customers" c ON c."id"=v."customerId"
       WHERE v."companyId"=${actor.companyId}::uuid AND v."branchId" IN (${Prisma.join(branches.branchIds.map(id=>Prisma.sql`${id}::uuid`))}) AND v."userId" IN (${Prisma.join(userIds.map(id=>Prisma.sql`${id}::uuid`))})
-        AND v."checkedInAt">=${filters.start} AND v."checkedInAt"<${filters.endExclusive} ${statusSql} ${sentimentSql} ${customerSql} ${selectedCustomerSql}`);
+        ${dateSql} ${statusSql} ${sentimentSql} ${customerSql} ${selectedCustomerSql}`);
     firstVisits=Number(kinds.first);repeatVisits=Number(kinds.repeat);
   }
   return {actor,filters,status,sentiment,customerId,customers,employees,rows,totalPages:Math.max(1,Math.ceil(total/filters.pageSize)),summary:{total,completed,pending,leadsGenerated:leadAgg,firstVisits,repeatVisits}};

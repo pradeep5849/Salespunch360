@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -245,6 +246,11 @@ fun AccountUtilityScreen(
                 }
             }
             else -> Column {
+                if(mode=="recycle"){
+                    OutlinedTextField(state.recycleQuery,vm::setRecycleQuery,label={Text("Search archived name")},enabled=!state.loading,modifier=Modifier.fillMaxWidth())
+                    Row(Modifier.horizontalScroll(rememberScrollState())){listOf("","CUSTOMER","VENDOR","PRODUCT","PROJECT").forEach{type->FilterChip(selected=state.recycleType==type,onClick={vm.setRecycleType(type)},enabled=!state.loading,label={Text(type.ifEmpty{"All types"})})}}
+                    Button(enabled=!state.loading,onClick={vm.load("recycle")}){Text("Search archived records")}
+                }
                 if(state.recycleHasMore) Button(enabled=!state.loading,onClick={vm.load("recycle",true)}) { Text("Load more archived records") }
                 JsonList(state.rows, !state.loading) { id -> confirmRestore = id }
             }
