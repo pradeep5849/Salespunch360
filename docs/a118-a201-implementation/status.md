@@ -1,14 +1,14 @@
 # A118–A201 implementation status
 
-Counts refer to findings, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Evidence is recorded per finding in register.json.
+Counts refer to historical finding records, not pages/tests. Implemented means code present, with acceptance limitations retained. Partial findings remain pending. Evidence is recorded per finding in register.json. A200’s synthesized no-defect placeholder is retained as withdrawn.
 
 | Status | Findings |
 |---|---:|
-| IMPLEMENTED — ACCEPTANCE PENDING | 100 |
+| IMPLEMENTED — ACCEPTANCE PENDING | 109 |
 | PARTIAL | 24 |
-| NOT STARTED | 31 |
+| NOT STARTED | 21 |
 | REQUIREMENT SUPERSEDED | 3 |
-| AUDIT CORRECTION — WITHDRAWN | 1 |
+| AUDIT CORRECTION — WITHDRAWN | 2 |
 | DISCLOSED LIMITATION | 1 |
 
 | Finding | Status |
@@ -54,8 +54,8 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A129-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A130-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A130-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A132-F01 | NOT STARTED |
-| A132-F02 | NOT STARTED |
+| A132-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A132-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A133-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A134-F01 | REQUIREMENT SUPERSEDED |
 | A134-F02 | REQUIREMENT SUPERSEDED |
@@ -65,14 +65,14 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A135-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A136-F01 | NOT STARTED |
 | A136-F02 | NOT STARTED |
-| A136-F03 | NOT STARTED |
-| A136-F04 | NOT STARTED |
+| A136-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A136-F04 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A137-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A137-F02 | NOT STARTED |
+| A137-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A137-F03 | NOT STARTED |
 | A138-F01 | NOT STARTED |
-| A138-F02 | NOT STARTED |
-| A139-F01 | NOT STARTED |
+| A138-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
+| A139-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A139-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A139-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A140-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
@@ -109,7 +109,7 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A151-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A151-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A152-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A152-F02 | NOT STARTED |
+| A152-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A153-F01 | NOT STARTED |
 | A153-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A154-F01 | PARTIAL |
@@ -150,7 +150,7 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A168-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A168-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A169-F01 | PARTIAL |
-| A170-F01 | NOT STARTED |
+| A170-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A170-F02 | PARTIAL |
 | A171-F01 | PARTIAL |
 | A171-F02 | IMPLEMENTED — ACCEPTANCE PENDING |
@@ -172,4 +172,4 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A187-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A192-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A199-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A200-F01 | NOT STARTED |
+| A200-F01 | AUDIT CORRECTION — WITHDRAWN |
