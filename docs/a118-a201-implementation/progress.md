@@ -122,3 +122,7 @@ A137-F03 implemented pending acceptance with a dedicated COMPANY_VIEW GET-only D
 ## Native Account user create/edit controls
 
 A140-F02 and A141-F02 implemented pending acceptance. Selected-branch creation and existing Account role/access corrections use the existing authorized route, with dual Sales branch authority retained. Twenty-six focused checks and whitespace passed; native compile/lint/device acceptance pending. Register: 125 implemented pending acceptance, 16 partial, 13 not started. See docs/native-account-user-implementation/checkpoint.md.
+
+## Paid native Telecaller creation and complete-day attendance
+
+A145-F01 and A153-F01 implemented pending acceptance. Final combined full regression: 4214 passed / 451 optional skipped, zero failed (650 files passed). Fifteen real SQL cases passed separately, including final-paid-seat contention; all 168 migrations applied in a fresh owned fixture, then fixture removed. Fifty-two focused attendance checks and 25 Telecaller checks passed. Final TypeScript, changed-file lint and whitespace passed. Previous 8706e3a8 CI passed web, Android, migration and both build Lighthouse checks; only live desktop/mobile Lighthouse failed. Final new-head CI and browser/device acceptance pending. No production migration/data/security changes, deployment or merge. Register: 127 implemented pending acceptance, 16 partial, 11 not started; exclusions unchanged. See docs/telecaller-creation-implementation/checkpoint.md and docs/attendance-history-implementation/checkpoint.md.

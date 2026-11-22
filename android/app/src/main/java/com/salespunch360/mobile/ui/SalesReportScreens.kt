@@ -54,7 +54,7 @@ fun SalesReportScreen(type:String,vm:ReportsViewModel=viewModel()){
  }
  when(type){
   "check-ins"->SalesCheckInReport(state,vm)
-  "attendance"->SalesAttendanceReport(state)
+  "attendance"->SalesAttendanceReport(state,vm)
   else->ReportsScreen(initialType=type,showMenu=false)
  }
 }
@@ -181,15 +181,20 @@ private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
 }
 
 @Composable
-private fun SalesAttendanceReport(state:ReportsState){
+private fun SalesAttendanceReport(state:ReportsState,vm:ReportsViewModel){
+ val totalPages=state.report?.get("totalPages")?.jsonPrimitive?.intOrNull?:1
+ val history=state.report?.get("historyPage") as? JsonObject
+ val pageStart=history?.get("startText")?.jsonPrimitive?.contentOrNull
+ val pageEnd=history?.get("endText")?.jsonPrimitive?.contentOrNull
  val rows=(state.report?.get("rows")?.jsonArray?:JsonArray(emptyList())).map{it.jsonObject}
  val today=LocalDate.now(salesReportZone).toString()
+ val showToday=pageStart==null||pageEnd==null||(today>=pageStart&&today<=pageEnd)
  val grouped=remember(rows){rows.groupBy{salesAttendanceDay(it.salesText("startedAt"))}.filterKeys{it.isNotBlank()}.toSortedMap(compareByDescending{it})}
  val todayRows=grouped[today].orEmpty().sortedBy{salesEpoch(it.salesText("startedAt"))}
  val past=grouped.filterKeys{it!=today}
  val todayTotal=todayRows.sumOf(::salesAttendanceDuration)
  var allToday by rememberSaveable{mutableStateOf(false)}
- var showPast by rememberSaveable{mutableStateOf(false)}
+ var showPast by rememberSaveable(state.page){mutableStateOf(state.page>1)}
  val expandedDays=remember{mutableStateMapOf<String,Boolean>()}
 
  LazyColumn(
@@ -203,7 +208,16 @@ private fun SalesAttendanceReport(state:ReportsState){
   }
   if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
   state.message?.let{item{ContentCard("Report unavailable",it)}}
+  item{
+   if(pageStart!=null&&pageEnd!=null)Text("Complete attendance days: $pageStart to $pageEnd",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    OutlinedButton({vm.load("attendance",state.page-1)},enabled=state.page>1&&!state.loading){Text("Previous")}
+    Text("Page ${state.page} of $totalPages",style=MaterialTheme.typography.bodySmall)
+    OutlinedButton({vm.load("attendance",state.page+1)},enabled=state.page<totalPages&&!state.loading){Text("Next")}
+   }
+  }
   if(!state.loading&&state.message==null){
+   if(showToday){
    item{
     Card(
      Modifier.fillMaxWidth(),
@@ -232,6 +246,7 @@ private fun SalesAttendanceReport(state:ReportsState){
      OutlinedButton({allToday=!allToday},Modifier.fillMaxWidth()){Text(if(allToday)"Show fewer sessions" else "View all ${todayRows.size} sessions")}
     }
    }
+   }
    item{
     Button(
      onClick={showPast=!showPast},
@@ -246,7 +261,7 @@ private fun SalesAttendanceReport(state:ReportsState){
       Text("Latest date first",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
      }
     }
-    if(past.isEmpty())item{ContentCard("No past attendance","No past attendance was found in the last 35 days.")}
+    if(past.isEmpty())item{ContentCard("No past attendance","No past attendance was found on this page.")}
     past.forEach{(day,dayRowsUnsorted)->
      val dayRows=dayRowsUnsorted.sortedBy{salesEpoch(it.salesText("startedAt"))}
      val multiple=dayRows.size>1
