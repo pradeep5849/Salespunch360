@@ -1,4 +1,5 @@
 "use server";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { accountErrorMessage } from "@/lib/account/action-feedback";
 import {
@@ -37,7 +38,7 @@ export async function saveAccountMaster(formData: FormData) {
     "financial-years": createFinancialYear,
     currency: setCurrency,
   };
-  const call = Object.hasOwn(calls,type) ? calls[type] : undefined;
+  const call = Object.hasOwn(calls, type) ? calls[type] : undefined;
   if (!call) throw new Error("INVALID_MASTER_TYPE");
   await call(raw);
   revalidatePath(`/workspace/account/${type}`);
@@ -81,13 +82,13 @@ export async function createAccountItemAction(raw: CreateAccountItemInput) {
       itemLocation: raw.type === "products" ? raw.itemLocation : undefined,
       openingStock: raw.type === "products" ? raw.openingStock : undefined,
       unitId: raw.unitId,
-      secondaryUnitId:raw.secondaryUnitId,
-      secondaryUnitsPerBase:raw.secondaryUnitsPerBase,
+      secondaryUnitId: raw.secondaryUnitId,
+      secondaryUnitsPerBase: raw.secondaryUnitsPerBase,
       categoryId: raw.categoryId,
       code: raw.code ?? "",
       barcode: raw.barcode,
       description: raw.description ?? "",
-      pricing:raw.pricing,
+      pricing: raw.pricing,
       sellingRate: raw.sellingRate ?? "0",
       cost: raw.cost ?? "0",
       taxRate: raw.taxRate ?? "0",
@@ -132,7 +133,13 @@ export async function createAccountCategoryAction(raw: {
     scope: raw.scope ?? "BOTH",
   });
   revalidatePath("/workspace/account/inventory/items/new");
-  return { id: row.id, name: row.name };
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    scope: row.scope,
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 export async function createCategoryWithFeedbackAction(raw: {
   name: string;
@@ -236,25 +243,100 @@ export async function saveUnitConversionAction(raw: {
 export async function saveNewAccountPartyAction(form: FormData) {
   const { accountAction } = await import("@/lib/account/action-feedback");
   const { z } = await import("zod");
-  let createdParty: {id:string;name:string;contactPerson:string|null;phone:string|null;branchId:string}|undefined;
-  const result=await accountAction(async () => {
+  let createdParty:
+    | {
+        id: string;
+        name: string;
+        contactPerson: string | null;
+        phone: string | null;
+        branchId: string;
+      }
+    | undefined;
+  const result = await accountAction(async () => {
     const branchId = z.string().guid().parse(form.get("branchId"));
     const customValues = Object.fromEntries(
       [...form.entries()]
         .filter(([key]) => key.startsWith("custom_"))
         .map(([key, value]) => [key.slice(7), value]),
     );
-    const row=await createPartyWithCustomValues(
+    const row = await createPartyWithCustomValues(
       "customers",
       Object.fromEntries(form.entries()),
       customValues,
       branchId,
     );
-    createdParty={id:row.id,name:String(form.get("name")??"").trim(),contactPerson:String(form.get("contactPerson")??"").trim()||null,phone:String(form.get("phone")??"").trim()||null,branchId};
+    createdParty = {
+      id: row.id,
+      name: String(form.get("name") ?? "").trim(),
+      contactPerson: String(form.get("contactPerson") ?? "").trim() || null,
+      phone: String(form.get("phone") ?? "").trim() || null,
+      branchId,
+    };
     revalidatePath("/workspace/account");
   }, "Account party created");
-  return {...result,...(result.kind==="success"&&createdParty?{createdParty}:{})};
+  return {
+    ...result,
+    ...(result.kind === "success" && createdParty ? { createdParty } : {}),
+  };
 }
 
-export async function unitAssignmentOptionsAction(raw:unknown){try{const {requirePermission}=await import("@/lib/auth/authorization");const {unitAssignmentOptionsForActor}=await import("@/lib/account/unit-assignment");const actor=await requirePermission("ACCOUNT_STOCK");return {ok:true as const,page:await unitAssignmentOptionsForActor(actor as import("@/lib/account/projects").ProjectActor,raw)};}catch(error){return {ok:false as const,message:accountErrorMessage(error)};}}
-export async function assignUnitToItemsAction(raw:unknown){try{const {requirePermissionForMutation}=await import("@/lib/auth/authorization");const {assignUnitToItemsForActor}=await import("@/lib/account/unit-assignment");const actor=await requirePermissionForMutation("ACCOUNT_STOCK");const result=await assignUnitToItemsForActor(actor as import("@/lib/account/projects").ProjectActor,raw);revalidatePath("/workspace/account/inventory","layout");return {ok:true as const,...result};}catch(error){return {ok:false as const,message:accountErrorMessage(error)};}}
+export async function unitAssignmentOptionsAction(raw: unknown) {
+  try {
+    const { requirePermission } = await import("@/lib/auth/authorization");
+    const { unitAssignmentOptionsForActor } =
+      await import("@/lib/account/unit-assignment");
+    const actor = await requirePermission("ACCOUNT_STOCK");
+    return {
+      ok: true as const,
+      page: await unitAssignmentOptionsForActor(
+        actor as import("@/lib/account/projects").ProjectActor,
+        raw,
+      ),
+    };
+  } catch (error) {
+    return { ok: false as const, message: accountErrorMessage(error) };
+  }
+}
+export async function assignUnitToItemsAction(raw: unknown) {
+  try {
+    const { requirePermissionForMutation } =
+      await import("@/lib/auth/authorization");
+    const { assignUnitToItemsForActor } =
+      await import("@/lib/account/unit-assignment");
+    const actor = await requirePermissionForMutation("ACCOUNT_STOCK");
+    const result = await assignUnitToItemsForActor(
+      actor as import("@/lib/account/projects").ProjectActor,
+      raw,
+    );
+    revalidatePath("/workspace/account/inventory", "layout");
+    return { ok: true as const, ...result };
+  } catch (error) {
+    return { ok: false as const, message: accountErrorMessage(error) };
+  }
+}
+
+export async function editCategoryWithFeedbackAction(raw: unknown) {
+  try {
+    const { editCategoryMetadata } =
+      await import("@/lib/account/category-metadata");
+    const row = await editCategoryMetadata(raw);
+    revalidatePath("/workspace/account/inventory/categories");
+    revalidatePath("/workspace/account/categories");
+    return { kind: "success" as const, row };
+  } catch (error) {
+    const code =
+      error !== null && typeof error === "object" && "code" in error
+        ? error.code
+        : null;
+    if (isRedirectError(error)) throw error;
+    return {
+      kind: "error" as const,
+      message:
+        error instanceof Error && error.message === "CATEGORY_STALE"
+          ? "This category changed or is no longer available. Reload before editing again."
+          : code === "P2002"
+            ? "A category with this name already exists. Choose another name."
+            : accountErrorMessage(error),
+    };
+  }
+}

@@ -11,7 +11,13 @@ export default async function Page() {
     db.accountCategory.findMany({
       where: { companyId, isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        scope: true,
+        updatedAt: true,
+      },
     }),
     db.accountProduct.findMany({
       where: { companyId, isActive: true },
@@ -33,6 +39,9 @@ export default async function Page() {
       categories={categories.map((x) => ({
         id: x.id,
         name: x.name,
+        description: x.description,
+        scope: x.scope,
+        updatedAt: x.updatedAt.toISOString(),
         count: counts.get(x.id) ?? 0,
       }))}
       uncategorizedCount={uncategorizedCount}
