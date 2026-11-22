@@ -237,6 +237,8 @@ export default async function MasterPage({
             <article key={x.id}>
               <h2>{x.name}</h2>
               <MasterSummary value={x} canViewCosts={d.canViewCosts}/>
+              {master==="vendors"&&d.canCreate&&<Link href={`/workspace/account/parties/vendors/${x.id}/edit`}>Edit Vendor</Link>}
+              {master==="vendors"&&"address"in x&&Boolean(x.address)&&<p>Address: {String(x.address)}</p>}
               {"description" in x && Boolean(x.description) && <p>{String(x.description)}</p>}
               {"scope" in x && <p>Applies to: {String(x.scope).toLowerCase()}</p>}
               {"phone" in x && Boolean(x.phone) && <p>Phone: {String(x.phone)}</p>}
