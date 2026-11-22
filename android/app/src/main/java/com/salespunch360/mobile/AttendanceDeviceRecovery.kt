@@ -18,3 +18,7 @@ internal fun attendanceTransportRecovery(start:Boolean,previousId:String?,curren
  !start && current?.id!=previousId -> "Attendance is active in a different session. Current state was refreshed; review attendance before stopping this session."
  else -> "The request could not be confirmed. Attendance is currently ${if(current==null)"stopped"else"active"}. Review attendance history before retrying."
 }
+
+internal fun attendanceResponseMayBeLost(error:Exception):Boolean =
+ error is java.io.IOException || error is kotlinx.serialization.SerializationException ||
+ (error is com.salespunch360.mobile.data.ApiException && error.status>=500)

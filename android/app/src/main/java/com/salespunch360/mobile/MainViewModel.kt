@@ -116,7 +116,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (e is IOException) {
+                if (attendanceResponseMayBeLost(e)) {
                     try {
                         val refreshed=api.bootstrap()
                         if(!applyBootstrap(refreshed, forcedWorkspace = Workspace.SALES)||Workspace.SALES !in validatedWorkspaces(refreshed))return@launch
