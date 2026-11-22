@@ -325,7 +325,7 @@ private fun SalesDrawerAttendance(
             locating = true
             status = "Getting current location…"
             try {
-                val point = if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,start))com.salespunch360.mobile.location.currentDeviceLocation(context)else null
+                val point = com.salespunch360.mobile.data.attendanceMeasurement(data.features,start){com.salespunch360.mobile.location.currentDeviceLocation(context)}
                 attendance(start, point) {}
                 status = if(point!=null)"Location ready"else null
             } catch (e: Exception) {
