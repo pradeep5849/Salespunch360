@@ -142,3 +142,7 @@ A160-F01 implemented pending acceptance under the retained Check-in default/keep
 ## Account party/vendor metadata editors
 
 A166-F02 and A167-F01 implemented pending acceptance in 83c3d0df. Twenty-three focused tests, 21 real SQL cases, TypeScript, changed-file lint and whitespace passed. Seven isolated Chromium form checks passed with mocked action responses; authenticated application acceptance remains separate. Previous full suite: 4236 passed / 453 optional skipped. Register: 133 implemented pending acceptance, 10 partial, 11 not started. See docs/party-metadata-implementation/checkpoint.md and browser-check.json. Prior 24393b44 CI passed all checks except live Lighthouse. Final-head CI pending. No production data/migration/security changes, deployment or merge.
+
+## Saved visit contact and report details
+
+A136-F02 implemented pending acceptance in e419d952; A155-F01 partial because deletion remains unfinished. Forty-five focused checks, TypeScript, lint and whitespace passed. Native CI/device acceptance pending. Register: 134 implemented pending acceptance, 11 partial, 9 not started; exclusions unchanged. See docs/visit-details-implementation/checkpoint.md. Previous c83d09ed passed all non-live checks. No production mutation, deployment or merge.
