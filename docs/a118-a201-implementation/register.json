@@ -2510,7 +2510,7 @@
         "status": "OPEN",
         "title": "Android lacks existing Account employee role and branch editor"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2520,7 +2520,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
-      }
+      },
+      "implementation_evidence": [
+        "docs/native-account-user-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Native compilation, lint and physical acceptance remain pending. Existing backend authority/seat/branch validation retained; dual Sales branch changes stay in the Sales editor."
     },
     {
       "finding_id": "A140-F03",
@@ -2583,7 +2587,7 @@
         "status": "OPEN",
         "title": "Native creation hardcodes All Branches without restricted scope option"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2593,7 +2597,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
-      }
+      },
+      "implementation_evidence": [
+        "docs/native-account-user-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Native compilation, lint and physical acceptance remain pending. Existing backend authority/seat/branch validation retained; dual Sales branch changes stay in the Sales editor."
     },
     {
       "finding_id": "A142-F01",
@@ -6309,8 +6317,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 123,
-    "NOT STARTED": 15,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 125,
+    "NOT STARTED": 13,
     "PARTIAL": 16,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,

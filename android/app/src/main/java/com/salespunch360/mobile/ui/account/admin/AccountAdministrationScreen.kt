@@ -92,7 +92,7 @@ fun AccountAdministrationScreen(
         }
 
         when (mode) {
-            "users" -> UserView(state.data, vm)
+            "users" -> UserView(state.data, vm,state.loading)
             "settings" -> SettingsForm(state.data, vm)
             "general" -> androidx.compose.runtime.CompositionLocalProvider(com.salespunch360.mobile.ui.account.LocalAccountDisplayPreferences provides com.salespunch360.mobile.ui.account.AccountDisplayPreferences.from(state.data.jsonObject["settings"]?.jsonObject)){GeneralSettingsView(state.data, vm,navigate)}
             "party-settings" -> PartySettingsView(state.data,vm,navigate,state.loading)
@@ -434,56 +434,61 @@ private fun TaxSettingsForm(data: JsonElement, vm: AccountAdministrationViewMode
     }
 }
 
+private val accountUserRoles=listOf("ACCOUNT_ADMIN","ACCOUNTANT","PROJECT_MANAGER","DATA_ENTRY").map{it to it.lowercase().replace('_',' ').replaceFirstChar{c->c.uppercase()}}
+
+@Composable private fun AccountUserBranches(branches:List<JsonObject>,scope:String,onScope:(String)->Unit,selected:MutableList<String>,busy:Boolean){
+ if(branches.size<2)return
+ Text("Branch access",fontWeight=FontWeight.Bold)
+ Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+  FilterChip(scope=="ALL_BRANCHES",{if(!busy)onScope("ALL_BRANCHES")},{Text("All branches")},enabled=!busy)
+  FilterChip(scope=="SELECTED_BRANCHES",{if(!busy)onScope("SELECTED_BRANCHES")},{Text("Selected branches")},enabled=!busy)
+ }
+ if(scope=="SELECTED_BRANCHES")branches.forEach{branch->val id=branch.str("id");Row(verticalAlignment=Alignment.CenterVertically){Checkbox(id in selected,{checked->if(checked&&id !in selected)selected.add(id)else if(!checked)selected.remove(id)},enabled=!busy);Text(branch.str("name"))}}
+}
+
 @Composable
-private fun UserView(data: JsonElement, vm: AccountAdministrationViewModel) {
-    val root = data as? JsonObject ?: return
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("ACCOUNTANT") }
-    Column {
-        OutlinedTextField(name, { name = it }, label = { Text("Name") })
-        OutlinedTextField(email, { email = it }, label = { Text("Email") })
-        OutlinedTextField(password, { password = it }, label = { Text("Temporary password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)
-        OutlinedTextField(role, { role = it }, label = { Text("Account role") })
-        Button(onClick = {
-            vm.saveUser(buildJsonObject {
-                put("name", name)
-                put("email", email)
-                put("password", password)
-                put("confirmPassword", password)
-                put("accountRole", role)
-                put("branchAccessScope", "ALL_BRANCHES")
-                putJsonArray("branchIds") {}
-            })
-        }) { Text("Create Account user") }
-        Text("Effective roles and access")
-        LazyColumn {
-            items(root["users"]?.jsonArray?.toList().orEmpty()) { element ->
-                val user = element.jsonObject
-                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(user["name"]!!.jsonPrimitive.content)
-                        Text("${user["accountRole"]?.jsonPrimitive?.contentOrNull ?: "No Account role"} · ${user["branchAccessScope"]?.jsonPrimitive?.content ?: ""}")
-                        Button(onClick = {
-                            vm.saveUser(buildJsonObject {
-                                put("userId", user["id"]!!.jsonPrimitive.content)
-                                val accountRole = user["accountRole"]?.jsonPrimitive?.contentOrNull
-                                if (accountRole != null) put("accountRole", accountRole) else put("accountRole", JsonNull)
-                                put("accountAccessActive", !(user["accountAccessActive"]?.jsonPrimitive?.booleanOrNull ?: false))
-                                put("branchAccessScope", user["branchAccessScope"]?.jsonPrimitive?.content ?: "ALL_BRANCHES")
-                                putJsonArray("branchIds") {
-                                    user["branchAccesses"]?.jsonArray?.forEach { access -> add(access.jsonObject["branchId"]!!.jsonPrimitive.content) }
-                                }
-                            })
-                        }) {
-                            Text(if (user["accountAccessActive"]?.jsonPrimitive?.booleanOrNull == true) "Deactivate Account access" else "Reactivate Account access")
-                        }
-                    }
-                }
-            }
-        }
+private fun UserView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean){
+ val root=data as? JsonObject?:return
+ val branches=root["branches"]?.jsonArray?.map{it.jsonObject}.orEmpty()
+ val canManage=root["canManageAccountUsers"]?.jsonPrimitive?.booleanOrNull==true
+ var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var role by remember{mutableStateOf("ACCOUNTANT")};var scope by remember{mutableStateOf("ALL_BRANCHES")};val selected=remember{mutableStateListOf<String>()}
+ LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
+  if(canManage)item{
+   Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+    OutlinedTextField(name,{name=it},label={Text("Name")},enabled=!busy)
+    OutlinedTextField(email,{email=it},label={Text("Email")},enabled=!busy)
+    OutlinedTextField(password,{password=it},label={Text("Temporary password")},visualTransformation=PasswordVisualTransformation(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password),singleLine=true,enabled=!busy)
+    SelectField("Account role",role,accountUserRoles){if(!busy)role=it}
+    AccountUserBranches(branches,scope,{scope=it},selected,busy)
+    Button({vm.saveUser(buildJsonObject{put("name",name.trim());put("email",email.trim());put("password",password);put("confirmPassword",password);put("accountRole",role);put("branchAccessScope",scope);putJsonArray("branchIds"){if(scope=="SELECTED_BRANCHES")selected.forEach{add(it)}}})},enabled=!busy&&name.isNotBlank()&&email.isNotBlank()&&password.isNotBlank()&&(scope=="ALL_BRANCHES"||selected.isNotEmpty())){Text("Create Account user")}
+   }
+  }
+  item{Text("Effective roles and access",fontWeight=FontWeight.Bold)}
+  items(root["users"]?.jsonArray?.toList().orEmpty(),key={it.jsonObject.str("id")}){element->AccountUserEditor(element.jsonObject,branches,canManage,busy,vm)}
+ }
+}
+
+@Composable private fun AccountUserEditor(user:JsonObject,branches:List<JsonObject>,canManage:Boolean,busy:Boolean,vm:AccountAdministrationViewModel){
+ val id=user.str("id");val savedRole=user["accountRole"]?.jsonPrimitive?.contentOrNull.orEmpty();val savedScope=user.str("branchAccessScope").ifBlank{"ALL_BRANCHES"};val savedIds=user["branchAccesses"]?.jsonArray?.map{it.jsonObject.str("branchId")}.orEmpty();val savedActive=user["accountAccessActive"]?.jsonPrimitive?.booleanOrNull?:false;val salesUser=user["salesRole"]?.jsonPrimitive?.contentOrNull!=null
+ var editing by remember(id){mutableStateOf(false)};var role by remember(id,savedRole){mutableStateOf(savedRole)};var scope by remember(id,savedScope){mutableStateOf(savedScope)};val selected=remember(id,savedIds){mutableStateListOf<String>().apply{addAll(savedIds)}};var active by remember(id,savedActive){mutableStateOf(savedActive)}
+ fun save(accountRole:String,enabled:Boolean,branchScope:String,branchIds:List<String>){vm.saveUser(buildJsonObject{put("userId",id);if(accountRole.isBlank())put("accountRole",JsonNull)else put("accountRole",accountRole);put("accountAccessActive",enabled&&accountRole.isNotBlank());put("branchAccessScope",branchScope);putJsonArray("branchIds"){branchIds.forEach{add(it)}}})}
+ Card(Modifier.fillMaxWidth()){
+  Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+   Text(user.str("name"),fontWeight=FontWeight.Bold);Text(user.str("email"));Text(savedRole.ifBlank{"No Account role"})
+   if(branches.size>1)Text(if(savedScope=="ALL_BRANCHES")"All branches" else branches.filter{it.str("id") in savedIds}.joinToString(", "){it.str("name")})
+   if(canManage){
+    OutlinedButton({editing=!editing},enabled=!busy){Text(if(editing)"Close editor" else "Edit Account role / access")}
+    if(editing){
+     val options=if(salesUser)listOf("" to "Remove Account role")+accountUserRoles else accountUserRoles
+     SelectField("Account role",role,options){if(!busy)role=it}
+     Row(verticalAlignment=Alignment.CenterVertically){Checkbox(active,{active=it},enabled=!busy&&role.isNotBlank());Text("Account access active")}
+     if(salesUser&&branches.size>1)Text("Branch access is shared with Sales. Change it in the Sales user editor.")else if(!salesUser)AccountUserBranches(branches,scope,{scope=it},selected,busy)
+     Button({save(role,active,if(salesUser)savedScope else scope,if(salesUser)savedIds else if(scope=="SELECTED_BRANCHES")selected.toList()else emptyList())},enabled=!busy&&(salesUser||role.isNotBlank())&&(salesUser||scope=="ALL_BRANCHES"||selected.isNotEmpty())){Text("Save role / access")}
     }
+    Button({save(savedRole,!savedActive,savedScope,savedIds)},enabled=!busy&&savedRole.isNotBlank()){Text(if(savedActive)"Deactivate Account access" else "Reactivate Account access")}
+   }
+  }
+ }
 }
 
 private val accountSettingsDestinations=listOf(

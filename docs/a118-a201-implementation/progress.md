@@ -118,3 +118,7 @@ A164-F02 implemented pending acceptance on web/current Android. Fourteen guarded
 ## View-only native company details
 
 A137-F03 implemented pending acceptance with a dedicated COMPANY_VIEW GET-only DTO and shared read-only Android screen for existing non-owner Company Details destinations. No settings/billing permission widened. Nine focused tests, TypeScript, changed lint and whitespace passed. Native CI/device acceptance pending. Register: 123 implemented pending acceptance, 16 partial, 15 not started. See docs/company-read-only-implementation/checkpoint.md.
+
+## Native Account user create/edit controls
+
+A140-F02 and A141-F02 implemented pending acceptance. Selected-branch creation and existing Account role/access corrections use the existing authorized route, with dual Sales branch authority retained. Twenty-six focused checks and whitespace passed; native compile/lint/device acceptance pending. Register: 125 implemented pending acceptance, 16 partial, 13 not started. See docs/native-account-user-implementation/checkpoint.md.
