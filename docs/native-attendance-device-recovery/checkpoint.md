@@ -1,0 +1,5 @@
+# A121-F04 — Preserve confirmed attendance through device failures
+
+Device tracking and upload scheduling failures are now recoverable warnings after a server-confirmed attendance response. They cannot turn a committed start/stop into a request-failure message, prevent the other device effect from running, or prevent bootstrap from installing current authorized state. Cancellation still propagates. Warnings include safe recovery guidance and survive the post-save bootstrap refresh. All three attendance surfaces delegate tracking to the ViewModel instead of starting/stopping it again in success callbacks.
+
+Four JVM cases cover success, tracking SecurityException with upload recovery, scheduler failure with tracking preserved, and cancellation. Whitespace passed; native compilation/JVM/lint CI and real permission/network/device acceptance are pending. Previous combined JS regression: 4266 passed / 454 gated skipped. A121-F04 remains PARTIAL: this slice does not complete the lost-response reconciliation and device retry acceptance work. No API/policy or production data/settings change, deployment or merge.

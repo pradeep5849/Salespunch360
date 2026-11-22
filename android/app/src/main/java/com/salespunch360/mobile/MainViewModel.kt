@@ -106,14 +106,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 } ?: "Attendance saved. Refresh to verify its confirmed time."
                 val bootstrap = _state.value.bootstrap
                 if (bootstrap != null) _state.value = _state.value.copy(bootstrap = bootstrap.copy(attendance = if (start) saved else null))
-                if (start && bootstrap?.features?.gpsTrackingEnabled == true) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
-                session.userId()?.let { LocationSyncWorker.schedule(getApplication(), it) }
+                val warning=attendanceDeviceRecovery(
+                    { if (start && bootstrap?.features?.gpsTrackingEnabled == true) TrackingService.start(getApplication()) else TrackingService.stop(getApplication()) },
+                    { session.userId()?.let { LocationSyncWorker.schedule(getApplication(), it) } }
+                )
+                if(warning!=null)confirmation += " $warning"
                 onSuccess()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e is IOException) {
-                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES); _state.value = _state.value.copy(message=confirmation) }
+                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR) }
                 }
@@ -122,7 +125,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 _state.value = _state.value.copy(submitting = false)
             }
-            try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES); _state.value = _state.value.copy(message=confirmation) }
+            _state.value = _state.value.copy(message=confirmation)
+            try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { _state.value = _state.value.copy(message = "$confirmation Refresh pending; refresh when connected.") }
         }
@@ -189,12 +193,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return false
         }
 
+        var deviceWarning:String?=null
         if (Workspace.SALES !in authorized) {
             TrackingService.stop(getApplication())
             purgeSalesLocal(session.userId())
         } else {
-            session.userId()?.let { if (bootstrap.features.gpsTrackingEnabled) LocationSyncWorker.schedule(getApplication(), it) }
-            if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
+            deviceWarning=attendanceDeviceRecovery(
+                { if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) TrackingService.start(getApplication()) else TrackingService.stop(getApplication()) },
+                { session.userId()?.let { if (bootstrap.features.gpsTrackingEnabled) LocationSyncWorker.schedule(getApplication(), it) } }
+            )
         }
 
         val deepPath = pendingAccountPath
@@ -217,7 +224,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             workspace = desired,
             accountPath = accountPath,
             accountSessionEpoch = _state.value.accountSessionEpoch,
-            message = _state.value.message,
+            message = listOfNotNull(_state.value.message,deviceWarning).distinct().joinToString(" ").ifBlank{null},
         )
         return true
     }

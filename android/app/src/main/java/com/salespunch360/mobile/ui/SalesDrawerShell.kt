@@ -32,7 +32,6 @@ import com.salespunch360.mobile.BuildConfig
 import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.SalesNotificationsViewModel
 import com.salespunch360.mobile.data.*
-import com.salespunch360.mobile.location.TrackingService
 import kotlinx.coroutines.launch
 
 private data class SalesVisitDetails(
@@ -327,10 +326,7 @@ private fun SalesDrawerAttendance(
             status = "Getting current location…"
             try {
                 val point = if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,start))com.salespunch360.mobile.location.currentDeviceLocation(context)else null
-                attendance(start, point) {
-                    if (start && data.features.gpsTrackingEnabled) TrackingService.start(context)
-                    if (!start) TrackingService.stop(context)
-                }
+                attendance(start, point) {}
                 status = if(point!=null)"Location ready"else null
             } catch (e: Exception) {
                 status = com.salespunch360.mobile.location.locationFailureMessage(e)
