@@ -29,7 +29,7 @@ import com.salespunch360.mobile.data.*
    state.message?.let{MessageBanner(it,vm::clear)}
   }
   if(monthly.rows.isEmpty())item{ContentCard("No employees","No active field employees are visible in your current scope.")}
-  items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won,onSaved->vm.saveMonthly(row.id,lead,won,onSaved)}}
+  items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won,onSaved->vm.saveMonthly(row.id,lead,won,row.revision,onSaved)}}
  }
 }
 

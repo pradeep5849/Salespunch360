@@ -5,8 +5,8 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | Status | Findings |
 |---|---:|
 | IMPLEMENTED — ACCEPTANCE PENDING | 80 |
-| PARTIAL | 24 |
-| NOT STARTED | 51 |
+| PARTIAL | 25 |
+| NOT STARTED | 50 |
 | REQUIREMENT SUPERSEDED | 3 |
 | AUDIT CORRECTION — WITHDRAWN | 1 |
 | DISCLOSED LIMITATION | 1 |
@@ -137,7 +137,7 @@ Counts refer to findings, not pages/tests. Implemented means code present, with 
 | A161-F02 | NOT STARTED |
 | A162-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A163-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
-| A163-F02 | NOT STARTED |
+| A163-F02 | PARTIAL |
 | A164-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A164-F02 | NOT STARTED |
 | A165-F01 | IMPLEMENTED — ACCEPTANCE PENDING |

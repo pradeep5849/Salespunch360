@@ -4151,7 +4151,7 @@
         "status": "OPEN",
         "title": "Monthly upserts lack expected-version conflict protection"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "PARTIAL",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4161,6 +4161,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after c780db58",
+        "progress": "docs/a118-a201-implementation/progress.md",
+        "acceptance": "Web/native revision transport and serializable paired save implemented; 53 target checks passed. Real SQL concurrency and new native CI remain pending."
       }
     },
     {
@@ -6135,8 +6140,8 @@
   },
   "implementation_status_counts": {
     "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 80,
-    "PARTIAL": 24,
-    "NOT STARTED": 51,
+    "PARTIAL": 25,
+    "NOT STARTED": 50,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 1,
     "DISCLOSED LIMITATION": 1
