@@ -2,7 +2,7 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "297123ca",
+  "application_revision": "continuation after 83facf8a",
   "status": "Implementation continued through category editing, native directory search and independent attendance location policy; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
@@ -1268,7 +1268,12 @@
         "title": "Transport and tracking failure recovery"
       },
       "reconciliation_status": "PARTIAL",
-      "evidence_updates": [],
+      "evidence_updates": [
+        {
+          "source": "docs/native-attendance-device-recovery/checkpoint.md",
+          "status": "PARTIAL \u2014 confirmed attendance/device failure boundary repaired; lost-response reconciliation remains"
+        }
+      ],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",

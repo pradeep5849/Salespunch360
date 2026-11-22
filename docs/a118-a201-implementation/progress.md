@@ -166,3 +166,7 @@ A156-F04 reconciled as implemented pending acceptance by earlier 3a83c1d5: the i
 ## Combined continuation validation
 
 Full regression after category editing, native Account directory search, independent attendance location policy and expense read-only reconciliation: **4266 passed / 454 environment-gated skipped, zero failed** (657 files passed / 49 skipped). Nine category backend/action checks passed after updating the older creation fixture to assert the saved metadata/revision response. TypeScript, changed-file lint and whitespace passed. Attendance-policy revision ecf590be passed web, Android and migration CI; both build Lighthouse checks passed on subsequent test-only 6f4764db, whose native/migration checks were still running at recording. Live Lighthouse remains enabled/failing. Final pushed-head CI and browser/device acceptance remain separate. Counts: 137 implemented pending acceptance, 8 partial, 9 not started. No production mutation, migration, deployment or merge.
+
+## Native attendance/device recovery boundary
+
+A121-F04 remains partial. Tracking/scheduler exceptions no longer invalidate a confirmed attendance response or prevent bootstrap installation; redundant screen-level tracking calls removed. Four JVM cases added; native CI/device acceptance pending. No extra JS full suite for this native-only slice. Counts unchanged: 137 implemented pending acceptance, 8 partial, 9 not started. See docs/native-attendance-device-recovery/checkpoint.md.
