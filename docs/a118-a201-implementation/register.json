@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "8d8dde16",
-  "status": "Implementation continued through category metadata editing; retained work and acceptance remain.",
+  "application_revision": "297123ca",
+  "status": "Implementation continued through category editing, native directory search and independent attendance location policy; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1240,7 +1240,7 @@
         "status": "OPEN",
         "title": "Geofence and tracking location requirements conflated"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1252,9 +1252,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "297123ca",
+        "progress": "docs/native-attendance-location-policy/checkpoint.md",
+        "acceptance": "30 focused checks, TypeScript, lint and whitespace passed. Three native JVM cases and final-head CI/device acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -6341,9 +6341,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 135,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 136,
     "NOT STARTED": 9,
-    "PARTIAL": 10,
+    "PARTIAL": 9,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1

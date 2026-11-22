@@ -4,9 +4,9 @@ Counts refer to historical finding records, not pages/tests. Implemented means c
 
 | Status | Findings |
 |---|---:|
-| IMPLEMENTED — ACCEPTANCE PENDING | 135 |
+| IMPLEMENTED — ACCEPTANCE PENDING | 136 |
 | NOT STARTED | 9 |
-| PARTIAL | 10 |
+| PARTIAL | 9 |
 | REQUIREMENT SUPERSEDED | 3 |
 | AUDIT CORRECTION — WITHDRAWN | 2 |
 | DISCLOSED LIMITATION | 1 |
@@ -27,7 +27,7 @@ Counts refer to historical finding records, not pages/tests. Implemented means c
 | A120-F06 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A121-F01 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A121-F02 | PARTIAL |
-| A121-F03 | PARTIAL |
+| A121-F03 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A121-F04 | PARTIAL |
 | A121-F05 | IMPLEMENTED — ACCEPTANCE PENDING |
 | A121-F06 | IMPLEMENTED — ACCEPTANCE PENDING |

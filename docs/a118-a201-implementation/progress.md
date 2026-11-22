@@ -154,3 +154,7 @@ A169-F01 implemented pending acceptance in 8d8dde16. Six backend checks, TypeScr
 ## Native Account directory search
 
 A142-F02 remains partial: native loaded-directory field search added with two JVM cases pending remote execution; server directory paging remains open. Whitespace passed. Counts remain 135 implemented pending acceptance, 10 partial, 9 not started. See docs/native-account-directory-search/checkpoint.md.
+
+## Independent native attendance location policy
+
+A121-F03 implemented pending acceptance in 297123ca. Thirty focused backend/bootstrap checks, TypeScript, lint and whitespace passed. Three native JVM policy cases and final-head CI/device acceptance pending. Register: 136 implemented pending acceptance, 9 partial, 9 not started; exclusions unchanged. See docs/native-attendance-location-policy/checkpoint.md. Tracking recovery and branch selection remain separate. No production data/settings change, migration, deployment or merge.
