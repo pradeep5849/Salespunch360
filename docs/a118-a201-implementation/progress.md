@@ -86,3 +86,11 @@ Continued through A163-F02, A159-F02/F03, A168-F01, A177-F01, A178-F01, A179-F01
 160 focused checks passed / 6 opt-in SQL cases skipped in that run. Two monthly SQL race cases passed separately. Final TypeScript and changed-file ESLint passed, including the accounting metadata editor and native target recovery source changes. Native filter helper JVM tests await remote Android CI; SDK unavailable locally. Full regression running before the batched push. Period history deliberately displays the latest 50 changes and labels that bound. Stock controls preserve service authorization; single-location context is not presented as a branch selector. No production migration or data mutation, deployment or merge.
 
 Final ten-slice full regression: 4172 passed / 435 skipped, zero failed (636 test files passed, 48 skipped). Two monthly-target race SQL cases passed separately as documented. Final TypeScript/ESLint/whitespace checks passed. Batched push will trigger new web/native/migration/build-Lighthouse CI; live Lighthouse remains enabled with the existing exception. Draft status and physical acceptance limits retained.
+
+## Next ten report/billing slices
+
+A155-F02/F03, A157-F01/F02, A125-F03/F04, A127-F03, A128-F01/F02 and A129-F03 implemented in code. Checkpoint: docs/report-billing-continuation/checkpoint.md. Register: 100 implemented pending acceptance, 24 partial, 31 not started, plus five exclusions/limitation. Native Account-only billing read access remains deferred; existing read guards and purchase prohibition retained.
+
+210 focused billing/report checks passed / 8 optional SQL skipped. Final TypeScript/changed-file ESLint/whitespace passed. New native JVM cases await CI. Full regression running for this ten-slice batch. Previous pushed 64694899 passed web, Android, migration and both build Lighthouse checks; only live Lighthouse failed. No real orders/payments/visits or security settings changed, no production deployment or merge.
+
+Final report/billing batch regression: 4178 passed / 435 skipped, zero failed (639 test files passed). TypeScript, changed-file lint and whitespace checks passed. Prior 64694899 CI passed every check except live Lighthouse. New-head CI and physical Android/browser acceptance remain required. No deployment/merge.

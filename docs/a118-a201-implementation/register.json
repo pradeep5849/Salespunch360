@@ -3,7 +3,7 @@
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
   "application_revision": "40ad06a6",
-  "status": "Implementation reconciled through ten target/report/master correction slices; retained findings and acceptance limits remain.",
+  "status": "Implementation reconciled through report/billing continuation after 64694899; acceptance and retained findings remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1481,7 +1481,7 @@
         "status": "OPEN",
         "title": "Native billing period taken from paginated order history"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1491,6 +1491,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -1502,7 +1507,7 @@
         "status": "OPEN",
         "title": "Native quote failure feedback missing"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1512,6 +1517,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -1667,7 +1677,7 @@
         "status": "OPEN",
         "title": "Quote failure lacks local review recovery"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1677,6 +1687,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -1688,7 +1703,7 @@
         "status": "OPEN",
         "title": "Payment History lacks a visible entry in billing navigation"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1698,6 +1713,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -1709,7 +1729,7 @@
         "status": "OPEN",
         "title": "Web order history stops at 50 without pagination"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1719,6 +1739,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -1827,7 +1852,7 @@
         "status": "OPEN",
         "title": "Ancillary billing-data failure blocks hub navigation"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1837,6 +1862,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -3576,7 +3606,7 @@
         "status": "OPEN",
         "title": "Android Sales cards omit checkout timestamp and outcome notes"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3586,6 +3616,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -3597,7 +3632,7 @@
         "status": "OPEN",
         "title": "Sales report paging drops supported non-date query filters"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3607,6 +3642,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -3798,7 +3838,7 @@
         "status": "OPEN",
         "title": "Category summary overwrites selected action/type scope without explanation"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3808,6 +3848,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -3819,7 +3864,7 @@
         "status": "OPEN",
         "title": "Android omits action/type/customer-name geofence filters"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3829,6 +3874,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 64694899",
+        "progress": "docs/report-billing-continuation/checkpoint.md",
+        "acceptance": "210 focused tests passed; final full suite in progress.md. Native/browser acceptance and final-head CI remain pending."
       }
     },
     {
@@ -6184,9 +6234,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 90,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 100,
     "PARTIAL": 24,
-    "NOT STARTED": 41,
+    "NOT STARTED": 31,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 1,
     "DISCLOSED LIMITATION": 1
