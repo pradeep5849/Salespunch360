@@ -1,0 +1,8 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({visits:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{customerVisit:{count:async()=>1,findMany:m.visits},lead:{count:async()=>0},customer:{findMany:async()=>[]}}}));
+vi.mock('./scope',()=>({resolveEmployeeScope:async()=>['employee'],reportEmployeeOptions:async()=>[]}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:async()=>({branchId:'branch'})}));
+import {checkInReport} from './check-ins';
+beforeEach(()=>vi.clearAllMocks());
+it.each([{stored:'existing-lead',source:[],expected:'existing-lead'},{stored:null,source:[{id:'legacy-lead'}],expected:'legacy-lead'},{stored:'canonical',source:[{id:'legacy'}],expected:'canonical'}])('preserves canonical visit relationship with legacy fallback: $expected',async({stored,source,expected})=>{m.visits.mockResolvedValue([{id:'visit',leadId:stored,sourceLeads:source,checkedInAt:new Date('2026-11-22T01:00Z'),checkedOutAt:null,customer:null}]);const result=await checkInReport({start:'2026-11-01',end:'2026-11-22'},false,{id:'employee',name:'Employee',companyId:'company',salesRole:'SALES'});expect(result.rows[0].leadId).toBe(expected)});

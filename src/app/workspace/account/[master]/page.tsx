@@ -215,6 +215,7 @@ export default async function MasterPage({
           </label>
           <button>Search</button>
         </form>
+        {master === "products" && d.canCreate && <p>Products created with this quick form are untracked. <Link href="/workspace/account/inventory/items/new">Create inventory item with tracking / opening stock</Link></p>}
         {master === "units" && d.canCreate && <Link href="/workspace/account/inventory/units">Manage / Edit units</Link>}
         {d.canCreate && (
           <SaveFeedbackForm
