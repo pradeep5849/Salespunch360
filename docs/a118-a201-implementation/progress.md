@@ -146,3 +146,7 @@ A166-F02 and A167-F01 implemented pending acceptance in 83c3d0df. Twenty-three f
 ## Saved visit contact and report details
 
 A136-F02 implemented pending acceptance in e419d952; A155-F01 partial because deletion remains unfinished. Forty-five focused checks, TypeScript, lint and whitespace passed. Native CI/device acceptance pending. Register: 134 implemented pending acceptance, 11 partial, 9 not started; exclusions unchanged. See docs/visit-details-implementation/checkpoint.md. Previous c83d09ed passed all non-live checks. No production mutation, deployment or merge.
+
+## Category metadata editing
+
+A169-F01 implemented pending acceptance in 8d8dde16. Six backend checks, TypeScript, lint/whitespace and five isolated React browser checks passed. Scope and existing item relations remain unchanged. Register: 135 implemented pending acceptance, 10 partial, 9 not started; exclusions unchanged. See docs/category-metadata-implementation/checkpoint.md. Final-head CI/authenticated browser acceptance pending; no production mutation, migration, deployment or merge.
