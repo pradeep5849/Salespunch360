@@ -383,6 +383,11 @@ private fun ReportFilters(state:com.salespunch360.mobile.ReportsState,vm:Reports
    DateField("End",state.end,vm::setEnd,Modifier.weight(1f))
   }
   CycleFilter("Employee",state.employeeId,employees,vm::setEmployee)
+  if(state.type=="geofence"){
+   OutlinedTextField(value=state.geofenceFilters.q,onValueChange=vm::setGeofenceSearch,label={Text("Customer name")},singleLine=true,modifier=Modifier.fillMaxWidth())
+   ChoiceRow("Action",state.geofenceFilters.action,listOf("ALL","ATTENDANCE_START","CUSTOMER_CHECK_IN"),vm::setGeofenceAction)
+   ChoiceRow("Breach type",state.geofenceFilters.eventType,listOf("ALL","OUTSIDE_RADIUS","INSUFFICIENT_ACCURACY"),vm::setGeofenceType)
+  }
   if(state.type=="leads"){
    OutlinedTextField(value=state.leadFilters.q,onValueChange=vm::setLeadSearch,label={Text("Search leads")},singleLine=true,modifier=Modifier.fillMaxWidth())
    ChoiceRow("Stage",state.leadFilters.stage,listOf("ALL","NEW","QUALIFIED","PROPOSAL","NEGOTIATION","WON","LOST"),vm::setLeadStage)

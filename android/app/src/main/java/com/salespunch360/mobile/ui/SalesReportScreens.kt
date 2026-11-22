@@ -161,6 +161,10 @@ private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
        }
       }
       row.salesText("checkedInAt")?.let{Text(salesReportDateTime(it),style=MaterialTheme.typography.bodySmall,fontWeight=FontWeight.SemiBold,color=SalesBlue)}
+      row.salesText("checkedOutAt")?.let{Text("Check out: ${salesReportDateTime(it)}",style=MaterialTheme.typography.bodySmall,color=SalesInk)}
+      row.salesText("checkoutSentiment")?.takeIf{it.isNotBlank()}?.let{Text("Outcome: $it",style=MaterialTheme.typography.bodySmall,color=SalesInk)}
+      row.salesText("checkoutRemarks")?.takeIf{it.isNotBlank()}?.let{Text("Checkout remarks: $it",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+      row.salesText("visitNotes")?.takeIf{it.isNotBlank()}?.let{Text("Visit notes: $it",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
       Text(address,style=MaterialTheme.typography.bodySmall,color=SalesMuted)
      }
     }

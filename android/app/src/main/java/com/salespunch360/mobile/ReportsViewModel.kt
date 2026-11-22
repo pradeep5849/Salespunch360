@@ -24,6 +24,7 @@ data class ReportsState(
  val sentiment:String="ALL",
  val page:Int=1,
  val leadFilters:LeadReportFilters=LeadReportFilters(),
+ val geofenceFilters:GeofenceReportFilters=GeofenceReportFilters(),
  val export:ByteArray?=null,
  val message:String?=null,
 )
@@ -41,7 +42,7 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
   val base=current.copy(loading=true,type=type,page=page,start=requestStart,end=requestEnd,message=null)
   _state.value=base
   _state.value=try{
-   val report=api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page,current.leadFilters)
+   val report=api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page,current.leadFilters,current.geofenceFilters)
    val filters=report["filters"]?.jsonObject
    base.copy(
     loading=false,
@@ -58,7 +59,7 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
   if(current.exporting)return@launch
   _state.value=current.copy(exporting=true,export=null,message=null)
   _state.value=try{
-   current.copy(exporting=false,export=api.reportExcel(current.type,current.start.ifBlank{null},current.end.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,current.leadFilters))
+   current.copy(exporting=false,export=api.reportExcel(current.type,current.start.ifBlank{null},current.end.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,current.leadFilters,current.geofenceFilters))
   }catch(e:Exception){
    current.copy(exporting=false,message=if(e is ApiException&&e.code=="REPORT_TOO_LARGE")"More than 10,000 rows match. Narrow the filters and try again." else apiMessage(e,"Excel export couldn't be downloaded."))
   }
@@ -75,8 +76,11 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
  fun setLeadSource(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(source=v))}
  fun setLeadFollowUp(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(followUp=v))}
  fun setLeadSearch(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(q=v))}
+ fun setGeofenceAction(v:String){_state.value=_state.value.copy(geofenceFilters=_state.value.geofenceFilters.copy(action=v))}
+ fun setGeofenceType(v:String){_state.value=_state.value.copy(geofenceFilters=_state.value.geofenceFilters.copy(eventType=v))}
+ fun setGeofenceSearch(v:String){_state.value=_state.value.copy(geofenceFilters=_state.value.geofenceFilters.copy(q=v))}
  fun reset(){
-  _state.value=_state.value.copy(start="",end="",employeeId=null,customerId=null,status="ALL",sentiment="ALL",page=1,leadFilters=LeadReportFilters())
+  _state.value=_state.value.copy(start="",end="",employeeId=null,customerId=null,status="ALL",sentiment="ALL",page=1,leadFilters=LeadReportFilters(),geofenceFilters=GeofenceReportFilters())
   load()
  }
 }

@@ -1,3 +1,4 @@
+import {reportPageHref as pageHref} from "@/lib/reports/page-href";
 import Image from "next/image";
 import Link from "next/link";
 import {DownloadExcel,reportQueryWasRun} from "@/components/workspace/download-excel";
@@ -8,7 +9,7 @@ import { dateTime,distance,duration,Filters,Summary } from "../report-ui";
 import styles from "../sales-report-cards.module.css";
 
 const one=(value:string|string[]|undefined)=>Array.isArray(value)?value[0]:value;
-const pageHref=(raw:SearchParams,page:number)=>{const q=new URLSearchParams();for(const[key,value]of Object.entries(raw)){const v=Array.isArray(value)?value[0]:value;if(v&&key!=="page")q.set(key,v)}q.set("page",String(page));return`?${q.toString()}`};
+
 
 export default async function Page({searchParams}:{searchParams:Promise<SearchParams>}){
  const raw=await searchParams;
@@ -16,7 +17,7 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
  const selectedDate=one(raw.date)||"";
  const effectiveRaw=actor.salesRole==="SALES"&&selectedDate?{...raw,start:selectedDate,end:selectedDate}:raw;
  const r=await checkInReport(effectiveRaw,false,actor);
- if(actor.salesRole==="SALES")return <SalesCheckInReport r={r} selectedDate={selectedDate}/>;
+ if(actor.salesRole==="SALES")return <SalesCheckInReport r={r} selectedDate={selectedDate} raw={raw}/>;
  return <main className={styles.salesPage}>
   <header className={styles.heading}><h1>Check-in Report</h1><p>Recent check-ins from all authorized users are shown by default. Select an employee and date range when you need a specific report.</p></header>
   <section className={styles.searchCard}>
@@ -49,9 +50,9 @@ function CheckInCards({rows,showEmployee=false}:{rows:CheckInResult['rows'];show
  </article>)}</section>;
 }
 
-function SalesCheckInReport({r,selectedDate}:{r:CheckInResult;selectedDate:string}){
+function SalesCheckInReport({r,selectedDate,raw}:{r:CheckInResult;selectedDate:string;raw:SearchParams}){
  const page=r.filters.page;
- const salesPageHref=(next:number)=>selectedDate?`?date=${encodeURIComponent(selectedDate)}&page=${next}`:`?page=${next}`;
+ const salesPageHref=(next:number)=>pageHref(raw,next);
  return <main className={styles.salesPage}>
   <header className={styles.heading}><h1>Check-in Report</h1><p>All your check-ins, latest first. Search any particular day using the date below.</p></header>
   <form className={styles.searchCard}>
