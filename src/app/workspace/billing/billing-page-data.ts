@@ -1,3 +1,4 @@
+import {operationalSalesStatus,nextAccountPackageExpiry} from "@/lib/billing/subscription-display";
 import {billingDashboard} from '@/lib/billing/service';
 import {getTelecallerBillingOverview} from '@/lib/billing/telecaller';
 
@@ -34,9 +35,10 @@ export async function loadBillingPageData(){
  const accountPrices={SIX_MONTH:r.account.sixMonthUnitPrice,YEARLY:r.account.yearlyUnitPrice};
  const accountCurrent=r.account.subscriptions[0];
  const isPlus=r.company?.productEdition==='SALESPUNCH360_PLUS';
- const salesStatus=e?(e.paidActive?'ACTIVE':e.trialActive?'TRIAL':r.company?.subscriptionStatus==='ACTIVE'?'ACTIVE':'INACTIVE'):'INACTIVE';
+ const salesStatus=operationalSalesStatus(e);
+ const accountExpiry=nextAccountPackageExpiry(r.account.subscriptions);
  const accountStatus=accountCurrent?'ACTIVE':r.company?.subscriptionStatus==='TRIAL'&&r.account.packageCount>0?'TRIAL':'INACTIVE';
  const activePeriod=(e?.subscription?.billingPeriod??'SIX_MONTH') as BillingPeriod;
  const activeEmployees=r.activeEmployees as ActiveSalesEmployee[];
- return {r,e,telecaller,managersEnabled,backHref,prices,telecallerPrices,accountPrices,accountCurrent,isPlus,salesStatus,accountStatus,activePeriod,activeEmployees};
+ return {accountExpiry,r,e,telecaller,managersEnabled,backHref,prices,telecallerPrices,accountPrices,accountCurrent,isPlus,salesStatus,accountStatus,activePeriod,activeEmployees};
 }

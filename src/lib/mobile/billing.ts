@@ -1,3 +1,4 @@
+import {operationalSalesStatus,nextAccountPackageExpiry} from "@/lib/billing/subscription-display";
 import {effectiveAccountCapacity} from "@/lib/billing/account-capacity";
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
@@ -40,7 +41,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
   orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2)})),
   onlinePaymentAvailable:false,salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
   sales:entitlement?{
-   status:entitlement.paidActive?"ACTIVE":entitlement.trialActive?"TRIAL":company.subscriptionStatus,
+   status:operationalSalesStatus(entitlement),
    endsAt:entitlement.subscription?.endsAt??company.trialEndsAt,
    billingPeriod:entitlement.subscription?.billingPeriod??null,
    adminUsage:entitlement.adminUsage,adminLimit:entitlement.adminLimit,
@@ -49,6 +50,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
    telecallerUsage:telecaller.used,telecallerLimit:telecaller.limit
   }:null,
   account:hasAccount?{
+   ...nextAccountPackageExpiry(accountSubs),
    status:accountCurrent?"ACTIVE":trialAccountPackages?"TRIAL":"INACTIVE",
    endsAt:accountCurrent?.endsAt??(trialAccountPackages?company.trialEndsAt:null),
    packageCount:accountPackageCount,
