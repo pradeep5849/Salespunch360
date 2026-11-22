@@ -215,6 +215,7 @@ export default async function MasterPage({
           </label>
           <button>Search</button>
         </form>
+        {master === "units" && d.canCreate && <Link href="/workspace/account/inventory/units">Manage / Edit units</Link>}
         {d.canCreate && (
           <SaveFeedbackForm
             action={saveAccountMaster}

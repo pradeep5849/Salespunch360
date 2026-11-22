@@ -26,7 +26,7 @@ export async function warehouseAction(f: FormData) {
     id = String(f.get("id") || "");
   if (op === "deactivate") await deactivateWarehouse(id);
   else if (op === "update")
-    await updateWarehouse(id, raw(f, "operation", "id"));
+    await updateWarehouse(id, {...raw(f, "operation", "id"),...(f.has("address")?{address:String(f.get("address")??"")} : {}),...(f.has("isDefault")?{isDefault:f.get("isDefault")==="true"}: {})});
   else await createWarehouse(raw(f, "operation", "id"));
   revalidatePath("/workspace/account/inventory/warehouses");
 }
