@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "continuation after 83facf8a",
-  "status": "Implementation continued through category editing, native directory search and independent attendance location policy; retained work and acceptance remain.",
+  "application_revision": "f8809a51",
+  "status": "Implementation continued through native attendance device/transport recovery; retained findings and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1267,7 +1267,7 @@
         "status": "OPEN",
         "title": "Transport and tracking failure recovery"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "source": "docs/native-attendance-device-recovery/checkpoint.md",
@@ -1284,9 +1284,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "f8809a51",
+        "progress": "docs/native-attendance-device-recovery/checkpoint.md",
+        "acceptance": "Native compilation/JVM/lint, web, migrations and both build Lighthouse checks passed. Ten device/transport cases plus eight policy/measurement cases included. Live Lighthouse fails; real device/network acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -6346,9 +6346,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 137,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 138,
     "NOT STARTED": 9,
-    "PARTIAL": 8,
+    "PARTIAL": 7,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1

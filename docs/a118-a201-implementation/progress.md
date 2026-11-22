@@ -170,3 +170,7 @@ Full regression after category editing, native Account directory search, indepen
 ## Native attendance/device recovery boundary
 
 A121-F04 remains partial. Tracking/scheduler exceptions no longer invalidate a confirmed attendance response or prevent bootstrap installation; redundant screen-level tracking calls removed. Four JVM cases added; native CI/device acceptance pending. No extra JS full suite for this native-only slice. Counts unchanged: 137 implemented pending acceptance, 8 partial, 9 not started. See docs/native-attendance-device-recovery/checkpoint.md.
+
+## Native attendance recovery validated
+
+A121-F04 implemented pending acceptance in f8809a51: confirmed attendance survives device effects; ambiguous responses refresh authoritative state without replay; permission loss does not block END, while START policy stays enforced. Ten device/transport and eight policy/measurement JVM cases are included. Final application revision passed Android compilation/JVM/lint, web, migration and both build Lighthouse checks; only live desktop/mobile Lighthouse failed. Previous combined JS full suite remains 4266 passed / 454 gated skipped; no unnecessary repeat for the native-only change. Register: 138 implemented pending acceptance, 7 partial, 9 not started. Physical device/network and final documentation-head acceptance remain separate. See docs/native-attendance-device-recovery/checkpoint.md. No production settings/data change, migration, deployment or merge.
