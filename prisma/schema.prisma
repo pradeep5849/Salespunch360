@@ -1084,6 +1084,8 @@ model Customer {
   notes                     String?
   isActive                  Boolean              @default(true)
   isAccountCustomer         Boolean              @default(false)
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.Char(64)
   createdAt                 DateTime             @default(now())
   updatedAt                 DateTime             @updatedAt
   visits                    CustomerVisit[]
@@ -1095,6 +1097,7 @@ model Customer {
   settlements               AccountSettlement[]  @relation("SettlementCustomer")
   paymentReminders          PaymentReminder[]    @relation("PaymentReminderCustomer")
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@index([companyId, name])
   @@index([companyId, createdAt])
@@ -1215,9 +1218,12 @@ model FollowUpTask {
   completedVisitId String?            @unique @db.Uuid
   completedVisit   CustomerVisit?     @relation(fields: [completedVisitId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   completedAt      DateTime?
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.Char(64)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, assignedUserId, status, dueDate])
   @@index([companyId, leadId, status, dueDate])
   @@index([companyId, status, dueDate])

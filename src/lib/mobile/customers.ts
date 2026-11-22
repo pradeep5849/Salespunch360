@@ -1,7 +1,8 @@
+import {createCustomerForActor} from "@/lib/customers/service";
 import {pageWindow,pageResult} from "@/lib/pagination";
 import {Prisma} from '@prisma/client';
 import {db} from '@/lib/db';
-import {assignCustomerSchema,createCustomerSchema} from '@/lib/customers/validation';
+import {assignCustomerSchema} from '@/lib/customers/validation';
 import {operationalBranchContext,resolveOperationalWriteBranch} from '@/lib/branches/operational-scope';
 import type {MobilePrincipal} from './auth';
 import {MobileCompanyError} from './company';
@@ -15,6 +16,6 @@ export async function mobileCustomerAdminContext(p:MobilePrincipal,raw:{page?:un
  db.branch.findMany({where:{companyId,id:{in:scope.branchIds},isActive:true},select:{id:true,name:true,code:true,isPrimary:true},orderBy:[{isPrimary:'desc'},{name:'asc'}]})
 ]);const page=pageResult(customers,{page:window.page,pageSize:window.pageSize});return{customers:page.items,page:page.page,hasMore:page.hasMore,q,assignees,branches}}
 
-export async function mobileCreateCustomer(p:MobilePrincipal,raw:unknown){const companyId=admin(p),data=createCustomerSchema.parse(raw),branchId=await resolveOperationalWriteBranch(p,data.branchId);return db.$transaction(async tx=>{let assigneeId:string|undefined;if(data.assignedUserId){const assignee=await tx.user.findFirst({where:{id:data.assignedUserId,companyId,isActive:true,salesAccessActive:true,OR:[{salesRole:'SALES'},{salesRole:'MANAGER',managerType:'FIELD_MANAGER'}]},select:{id:true}});if(!assignee)throw new MobileCompanyError('INVALID_ASSIGNMENT',400);await resolveOperationalWriteBranch({id:assignee.id,companyId},branchId,tx);assigneeId=assignee.id}const customer=await tx.customer.create({data:{name:data.name,phone:data.phone,companyId,branchId,assignedUserId:assigneeId}});if(assigneeId)await createLead(tx,companyId,branchId,p.id,customer,assigneeId);return customer})}
+export async function mobileCreateCustomer(p:MobilePrincipal,raw:unknown){admin(p);try{return await createCustomerForActor(p,raw)}catch(error){const code=error instanceof Error?error.message:"";if(code==="INVALID_ASSIGNMENT")throw new MobileCompanyError(code,400);if(code==="CREATION_REQUEST_CONFLICT")throw new MobileCompanyError(code,409);throw error}}
 
 export async function mobileAssignCustomer(p:MobilePrincipal,raw:unknown){const companyId=admin(p),data=assignCustomerSchema.parse(raw),scope=await operationalBranchContext(p);return db.$transaction(async tx=>{const assignee=await tx.user.findFirst({where:{id:data.assignedUserId,companyId,isActive:true,salesAccessActive:true,OR:[{salesRole:'SALES'},{salesRole:'MANAGER',managerType:'FIELD_MANAGER'}]},select:{id:true}});if(!assignee)throw new MobileCompanyError('INVALID_ASSIGNMENT',400);const customer=await tx.customer.findFirst({where:{id:data.customerId,companyId,branchId:{in:scope.branchIds},assignedUserId:null},select:{id:true,name:true,phone:true,branchId:true}});if(!customer)throw new MobileCompanyError('CUSTOMER_NOT_FOUND',404);await resolveOperationalWriteBranch({id:assignee.id,companyId},customer.branchId,tx);const claimed=await tx.customer.updateMany({where:{id:customer.id,companyId,branchId:customer.branchId,assignedUserId:null},data:{assignedUserId:assignee.id}});if(claimed.count!==1)throw new MobileCompanyError("CUSTOMER_ALREADY_ASSIGNED",409);await createLead(tx,companyId,customer.branchId,p.id,customer,assignee.id);return{ok:true}})}

@@ -1,3 +1,5 @@
+import {retrySerializable} from "@/lib/account/transaction-retry";
+import {assertCreationIntent,creationIntentHash,optionalCreationRequestKeySchema,publicCreationResult} from "@/lib/mutations/creation-intent";
 import {createSalesNotification} from "@/lib/sales-notifications/service";
 import {Prisma,type ManagerType,type SalesRole} from "@prisma/client";
 import {db} from "@/lib/db";
@@ -37,25 +39,27 @@ export async function telecallerFollowUpOptions():Promise<TelecallerOption[]>{
  return telecallerOptionsForCompany(actor.companyId);
 }
 
-export async function createTelecallerCallFollowUpForActor(actor:CallAssignmentActor,raw:{leadId:unknown;dueDate:unknown;notes?:unknown;assignedUserId:unknown}){
+export async function createTelecallerCallFollowUpForActor(actor:CallAssignmentActor,raw:{leadId:unknown;dueDate:unknown;notes?:unknown;assignedUserId:unknown;creationRequestKey?:unknown}){
  await assertOperationalWrite(actor.companyId);
  await assertActiveTelecallerEntitlement(actor.companyId);
  const leadId=String(raw.leadId),assignedUserId=String(raw.assignedUserId),dueText=String(raw.dueDate);
  let dueDate:Date;try{dueDate=parseIndiaBusinessDate(dueText);}catch{throw new Error("INVALID_DATE");}
- const notes=encodeFollowUpNotes("CALL",raw.notes);
- return db.$transaction(async tx=>{
+ const notes=encodeFollowUpNotes("CALL",raw.notes),creationRequestKey=optionalCreationRequestKeySchema.parse(raw.creationRequestKey),hash=creationIntentHash({actorId:actor.id,leadId,assignedUserId,dueDate:dueDate.toISOString(),type:"CALL",notes});
+ return retrySerializable(()=>db.$transaction(async tx=>{
   await tx.$queryRaw`SELECT "id" FROM "leads" WHERE "id"=${leadId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
   const lead=await tx.lead.findFirst({where:{id:leadId,companyId:actor.companyId,...visibilityWhere(actor)},select:{id:true,branchId:true,assignedUserId:true,assignedUser:{select:{id:true,salesRole:true,isActive:true,salesAccessActive:true,managerId:true,managerType:true}}}});
   if(!lead)throw new Error("NOT_FOUND");
   await resolveOperationalWriteBranch(actor,lead.branchId,tx);
   if(!canAssign(actor,lead.assignedUser))throw new Error("INVALID_ASSIGNMENT");
+  const existing=creationRequestKey?await tx.followUpTask.findUnique({where:{companyId_creationRequestKey:{companyId:actor.companyId,creationRequestKey}}}):null;
+  if(existing){if(existing.leadId!==leadId||existing.branchId!==lead.branchId)throw new Error("CREATION_REQUEST_CONFLICT");assertCreationIntent(existing.creationRequestHash,hash);return{...publicCreationResult(existing),type:"CALL" as const,notes:decodeFollowUpNotes(existing.notes).notes};}
   const target=await tx.$queryRaw<{id:string}[]>(Prisma.sql`SELECT id FROM "users" WHERE id=${assignedUserId}::uuid AND "companyId"=${actor.companyId}::uuid AND "isActive"=TRUE AND "salesRole"='SALES'::"SalesRole" AND ${designationSql} LIMIT 1`);
   if(!target[0])throw new Error("INVALID_ASSIGNMENT");
-  const task=await tx.followUpTask.create({data:{companyId:actor.companyId,branchId:lead.branchId,leadId,assignedUserId,createdByUserId:actor.id,dueDate,notes}});
+  const task=await tx.followUpTask.create({data:{companyId:actor.companyId,branchId:lead.branchId,leadId,assignedUserId,createdByUserId:actor.id,dueDate,notes,...(creationRequestKey?{creationRequestKey,creationRequestHash:hash}:{})}});
   await syncLeadFollowUpAt(tx,leadId);
   await createSalesNotification(tx,{companyId:actor.companyId,recipientUserId:assignedUserId,actorUserId:actor.id,eventType:"FOLLOW_UP_ASSIGNED",title:"Call follow-up assigned",body:"A Call follow-up was assigned to you.",relatedEntityType:"FOLLOW_UP",relatedEntityId:task.id,navigationTarget:`/workspace/follow-up-tasks?status=PENDING&leadId=${leadId}`,dedupeKey:`FOLLOW_UP_ASSIGNED:${task.id}`});
-  return{...task,type:"CALL" as const,notes:decodeFollowUpNotes(task.notes).notes};
- },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+  return{...publicCreationResult(task),type:"CALL" as const,notes:decodeFollowUpNotes(task.notes).notes};
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable}),3,creationRequestKey?["companyId","creationRequestKey"]:undefined);
 }
 
 export async function listAssignedTelecallerCallsForActor(actor:CallAssignmentActor):Promise<AssignedTelecallerCall[]>{

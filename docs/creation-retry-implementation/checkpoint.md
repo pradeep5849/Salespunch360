@@ -1,0 +1,9 @@
+# Creation retry safety — A138-F01 / A148-F03
+
+Current web and Android create forms keep a UUID for unchanged customer/lead or follow-up submissions. The server scopes keys by company and hashes the normalized actor and request. Unchanged retries return the committed record; changed intent under the same key is rejected. Separate keys allow legitimate same-name/phone records. Follow-up replay does not send another notification or reopen a canceled task. Existing permissions, branch scope and billing checks remain enforced.
+
+Nullable key/hash columns and company/key unique indexes are additive. All 168 migrations applied to an isolated local PostgreSQL fixture. No production migration or data changed. Older callers may omit the key and retain normal creation behavior; their retries are not protected. Keys are not guaranteed across reinstall or lost drafts. Physical Android/browser acceptance and remote native compilation remain pending.
+
+Validation: 13 real PostgreSQL cases passed, including concurrent cross-client customer replay, task/notification contention, company and actor isolation, changed intent, separate same-phone requests, canceled-task replay, authorization denial and rollback on notification failure. The first expanded fixture failed because its additional admin used an invalid historical role pairing; correcting the fixture to FIELD_ADMIN/ADMIN preserved the production constraint. Full regression: 4203 passed / 449 optional checks skipped, zero failed. SQL cases ran separately with the guarded fixture enabled. TypeScript (4GB heap), changed TypeScript ESLint and whitespace checks passed. Default 2GB TypeScript heap was insufficient; no application failure was hidden.
+
+Register: 121 implemented pending acceptance, 16 partial, 17 not started; historical exclusions unchanged. PR #212 remains draft; no merge/deployment claimed.

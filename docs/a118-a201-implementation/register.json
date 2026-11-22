@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "40ad06a6",
-  "status": "Implementation reconciled through partial/history continuation after dda5da1e; acceptance and retained work remain.",
+  "application_revision": "99d7dde6",
+  "status": "Implementation continued with customer and follow-up retry safety; acceptance and retained work remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -2329,7 +2329,7 @@
         "status": "OPEN",
         "title": "Customer create retries are not idempotent"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2339,7 +2339,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
-      }
+      },
+      "implementation_evidence": [
+        "docs/creation-retry-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Current web/native forms send per-intent keys; legacy callers without keys retain ordinary create behavior. Browser/device acceptance and deployment remain pending."
     },
     {
       "finding_id": "A138-F02",
@@ -3007,7 +3011,7 @@
         "status": "OPEN",
         "title": "Uncertain creation retries can duplicate follow-up tasks"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -3017,7 +3021,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
-      }
+      },
+      "implementation_evidence": [
+        "docs/creation-retry-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Current web/native forms send per-intent keys; legacy callers without keys retain ordinary create behavior. Browser/device acceptance and deployment remain pending."
     },
     {
       "finding_id": "A149-F01",
@@ -6293,8 +6301,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 119,
-    "NOT STARTED": 19,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 121,
+    "NOT STARTED": 17,
     "PARTIAL": 16,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,

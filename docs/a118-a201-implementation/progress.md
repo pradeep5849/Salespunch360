@@ -106,3 +106,7 @@ Full regression 4192 passed / 436 skipped, zero failed (642 test files passed). 
 A119-F01, A154-F01, A173-F02, A121-F05/F06, A124-F01, A125-F02, A122-F02, A126-F04 and A128-F03 reconciled as implemented pending acceptance. Register: 119 implemented pending acceptance, 16 partial, 19 not started, 3 superseded, 2 withdrawn, 1 disclosed limitation. A125-F02 is verification of the previously repaired two-decimal formatter with a direct rendered fractional-rate regression, not an additional price-policy change.
 
 232 focused checks passed / 8 optional SQL skipped. Full regression: 4201 passed / 436 skipped, zero failed (646 test files passed). Final TS/lint and whitespace passed. New native DTO/filter/timezone tests await remote Android CI. Prior pushed dda5da1e passed web, Android, migration and both build Lighthouse checks; only live Lighthouse failed. See docs/partial-history-continuation/checkpoint.md. No production mutations, migration, deployment or merge.
+
+## Creation retry safety
+
+A138-F01 and A148-F03 implemented pending acceptance. See docs/creation-retry-implementation/checkpoint.md. Thirteen real SQL checks passed; full regression 4203 passed / 449 skipped. TypeScript, changed-file lint and whitespace passed. Register: 121 implemented pending acceptance, 16 partial, 17 not started. Legacy callers without keys remain compatible but lack retry guarantees. No production mutation, deployment or merge.

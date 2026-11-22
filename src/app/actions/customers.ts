@@ -12,15 +12,15 @@ export type CustomerActionState = { error?: string; success?: string; fieldError
 export async function manageCustomer(_: CustomerActionState, formData: FormData): Promise<CustomerActionState> {
   const fields = { name: formData.get("name"), contactPerson: formData.get("contactPerson"), phone: formData.get("phone"), email: formData.get("email") };
   try {
-    if (formData.get("operation") === "create") { const parsed = createCustomerSchema.parse({name:fields.name,phone:fields.phone,assignedUserId:formData.get("assignedUserId"),branchId:formData.get("branchId")}); await createCustomer(parsed); }
+    if (formData.get("operation") === "create") { const parsed = createCustomerSchema.parse({creationRequestKey:formData.get("creationRequestKey"),name:fields.name,phone:fields.phone,assignedUserId:formData.get("assignedUserId"),branchId:formData.get("branchId")}); await createCustomer(parsed); }
     else { const parsed = editCustomerSchema.parse({ customerId: formData.get("customerId"), ...fields }); await editCustomer(parsed); }
-  } catch(error) { if(error instanceof ZodError){const fieldErrors:Record<string,string>={};for(const issue of error.issues){const key=String(issue.path[0]??"");if(["name","phone","email","branchId","assignedUserId"].includes(key)&&!fieldErrors[key])fieldErrors[key]=issue.message;}return{error:"Correct the highlighted details and try again.",fieldErrors};} const code=error instanceof Error?error.message:"";return { error: code==="BRANCH_REQUIRED"?"Choose a branch and try again.":"Unable to save this customer. Check the branch, assignment, and details." }; }
+  } catch(error) { if(error instanceof ZodError){if(error.issues.some(issue=>issue.path[0]==="creationRequestKey"))return{error:"Reload this page before submitting a new lead."};const fieldErrors:Record<string,string>={};for(const issue of error.issues){const key=String(issue.path[0]??"");if(["name","phone","email","branchId","assignedUserId"].includes(key)&&!fieldErrors[key])fieldErrors[key]=issue.message;}return{error:"Correct the highlighted details and try again.",fieldErrors};} const code=error instanceof Error?error.message:"";return { error: code==="CREATION_REQUEST_CONFLICT"?"This submission key belongs to different details. Open a new lead form before creating another lead.":code==="BRANCH_REQUIRED"?"Choose a branch and try again.":"Unable to save this customer. Check the branch, assignment, and details." }; }
   revalidatePath("/workspace/customers");
   revalidatePath("/workspace/leads");
   return { success: formData.get("operation") === "create" ? "Lead details saved." : "Customer saved." };
 }
 
-export async function createCustomerAction(formData:FormData){const parsed=createCustomerSchema.parse({name:formData.get("name"),phone:formData.get("phone"),assignedUserId:formData.get("assignedUserId"),branchId:formData.get("branchId")});await createCustomer(parsed);revalidatePath("/workspace/customers");revalidatePath("/workspace/leads");redirect("/workspace/customers");}
+export async function createCustomerAction(formData:FormData){const parsed=createCustomerSchema.parse({creationRequestKey:formData.get("creationRequestKey"),name:formData.get("name"),phone:formData.get("phone"),assignedUserId:formData.get("assignedUserId"),branchId:formData.get("branchId")});await createCustomer(parsed);revalidatePath("/workspace/customers");revalidatePath("/workspace/leads");redirect("/workspace/customers");}
 
 export async function assignCustomerWithFeedback(formData:FormData){
  try{await assignCustomerAction(formData);return {saved:true};}

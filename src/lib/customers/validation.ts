@@ -1,3 +1,4 @@
+import {optionalCreationRequestKeySchema} from "@/lib/mutations/creation-intent";
 import { z } from "zod";
 import { phoneSchema } from "@/lib/employees/validation";
 
@@ -9,7 +10,7 @@ export const customerFields = {
 };
 export const assignCustomerSchema=z.object({customerId:z.string().guid(),assignedUserId:z.string().guid()}).strict();
 
-export const createCustomerSchema = z.object({name:customerFields.name,phone:phoneSchema.nonoptional({error:"Phone number is required"}),assignedUserId:z.preprocess((value)=>value===""||value===null?undefined:value,z.string().guid().optional()),branchId:z.preprocess(value=>value===""||value===null?undefined:value,z.string().guid().optional())}).strict();
+export const createCustomerSchema = z.object({creationRequestKey:optionalCreationRequestKeySchema,name:customerFields.name,phone:phoneSchema.nonoptional({error:"Phone number is required"}),assignedUserId:z.preprocess((value)=>value===""||value===null?undefined:value,z.string().guid().optional()),branchId:z.preprocess(value=>value===""||value===null?undefined:value,z.string().guid().optional())}).strict();
 export const editCustomerSchema = z.object({ customerId: z.string().guid(), ...customerFields }).strict();
 export type CreateCustomerInput = z.input<typeof createCustomerSchema>;
 export type EditCustomerInput = z.input<typeof editCustomerSchema>;

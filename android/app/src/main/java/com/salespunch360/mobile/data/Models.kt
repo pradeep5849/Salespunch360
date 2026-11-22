@@ -98,7 +98,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable data class CustomerAssignee(val id:String,val name:String,val salesRole:MobileRole,val branchAccessScope:String="ALL_BRANCHES",val branchAccesses:List<CustomerAssigneeBranch> = emptyList())
 @Serializable data class CustomerAssigneeBranch(val branchId:String)
 @Serializable data class CustomerAdminContext(val customers:List<CustomerAdminItem> = emptyList(),val assignees:List<CustomerAssignee> = emptyList(),val branches:List<BranchSummary> = emptyList(),val page:Int=1,val hasMore:Boolean=false,val q:String="")
-@Serializable data class CreateCustomerRequest(val name:String,val phone:String,val assignedUserId:String?=null,val branchId:String?=null)
+@Serializable data class CreateCustomerRequest(val name:String,val phone:String,val assignedUserId:String?=null,val branchId:String?=null,val creationRequestKey:String="")
 @Serializable data class AssignCustomerRequest(val action:String="ASSIGN",val customerId:String,val assignedUserId:String)
 @Serializable enum class VisitSentiment{POSITIVE,NEUTRAL,NEGATIVE}
 @Serializable data class FieldVisit(val id:String,val checkedInAt:String,val checkedOutAt:String?=null,val visitNotes:String?=null,val checkoutSentiment:VisitSentiment?=null,val checkoutRemarks:String?=null,val leadCount:Int=0,val contactName:String?=null,val leadId:String?=null,val visitType:String="CUSTOMER",val customer:Customer?=null,val checkInAddress:String?=null,val checkInLatitude:Double?=null,val checkInLongitude:Double?=null)
@@ -116,7 +116,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable data class PendingLeadsContext(val count:Int=0,val visits:List<PendingLeadVisit> = emptyList())
 @Serializable data class LeadFromVisitRequest(val action:String="FROM_VISIT",val visitId:String,val title:String,val contactName:String?=null,val phone:String?=null,val companyName:String?=null,val currencyCode:String="INR")
 @Serializable data class LeadTransitionRequest(val action:String="TRANSITION",val leadId:String,val version:Int,val toStage:LeadStage,val lostReason:String?=null)
-@Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null)
+@Serializable data class LeadFollowUpRequest(val action:String="FOLLOW_UP",val leadId:String,val followUpAt:String?=null,val notes:String?=null,val creationRequestKey:String="")
 @Serializable data class LeadEditRequest(val action:String="EDIT",val leadId:String,val version:Int,val title:String,val companyName:String?=null,val contactName:String?=null,val phone:String?=null,val email:String?=null,val estimatedValue:String?=null,val currencyCode:String="INR",val assignedUserId:String?=null,val notes:String?=null)
 @Serializable data class Attendance(val id:String,val startedAt:String,val endedAt:String?=null,val gpsPointCount:Int=0)
 @Serializable data class AttendanceRequest(val action:String,val location:LocationPayload?=null)

@@ -35,10 +35,11 @@ class FollowUpMutationClient(private val session: SecureSession) {
         }
     }
 
-    suspend fun create(leadId: String, dueDate: String, type: String, notes: String?, assignedUserId: String? = null) = withContext(Dispatchers.IO) {
+    suspend fun create(leadId: String, dueDate: String, type: String, notes: String?, creationRequestKey:String, assignedUserId: String? = null) = withContext(Dispatchers.IO) {
         val token = session.token()
         val body = JSONObject()
             .put("action", "CREATE")
+            .put("creationRequestKey",creationRequestKey)
             .put("leadId", leadId)
             .put("dueDate", dueDate)
             .put("type", type)
@@ -56,7 +57,8 @@ class FollowUpMutationClient(private val session: SecureSession) {
             if (!response.isSuccessful) {
                 if (response.code == 401) session.invalidateIfCurrent(token)
                 if (response.code == 403) session.authorizationChanged()
-                throw ApiException(response.code, "FOLLOW_UP_CREATE_FAILED")
+                val code=runCatching{JSONObject(response.body?.string().orEmpty()).optString("error").takeIf{it.matches(Regex("[A-Z_]{1,80}"))}}.getOrNull()?:"FOLLOW_UP_CREATE_FAILED"
+                throw ApiException(response.code,code)
             }
         }
     }
