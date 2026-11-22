@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
  val state=vm.state.collectAsStateWithLifecycle().value
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=16.dp),contentPadding=PaddingValues(vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Attendance",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk);HorizontalDivider(Modifier.padding(top=8.dp,bottom=10.dp),color=SalesLine);Text("Team attendance",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk);Text(if(role==MobileRole.MANAGER)"Current attendance status of your assigned sales team." else "Current attendance state for your company.",color=SalesMuted)}
+  item{state.refreshedAt?.let{Text("Snapshot refreshed ${com.salespunch360.mobile.data.attendanceSnapshotTimeIst(it)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)};OutlinedButton(vm::load,enabled=!state.loading){Text(if(state.loading)"Refreshing…" else "Refresh team status")}}
   if(state.loading&&state.employees.isEmpty())item{LinearProgressIndicator(Modifier.fillMaxWidth())}
   state.message?.let{item{Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Text(it,color=SalesMuted);OutlinedButton(onClick=vm::load,enabled=!state.loading){Text("Retry")}}}}
   if(!state.loading&&state.employees.isEmpty()&&state.message==null)item{OutlinedCard(Modifier.fillMaxWidth()){Text("No team members to show.",Modifier.padding(16.dp),color=SalesMuted)}}
