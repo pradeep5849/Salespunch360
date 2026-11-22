@@ -2308,7 +2308,7 @@
         "status": "OPEN",
         "title": "Android lacks web-equivalent view-only company details"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -2318,7 +2318,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
-      }
+      },
+      "implementation_evidence": [
+        "docs/company-read-only-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Remote native compilation and physical role/device acceptance remain pending. Company edit/settings APIs remain separate and retain existing restrictions."
     },
     {
       "finding_id": "A138-F01",
@@ -6305,8 +6309,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 122,
-    "NOT STARTED": 16,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 123,
+    "NOT STARTED": 15,
     "PARTIAL": 16,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,

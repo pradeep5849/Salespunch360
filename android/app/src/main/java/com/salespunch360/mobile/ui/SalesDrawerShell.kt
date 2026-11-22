@@ -222,16 +222,7 @@ fun SalesDrawerAuthenticatedApp(
                 )
                 !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
                 !telecaller && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
-                route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-                    item {
-                        Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        ContentCard(data.company.name, data.company.address ?: "Company address is not available.") {
-                            CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl)
-                            Text("Signed in as ${data.user.name}")
-                        }
-                    }
-                }
+                route == "Company Details" -> ReadOnlyCompanyDetailsScreen()
                 route == "Change Password" -> ChangePasswordScreen()
                 else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
             }

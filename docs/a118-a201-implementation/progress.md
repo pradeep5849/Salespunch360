@@ -114,3 +114,7 @@ A138-F01 and A148-F03 implemented pending acceptance. See docs/creation-retry-im
 ## Shared scheduled-call paging
 
 A164-F02 implemented pending acceptance on web/current Android. Fourteen guarded SQL cases passed, including 602 mixed-source rows across seven pages; 48 focused checks passed / 9 optional skipped. TS/lint/whitespace passed. Native remote/device acceptance pending. Register: 122 implemented pending acceptance, 16 partial, 16 not started. See docs/callback-pagination-implementation/checkpoint.md. CI caught a misplaced declaration in the preceding customer assignment card; corrected separately in 8387ee10, with a new native run required.
+
+## View-only native company details
+
+A137-F03 implemented pending acceptance with a dedicated COMPANY_VIEW GET-only DTO and shared read-only Android screen for existing non-owner Company Details destinations. No settings/billing permission widened. Nine focused tests, TypeScript, changed lint and whitespace passed. Native CI/device acceptance pending. Register: 123 implemented pending acceptance, 16 partial, 15 not started. See docs/company-read-only-implementation/checkpoint.md.

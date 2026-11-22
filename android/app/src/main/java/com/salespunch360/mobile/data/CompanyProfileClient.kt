@@ -37,6 +37,7 @@ data class CompanyProfile(
     val teamStructure: TeamStructure = TeamStructure.MANAGERS_AND_SALES,
     val hasLogo: Boolean = false,
     val profileComplete: Boolean = false,
+    val enabledModules:List<String> = emptyList(),
 )
 
 @Serializable
@@ -82,10 +83,10 @@ class CompanyProfileClient(private val session: SecureSession) {
         return ApiException(status, code)
     }
 
-    private suspend fun call(method: String, body: String? = null) = withContext(Dispatchers.IO) {
+    private suspend fun call(method: String, body: String? = null, path:String="api/v1/mobile/company") = withContext(Dispatchers.IO) {
         val requestToken = session.token()
         val builder = Request.Builder()
-            .url(BuildConfig.API_BASE_URL + "api/v1/mobile/company")
+            .url(BuildConfig.API_BASE_URL + path)
             .header("Accept", "application/json")
         requestToken?.let { builder.header("Authorization", "Bearer $it") }
         if (method == "PATCH") builder.patch((body ?: "{}").toRequestBody(media))
@@ -95,6 +96,8 @@ class CompanyProfileClient(private val session: SecureSession) {
             raw
         }
     }
+
+    suspend fun loadReadOnly():CompanyProfile = json.decodeFromString<CompanyProfileEnvelope>(call("GET",path="api/v1/mobile/company/details")).company
 
     suspend fun load(): CompanyProfile =
         json.decodeFromString<CompanyProfileEnvelope>(call("GET")).company

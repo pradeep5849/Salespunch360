@@ -1,0 +1,7 @@
+# A137-F03 — Native view-only company details
+
+Sales/Telecaller and additional Admin/Manager Company Details now load authoritative saved business details from a dedicated GET-only endpoint protected by COMPANY_VIEW and authenticated Sales mobile company context. The explicit DTO contains business address/contact, legal identifiers, description, team structure and enabled modules. It excludes tenant IDs, slug, storage keys, billing, prices, operational policies and travel rates. Blank authoritative contact details remain blank; the signed-in employee is not substituted as the business contact. No editing controls or settings permission were added. Primary-owner editing stays on its existing screen/API. No branch label is introduced.
+
+Native loading/retry/refresh/error states retain previous details on a refresh failure. Nine focused server/profile checks passed, including explicit DTO stripping, denied-before-query behavior and missing tenant handling. TypeScript, changed TypeScript lint and whitespace passed. Added native business DTO serialization coverage; native CI and physical role/device acceptance remain pending. This is the second slice after the previous full regression (4203 passed / 449 optional skipped); no extra full suite claimed.
+
+Register: 123 implemented pending acceptance, 16 partial, 15 not started; historical exclusions unchanged. No production data, security settings, deployment or merge changed.
