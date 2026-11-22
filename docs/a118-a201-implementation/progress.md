@@ -158,3 +158,7 @@ A142-F02 remains partial: native loaded-directory field search added with two JV
 ## Independent native attendance location policy
 
 A121-F03 implemented pending acceptance in 297123ca. Thirty focused backend/bootstrap checks, TypeScript, lint and whitespace passed. Three native JVM policy cases and final-head CI/device acceptance pending. Register: 136 implemented pending acceptance, 9 partial, 9 not started; exclusions unchanged. See docs/native-attendance-location-policy/checkpoint.md. Tracking recovery and branch selection remain separate. No production data/settings change, migration, deployment or merge.
+
+## Expense report source-path reconciliation
+
+A156-F04 reconciled as implemented pending acceptance by earlier 3a83c1d5: the interactive shared report now reads saved daily approvals without GPS loading/calculation/writes. Eight focused checks, lint and whitespace passed; SQL evidence retained, not rerun. Counts: 137 implemented pending acceptance, 8 partial, 9 not started; exclusions unchanged. See docs/expense-read-only-reconciliation/checkpoint.md. No new production behavior/data mutation, deployment or merge.

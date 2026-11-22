@@ -1,0 +1,14 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {Prisma} from '@prisma/client';
+const m=vi.hoisted(()=>({company:vi.fn(),approvals:vi.fn(),scope:vi.fn(),employees:vi.fn(),branches:vi.fn(),points:vi.fn(),write:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:m.company},dailyTravelApproval:{findMany:m.approvals,upsert:m.write},locationPoint:{findMany:m.points}}}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),resolveEmployeeScope:m.scope,reportEmployeeOptions:m.employees}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:m.branches}));
+import {expenseReport} from './expenses';
+const actor={id:'employee',name:'Employee',companyId:'tenant',salesRole:'SALES' as const,managerType:null};
+const saved={branchId:'branch',employeeId:'employee',businessDate:new Date('2026-11-21T00:00:00Z'),distanceMeters:20000,ratePerKm:new Prisma.Decimal(5),amount:new Prisma.Decimal(100),status:'APPROVED',reviewedByUserId:null,reviewedAt:new Date('2026-11-21T12:00:00Z'),employee:{name:'Employee'}};
+beforeEach(()=>{vi.clearAllMocks();m.company.mockResolvedValue({travelRatePerKm:new Prisma.Decimal(9)});m.approvals.mockResolvedValue([saved]);m.scope.mockResolvedValue(['employee']);m.employees.mockResolvedValue([]);m.branches.mockResolvedValue({branchId:'branch'});m.points.mockImplementation(()=>{throw new Error('GPS source must not be read by expense report')});m.write.mockImplementation(()=>{throw new Error('Report must not write')});});
+it('uses saved daily distance/rate/amount without reading a truncated GPS source or writing',async()=>{const r=await expenseReport({start:'2026-11-21',end:'2026-11-21'},actor);expect(r.rows[0]).toMatchObject({distanceMeters:20000,ratePerKm:saved.ratePerKm,amount:saved.amount,status:'APPROVED'});expect(m.points).not.toHaveBeenCalled();expect(m.write).not.toHaveBeenCalled();});
+it('keeps company/branch/employee/date scope on saved approvals',async()=>{await expenseReport({start:'2026-11-21',end:'2026-11-21'},actor);expect(m.approvals.mock.calls[0][0].where).toEqual({companyId:'tenant',branchId:'branch',employeeId:{in:['employee']},businessDate:{gte:new Date('2026-11-21T00:00:00Z'),lte:new Date('2026-11-21T00:00:00Z')}});});
+it('repeated reads retain the original saved rate rather than current company rate',async()=>{const a=await expenseReport({start:'2026-11-21',end:'2026-11-21'},actor);m.company.mockResolvedValue({travelRatePerKm:new Prisma.Decimal(99)});const b=await expenseReport({start:'2026-11-21',end:'2026-11-21'},actor);expect(b.rows).toEqual(a.rows);expect(m.write).not.toHaveBeenCalled();});
+it('does not calculate or create an expense when no saved snapshot exists',async()=>{m.approvals.mockResolvedValue([]);expect((await expenseReport({start:'2026-11-21',end:'2026-11-21'},actor)).rows).toEqual([]);expect(m.points).not.toHaveBeenCalled();expect(m.write).not.toHaveBeenCalled();});

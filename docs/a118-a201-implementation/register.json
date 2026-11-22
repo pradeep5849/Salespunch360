@@ -3889,7 +3889,7 @@
         "status": "OPEN",
         "title": "Interactive report ignores GPS source truncation before calculation and writes"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "source": "docs/runtime-native-followup/a156/audit-register.json",
@@ -3919,9 +3919,9 @@
         ]
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "3a83c1d5; reconciled after 297123ca",
+        "progress": "docs/expense-read-only-reconciliation/checkpoint.md",
+        "acceptance": "Eight focused checks, lint and whitespace passed. Interactive report no longer reads GPS/calculates/writes; earlier SQL evidence retained, not rerun. Final-head acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -6341,9 +6341,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 136,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 137,
     "NOT STARTED": 9,
-    "PARTIAL": 9,
+    "PARTIAL": 8,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
