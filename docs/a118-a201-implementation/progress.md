@@ -138,3 +138,7 @@ A120-F03/F06 implemented pending acceptance. A120-F05 improved incomplete/stale/
 ## Report entry discoverability
 
 A160-F01 implemented pending acceptance under the retained Check-in default/keep-UI contract. Sales and Admin/Manager landing views now link Leads/Advanced Check-in directly; existing menus already expose them. Thirty-seven existing checks, changed lint and whitespace passed. No extra full suite for this small navigation slice. Register: 131 implemented pending acceptance, 12 partial, 11 not started. See docs/report-entry-implementation/checkpoint.md. Final-head CI/browser/device acceptance pending; no production data or merge/deployment.
+
+## Account party/vendor metadata editors
+
+A166-F02 and A167-F01 implemented pending acceptance in 83c3d0df. Twenty-three focused tests, 21 real SQL cases, TypeScript, changed-file lint and whitespace passed. Seven isolated Chromium form checks passed with mocked action responses; authenticated application acceptance remains separate. Previous full suite: 4236 passed / 453 optional skipped. Register: 133 implemented pending acceptance, 10 partial, 11 not started. See docs/party-metadata-implementation/checkpoint.md and browser-check.json. Prior 24393b44 CI passed all checks except live Lighthouse. Final-head CI pending. No production data/migration/security changes, deployment or merge.

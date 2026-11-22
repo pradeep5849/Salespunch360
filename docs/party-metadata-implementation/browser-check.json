@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "scope": "Isolated actual React form with mocked server action; full app/browser acceptance remains separate",
+  "checks": [
+    "pending disables save and inputs",
+    "validation failure retains draft",
+    "network failure retains draft",
+    "hidden and unchanged legacy fields omitted",
+    "successful revision used by next save",
+    "stale response preserves draft and offers explicit reload",
+    "incoming refreshed props do not silently rebase a dirty draft"
+  ]
+}

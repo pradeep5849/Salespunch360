@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-22",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "99d7dde6",
-  "status": "Implementation continued through bounded company verification and canonical warehouse transfers; retained work and acceptance remain.",
+  "application_revision": "83c3d0df",
+  "status": "Implementation continued through scoped Account party/vendor editors; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -4464,7 +4464,7 @@
         "status": "OPEN",
         "title": "Web customer cards omit contact/details/edit access"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "source": "docs/runtime-native-followup/a166/audit-register.json",
@@ -4495,12 +4495,11 @@
           "docs/runtime-native-followup/audit-register.json"
         ]
       },
-      "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
-      },
-      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
+      "implementation_evidence": [
+        "docs/party-metadata-implementation/checkpoint.md"
+      ],
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_limits": "Scoped metadata-only edits with revision/audit guards; isolated browser checks use a mocked action. Final-head CI and authenticated application/device acceptance remain separate."
     },
     {
       "finding_id": "A166-F03",
@@ -4552,7 +4551,7 @@
         "status": "OPEN",
         "title": "Web vendor cards omit contact details and edit access"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4563,12 +4562,11 @@
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
       },
-      "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
-      },
-      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
+      "implementation_evidence": [
+        "docs/party-metadata-implementation/checkpoint.md"
+      ],
+      "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
+      "implementation_limits": "Scoped metadata-only edits with revision/audit guards; isolated browser checks use a mocked action. Final-head CI and authenticated application/device acceptance remain separate."
     },
     {
       "finding_id": "A167-F02",
@@ -6328,9 +6326,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 131,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 133,
     "NOT STARTED": 11,
-    "PARTIAL": 12,
+    "PARTIAL": 10,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
