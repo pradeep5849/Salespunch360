@@ -352,12 +352,13 @@ private fun GpsDisclaimer(){
 
 @Composable
 private fun ReportRow(row:JsonObject){
- val title=row.objText("user","name")?:row.objText("assignedUser","name")?:row.objText("employee","name")?:row.objText("customer","name")?:row.text("title")?:"Report record"
+ val isVisit=row.containsKey("checkedInAt")&&row.containsKey("checkInLatitude")
+ val title=if(isVisit)row.text("contactName")?:row.objText("customer","name")?:"Contact"else row.objText("user","name")?:row.objText("assignedUser","name")?:row.objText("employee","name")?:row.objText("customer","name")?:row.text("title")?:"Report record"
  val hidden=setOf("id","companyId","branchId","userId","customerId","assignedUserId","user","customer","assignedUser")
  OutlinedCard(Modifier.fillMaxWidth()){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
    Text(title,fontWeight=FontWeight.Bold)
-   row.entries.filter{it.key !in hidden&&!it.value.isNullish()}.forEach{(k,v)->Text("${prettyLabel(k)}: ${value(v)}",style=MaterialTheme.typography.bodySmall)}
+   if(isVisit){row.text("visitKind")?.let{Text(it)};row.text("checkInAddress")?.let{Text(it)};ReportVisitContactAndDetails(row)}else row.entries.filter{it.key !in hidden&&!it.value.isNullish()}.forEach{(k,v)->Text("${prettyLabel(k)}: ${value(v)}",style=MaterialTheme.typography.bodySmall)}
   }
  }
 }

@@ -1,3 +1,4 @@
+import {ReportVisitDetails} from "./visit-details";
 import {reportPageHref as pageHref} from "@/lib/reports/page-href";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,11 +44,13 @@ function CheckInCards({rows,showEmployee=false}:{rows:CheckInResult['rows'];show
  return <section className={styles.cards}>{rows.map(v=><article className={styles.checkinCard} key={v.id}>
   {v.photo&&<Image className={styles.checkinPhoto} src={`/api/visit-photos/${v.id}/thumbnail`} alt="Check-in photo" width={900} height={560} unoptimized/>}
   <div className={styles.checkinBody}>
-   <div className={styles.checkinTop}><h2>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.customer?.name||v.contactName||"Customer"}</Link>:v.customer?.name||v.contactName||"Customer"}</h2><span className={styles.timePill}>{v.checkedOutAt?"Completed":"Active"}</span></div>
+   <div className={styles.checkinTop}><h2>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.contactName||v.customer?.name||"Contact"}</Link>:v.contactName||v.customer?.name||"Contact"}</h2><span className={styles.timePill}>{v.checkedOutAt?"Completed":"Active"}</span></div>
    {showEmployee&&<p className={styles.meta}><strong>{v.user.name}</strong> · {v.user.salesRole}</p>}
+   <p className={styles.meta}>Phone: {v.contactPhone?.trim()||"Not recorded"}</p>
    <p className={styles.meta}>{dateTime(v.checkedInAt)}{v.checkedOutAt?` · Checkout ${dateTime(v.checkedOutAt)}`:""}</p>
    <p className={styles.address}>{v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`}</p>
    {(v.checkoutSentiment||v.checkoutRemarks||v.visitNotes)&&<p className={styles.meta}>{[v.checkoutSentiment,v.checkoutRemarks,v.visitNotes].filter(Boolean).join(" · ")}</p>}
+   <ReportVisitDetails row={v}/>
    {v.leadId&&<p><Link href={`/workspace/leads/${v.leadId}`}>Open Lead Details</Link></p>}
   </div>
  </article>)}</section>;
@@ -71,4 +74,4 @@ function SalesCheckInReport({r,selectedDate,raw}:{r:CheckInResult;selectedDate:s
  </main>
 }
 
-export function VisitTable({rows}:{rows:CheckInResult['rows']}){if(!rows.length)return <div className="empty-state">No check-ins match the selected filters and date range.</div>;return <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Employee / customer</th><th>Check-in / checkout</th><th>Status / duration</th><th>Visit details</th><th>Check-in address / coordinates</th><th>Leads</th></tr></thead><tbody>{rows.map(v=><tr key={v.id}><td><strong>{v.user.name}</strong><small>{v.user.salesRole} · {v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.customer?.name||v.contactName||"Customer"}</Link>:v.customer?.name||v.contactName||"Customer"}</small></td><td>{dateTime(v.checkedInAt)}<small>{dateTime(v.checkedOutAt)}</small></td><td>{v.checkedOutAt?'COMPLETED':'ACTIVE'}<small>{duration(v.durationMs)}</small></td><td>{v.visitNotes||'—'}<small>{v.visitKind?`${v.visitKind} · `:''}{v.checkoutSentiment||'No sentiment'} · {v.checkoutRemarks||'No remarks'}</small></td><td>{v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`}<small>{v.checkOutLatitude?.toFixed(5)||'—'}, {v.checkOutLongitude?.toFixed(5)||'—'} · Ref. {distance(v.referenceDistanceMeters)}</small></td><td>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>Open lead</Link>:v._count.sourceLeads}</td></tr>)}</tbody></table></div>}
+export function VisitTable({rows}:{rows:CheckInResult['rows']}){if(!rows.length)return <div className="empty-state">No check-ins match the selected filters and date range.</div>;return <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Employee / customer</th><th>Check-in / checkout</th><th>Status / duration</th><th>Visit details</th><th>Check-in address / coordinates</th><th>Leads</th></tr></thead><tbody>{rows.map(v=><tr key={v.id}><td><strong>{v.user.name}</strong><small>{v.user.salesRole} · {v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.contactName||v.customer?.name||"Contact"}</Link>:v.contactName||v.customer?.name||"Contact"}</small></td><td>{dateTime(v.checkedInAt)}<small>{dateTime(v.checkedOutAt)}</small></td><td>{v.checkedOutAt?'COMPLETED':'ACTIVE'}<small>{duration(v.durationMs)}</small></td><td>{v.visitNotes||'—'}<p>Phone: {v.contactPhone?.trim()||'Not recorded'}</p><ReportVisitDetails row={v}/><small>{v.visitKind?`${v.visitKind} · `:''}{v.checkoutSentiment||'No sentiment'} · {v.checkoutRemarks||'No remarks'}</small></td><td>{v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`}<small>{v.checkOutLatitude?.toFixed(5)||'—'}, {v.checkOutLongitude?.toFixed(5)||'—'} · Ref. {distance(v.referenceDistanceMeters)}</small></td><td>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>Open lead</Link>:v._count.sourceLeads}</td></tr>)}</tbody></table></div>}

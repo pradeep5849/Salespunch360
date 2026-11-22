@@ -131,7 +131,7 @@ private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
    val row=item.jsonObject
    val id=row.salesText("id")
    val leadId=row.salesText("leadId")
-   val customer=row.salesObjText("customer","name")?:row.salesText("contactName")?:"Field prospect"
+   val customer=row.salesText("contactName")?:row.salesObjText("customer","name")?:"Field prospect"
    val address=row.salesText("checkInAddress")?:run{
     val lat=row["checkInLatitude"]?.jsonPrimitive?.doubleOrNull
     val lng=row["checkInLongitude"]?.jsonPrimitive?.doubleOrNull
@@ -166,6 +166,7 @@ private fun SalesCheckInReport(state:ReportsState,vm:ReportsViewModel){
       row.salesText("checkoutRemarks")?.takeIf{it.isNotBlank()}?.let{Text("Checkout remarks: $it",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
       row.salesText("visitNotes")?.takeIf{it.isNotBlank()}?.let{Text("Visit notes: $it",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
       Text(address,style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+      ReportVisitContactAndDetails(row)
      }
     }
    }
