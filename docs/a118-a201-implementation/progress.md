@@ -150,3 +150,7 @@ A136-F02 implemented pending acceptance in e419d952; A155-F01 partial because de
 ## Category metadata editing
 
 A169-F01 implemented pending acceptance in 8d8dde16. Six backend checks, TypeScript, lint/whitespace and five isolated React browser checks passed. Scope and existing item relations remain unchanged. Register: 135 implemented pending acceptance, 10 partial, 9 not started; exclusions unchanged. See docs/category-metadata-implementation/checkpoint.md. Final-head CI/authenticated browser acceptance pending; no production mutation, migration, deployment or merge.
+
+## Native Account directory search
+
+A142-F02 remains partial: native loaded-directory field search added with two JVM cases pending remote execution; server directory paging remains open. Whitespace passed. Counts remain 135 implemented pending acceptance, 10 partial, 9 not started. See docs/native-account-directory-search/checkpoint.md.

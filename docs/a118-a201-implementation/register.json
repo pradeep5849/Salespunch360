@@ -2647,7 +2647,12 @@
         "title": "Web employee directory lacks text search"
       },
       "reconciliation_status": "PARTIAL",
-      "evidence_updates": [],
+      "evidence_updates": [
+        {
+          "source": "docs/native-account-directory-search/checkpoint.md",
+          "status": "PARTIAL \u2014 server paging remains open"
+        }
+      ],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
@@ -2660,7 +2665,7 @@
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
       "implementation_evidence": {
         "checkpoint": "docs/a140-a144-implementation/checkpoint.md",
-        "limits": "Synthetic focused tests plus guarded local SQL. Final CI/browser/device acceptance and deployment remain separate. Search paging/native Account search remain open."
+        "limits": "Web text search and native authorized loaded-directory field search present. Server directory pagination remains open; native final-head CI/device acceptance pending."
       }
     },
     {
