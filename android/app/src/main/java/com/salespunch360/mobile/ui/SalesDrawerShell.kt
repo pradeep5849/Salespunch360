@@ -97,6 +97,7 @@ fun SalesDrawerAuthenticatedApp(
     val leadsState = leadsVm.state.collectAsStateWithLifecycle().value
     var pendingTask by remember { mutableStateOf<FollowUpTask?>(null) }
     var pendingLeadId by remember { mutableStateOf<String?>(null) }
+    var pendingFollowUpTarget by remember { mutableStateOf<FollowUpNotificationTarget?>(null) }
     var pendingCheckInLead by remember { mutableStateOf<LeadSummary?>(null) }
     var visitDetails by remember { mutableStateOf<SalesVisitDetails?>(null) }
     var profileMenu by remember { mutableStateOf(false) }
@@ -199,7 +200,7 @@ fun SalesDrawerAuthenticatedApp(
                     },
                     onBack = { if (nav.canGoBack) nav.back() else navigate("Dashboard") },
                 )
-                route == "Notifications" -> SalesNotificationsScreen(notificationsState,notificationsVm::refresh,{notificationsVm.read(it)},{notification->when(notification.relatedEntityType){"LEAD"->{pendingLeadId=notification.relatedEntityId;navigate("Leads")};"FOLLOW_UP"->navigate("Follow-ups");else->Unit}})
+                route == "Notifications" -> SalesNotificationsScreen(notificationsState,notificationsVm::refresh,{notificationsVm.read(it)},{notification->notificationsVm.read(notification.id){saved->if(nav.current=="Notifications")saved?.let{when(it.relatedEntityType){"LEAD"->{leadsVm.close();pendingLeadId=it.relatedEntityId;navigate("Leads")};"FOLLOW_UP"->{pendingFollowUpTarget=followUpNotificationTarget(it.navigationTarget);navigate("Follow-ups")};else->Unit}}}},loadMore=notificationsVm::loadMore)
                 route == "Leads" -> LeadsScreen(
                     allowStageActions = !telecaller,
                     initialLeadId = pendingLeadId,
@@ -211,6 +212,8 @@ fun SalesDrawerAuthenticatedApp(
                     vm = leadsVm
                 )
                 route == "Follow-ups" -> FollowUpsScreen(
+                    initialTarget=pendingFollowUpTarget,
+                    targetApplied={pendingFollowUpTarget=null},
                     startCheckIn = { if(!telecaller){pendingCheckInLead = null; pendingTask = it; navigate("Check-ins")} },
                     viewLead = { pendingLeadId = it; navigate("Leads") },
                     viewVisit = { task ->

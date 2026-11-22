@@ -1,3 +1,4 @@
+import {pageWindow,pageResult} from "@/lib/pagination";
 import type {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requireSalesWorkspace,requireSalesWorkspaceForMutation} from "@/lib/auth/authorization";
@@ -20,12 +21,13 @@ export async function notifySalesAdmins(tx:NotificationTx,input:Omit<SalesNotifi
  return Promise.all(recipients.map(({id})=>createSalesNotification(tx,{...input,recipientUserId:id})));
 }
 
-export async function listSalesNotificationsForActor(actor:{id:string;companyId:string},take=50){
+export async function listSalesNotificationsForActor(actor:{id:string;companyId:string},take=50,page:unknown=1){
+ const window=pageWindow({page,pageSize:Math.min(Math.max(take,1),100)});
  const where={companyId:actor.companyId,recipientUserId:actor.id};
- const [items,unreadCount]=await Promise.all([db.salesNotification.findMany({where,orderBy:[{createdAt:"desc"},{id:"desc"}],take:Math.min(Math.max(take,1),100)}),db.salesNotification.count({where:{...where,readAt:null}})]);
- return{items,unreadCount};
+ const [items,unreadCount]=await Promise.all([db.salesNotification.findMany({where,orderBy:[{createdAt:"desc"},{id:"desc"}],take:window.take,skip:window.skip}),db.salesNotification.count({where:{...where,readAt:null}})]);
+ return{...pageResult(items,{page:window.page,pageSize:window.pageSize}),unreadCount};
 }
-export async function listSalesNotifications(){const actor=await requireSalesWorkspace();return listSalesNotificationsForActor(actor);}
+export async function listSalesNotifications(page:unknown=1){const actor=await requireSalesWorkspace();return listSalesNotificationsForActor(actor,50,page);}
 export async function markSalesNotificationRead(id:string){const actor=await requireSalesWorkspaceForMutation();return db.salesNotification.updateMany({where:{id,companyId:actor.companyId,recipientUserId:actor.id,readAt:null},data:{readAt:new Date()}});}
 export async function markAllSalesNotificationsRead(){const actor=await requireSalesWorkspaceForMutation();return db.salesNotification.updateMany({where:{companyId:actor.companyId,recipientUserId:actor.id,readAt:null},data:{readAt:new Date()}});}
 

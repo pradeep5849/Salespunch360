@@ -30,3 +30,5 @@ describe('follow-up reminder delivery',()=>{
   expect(db.salesNotification.upsert).toHaveBeenCalledOnce();
  });
 });
+
+ it('pages scoped history with a sentinel without changing global unread count',async()=>{db.salesNotification.findMany.mockResolvedValue(Array.from({length:3},(_,i)=>({id:String(i)})));db.salesNotification.count.mockResolvedValue(9);const result=await listSalesNotificationsForActor({id:'user-a',companyId:'company-a'},2,2);expect(db.salesNotification.findMany).toHaveBeenCalledWith(expect.objectContaining({skip:2,take:3,where:{companyId:'company-a',recipientUserId:'user-a'}}));expect(result).toMatchObject({page:2,pageSize:2,hasMore:true,unreadCount:9});expect(result.items).toHaveLength(2)});
