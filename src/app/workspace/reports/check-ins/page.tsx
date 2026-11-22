@@ -11,6 +11,8 @@ import styles from "../sales-report-cards.module.css";
 const one=(value:string|string[]|undefined)=>Array.isArray(value)?value[0]:value;
 
 
+function RelatedReports(){return <nav className={styles.pager} aria-label="Related reports"><Link href="/workspace/reports/leads">Leads Report</Link><Link href="/workspace/reports/check-ins/advanced">Advanced Check-in Report</Link></nav>}
+
 export default async function Page({searchParams}:{searchParams:Promise<SearchParams>}){
  const raw=await searchParams;
  const actor=await reportActor();
@@ -20,6 +22,7 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
  if(actor.salesRole==="SALES")return <SalesCheckInReport r={r} selectedDate={selectedDate} raw={raw}/>;
  return <main className={styles.salesPage}>
   <header className={styles.heading}><h1>Check-in Report</h1><p>Recent check-ins from all authorized users are shown by default. Select an employee and date range when you need a specific report.</p></header>
+  <RelatedReports/>
   <section className={styles.searchCard}>
    <DownloadExcel report="check-ins" params={raw} ready={reportQueryWasRun(raw)}/>
    <Filters filters={r.filters} employees={r.employees}>
@@ -55,6 +58,7 @@ function SalesCheckInReport({r,selectedDate,raw}:{r:CheckInResult;selectedDate:s
  const salesPageHref=(next:number)=>pageHref(raw,next);
  return <main className={styles.salesPage}>
   <header className={styles.heading}><h1>Check-in Report</h1><p>All your check-ins, latest first. Search any particular day using the date below.</p></header>
+  <RelatedReports/>
   <form className={styles.searchCard}>
    <div className={styles.searchRow}>
     <label>Search check-ins by date<input type="date" name="date" defaultValue={selectedDate}/></label>

@@ -4167,7 +4167,7 @@
         "status": "OPEN",
         "title": "Web report entry and main menus omit discoverable Lead and Advanced Check-in reports"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4179,10 +4179,10 @@
         "later_evidence_sources": []
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212",
-      "implementation_evidence": {
-        "checkpoint": "docs/a153-a164-implementation/checkpoint.md",
-        "limits": "Existing final-UI contract preserves Reports default Check-in redirect; missing destinations added to existing menus only. Broader report-entry behavior deferred."
-      }
+      "implementation_evidence": [
+        "docs/report-entry-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Existing Reports redirect retained under owner UI contract. Related destination links and existing menus provide entry discoverability; physical browser/native acceptance and final-head CI remain separate."
     },
     {
       "finding_id": "A161-F01",
@@ -6328,9 +6328,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 130,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 131,
     "NOT STARTED": 11,
-    "PARTIAL": 13,
+    "PARTIAL": 12,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
