@@ -383,6 +383,12 @@ private fun ReportFilters(state:com.salespunch360.mobile.ReportsState,vm:Reports
    DateField("End",state.end,vm::setEnd,Modifier.weight(1f))
   }
   CycleFilter("Employee",state.employeeId,employees,vm::setEmployee)
+  if(state.type=="leads"){
+   OutlinedTextField(value=state.leadFilters.q,onValueChange=vm::setLeadSearch,label={Text("Search leads")},singleLine=true,modifier=Modifier.fillMaxWidth())
+   ChoiceRow("Stage",state.leadFilters.stage,listOf("ALL","NEW","QUALIFIED","PROPOSAL","NEGOTIATION","WON","LOST"),vm::setLeadStage)
+   ChoiceRow("Source",state.leadFilters.source,listOf("ALL","MANUAL","CUSTOMER_VISIT","REFERRAL","PHONE","EMAIL","WEBSITE","OTHER"),vm::setLeadSource)
+   ChoiceRow("Follow-up",state.leadFilters.followUp,listOf("ALL","OVERDUE","TODAY","UPCOMING","NONE"),vm::setLeadFollowUp)
+  }
   if(state.type.contains("check-ins"))CycleFilter("Customer",state.customerId,customers,vm::setCustomer)
   if(state.type.contains("check-ins")){
    ChoiceRow("Status",state.status,listOf("ALL","ACTIVE","COMPLETED"),vm::setStatus)

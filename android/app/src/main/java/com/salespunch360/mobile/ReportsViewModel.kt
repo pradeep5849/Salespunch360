@@ -23,6 +23,7 @@ data class ReportsState(
  val status:String="ALL",
  val sentiment:String="ALL",
  val page:Int=1,
+ val leadFilters:LeadReportFilters=LeadReportFilters(),
  val export:ByteArray?=null,
  val message:String?=null,
 )
@@ -40,7 +41,7 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
   val base=current.copy(loading=true,type=type,page=page,start=requestStart,end=requestEnd,message=null)
   _state.value=base
   _state.value=try{
-   val report=api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page)
+   val report=api.report(type,requestStart.ifBlank{null},requestEnd.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,page,current.leadFilters)
    val filters=report["filters"]?.jsonObject
    base.copy(
     loading=false,
@@ -57,7 +58,7 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
   if(current.exporting)return@launch
   _state.value=current.copy(exporting=true,export=null,message=null)
   _state.value=try{
-   current.copy(exporting=false,export=api.reportExcel(current.type,current.start.ifBlank{null},current.end.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment))
+   current.copy(exporting=false,export=api.reportExcel(current.type,current.start.ifBlank{null},current.end.ifBlank{null},current.employeeId,current.customerId,current.status,current.sentiment,current.leadFilters))
   }catch(e:Exception){
    current.copy(exporting=false,message=if(e is ApiException&&e.code=="REPORT_TOO_LARGE")"More than 10,000 rows match. Narrow the filters and try again." else apiMessage(e,"Excel export couldn't be downloaded."))
   }
@@ -70,8 +71,12 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
  fun setCustomer(v:String?){_state.value=_state.value.copy(customerId=v)}
  fun setStatus(v:String){_state.value=_state.value.copy(status=v)}
  fun setSentiment(v:String){_state.value=_state.value.copy(sentiment=v)}
+ fun setLeadStage(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(stage=v))}
+ fun setLeadSource(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(source=v))}
+ fun setLeadFollowUp(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(followUp=v))}
+ fun setLeadSearch(v:String){_state.value=_state.value.copy(leadFilters=_state.value.leadFilters.copy(q=v))}
  fun reset(){
-  _state.value=_state.value.copy(start="",end="",employeeId=null,customerId=null,status="ALL",sentiment="ALL",page=1)
+  _state.value=_state.value.copy(start="",end="",employeeId=null,customerId=null,status="ALL",sentiment="ALL",page=1,leadFilters=LeadReportFilters())
   load()
  }
 }
