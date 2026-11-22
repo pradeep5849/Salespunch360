@@ -1,3 +1,4 @@
+import {isTelecaller} from "@/lib/telecalling/policy";
 import Link from "next/link";
 import {WorkspacePageHeader} from "@/components/workspace/workspace-page-header";
 import {requirePermission} from "@/lib/auth/authorization";
@@ -12,6 +13,7 @@ const label=(value:string)=>value.toLowerCase().split("_").map(x=>x[0]?.toUpperC
 export default async function TelecallingPage({searchParams}:{searchParams:Promise<{q?:string;page?:string}>}){
  const actor=await requirePermission("SALES_TELECALLING");
  if(!actor.companyId||!actor.salesRole)throw new Error("Company Sales access required");
+ if(!isTelecaller(actor)&&!["PRIMARY_ADMIN","ADMIN","MANAGER"].includes(actor.salesRole))throw new Error("NOT_AUTHORIZED");
  const {q,page}=await searchParams,search=q?.trim()||"";
  const [leads,callbackPage,actions]=await Promise.all([search?listTelecallingLeads(search):Promise.resolve([]),callbackPageForActor({...actor,companyId:actor.companyId,salesRole:actor.salesRole},Number(page)),listSalesActions()]);
  const queues=splitCallbackQueue(callbackPage.items);
