@@ -95,6 +95,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun attendance(start: Boolean, location: LocationPayload?, onSuccess: () -> Unit) {
         if (_state.value.submitting) return
         _state.value = _state.value.copy(submitting = true, message = null)
+        val previousAttendanceId=_state.value.bootstrap?.attendance?.id
         viewModelScope.launch {
             var confirmation = ""
             try {
@@ -116,9 +117,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 throw e
             } catch (e: Exception) {
                 if (e is IOException) {
-                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
-                    catch (cancel: CancellationException) { throw cancel }
-                    catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR) }
+                    try {
+                        val refreshed=api.bootstrap()
+                        if(!applyBootstrap(refreshed, forcedWorkspace = Workspace.SALES)||Workspace.SALES !in validatedWorkspaces(refreshed))return@launch
+                        if(!refreshed.features.fieldWorkEnabled){_state.value=_state.value.copy(message="Field attendance is no longer available. Review updated company settings and access.");return@launch}
+                        val recovered=attendanceTransportRecovery(start,previousAttendanceId,refreshed.attendance)
+                        _state.value=_state.value.copy(message=listOfNotNull(recovered,_state.value.message).distinct().joinToString(" "))
+                    } catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR,message="Attendance could not be confirmed while disconnected. Reconnect and refresh before retrying.") }
+                    return@launch
                 }
                 _state.value = _state.value.copy(message = apiMessage(e, "Could not confirm attendance. Refresh before trying again."), submitting = false)
                 return@launch
