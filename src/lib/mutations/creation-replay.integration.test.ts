@@ -8,6 +8,7 @@ vi.mock('@/lib/db',()=>({db:new Proxy({},{get:(_,key)=>{
  }})),{maxWait:10000,timeout:10000,...options});
  const value=client[key as keyof PrismaClient];return typeof value==='function'?value.bind(client):value;
 }})}));
+import {callbackPageForActor} from '@/lib/telecalling/callback-page';
 import {createCustomerForActor} from '@/lib/customers/service';
 import {mobileCreateCustomer} from '@/lib/mobile/customers';
 import {createFollowUpTaskForActor,cancelFollowUpTaskForActor} from '@/lib/follow-up-tasks/service';
@@ -39,3 +40,14 @@ it.skipIf(!databaseUrl)('failed notification rolls back the keyed task and permi
 it.skipIf(!databaseUrl)('does not replay another actor submission under a guessed key',async()=>{const input=customer();await createCustomerForActor(owner,input);await expect(createCustomerForActor({...owner,id:secondAdminId,salesRole:'ADMIN'},input)).rejects.toThrow('CREATION_REQUEST_CONFLICT');expect(await client.customer.count({where:{companyId}})).toBe(1)});
 it.skipIf(!databaseUrl)('allows the same key in another authorized company without crossing results',async()=>{const input=customer();const first=await createCustomerForActor(owner,input);const second=await createCustomerForActor({id:foreignOwnerId,companyId:foreignCompanyId,salesRole:'PRIMARY_ADMIN'},{...input,branchId:foreignBranchId,assignedUserId:undefined});expect(second.id).not.toBe(first.id);expect(second.companyId).toBe(foreignCompanyId)});
 it.skipIf(!databaseUrl)('replay preserves cancellation and does not reopen completed intent',async()=>{const input=follow(),first=await createFollowUpTaskForActor(sales,input);await cancelFollowUpTaskForActor(sales,first.id);const replay=await createFollowUpTaskForActor(sales,input);expect(replay.status).toBe('CANCELLED');expect((await client.lead.findUniqueOrThrow({where:{id:leadId}})).followUpAt).toBeNull();expect(await client.followUpTask.count({where:{companyId}})).toBe(1)});
+
+it.skipIf(!databaseUrl)('pages mixed callbacks and assigned tasks beyond both former caps without gaps',async()=>{
+ const leadIds=Array.from({length:602},()=>randomUUID()),due=new Date('2026-12-01T10:00:00Z');
+ await client.lead.createMany({data:leadIds.map(id=>({id,companyId,branchId,assignedUserId:salesId,createdByUserId:ownerId,title:'Queue fixture'}))});
+ await client.$executeRaw(Prisma.sql`INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,"calledAt","nextCallbackAt","callbackAssigneeUserId","createdAt","updatedAt") VALUES ${Prisma.join(leadIds.slice(0,301).map(leadId=>Prisma.sql`(${randomUUID()}::uuid,${companyId}::uuid,${leadId}::uuid,${ownerId}::uuid,'CALL_BACK',NOW(),${due},${ownerId}::uuid,NOW(),NOW())`))}`);
+ await client.followUpTask.createMany({data:leadIds.slice(301).map(leadId=>({companyId,branchId,leadId,assignedUserId:teleId,createdByUserId:ownerId,dueDate:due,notes:'[[SP360_FOLLOW_UP:CALL]]fixture'}))});
+ const ids:string[]=[];for(let page=1;page<=7;page++){const result=await callbackPageForActor(owner,page);expect(result.page).toBe(page);expect(result.items.length).toBe(page===7?2:100);expect(result.hasMore).toBe(page<7);ids.push(...result.items.map(row=>row.id));}
+ expect(new Set(ids).size).toBe(602);
+ const ownCalls=await callbackPageForActor(sales);expect(ownCalls.items).toEqual([]);
+ const teleCalls=await callbackPageForActor({...sales,id:teleId,designation:'Telecaller'});expect(teleCalls.items).toHaveLength(100);expect(teleCalls.items.every(row=>row.followUpTaskId&&row.notes==='fixture')).toBe(true);
+},30000);

@@ -14,6 +14,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
+@kotlinx.serialization.Serializable
+data class CallbackPage(val items:List<CallbackQueueItem> = emptyList(),val page:Int=1,val hasMore:Boolean=false)
+
 class TelecallingClient(private val session: SecureSession) {
     companion object {
         private val http = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).writeTimeout(20, TimeUnit.SECONDS).retryOnConnectionFailure(true).build()
@@ -26,7 +29,7 @@ class TelecallingClient(private val session: SecureSession) {
     }
     suspend fun queue(query: String = ""): List<TelecallingLead> {val suffix = if (query.isBlank()) "" else "&q=${enc(query)}";return json.decodeFromString(call("api/v1/mobile/telecalling?view=queue$suffix"))}
     suspend fun history(leadId: String): List<LeadCallHistoryItem> = json.decodeFromString(call("api/v1/mobile/telecalling?view=history&leadId=${enc(leadId)}"))
-    suspend fun callbacks(): List<CallbackQueueItem> = json.decodeFromString(call("api/v1/mobile/telecalling?view=callbacks"))
+    suspend fun callbacks(page:Int=1): CallbackPage = json.decodeFromString(call("api/v1/mobile/telecalling?view=callbacks&page=${page.coerceAtLeast(1)}"))
     suspend fun salesActions(): List<TelecallingSalesAction> = json.decodeFromString(call("api/v1/mobile/telecalling?view=sales-actions"))
     suspend fun recordCall(leadId: String,result: String,notes: String?,nextCallbackAt: String?,followUpTaskId:String?=null,dialStartedAt:String?=null,dialEndedAt:String?=null,timingSource:String?=null): RecordLeadCallResponse = json.decodeFromString(call("api/v1/mobile/telecalling","POST",json.encodeToString(RecordLeadCallRequest(leadId = leadId, result = result, notes = notes, nextCallbackAt = nextCallbackAt,followUpTaskId=followUpTaskId,dialStartedAt=dialStartedAt,dialEndedAt=dialEndedAt,timingSource=timingSource))))
     suspend fun updateSalesAction(actionId: String, status: String) {call("api/v1/mobile/telecalling","POST",json.encodeToString(UpdateSalesActionRequest(actionId = actionId, status = status)))}

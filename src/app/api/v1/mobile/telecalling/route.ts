@@ -1,3 +1,4 @@
+import {callbackPageForActor} from '@/lib/telecalling/callback-page';
 import { ZodError } from "zod";
 import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileAuthorizationFailure, mobileJson, mobileUnexpected } from "@/lib/mobile/http";
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
       return mobileJson(await mobileLeadCallHistory(actor, leadId));
     }
     if (view === "callbacks") {
+      if(url.searchParams.has("page"))return mobileJson(await callbackPageForActor(actor,Number(url.searchParams.get("page"))));
       const [callbacks,assigned]=await Promise.all([mobileCallbackQueue(actor),listAssignedTelecallerCallsForActor(actor)]);
       return mobileJson([...callbacks,...assigned].sort((a,b)=>new Date(a.nextCallbackAt||0).getTime()-new Date(b.nextCallbackAt||0).getTime()));
     }

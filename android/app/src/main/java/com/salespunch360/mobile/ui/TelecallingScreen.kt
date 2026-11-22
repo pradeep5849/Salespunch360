@@ -84,6 +84,13 @@ fun TelecallingScreen(vm: TelecallingViewModel = viewModel()) {
             HorizontalDivider(Modifier.padding(top=8.dp,bottom=8.dp),color=SalesLine)
             state.message?.let { MessageBanner(it, vm::clearMessage) }
         }
+        item(key="callback-pages") {
+            Text("Scheduled calls · Page ${state.callbackPage}. Counts are for this page.",color=SalesMuted)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedButton({vm.changeCallbackPage(state.callbackPage-1)},enabled=state.callbackPage>1&&!state.loading&&!state.busy){Text("Previous")}
+                OutlinedButton({vm.changeCallbackPage(state.callbackPage+1)},enabled=state.callbackHasMore&&!state.loading&&!state.busy){Text("Next")}
+            }
+        }
         groups.forEach{(title,callbacks)->
             item(key="heading-$title"){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(callbacks.size.toString(),color=SalesMuted)}}
             if(callbacks.isEmpty())item(key="empty-$title"){ContentCard(title,"No calls.")}

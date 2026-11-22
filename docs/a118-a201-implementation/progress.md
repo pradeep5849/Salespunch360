@@ -110,3 +110,7 @@ A119-F01, A154-F01, A173-F02, A121-F05/F06, A124-F01, A125-F02, A122-F02, A126-F
 ## Creation retry safety
 
 A138-F01 and A148-F03 implemented pending acceptance. See docs/creation-retry-implementation/checkpoint.md. Thirteen real SQL checks passed; full regression 4203 passed / 449 skipped. TypeScript, changed-file lint and whitespace passed. Register: 121 implemented pending acceptance, 16 partial, 17 not started. Legacy callers without keys remain compatible but lack retry guarantees. No production mutation, deployment or merge.
+
+## Shared scheduled-call paging
+
+A164-F02 implemented pending acceptance on web/current Android. Fourteen guarded SQL cases passed, including 602 mixed-source rows across seven pages; 48 focused checks passed / 9 optional skipped. TS/lint/whitespace passed. Native remote/device acceptance pending. Register: 122 implemented pending acceptance, 16 partial, 16 not started. See docs/callback-pagination-implementation/checkpoint.md. CI caught a misplaced declaration in the preceding customer assignment card; corrected separately in 8387ee10, with a new native run required.

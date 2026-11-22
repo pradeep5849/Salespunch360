@@ -4321,7 +4321,7 @@
         "status": "OPEN",
         "title": "Web callback buckets cap display at 100 with no paging; service queues cap at 500"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4331,7 +4331,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
-      }
+      },
+      "implementation_evidence": [
+        "docs/callback-pagination-implementation/checkpoint.md"
+      ],
+      "implementation_limits": "Stable offset pages reflect the live queue; new/closed calls can move rows between refreshes. Legacy native endpoint remains compatible; current clients use paged requests. Remote Android and device acceptance pending."
     },
     {
       "finding_id": "A165-F01",
@@ -6301,8 +6305,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 121,
-    "NOT STARTED": 17,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 122,
+    "NOT STARTED": 16,
     "PARTIAL": 16,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
