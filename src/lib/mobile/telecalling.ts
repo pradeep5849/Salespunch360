@@ -1,3 +1,4 @@
+import {completeAssignedTelecallerCallInTx} from "@/lib/follow-up-tasks/telecaller-assignment";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -150,6 +151,7 @@ export async function mobileRecordLeadCall(actor: MobilePrincipal, raw: unknown)
   const id = randomUUID();
   const handoffCreated = SALES_HANDOFF_RESULTS.has(result) && lead.assignedUserId !== actor.id;
   await db.$transaction(async tx => {
+    if(typeof input.followUpTaskId==="string"&&input.followUpTaskId)await completeAssignedTelecallerCallInTx(tx,actor,input.followUpTaskId,lead.id);
     await tx.$executeRaw(Prisma.sql`
       INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","dialStartedAt","dialEndedAt","dialDurationSeconds","timingSource","createdAt","updatedAt")
       VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt ? actor.id : null}::uuid,${timing.dialStartedAt},${timing.dialEndedAt},${timing.dialDurationSeconds},${timing.timingSource},NOW(),NOW())`);

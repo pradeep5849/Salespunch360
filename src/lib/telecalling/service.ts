@@ -1,3 +1,4 @@
+import {completeAssignedTelecallerCallInTx} from "@/lib/follow-up-tasks/telecaller-assignment";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -92,7 +93,7 @@ export async function getLeadCallHistory(leadId:string):Promise<LeadCallHistoryI
   WHERE c."companyId"=${actor.companyId}::uuid AND c."leadId"=${leadId}::uuid ORDER BY c."calledAt" DESC LIMIT 100`);
 }
 
-export async function recordLeadCall(input:{leadId:string;result:string;notes?:string|null;nextCallbackAt?:Date|null;dialStartedAt?:unknown;dialEndedAt?:unknown;timingSource?:unknown}){
+export async function recordLeadCall(input:{followUpTaskId?:string;leadId:string;result:string;notes?:string|null;nextCallbackAt?:Date|null;dialStartedAt?:unknown;dialEndedAt?:unknown;timingSource?:unknown}){
  const {actor,lead}=await requireLeadAccess(input.leadId,true);
  const result=assertResult(input.result);
  const notes=input.notes?.trim()?.slice(0,2000)||null;
@@ -102,6 +103,7 @@ export async function recordLeadCall(input:{leadId:string;result:string;notes?:s
  const timing=normalizeDialTiming(input);
  const id=randomUUID();
  await db.$transaction(async tx=>{
+  if(input.followUpTaskId)await completeAssignedTelecallerCallInTx(tx,{...actor,companyId:lead.companyId},input.followUpTaskId,lead.id);
   await tx.$executeRaw(Prisma.sql`INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","dialStartedAt","dialEndedAt","dialDurationSeconds","timingSource","createdAt","updatedAt") VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt?actor.id:null}::uuid,${timing.dialStartedAt},${timing.dialEndedAt},${timing.dialDurationSeconds},${timing.timingSource},NOW(),NOW())`);
   if(SALES_HANDOFF_RESULTS.has(result)&&lead.assignedUserId!==actor.id){
    const actionId=randomUUID();

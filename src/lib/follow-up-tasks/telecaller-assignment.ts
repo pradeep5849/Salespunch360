@@ -1,10 +1,11 @@
+import {createSalesNotification} from "@/lib/sales-notifications/service";
 import {Prisma,type ManagerType,type SalesRole} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requirePermission} from "@/lib/auth/authorization";
 import {assertOperationalWrite} from "@/lib/billing/entitlement";
 import {assertActiveTelecallerEntitlement} from "@/lib/billing/telecaller";
 import {canAssign,visibilityWhere} from "@/lib/leads/policy";
-import {resolveOperationalWriteBranch} from "@/lib/branches/operational-scope";
+import {operationalBranchContext,resolveOperationalWriteBranch,type OperationalActor} from "@/lib/branches/operational-scope";
 import {parseIndiaBusinessDate} from "./date";
 import {decodeFollowUpNotes,encodeFollowUpNotes} from "./type";
 import {syncLeadFollowUpAt} from "./service";
@@ -52,6 +53,7 @@ export async function createTelecallerCallFollowUpForActor(actor:CallAssignmentA
   if(!target[0])throw new Error("INVALID_ASSIGNMENT");
   const task=await tx.followUpTask.create({data:{companyId:actor.companyId,branchId:lead.branchId,leadId,assignedUserId,createdByUserId:actor.id,dueDate,notes}});
   await syncLeadFollowUpAt(tx,leadId);
+  await createSalesNotification(tx,{companyId:actor.companyId,recipientUserId:assignedUserId,actorUserId:actor.id,eventType:"FOLLOW_UP_ASSIGNED",title:"Call follow-up assigned",body:"A Call follow-up was assigned to you.",relatedEntityType:"FOLLOW_UP",relatedEntityId:task.id,navigationTarget:`/workspace/follow-up-tasks?status=PENDING&leadId=${leadId}`,dedupeKey:`FOLLOW_UP_ASSIGNED:${task.id}`});
   return{...task,type:"CALL" as const,notes:decodeFollowUpNotes(task.notes).notes};
  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
 }
@@ -76,11 +78,15 @@ export async function listAssignedTelecallerCallsForActor(actor:CallAssignmentAc
  return rows.map(row=>({...row,notes:decodeFollowUpNotes(row.rawNotes).notes}));
 }
 
-export async function completeAssignedTelecallerCallForActor(actor:{id:string;companyId:string},taskId:string,leadId:string){
- return db.$transaction(async tx=>{
-  const task=await tx.followUpTask.findFirst({where:{id:taskId,companyId:actor.companyId,leadId,assignedUserId:actor.id},select:{id:true,leadId:true,status:true,notes:true}});
-  if(!task||task.status!=="PENDING"||decodeFollowUpNotes(task.notes).type!=="CALL")return;
-  await tx.followUpTask.update({where:{id:task.id},data:{status:"COMPLETED",completedAt:new Date()}});
-  await syncLeadFollowUpAt(tx,leadId);
- });
+export async function completeAssignedTelecallerCallInTx(tx:Prisma.TransactionClient,actor:OperationalActor,taskId:string,leadId:string){
+ const branches=await operationalBranchContext(actor,undefined,tx);
+ await tx.$queryRaw`SELECT "id" FROM "follow_up_tasks" WHERE "id"=${taskId}::uuid AND "companyId"=${actor.companyId}::uuid FOR UPDATE`;
+ const task=await tx.followUpTask.findFirst({where:{id:taskId,companyId:actor.companyId,branchId:branches.branchId,leadId,assignedUserId:actor.id},select:{id:true,leadId:true,status:true,notes:true,completedVisitId:true}});
+ if(!task)throw new Error("NOT_FOUND");
+ if(task.status!=="PENDING"||task.completedVisitId||decodeFollowUpNotes(task.notes).type!=="CALL")throw new Error("INVALID_STATE");
+ await tx.followUpTask.update({where:{id:task.id},data:{status:"COMPLETED",completedAt:new Date()}});
+ await syncLeadFollowUpAt(tx,leadId);
+}
+export async function completeAssignedTelecallerCallForActor(actor:OperationalActor,taskId:string,leadId:string){
+ return db.$transaction(tx=>completeAssignedTelecallerCallInTx(tx,actor,taskId,leadId));
 }

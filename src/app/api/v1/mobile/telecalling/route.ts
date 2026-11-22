@@ -2,7 +2,7 @@ import { ZodError } from "zod";
 import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileAuthorizationFailure, mobileJson, mobileUnexpected } from "@/lib/mobile/http";
 import { mobileCallbackQueue, mobileLeadCallHistory, mobileRecordLeadCall, mobileSalesActions, mobileTelecallingQueue, mobileUpdateSalesAction } from "@/lib/mobile/telecalling";
-import {completeAssignedTelecallerCallForActor,listAssignedTelecallerCallsForActor} from "@/lib/follow-up-tasks/telecaller-assignment";
+import {listAssignedTelecallerCallsForActor} from "@/lib/follow-up-tasks/telecaller-assignment";
 
 function fail(error: unknown) {
   const auth = mobileAuthorizationFailure(error);
@@ -44,7 +44,6 @@ export async function POST(request: Request) {
     const action = body.action;
     if (action === "RECORD_CALL") {
       const saved=await mobileRecordLeadCall(actor, body);
-      if(typeof body.followUpTaskId==="string"&&typeof body.leadId==="string")await completeAssignedTelecallerCallForActor(actor,body.followUpTaskId,body.leadId);
       return mobileJson(saved, 201);
     }
     if (action === "UPDATE_SALES_ACTION") return mobileJson(await mobileUpdateSalesAction(actor, body));

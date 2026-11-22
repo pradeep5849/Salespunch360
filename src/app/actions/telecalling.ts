@@ -1,8 +1,6 @@
 "use server";
 import {revalidatePath} from "next/cache";
 import {recordLeadCall,updateSalesAction} from "@/lib/telecalling/service";
-import {completeAssignedTelecallerCallForActor} from "@/lib/follow-up-tasks/telecaller-assignment";
-import {requirePermissionForMutation} from "@/lib/auth/authorization";
 
 export type TelecallingActionState={error?:string;success?:string};
 
@@ -14,6 +12,7 @@ export async function saveLeadCall(_:TelecallingActionState,form:FormData):Promi
   const rawNext=String(form.get("nextCallbackAt")||"").trim();
   await recordLeadCall({
    leadId,
+   followUpTaskId:followUpTaskId||undefined,
    result,
    notes:String(form.get("notes")||""),
    nextCallbackAt:rawNext?new Date(rawNext):null,
@@ -21,7 +20,6 @@ export async function saveLeadCall(_:TelecallingActionState,form:FormData):Promi
    dialEndedAt:String(form.get("dialEndedAt")||""),
    timingSource:String(form.get("timingSource")||""),
   });
-  if(followUpTaskId){const actor=await requirePermissionForMutation("SALES_TELECALLING");if(actor.companyId)await completeAssignedTelecallerCallForActor({id:actor.id,companyId:actor.companyId},followUpTaskId,leadId);}
   revalidatePath("/workspace/telecalling");
   revalidatePath("/workspace/follow-up-tasks");
   revalidatePath(`/workspace/leads/${leadId}`);
