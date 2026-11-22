@@ -50,7 +50,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
 @Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)
-@Serializable data class Features(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val fieldWorkEnabled:Boolean=false)
+@Serializable data class Features(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val fieldWorkEnabled:Boolean=false,val attendanceGeofenceEnabled:Boolean=false)
 @Serializable data class Capabilities(val canManageEmployees:Boolean=false,val canManageSalesSettings:Boolean=false,val canAccessSalesBilling:Boolean=false,val canViewReports:Boolean=false)
 @Serializable data class Entitlement(val state:String,val operationalWritesAllowed:Boolean,val adminLimit:Int=0,val adminUsage:Int=0,val managerLimit:Int=0,val salesLimit:Int=0,val managerUsage:Int=0,val salesUsage:Int=0)
 @Serializable data class CompanySettings(val name:String,val teamStructure:TeamStructure,val subscriptionStatus:String,val trialStartedAt:String?=null,val trialEndsAt:String?=null,val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val checkoutRequiredBeforeNextCheckIn:Boolean,val attendanceGeofenceEnabled:Boolean,val attendanceReferenceLatitude:String?=null,val attendanceReferenceLongitude:String?=null,val attendanceGeofenceRadiusMeters:Int?=null,val customerCheckInGeofenceEnabled:Boolean,val customerCheckInGeofenceRadiusMeters:Int?=null,val travelRatePerKm:String?=null)

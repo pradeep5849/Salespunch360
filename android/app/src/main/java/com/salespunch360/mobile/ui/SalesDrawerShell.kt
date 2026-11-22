@@ -83,7 +83,7 @@ fun SalesDrawerAuthenticatedApp(
     data: Bootstrap,
     message: String?,
     dismiss: () -> Unit,
-    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit,
+    attendance: (Boolean, LocationPayload?, () -> Unit) -> Unit,
     logout: () -> Unit,
     switchToAccount: (() -> Unit)? = null
 ) {
@@ -314,7 +314,7 @@ private fun SalesDrawerMetric(label: String, value: Int?, modifier: Modifier) {
 @Composable
 private fun SalesDrawerAttendance(
     data: Bootstrap,
-    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit
+    attendance: (Boolean, LocationPayload?, () -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -326,12 +326,12 @@ private fun SalesDrawerAttendance(
             locating = true
             status = "Getting current location…"
             try {
-                val point = com.salespunch360.mobile.location.currentDeviceLocation(context)
+                val point = if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,start))com.salespunch360.mobile.location.currentDeviceLocation(context)else null
                 attendance(start, point) {
                     if (start && data.features.gpsTrackingEnabled) TrackingService.start(context)
                     if (!start) TrackingService.stop(context)
                 }
-                status = "Location ready"
+                status = if(point!=null)"Location ready"else null
             } catch (e: Exception) {
                 status = com.salespunch360.mobile.location.locationFailureMessage(e)
             } finally {
@@ -370,7 +370,7 @@ private fun SalesDrawerAttendance(
                         }
                         status?.let { Text(it, color = SalesMuted) }
                         Button(
-                            onClick = { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                            onClick = { if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,data.attendance==null))launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))else submit(data.attendance==null) },
                             enabled = !locating,
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
@@ -381,7 +381,7 @@ private fun SalesDrawerAttendance(
                 ContentCard("Attendance", if (data.features.attendanceEnabled) "Not currently working" else "Attendance is disabled by your company.") {
                     status?.let { Text(it, color = SalesMuted) }
                     Button(
-                        onClick = { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                        onClick = { if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,data.attendance==null))launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))else submit(data.attendance==null) },
                         enabled = !locating && data.features.attendanceEnabled && data.entitlement.operationalWritesAllowed,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (locating) "Locating…" else "Start Attendance") }

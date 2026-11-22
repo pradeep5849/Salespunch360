@@ -92,7 +92,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun attendance(start: Boolean, location: LocationPayload, onSuccess: () -> Unit) {
+    fun attendance(start: Boolean, location: LocationPayload?, onSuccess: () -> Unit) {
         if (_state.value.submitting) return
         _state.value = _state.value.copy(submitting = true, message = null)
         viewModelScope.launch {
