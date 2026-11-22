@@ -3964,7 +3964,7 @@
         "status": "OPEN",
         "title": "Currency-blind pipeline and won sums labeled INR"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "source": "docs/runtime-native-followup/a159/audit-register.json",
@@ -3994,6 +3994,11 @@
           "docs/runtime-native-followup/a159/audit-register.json",
           "docs/runtime-native-followup/audit-register.json"
         ]
+      },
+      "implementation_evidence": {
+        "revision": "continuation after 6f8d1b51",
+        "progress": "docs/a118-a201-implementation/progress.md",
+        "acceptance": "113 focused checks passed; two real monthly-target race cases passed separately. TS/lint passed. Native/browser acceptance and next batched CI remain pending."
       }
     },
     {
@@ -4151,7 +4156,7 @@
         "status": "OPEN",
         "title": "Monthly upserts lack expected-version conflict protection"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4163,9 +4168,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "continuation after c780db58",
+        "revision": "continuation after 6f8d1b51",
         "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Web/native revision transport and serializable paired save implemented; 53 target checks passed. Real SQL concurrency and new native CI remain pending."
+        "acceptance": "113 focused checks passed; two real monthly-target race cases passed separately. TS/lint passed. Native/browser acceptance and next batched CI remain pending."
       }
     },
     {
@@ -6139,9 +6144,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 80,
-    "PARTIAL": 25,
-    "NOT STARTED": 50,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 82,
+    "PARTIAL": 24,
+    "NOT STARTED": 49,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 1,
     "DISCLOSED LIMITATION": 1
