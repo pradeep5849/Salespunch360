@@ -70,6 +70,8 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun createTelecaller(request:com.salespunch360.mobile.data.CreateTelecallerRequest,onSuccess:()->Unit)=mutate("Telecaller created.",onSuccess){api.createTelecaller(request)}
+
     fun create(request: CreateEmployeeRequest, onSuccess: () -> Unit) = mutate("Employee created.",onSuccess) { api.createEmployee(request) }
     fun edit(request:EditEmployeeRequest,onSuccess:()->Unit)=mutate("Employee updated.",onSuccess){api.editEmployee(request)}
     fun changeRole(request:ChangeEmployeeRoleRequest,onSuccess:()->Unit)=mutate("Employee role updated.",onSuccess){api.changeEmployeeRole(request)}
@@ -137,6 +139,9 @@ class EmployeesViewModel(app: Application) : AndroidViewModel(app) {
         "COMPANY_PROFILE_REQUIRED" -> "Complete Company Details before adding Managers or Sales employees."
         "EMAIL_IN_USE" -> "This email address is already in use."
         "PHONE_IN_USE" -> "This mobile number is already in use in your company."
+        "TELECALLER_SUBSCRIPTION_REQUIRED" -> "An active paid Telecaller subscription is required."
+        "TELECALLER_SEAT_LIMIT" -> "No paid Telecaller seat is available. Refresh the team or add capacity."
+        "SALES_NOT_ENTITLED" -> "Telecallers require a Sales company scope."
         "SEAT_LIMIT" -> "No seat is available for this role."
         "LIFECYCLE_BLOCKED" -> "Your entitlement currently blocks employee changes."
         "MANAGERS_DISABLED" -> "Managers aren't available for this company structure."

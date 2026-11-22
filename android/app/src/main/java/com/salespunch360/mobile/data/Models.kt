@@ -149,3 +149,5 @@ internal fun visiblePricingRoles(structure:TeamStructure)=if(structure==TeamStru
 
 @Serializable data class AccountLauncherGroup(val title:String,val actions:List<AccountLauncherAction> = emptyList())
 @Serializable data class AccountLauncherAction(val label:String,val href:String?=null,val disabled:Boolean=false)
+
+@Serializable data class CreateTelecallerRequest(val name:String,val email:String,val phone:String?=null,val employeeCode:String?=null,val password:String,val confirmPassword:String)

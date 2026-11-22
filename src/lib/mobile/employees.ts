@@ -1,3 +1,4 @@
+import {createTelecallerEmployeeForActor} from "@/lib/telecalling/team";
 import {telecallerBillingState} from "@/lib/billing/telecaller";
 import {effectiveEntitlement} from '@/lib/billing/entitlement';
 import {profileComplete} from '@/lib/company/profile';
@@ -31,7 +32,7 @@ export async function mobileEmployeeContext(principal:MobilePrincipal){
 
 export async function mobileCreateEmployee(principal:MobilePrincipal,raw:unknown){
  const companyId=primary(principal);if(!raw||typeof raw!=='object')throw new MobileEmployeeError('INVALID_INPUT');const {role,...input}=raw as Record<string,unknown>;
- const created=role==='ADMIN'?await createAdditionalAdminForCompany(companyId,input,principal.id):role==='MANAGER'?await createManagerForCompany(companyId,input,principal.id):role==='SALES'?await createSalesEmployeeForCompany(companyId,input,principal.id):null;
+ const created=role==='TELECALLER'?await createTelecallerEmployeeForActor(principal,input):role==='ADMIN'?await createAdditionalAdminForCompany(companyId,input,principal.id):role==='MANAGER'?await createManagerForCompany(companyId,input,principal.id):role==='SALES'?await createSalesEmployeeForCompany(companyId,input,principal.id):null;
  if(!created)throw new MobileEmployeeError('INVALID_ROLE');
  const context=await mobileEmployeeContext(principal),employee=context.employees.find(item=>item.id===created.id);if(!employee)throw new MobileEmployeeError('NOT_FOUND',404);return employee;
 }

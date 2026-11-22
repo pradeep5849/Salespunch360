@@ -1,3 +1,4 @@
+import {retrySerializable} from "@/lib/account/transaction-retry";
 import {revokeUserAuthenticationWithLock} from "@/lib/auth/session-generation";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -43,14 +44,20 @@ export async function listTelecallerEmployees(): Promise<TelecallerEmployee[]> {
 
 export async function createTelecallerEmployee(raw: unknown) {
   const actor = await requirePermissionForMutation("SALES_USER_ADMIN");
-  const companyId = actor.companyId;
-  if (!companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
+  if(!actor.companyId)throw new Error("NOT_AUTHORIZED");
+  return createTelecallerEmployeeForActor({...actor,companyId:actor.companyId},raw);
+}
+export async function createTelecallerEmployeeForActor(actor:{id:string;companyId:string;salesRole:string|null},raw:unknown){
+  const companyId=actor.companyId;
+  if(actor.salesRole!=="PRIMARY_ADMIN")throw new Error("NOT_AUTHORIZED");
   const data = createTelecallerSchema.parse(raw);
   await assertTelecallerSeatAvailable(companyId);
   const passwordHash = await hashPassword(data.password);
   try {
-    return await db.$transaction(async tx => {
+    return await retrySerializable(()=>db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
+      const primary=await tx.user.findFirst({where:{id:actor.id,companyId,salesRole:"PRIMARY_ADMIN",isActive:true,salesAccessActive:true},select:{id:true}});
+      if(!primary)throw new Error("NOT_AUTHORIZED");
       const company = await tx.company.findUnique({ where: { id: companyId }, select: { productEdition: true } });
       if (!company || (company.productEdition !== "SALESPUNCH360" && company.productEdition !== "SALESPUNCH360_PLUS")) throw new Error("SALES_NOT_ENTITLED");
       const paid = await tx.$queryRaw<{ seats: number }[]>(Prisma.sql`SELECT seats FROM "telecaller_subscriptions" WHERE "companyId"=${companyId}::uuid AND status='ACTIVE' AND "startsAt"<=NOW() AND "endsAt">NOW() ORDER BY "endsAt" DESC LIMIT 1 FOR UPDATE`);
@@ -79,7 +86,7 @@ export async function createTelecallerEmployee(raw: unknown) {
         },
         select: { id: true, name: true, email: true, phone: true, employeeCode: true, isActive: true, createdAt: true },
       });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new Error("EMAIL_IN_USE");
     const message = error instanceof Error ? error.message : "TELECALLER_CREATE_FAILED";

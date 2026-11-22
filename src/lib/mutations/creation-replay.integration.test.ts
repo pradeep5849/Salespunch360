@@ -8,6 +8,7 @@ vi.mock('@/lib/db',()=>({db:new Proxy({},{get:(_,key)=>{
  }})),{maxWait:10000,timeout:10000,...options});
  const value=client[key as keyof PrismaClient];return typeof value==='function'?value.bind(client):value;
 }})}));
+import {createTelecallerEmployeeForActor} from '@/lib/telecalling/team';
 import {callbackPageForActor} from '@/lib/telecalling/callback-page';
 import {createCustomerForActor} from '@/lib/customers/service';
 import {mobileCreateCustomer} from '@/lib/mobile/customers';
@@ -50,4 +51,14 @@ it.skipIf(!databaseUrl)('pages mixed callbacks and assigned tasks beyond both fo
  expect(new Set(ids).size).toBe(602);
  const ownCalls=await callbackPageForActor(sales);expect(ownCalls.items).toEqual([]);
  const teleCalls=await callbackPageForActor({...sales,id:teleId,designation:'Telecaller'});expect(teleCalls.items).toHaveLength(100);expect(teleCalls.items.every(row=>row.followUpTaskId&&row.notes==='fixture')).toBe(true);
+},30000);
+
+it.skipIf(!databaseUrl)('allows one concurrent paid Telecaller creation into the final seat without field access',async()=>{
+ await expect(createTelecallerEmployeeForActor({...owner,salesRole:'ADMIN'},{})).rejects.toThrow('NOT_AUTHORIZED');
+ await client.$executeRaw`UPDATE "telecaller_subscriptions" SET seats=2 WHERE "companyId"=${companyId}::uuid AND status='ACTIVE'`;
+ const results=await Promise.allSettled([0,1].map(index=>createTelecallerEmployeeForActor(owner,{name:'New fixture caller',email:`caller-${randomUUID()}-${index}@example.invalid`,password:'FixtureSecure12345',confirmPassword:'FixtureSecure12345'})));
+ expect(results.filter(result=>result.status==='fulfilled')).toHaveLength(1);
+ const denied=results.find(result=>result.status==='rejected') as PromiseRejectedResult;expect(denied.reason.message).toBe('TELECALLER_SEAT_LIMIT');
+ const created=(results.find(result=>result.status==='fulfilled') as PromiseFulfilledResult<{id:string}>).value;
+ expect(await client.user.findUnique({where:{id:created.id},select:{companyId:true,salesRole:true,designation:true,salesAccessActive:true,accountRole:true,accountAccessActive:true}})).toEqual({companyId,salesRole:'SALES',designation:'Telecaller',salesAccessActive:false,accountRole:null,accountAccessActive:false});
 },30000);
