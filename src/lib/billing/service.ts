@@ -1,3 +1,4 @@
+import {pageWindow,pageResult} from "@/lib/pagination";
 import {effectiveAccountCapacity} from "./account-capacity";
 import {pendingOrderMatches,PendingOrderConflict,type PendingOrderIntent} from "./pending-order-intent";
 import {adminOrderQuery,ADMIN_ORDER_PAGE_SIZE} from "./admin-order-query";
@@ -74,3 +75,6 @@ export async function cancelCurrentCompanyPendingOrder(orderId:string){
   await tx.billingAuditEvent.create({data:{companyId:u.companyId,actorUserId:u.id,type:"ORDER_CANCELLED",entityId:order.id,reason:"Explicit cancellation confirmed by company administrator"}});
  });
 }
+
+export async function billingHubContext(){const user=await billingUser();return{backHref:user.company.productEdition==="SALESPUNCH360_ACCOUNT"?"/workspace/account":"/workspace"}}
+export async function billingOrderHistory(raw:unknown={}){const user=await billingUser(),window=pageWindow(raw);const rows=await db.billingOrder.findMany({where:{companyId:user.companyId},include:{payments:true},orderBy:[{createdAt:"desc"},{id:"desc"}],skip:window.skip,take:window.take});return pageResult(rows,raw)}
