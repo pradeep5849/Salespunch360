@@ -44,6 +44,9 @@ export async function verifyFirebasePhoneProof(idToken: string, expectedPhone: s
   const now = Math.floor(Date.now() / 1000);
   const authTime = decoded.auth_time;
   if (
+    typeof decoded.uid !== "string" ||
+    decoded.uid.length === 0 ||
+    decoded.uid.length > 128 ||
     decoded.phone_number !== expectedPhone ||
     decoded.firebase?.sign_in_provider !== "phone" ||
     typeof authTime !== "number" ||
