@@ -28,7 +28,9 @@ function PasswordIcon({ visible }: { visible: boolean }) {
 
 export function RegistrationForm({
   initialProduct,
+  phoneVerificationEnabled,
 }: {
+  phoneVerificationEnabled: boolean;
   initialProduct?:
     "SALESPUNCH360" | "SALESPUNCH360_ACCOUNT" | "SALESPUNCH360_PLUS";
 }) {
@@ -197,7 +199,7 @@ export function RegistrationForm({
               errors={state.fieldErrors?.adminEmail}
             />
           </div>
-          {process.env.NEXT_PUBLIC_PHONE_VERIFICATION_ENABLED === "true" && (
+          {phoneVerificationEnabled && (
             <div className="field full">
               <label htmlFor="adminPhone">Mobile number</label>
               <div className="password-field">
