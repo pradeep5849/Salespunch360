@@ -1672,6 +1672,17 @@ model BillingAuditEvent {
   @@map("billing_audit_events")
 }
 
+/// Persistent registration/first-use SMS send reservations.
+ /// The send endpoint must reserve atomically before contacting Firebase.
+model PhoneOtpSend {
+  id        String   @id @default(uuid()) @db.Uuid
+  phoneHash String   @db.Char(64)
+  createdAt DateTime @default(now())
+
+  @@index([phoneHash, createdAt])
+  @@map("phone_otp_sends")
+}
+
 model RateLimitBucket {
   key       String   @id @db.VarChar(128)
   count     Int
