@@ -25,7 +25,7 @@ export default async function RegisterPage({searchParams}:{searchParams:Promise<
         <h1>Create your company workspace</h1>
         <p className="muted">Choose Sales, Accounts, or both in one Company. No card required.</p>
       </section>
-      <RegistrationForm initialProduct={initialProduct} />
+      <RegistrationForm initialProduct={initialProduct} phoneVerificationEnabled={process.env.PHONE_VERIFICATION_ENABLED === "true"} />
     </main>
   );
 }
