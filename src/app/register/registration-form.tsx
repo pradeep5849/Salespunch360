@@ -232,7 +232,7 @@ export function RegistrationForm({
                   inputMode="tel"
                   autoComplete="tel"
                   pattern="\+[1-9][0-9]{1,14}"
-                  placeholder="+919876543210"
+                  placeholder="+14155552671"
                   aria-describedby="adminPhone-help"
                 />
                 <button type="button" disabled={phoneBusy || !/^\+[1-9]\d{1,14}$/.test(adminPhone) || verifiedPhone === adminPhone} onClick={async () => {
@@ -255,7 +255,7 @@ export function RegistrationForm({
                   {phoneBusy ? "Please wait…" : "Send OTP"}
                 </button>
               </div>
-              <small id="adminPhone-help">Enter your number with country code, for example +919876543210. SMS verification is required.</small>
+              <small id="adminPhone-help">Enter your mobile number in international format, including + and country code (for example +14155552671, +447911123456, or +919876543210). SMS availability depends on supported destinations.</small>
               <div id="registration-recaptcha" />
               {phoneConfirmation && verifiedPhone !== adminPhone && (
                 <div className="password-field">
