@@ -25,6 +25,7 @@ export async function register(_: RegistrationState, formData: FormData): Promis
     companyName: formData.get("companyName"),
     adminName: formData.get("adminName"),
     adminEmail: formData.get("adminEmail"),
+    ...(process.env.PHONE_VERIFICATION_ENABLED === "true" ? { adminPhone: formData.get("adminPhone"), firebasePhoneToken: formData.get("firebasePhoneToken") } : {}),
     adminPassword: formData.get("adminPassword"),
     confirmPassword: formData.get("confirmPassword"),
   };
