@@ -202,3 +202,7 @@ Completed A149-F01 through transactional source-linked Call tasks, compatible qu
 ## Verification review navigation — 2ac1814d / fixture typing 55a92385
 
 Completed A120-F05 with authorized affected-record and review-area links on web/native, native journal/Asset detail entry and stale detail request guards. 30 focused cases passed including a real two-company SQL scan and server-rendered pages; TypeScript/lint/whitespace passed. See `docs/verification-review-links/checkpoint.md`. Slice 3 since the last full regression; no new full run. Counts: 147 implemented/acceptance pending, one partial, six not started; seven retained findings unfinished. Callback head 5a05d680 CI passed all non-live checks; live Lighthouse failures retained.
+
+## Financial verification coverage — 232db949 / bff82eb8
+
+Completed A120-F02 with independent saved line/discount/header, effective allocation, original settlement/advance, year-date and current-lock checks. Independent opening/physical stock comparison is explicitly NOT_CHECKED per the original finding's disclosed-coverage alternative. No false live-balance-cache comparison is made. See `docs/verification-financial-reconciliation/checkpoint.md`. 47 focused/close checks and 23 SQL producer/verification cases passed; TypeScript/lint/whitespace passed. Slice 4 since last full regression, no new full run. Counts: 148 implemented/acceptance pending, one partial, five not started; six retained findings unfinished. Three owner questions are pending while branch work continues.

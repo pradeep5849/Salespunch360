@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "2ac1814d",
-  "status": "Implementation continued through authorized verification record review navigation; retained work and acceptance remain.",
+  "application_revision": "bff82eb8",
+  "status": "Implementation continued through saved financial reconciliations and explicit unavailable independent-stock coverage; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1043,7 +1043,7 @@
         "status": "OPEN",
         "title": "Missing approved reconciliations"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
@@ -1055,6 +1055,11 @@
           "src/lib/account/utilities.ts:verifyAccountData",
           "src/app/workspace/account/utilities/verification/page.tsx"
         ]
+      },
+      "implementation_evidence": {
+        "revision": "232db949 + close-review disclosure bff82eb8",
+        "progress": "docs/verification-financial-reconciliation/checkpoint.md",
+        "acceptance": "47 focused/close checks and 23 guarded producer/verification SQL checks passed; independent opening/physical stock explicitly NOT_CHECKED, not falsely reconciled. Native/live acceptance pending."
       }
     },
     {
@@ -6362,8 +6367,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 147,
-    "NOT STARTED": 6,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 148,
+    "NOT STARTED": 5,
     "REQUIREMENT SUPERSEDED": 3,
     "PARTIAL": 1,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
