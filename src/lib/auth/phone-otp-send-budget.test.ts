@@ -15,7 +15,7 @@ const mock = vi.hoisted(() => {
       }),
     },
   };
-  return { rows, tx, transaction: vi.fn(async (callback: (tx: typeof tx) => unknown) => callback(tx)) };
+  return { rows, tx, transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback(tx)) };
 });
 vi.mock("@/lib/db", () => ({ db: { $transaction: mock.transaction } }));
 
