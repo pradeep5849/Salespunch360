@@ -15,6 +15,11 @@ export async function POST(request: Request) {
   if (process.env.PHONE_VERIFICATION_ENABLED !== "true") {
     return NextResponse.json({ error: "NOT_ENABLED" }, { status: 503 });
   }
+  // Browsers send Origin for cross-origin-sensitive POST requests. Require it
+  // here rather than accepting an absent Origin on this anonymous endpoint.
+  if (!request.headers.get("origin")) {
+    return NextResponse.json({ error: "ORIGIN_REQUIRED" }, { status: 403 });
+  }
   try {
     await assertTrustedOrigin();
   } catch {
