@@ -238,6 +238,7 @@ export default async function MasterPage({
             <article key={x.id}>
               <h2>{x.name}</h2>
               <MasterSummary value={x} canViewCosts={d.canViewCosts}/>
+              {["products","services","work-packages"].includes(master)&&d.canCreate&&<Link href={`/workspace/account/items/${master}/${x.id}/edit`}>Edit {master==="products"?"Product":master==="services"?"Service":"Work / Package"}</Link>}
               {master==="vendors"&&d.canCreate&&<Link href={`/workspace/account/parties/vendors/${x.id}/edit`}>Edit Vendor</Link>}
               {master==="vendors"&&"address"in x&&Boolean(x.address)&&<p>Address: {String(x.address)}</p>}
               {"description" in x && Boolean(x.description) && <p>{String(x.description)}</p>}
