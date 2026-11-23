@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { register, type RegistrationState } from "@/app/actions/register";
+import { sendFirebasePhoneCode, confirmFirebasePhoneCode } from "@/lib/auth/firebase-web-client";
+import type { ConfirmationResult } from "firebase/auth";
 
 const initialState: RegistrationState = {};
 function FieldError({ errors, name }: { errors?: string[]; name: string }) {
@@ -39,6 +41,10 @@ export function RegistrationForm({
   const [adminPhone, setAdminPhone] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState("");
   const [firebasePhoneToken, setFirebasePhoneToken] = useState("");
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [smsCode, setSmsCode] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -217,6 +223,9 @@ export function RegistrationForm({
                     setAdminPhone(event.target.value);
                     setVerifiedPhone("");
                     setFirebasePhoneToken("");
+                    setPhoneConfirmation(null);
+                    setSmsCode("");
+                    setPhoneError("");
                   }}
                   type="tel"
                   required
@@ -226,13 +235,49 @@ export function RegistrationForm({
                   placeholder="+919876543210"
                   aria-describedby="adminPhone-help"
                 />
-                <button type="button" disabled title="SMS verification is being connected">
-                  Verify
+                <button type="button" disabled={phoneBusy || !/^\\+[1-9]\\d{1,14}$/.test(adminPhone) || verifiedPhone === adminPhone} onClick={async () => {
+                  setPhoneBusy(true);
+                  setPhoneError("");
+                  try {
+                    const response = await fetch("/api/auth/phone-otp/reserve", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ phone: adminPhone }),
+                    });
+                    if (!response.ok) throw new Error(response.status === 429 ? "SMS limit reached. Try again later." : "Unable to reserve SMS. Please try again.");
+                    setPhoneConfirmation(await sendFirebasePhoneCode(adminPhone, "registration-recaptcha"));
+                  } catch (error) {
+                    setPhoneError(error instanceof Error ? error.message : "SMS could not be sent.");
+                  } finally {
+                    setPhoneBusy(false);
+                  }
+                }}>
+                  {phoneBusy ? "Please wait…" : "Send OTP"}
                 </button>
               </div>
-              <small id="adminPhone-help">
-                Enter your number with country code. SMS verification will be available when setup is complete.
-              </small>
+              <small id="adminPhone-help">Enter your number with country code, for example +919876543210. SMS verification is required.</small>
+              <div id="registration-recaptcha" />
+              {phoneConfirmation && verifiedPhone !== adminPhone && (
+                <div className="password-field">
+                  <input aria-label="SMS verification code" inputMode="numeric" autoComplete="one-time-code" value={smsCode} onChange={(event) => setSmsCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} maxLength={6} placeholder="6-digit OTP" />
+                  <button type="button" disabled={phoneBusy || smsCode.length !== 6} onClick={async () => {
+                    setPhoneBusy(true);
+                    setPhoneError("");
+                    try {
+                      const token = await confirmFirebasePhoneCode(phoneConfirmation, smsCode);
+                      setFirebasePhoneToken(token);
+                      setVerifiedPhone(adminPhone);
+                      setPhoneConfirmation(null);
+                    } catch {
+                      setPhoneError("Invalid or expired OTP. Please check the code.");
+                    } finally {
+                      setPhoneBusy(false);
+                    }
+                  }}>Verify OTP</button>
+                </div>
+              )}
+              {verifiedPhone === adminPhone && firebasePhoneToken && <small role="status">Mobile number verified.</small>}
+              {phoneError && <span className="field-error" role="alert">{phoneError}</span>
             </div>
           )}
           <div className="field">
