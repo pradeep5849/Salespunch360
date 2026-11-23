@@ -49,7 +49,7 @@ import kotlinx.serialization.json.*
   item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("pdf","xlsx").forEach{format->TextButton({vm.export(format)},enabled=state.appliedFilters!=null&&!state.loading&&!state.exporting){Text(format.uppercase())}}}}
   if(state.loading||state.exporting)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
   state.error?.let{error->item{Text(error,color=MaterialTheme.colorScheme.error);TextButton(vm::run){Text("Retry")}}}
-  state.appliedFilters?.let{filters->item{Text("Showing ${filters["asOf"]?:"current stock"} · ${state.data?.get("context")?.jsonObject?.str("branchName")?.ifBlank{null}?:"All authorized branches"}",style=MaterialTheme.typography.bodySmall)}}
+  state.appliedFilters?.let{filters->item{Text(if(com.salespunch360.mobile.ui.LocalBranchUiEnabled.current)"Showing ${filters["asOf"]?:"current stock"} · ${state.data?.get("context")?.jsonObject?.str("branchName")?.ifBlank{null}?:"All authorized branches"}" else "Showing ${filters["asOf"]?:"current stock"}",style=MaterialTheme.typography.bodySmall)}}
   if(state.data!=null){
    item{ElevatedCard{Column(Modifier.padding(12.dp)){Text("Number of Items: ${metrics.itemCount}");Text("Low Stock Items: ${metrics.lowStockCount}");Text("Total Stock Value: ${accountMoney(metrics.value)}")}}}
    if(rows.isEmpty())item{Text(if(state.data?.array("rows").isNullOrEmpty())"No inventory items are available in this branch." else "No stock items match these filters.")}

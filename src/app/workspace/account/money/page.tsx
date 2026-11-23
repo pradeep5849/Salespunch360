@@ -37,7 +37,7 @@ export default async function Page({
           title="Cash, bank, capital & loans"
           backHref="/workspace/account"
         />
-        <p>
+        <p data-branch-ui>
           Scope:{" "}
           {d.branchContext.mode === "COMPANY"
             ? "All company branches"

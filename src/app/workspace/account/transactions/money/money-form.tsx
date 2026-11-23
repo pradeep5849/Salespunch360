@@ -312,7 +312,7 @@ export function LegacyMoneyForm({
             required
           />
         </label>
-        <label>
+        <label data-branch-ui>
           Branch
           <select
             value={branchId}

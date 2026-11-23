@@ -154,7 +154,7 @@ export default async function Page({
           <Link href={`/workspace/account/expenses/categories?${scopeQuery}`}>Manage categories</Link>{" "}
           · <Link href="/workspace/account/expenses/recurring">Recurring</Link>
         </p>
-        <p>
+        <p data-branch-ui>
           Scope:{" "}
           {scoped.context.mode === "COMPANY"
             ? "Company consolidated"
@@ -262,7 +262,7 @@ export default async function Page({
               <thead>
                 <tr>
                   <th>Number</th>
-                  <th>Branch</th>
+                  <th data-branch-ui>Branch</th>
                   <th>Type</th>
                   <th>Date</th>
                   <th>Status</th>
@@ -277,7 +277,7 @@ export default async function Page({
                         {x.transactionNumber}
                       </Link>
                     </td>
-                    <td>{branches.get(x.branchId) ?? "Branch"}</td>
+                    <td data-branch-ui>{branches.get(x.branchId) ?? "Branch"}</td>
                     <td>{x.type}</td>
                     <td><AccountDate value={x.transactionDate.toISOString().slice(0, 10)} /></td>
                     <td>{x.status}</td>

@@ -92,12 +92,12 @@ export function AssetEditor({
   const displayPreferences=useDisplayPreferences();
   const [stableRequestKey] = useState(requestKey);
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
+    ({branchId:options.branches.length===1?options.branches[0].id:"",...Object.fromEntries(
       Object.entries(asset ?? {}).map(([key, value]) => [
         key,
         value == null ? "" : String(value),
       ]),
-    ),
+    )}),
   );
   const get = (name: string, fallback = "") => values[name] ?? fallback;
   const set = (name: string) => (value: string) =>
@@ -128,7 +128,7 @@ export function AssetEditor({
     required = false,
     onChange?: (value: string) => void,
   ) => (
-    <label>
+    <label data-branch-ui={name==="branchId"?true:undefined}>
       {label}
       <select
         name={name}

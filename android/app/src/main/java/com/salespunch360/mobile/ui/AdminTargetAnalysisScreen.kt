@@ -64,7 +64,7 @@ fun AdminTargetAnalysisScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()-
      Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
       Text(row.targetText("name")?:"Employee",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
       Text(if(row.targetText("actualScope")=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-      (row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.targetText("branchName").orEmpty()}: ${branch.targetInt("created")} leads · ${branch.targetInt("won")} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+      if(LocalBranchUiEnabled.current)(row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.targetText("branchName").orEmpty()}: ${branch.targetInt("created")} leads · ${branch.targetInt("won")} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
       Text(if(row.targetText("salesRole")=="MANAGER")"Field Manager" else "Sales",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
        Column(Modifier.weight(1f)){Text("LEADS CREATED TARGET / ACTUAL",style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text("${row.targetInt("leadTarget")} / ${row.targetInt("created")}",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}

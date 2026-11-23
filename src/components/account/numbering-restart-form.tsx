@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import {useBranchPresentation} from "@/components/workspace/branch-presentation";
 import { useRouter } from "next/navigation";
 type Option = {
   id: string;
@@ -20,6 +21,7 @@ type Review = {
 };
 export function NumberingRestartForm({ options }: { options: Option[] }) {
   const router = useRouter();
+  const branchUi=useBranchPresentation().enabled;
   const [seriesId, setSeries] = useState(options[0]?.id ?? ""),
     [prefix, setPrefix] = useState(""),
     [reason, setReason] = useState(""),
@@ -74,12 +76,12 @@ export function NumberingRestartForm({ options }: { options: Option[] }) {
   return (
     <section>
       <p>
-        This changes future numbering for one active branch series. It does not
+        This changes future numbering for one active document series. It does not
         close a financial year, delete transactions or alter issued document
         numbers. A completely unused prefix is required.
       </p>
       <label>
-        Branch and document series
+        {branchUi?"Branch and document series":"Document series"}
         <select
           value={seriesId}
           disabled={busy}
@@ -90,7 +92,7 @@ export function NumberingRestartForm({ options }: { options: Option[] }) {
         >
           {options.map((x) => (
             <option key={x.id} value={x.id}>
-              {x.branch} · {x.type.replaceAll("_", " ")} · {x.prefix}
+              {branchUi?`${x.branch} · `:""}{x.type.replaceAll("_", " ")} · {x.prefix}
               {x.nextSequence}
             </option>
           ))}
@@ -133,7 +135,7 @@ export function NumberingRestartForm({ options }: { options: Option[] }) {
         <section aria-label="Numbering restart review">
           <h2>Review future numbers</h2>
           <p>
-            {review.branch} · {review.type.replaceAll("_", " ")}
+            {branchUi?`${review.branch} · `:""}{review.type.replaceAll("_", " ")}
           </p>
           <p>
             Previous prefix: {review.previousPrefix || "none"}; next sequence:{" "}

@@ -43,7 +43,7 @@ export default async function Page({
         title="Account Parties"
         backHref={`/workspace/account?tab=parties&${new URLSearchParams(scope)}`}
       />
-      <p>
+      <p data-branch-ui>
         Scope:{" "}
         {context.context.mode === "COMPANY"
           ? "All company branches"

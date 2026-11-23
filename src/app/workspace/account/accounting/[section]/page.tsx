@@ -167,7 +167,7 @@ export default async function Page({
               Search journals
               <input name="q" defaultValue={query.q} maxLength={160} />
             </label>
-            <label>
+            <label data-branch-ui>
               Branch
               <select name="branchId" defaultValue={query.branchId ?? ""}>
                 <option value="">All accessible branches</option>

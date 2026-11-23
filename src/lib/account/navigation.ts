@@ -299,7 +299,7 @@ const groups: AccountNavGroup[] = [
     ],
   },
   {
-    label: "Company / Branch",
+    label: "Company",
     items: [
       {
         label: "Company details",

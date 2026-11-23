@@ -1,3 +1,4 @@
+import {BranchOnly,BranchText} from "@/components/workspace/branch-presentation";
 import {
   dashboardLinks,
   signedTrendPercent,
@@ -58,7 +59,7 @@ export default async function Page({
     return (
       <>
         <AccountPageHeader
-          title={title}
+          title={<BranchText multiple={title} single="Dashboard"/>}
           subtitle={<>Authorized Projects · {period}</>}
         />
         <section className="account-stat-grid">
@@ -91,7 +92,7 @@ export default async function Page({
   return (
     <>
       <AccountPageHeader
-        title={title}
+        title={<BranchText multiple={title} single="Dashboard"/>}
         subtitle={<>Current Financial Year · {period}</>}
       />
       <div className="account-dashboard-modern">
@@ -268,13 +269,13 @@ export default async function Page({
       </div>
       {resolved.context.mode === "COMPANY" &&
         (visible.sales || visible.expenses) && (
-          <AccountCard>
-            <h2>Branch comparison</h2>
+          <BranchOnly><AccountCard>
+            <h2 data-branch-ui>Branch comparison</h2>
             <div className="account-table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Branch</th>
+                    <th data-branch-ui>Branch</th>
                     {visible.sales && <th>Sales</th>}
                     {visible.expenses && <th>Expenses</th>}
                     {visible.sales && visible.expenses && (
@@ -296,7 +297,7 @@ export default async function Page({
                 </tbody>
               </table>
             </div>
-          </AccountCard>
+          </AccountCard></BranchOnly>
         )}
     </>
   );

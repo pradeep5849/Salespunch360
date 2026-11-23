@@ -23,7 +23,7 @@ export function RecurringExpenseForm({
     <ActionFeedbackForm action={action} className="account-form">
       <SavePendingFields>
         <input type="hidden" name="creationRequestKey" value={requestKey} />
-        <label>
+        <label data-branch-ui>
           Branch
           <select
             name="branchId"

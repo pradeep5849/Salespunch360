@@ -359,7 +359,7 @@ private fun ReportRow(row:JsonObject,vm:ReportsViewModel,deleting:Boolean){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
    Text(title,fontWeight=FontWeight.Bold)
    if(row.text("targetScope")=="COMPANY")Text(if(row.text("actualScope")=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records; company comparison unavailable" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   (row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.text("branchName").orEmpty()}: ${branch.text("actual").orEmpty()}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+   if(LocalBranchUiEnabled.current)(row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.text("branchName").orEmpty()}: ${branch.text("actual").orEmpty()}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
    if(isVisit){row.text("visitKind")?.let{Text(it)};row.text("checkInAddress")?.let{Text(it)};ReportVisitContactAndDetails(row);DeleteOwnVisitControl(row,deleting,{id,revision->vm.deleteOwnVisit(id,revision)})}else row.entries.filter{it.key !in hidden&&!it.value.isNullish()}.forEach{(k,v)->Text("${prettyLabel(k)}: ${value(v)}",style=MaterialTheme.typography.bodySmall)}
   }
  }

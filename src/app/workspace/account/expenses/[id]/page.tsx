@@ -81,7 +81,7 @@ export default async function Page({
               : "Automatic / not approved",
             "Approved at": x.approvedAt ? <AccountUtcTimestamp value={x.approvedAt}/> : "Not recorded",
           }).map(([label, value]) => (
-            <div key={label}>
+            <div key={label} data-branch-ui={label==="Branch"?true:undefined}>
               <dt>{label}</dt>
               <dd style={{ overflowWrap: "anywhere" }}>{value}</dd>
             </div>

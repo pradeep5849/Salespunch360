@@ -42,7 +42,7 @@ export function NewAccountPartyForm({
     >
       {onPendingChange&&<PartyPendingState onChange={onPendingChange}/>}
       <SavePendingFields>
-        <label>
+        <label data-branch-ui>
           Branch
           <select
             name="branchId"

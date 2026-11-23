@@ -84,7 +84,7 @@ export default async function Page() {
       ))}
       {branch.branches.length > 1 && (
         <section className="account-menu-section">
-          <h2>Branch</h2>
+          <h2 data-branch-ui>Branch</h2>
           <form action={selectAccountBranch} className="account-menu-choices">
             {branch.branches.map((item) => (
               <button

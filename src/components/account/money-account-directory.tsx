@@ -75,7 +75,7 @@ export async function MoneyAccountDirectory({
             All money accounts
           </Link>
         </nav>
-        <p>
+        <p data-branch-ui>
           Scope:{" "}
           {scoped.context.mode === "COMPANY"
             ? "All company branches"

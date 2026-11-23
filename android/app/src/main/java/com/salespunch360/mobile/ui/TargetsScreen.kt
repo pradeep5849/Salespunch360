@@ -42,7 +42,7 @@ import com.salespunch360.mobile.data.*
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Text(row.name,fontWeight=FontWeight.Bold,color=SalesInk)
    Text(if(row.actualScope=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   row.branchActuals.forEach{branch->Text("${branch.branchName}: ${branch.created} leads · ${branch.won} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+   if(LocalBranchUiEnabled.current)row.branchActuals.forEach{branch->Text("${branch.branchName}: ${branch.created} leads · ${branch.won} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
    Text(salesTargetRole(row),style=MaterialTheme.typography.labelSmall,color=SalesMuted)
    HorizontalDivider(color=SalesLine)
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){

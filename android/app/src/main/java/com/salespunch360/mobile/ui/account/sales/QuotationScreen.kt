@@ -173,7 +173,7 @@ private fun QuotationEditor(draft: QuotationDraft, state: QuotationState, vm: Qu
                 if(state.canCreateParty)item { OutlinedButton({newPartyOpen=true},enabled=draft.branchId.isNotBlank()&&!state.saving){Text("Add new party")} }
                 } else {
                     item { Text("Type: ${draft.documentType}") }
-                    item { Text("Branch: ${state.branches.firstOrNull{it.id==draft.branchId}?.name?:draft.branchId}") }
+                    item { com.salespunch360.mobile.ui.BranchOnly{Text("Branch: ${state.branches.firstOrNull{it.id==draft.branchId}?.name?:draft.branchId}")} }
                     item { Text("Customer: ${state.customers.firstOrNull{it.id==draft.customerId}?.name?:state.detail?.array("revisions")?.firstOrNull()?.str("customerName").orEmpty()}") }
                 }
                 if(state.canViewPartyBalance&&draft.customerId.isNotBlank())item {

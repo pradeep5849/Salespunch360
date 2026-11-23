@@ -91,7 +91,7 @@ export default async function Page({
   ].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <>
-      <p>
+      <p data-branch-ui>
         Company product/service catalog · Stock as of{" "}
         {scoped.asOf ? <AccountDate value={scoped.asOf.toISOString()}/> : "today"}:{" "}
         {scoped.context.mode === "COMPANY"

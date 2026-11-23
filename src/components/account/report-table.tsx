@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
+import {useBranchPresentation} from "@/components/workspace/branch-presentation";
+import {presentBranchColumns} from "@/lib/branches/report-presentation";
 import { formatReport } from "@/lib/account/reports/display";
 import type { ReportResult } from "@/lib/account/reports/service";
 import { useDisplayPreferences } from "./display-preferences";
 
 export function ReportTable({ data }: { data: ReportResult }) {
-  const formatted = formatReport(data, useDisplayPreferences());
+  const formatted = presentBranchColumns(formatReport(data, useDisplayPreferences()),useBranchPresentation().enabled);
   return (
     <><table>
       <thead>

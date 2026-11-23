@@ -60,7 +60,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
         }
     }
 
-    CompanyBranchPresentationProvider(bootstrap?.company?.branchUiEnabled?:true){
+    CompanyBranchPresentationProvider(bootstrap?.company?.branchUiEnabled?:true,bootstrap?.user?.salesRole==MobileRole.PRIMARY_ADMIN){
     when (state.status) {
         AppStatus.STARTING -> LoadingScreen("Securing your session…")
         AppStatus.SIGNED_OUT -> if (showSignUp) {

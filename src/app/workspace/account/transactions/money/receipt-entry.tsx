@@ -293,7 +293,7 @@ export function ReceiptEntry(p: Props) {
             </label>
           </div>
           {p.branches.length > 1 && (
-            <label>
+            <label data-branch-ui>
               Branch
               <select
                 value={branchId}

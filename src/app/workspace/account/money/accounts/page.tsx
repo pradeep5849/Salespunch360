@@ -43,7 +43,7 @@ export default async function Page({
         ) : (
           <p>Creating money accounts requires Money Entry permission.</p>
         )}
-        <p>
+        <p data-branch-ui>
           Scope:{" "}
           {d.branchContext.mode === "COMPANY"
             ? "All company branches"

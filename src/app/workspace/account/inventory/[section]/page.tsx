@@ -55,7 +55,7 @@ export default async function Page({
     return (
       <Shell title="Warehouses">
         <form action={warehouseAction} className="stack">
-          <label>
+          <label data-branch-ui>
             Branch
             <select aria-label="Branch" name="branchId" required>
               {o.branches.map((x) => (
@@ -300,13 +300,13 @@ export default async function Page({
     return (
       <Shell title={section === "stock" ? "Stock" : "Low Stock"}>
         <form method="get" className="stack">
-          {branches.length>1&&<label>View<select name="branchId" defaultValue={scoped.context.mode==="COMPANY"?"all":scoped.context.branchId}>
+          {branches.length>1&&<label data-branch-ui>View<select name="branchId" defaultValue={scoped.context.mode==="COMPANY"?"all":scoped.context.branchId}>
             {canUseCompanyConsolidation({...a,companyId:a.companyId!})&&<option value="all">Company consolidated</option>}
             {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.name}</option>)}
           </select></label>}
           <label>As of<input type="date" name="asOf" defaultValue={query.asOf}/></label><button>Apply stock filters</button>
         </form>
-        <p>
+        <p data-branch-ui>
           {branches.length<=1 ? "Stock positions" : scoped.context.mode === "COMPANY"
             ? "Company consolidated"
             : scoped.context.branchName}{" "}

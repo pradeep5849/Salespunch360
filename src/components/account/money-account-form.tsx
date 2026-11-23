@@ -96,7 +96,7 @@ function Choice({
 }) {
   const error = useAccountFieldError(name);
   return (
-    <label>
+    <label data-branch-ui={name==="branchId"||name==="openingBranchId"?true:undefined}>
       {label}
       <select
         name={name}
@@ -164,6 +164,7 @@ export function MoneyAccountForm({
         </label>
         <Choice
           name="openingBranchId"
+          defaultValue={branches.length===1?branches[0].id:undefined}
           label="Opening journal branch (for company-wide accounts)"
         >
           <option value="">Use account branch</option>

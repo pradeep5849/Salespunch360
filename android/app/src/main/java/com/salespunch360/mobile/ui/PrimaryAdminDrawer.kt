@@ -76,7 +76,7 @@ fun PrimaryAdminAuthenticatedApp(
      Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom=8.dp)){
       PrimaryAdminItems.forEach{item->
        CompactAdminDrawerItem(
-        label=item,
+        label=if(item=="Branches"&&!LocalBranchUiEnabled.current)"Add Branch" else item,
         selected=route==item,
         onClick=if(item=="Settings")::openSalesSettings else {{navigate(item)}}
        )

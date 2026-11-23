@@ -71,7 +71,7 @@ fun SalesDocumentEditor(
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item { if((draft.sourceQuotationRevisionId.isNotBlank()||draft.sourceSalesOrderId.isNotBlank()))Text("Document type: ${draft.type.replace('_',' ')}") else SelectField("Document type", draft.type, options.types.map { it to it.replace('_', ' ') }) { onDraft(draft.copy(type = it)) } }
-                item { if((draft.sourceQuotationRevisionId.isNotBlank()||draft.sourceSalesOrderId.isNotBlank()))Text("Branch: ${options.branches.firstOrNull{it.id==draft.branchId}?.name.orEmpty()}") else SelectField("Branch", draft.branchId, options.branches.map { it.id to it.name }) { onDraft(draft.copy(branchId = it, customerId = "")) } }
+                item { if((draft.sourceQuotationRevisionId.isNotBlank()||draft.sourceSalesOrderId.isNotBlank()))com.salespunch360.mobile.ui.BranchOnly{Text("Branch: ${options.branches.firstOrNull{it.id==draft.branchId}?.name.orEmpty()}")} else SelectField("Branch", draft.branchId, options.branches.map { it.id to it.name }) { onDraft(draft.copy(branchId = it, customerId = "")) } }
                 item { if((draft.sourceQuotationRevisionId.isNotBlank()||draft.sourceSalesOrderId.isNotBlank()))Text("Customer: ${options.customers.firstOrNull{it.id==draft.customerId}?.name.orEmpty()}") else SelectField("Customer", draft.customerId, options.customers.filter { it.branchId == draft.branchId }.map { it.id to it.name }) { onDraft(draft.copy(customerId = it)) } }
                 if (draft.type == "CREDIT_NOTE") item { SelectField("Original invoice", draft.sourceDocumentId, sources.map { it.str("id") to it.str("documentNumber") }) { onDraft(draft.copy(sourceDocumentId = it)) } }
                 item { OutlinedTextField(draft.issueDate, { onDraft(draft.copy(issueDate = it)) }, label = { Text("Issue date (YYYY-MM-DD)") }) }
@@ -780,6 +780,8 @@ private fun SalesLineEditor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectField(label: String, value: String, values: List<Pair<String, String>>, modifier: Modifier = Modifier, onChange: (String) -> Unit) {
+ if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.map{it.first},onChange))return
+
     var open by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = !open }, modifier = modifier) {
         OutlinedTextField(

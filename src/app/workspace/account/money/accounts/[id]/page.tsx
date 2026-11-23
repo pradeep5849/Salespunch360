@@ -58,7 +58,7 @@ export default async function Page({
           title={data.account.name}
           backHref={`/workspace/account/money/${data.account.type === "BANK" ? "bank-accounts" : "cash-in-hand"}?${new URLSearchParams(scope)}`}
         />
-        <p>
+        <p data-branch-ui>
           {data.account.type}
           {!data.account.isActive ? " · Inactive" : ""} · Scope:{" "}
           {data.branchContext.mode === "COMPANY"

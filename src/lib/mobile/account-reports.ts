@@ -1,3 +1,5 @@
+import {branchUiEnabled} from "@/lib/branches/presentation";
+import {presentBranchColumns,branchPresentationScope} from "@/lib/branches/report-presentation";
 import {loanStatementOptionsForActor} from "@/lib/account/reports/loan-statement";
 import {itemDiscountCategoriesForActor} from "@/lib/account/reports/item-discount";
 import {bankStatementOptionsForActor} from "@/lib/account/reports/bank-statement";
@@ -53,8 +55,8 @@ export async function mobileAccountReport(
 ) {
   valid(name);
   const a = actor(u);
-  const [data, settings] = await Promise.all([runFinancialReportForActor(a, name, filters), db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}})]);
-  return formatReport(data, resolveDisplayPreferences(settings));
+  const [data, settings, company] = await Promise.all([runFinancialReportForActor(a, name, filters), db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}}),db.company.findUniqueOrThrow({where:{id:a.companyId},select:{_count:{select:{branches:true}}}})]);
+  return presentBranchColumns(formatReport(data, resolveDisplayPreferences(settings)),branchUiEnabled(company._count?.branches));
 }
 export async function mobileAccountReportExport(
   u: MobileAppPrincipal,
@@ -66,17 +68,17 @@ export async function mobileAccountReportExport(
   const a = actor(u),
     raw = await runFinancialReportForActor(a, name, filters),
     settings = await db.accountSettings.findUnique({where:{companyId:a.companyId},select:{baseCurrency:true,displayDecimalPlaces:true,dateFormat:true,appLanguage:true}}),
-    data = formatReport(raw, resolveDisplayPreferences(settings), true),
     company = await db.company.findUniqueOrThrow({
       where: { id: a.companyId },
-      select: { name: true },
+      select: { name: true, _count:{select:{branches:true}} },
     }),
+    data=presentBranchColumns(formatReport(raw,resolveDisplayPreferences(settings),true),branchUiEnabled(company._count?.branches)),
     input = {
       title: data.title,
       company: company.name,
-      filter: new URLSearchParams(filters).toString(),
+      filter: branchPresentationScope(new URLSearchParams(filters).toString(),branchUiEnabled(company._count?.branches)),
       columns: data.columns,
-      rows: reportExportRows(data, new URLSearchParams(filters).toString()),
+      rows: reportExportRows(data, branchPresentationScope(new URLSearchParams(filters).toString(),branchUiEnabled(company._count?.branches))),
     };
   if (format === "csv")
     return {

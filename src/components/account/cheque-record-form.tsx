@@ -49,7 +49,7 @@ export function ChequeRecordForm({
     <ActionFeedbackForm action={saveChequeAction} className="stack" onSuccess={()=>{setRequestKey(crypto.randomUUID());setNumber("");setDate("");setAmount("");setReference("");setSearch("");setParties([]);setOffset(0);setMore(false);setSearching(false);searchGeneration.current++}}>
       <SavePendingFields>
       <input type="hidden" name="requestKey" value={requestKey} />
-      <label>
+      <label data-branch-ui>
         Branch
         <select
           aria-label="Branch"
