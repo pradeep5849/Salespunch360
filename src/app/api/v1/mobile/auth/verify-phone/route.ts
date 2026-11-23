@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return mobileJson({ error: "NOT_ENABLED" }, 503);
   let principal;
   try {
-    principal = await authenticateMobileToken(request.headers.get("authorization"));
+    principal = await authenticateMobileToken(request.headers.get("authorization"), new Date(), true);
   } catch (error) {
     return mobileUnauthorized(error) ?? mobileUnexpected("MOBILE_PHONE_VERIFY_AUTH", error);
   }
