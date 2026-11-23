@@ -7,7 +7,7 @@ import {requirePermission,requirePermissionForMutation} from "@/lib/auth/authori
 import {assertOperationalWrite} from "@/lib/billing/entitlement";
 import {canAssign,visibilityWhere} from "@/lib/leads/policy";
 import {operationalBranchContext,resolveOperationalWriteBranch} from "@/lib/branches/operational-scope";
-import {indiaDateText,parseIndiaBusinessDate} from "./date";
+import {parseIndiaBusinessDate} from "./date";
 import {decodeFollowUpNotes,encodeFollowUpNotes,parseFollowUpType} from "./type";
 import {createSalesNotification} from "@/lib/sales-notifications/service";
 import {isTelecallerDesignation} from "@/lib/telecalling/policy";
@@ -32,4 +32,4 @@ export function taskEmployeeWhere(actor:TaskActor,employeeId?:string):Prisma.Use
 }
 export async function taskEmployeeOptionsForActor(actor:TaskActor){return actor.salesRole==="SALES"?[]:db.user.findMany({where:taskEmployeeWhere(actor),select:{id:true,name:true},orderBy:[{name:"asc"},{id:"asc"}]});}
 export async function taskEmployeeOptions(){return taskEmployeeOptionsForActor(await taskActor());}
-export async function personalTaskCounts(){const actor=await taskActor(),branches=await operationalBranchContext(actor),today=parseIndiaBusinessDate(indiaDateText()),tomorrow=new Date(today.getTime()+86400000);const where={companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING" as const};const[todayCount,overdue]=await Promise.all([db.followUpTask.count({where:{...where,dueDate:{gte:today,lt:tomorrow}}}),db.followUpTask.count({where:{...where,dueDate:{lt:today}}})]);return{today:todayCount,overdue};}
+export async function personalTaskCounts(){const actor=await taskActor(),branches=await operationalBranchContext(actor);const where={companyId:actor.companyId,branchId:branches.branchId,assignedUserId:actor.id,status:"PENDING" as const};const[todayCount,overdue]=await Promise.all([db.followUpTask.count({where:{...where,...followUpStatusWhere('TODAY')}}),db.followUpTask.count({where:{...where,...followUpStatusWhere('OVERDUE')}})]);return{today:todayCount,overdue};}

@@ -1213,6 +1213,8 @@ model FollowUpTask {
   createdByUserId  String             @db.Uuid
   createdByUser    User               @relation("FollowUpTaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   dueDate          DateTime           @db.Date
+  callbackAt       DateTime?          @db.Timestamp(3)
+  callbackCallId   String?            @unique @db.Uuid
   notes            String?            @db.VarChar(2000)
   status           FollowUpTaskStatus @default(PENDING)
   completedVisitId String?            @unique @db.Uuid

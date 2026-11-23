@@ -32,3 +32,13 @@ describe('follow-up reminder delivery',()=>{
 });
 
  it('pages scoped history with a sentinel without changing global unread count',async()=>{db.salesNotification.findMany.mockResolvedValue(Array.from({length:3},(_,i)=>({id:String(i)})));db.salesNotification.count.mockResolvedValue(9);const result=await listSalesNotificationsForActor({id:'user-a',companyId:'company-a'},2,2);expect(db.salesNotification.findMany).toHaveBeenCalledWith(expect.objectContaining({skip:2,take:3,where:{companyId:'company-a',recipientUserId:'user-a'}}));expect(result).toMatchObject({page:2,pageSize:2,hasMore:true,unreadCount:9});expect(result.items).toHaveLength(2)});
+
+it('escalates a timestamp callback only after its exact due time, retaining date-only behavior',async()=>{
+ vi.clearAllMocks();db.user.findFirst.mockImplementation(async({where}:{where:{id:string}})=>({id:where.id,salesRole:where.id==='tele'?'SALES':'ADMIN',designation:where.id==='tele'?'Telecaller':null}));db.user.findMany.mockResolvedValue([{id:'admin'}]);db.salesNotification.upsert.mockResolvedValue({id:'notice'});
+ const base={companyId:'company',assignedUserId:'tele',dueDate:new Date('2026-11-23'),lead:{id:'lead',title:'Callback'},assignedUser:{salesRole:'SALES',designation:'Telecaller',managerId:null}};
+ db.followUpTask.findMany.mockResolvedValue([{...base,id:'past',callbackAt:new Date('2026-11-23T05:00Z')},{...base,id:'future',callbackAt:new Date('2026-11-23T07:00Z')},{...base,id:'date-only',callbackAt:null}]);
+ const {generateFollowUpReminders}=await import('./service');await generateFollowUpReminders(new Date('2026-11-23T06:00Z'));
+ const notices=db.salesNotification.upsert.mock.calls.map(([x])=>x.create);
+ expect(notices.filter(n=>n.recipientUserId==='admin').map(n=>n.relatedEntityId)).toEqual(['past']);
+ expect(notices.filter(n=>n.eventType==='FOLLOW_UP_OVERDUE').every(n=>n.relatedEntityId==='past')).toBe(true);
+});

@@ -20,7 +20,7 @@ export type CallAssignmentActor={
 export type TelecallerOption={id:string;name:string};
 export type AssignedTelecallerCall={
  id:string;followUpTaskId:string;leadId:string;callerUserId:string;callerName:string;result:"CALL_BACK";notes:string|null;
- calledAt:Date;nextCallbackAt:Date;callbackAssigneeUserId:string;leadTitle:string;phone:string|null;ownerName:string;assigneeName:string;
+ calledAt:Date;nextCallbackAt:Date;callbackAssigneeUserId:string;leadTitle:string;phone:string|null;ownerName:string;assigneeName:string;callbackCallId?:string|null;
 };
 
 const designationSql=Prisma.sql`upper(replace(coalesce(designation,''),' ',''))='TELECALLER'`;
@@ -64,19 +64,20 @@ export async function createTelecallerCallFollowUpForActor(actor:CallAssignmentA
 
 export async function listAssignedTelecallerCallsForActor(actor:CallAssignmentActor):Promise<AssignedTelecallerCall[]>{
  const telecaller=isTelecaller(actor),admin=actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN",manager=actor.salesRole==="MANAGER";
- if(!telecaller&&!admin&&!manager)return[];
+ const own=telecaller||actor.salesRole==="SALES";
+ if(!own&&!admin&&!manager)return[];
  const rows=await db.$queryRaw<(AssignedTelecallerCall&{rawNotes:string|null})[]>(Prisma.sql`
   SELECT t.id,t.id AS "followUpTaskId",t."leadId",t."createdByUserId" AS "callerUserId",creator.name AS "callerName",
-   'CALL_BACK'::text AS result,t.notes AS "rawNotes",t."createdAt" AS "calledAt",t."dueDate" AS "nextCallbackAt",t."assignedUserId" AS "callbackAssigneeUserId",
-   l.title AS "leadTitle",l.phone,owner.name AS "ownerName",assignee.name AS "assigneeName"
+   'CALL_BACK'::text AS result,t.notes AS "rawNotes",t."createdAt" AS "calledAt",coalesce(t."callbackAt",t."dueDate") AS "nextCallbackAt",t."assignedUserId" AS "callbackAssigneeUserId",
+   l.title AS "leadTitle",l.phone,owner.name AS "ownerName",assignee.name AS "assigneeName",t."callbackCallId"
   FROM "follow_up_tasks" t
   JOIN "leads" l ON l.id=t."leadId"
   JOIN "users" owner ON owner.id=l."assignedUserId"
   JOIN "users" assignee ON assignee.id=t."assignedUserId"
   JOIN "users" creator ON creator.id=t."createdByUserId"
   WHERE t."companyId"=${actor.companyId}::uuid AND t.status='PENDING' AND t.notes LIKE '[[SP360_FOLLOW_UP:CALL]]%'
-   AND upper(replace(coalesce(assignee.designation,''),' ',''))='TELECALLER' AND assignee."isActive"=TRUE
-   ${telecaller?Prisma.sql`AND t."assignedUserId"=${actor.id}::uuid`:Prisma.empty}
+   AND (upper(replace(coalesce(assignee.designation,''),' ',''))='TELECALLER' OR t."callbackCallId" IS NOT NULL) AND assignee."isActive"=TRUE
+   ${own?Prisma.sql`AND t."assignedUserId"=${actor.id}::uuid`:Prisma.empty}
    ${manager?Prisma.sql`AND (l."assignedUserId"=${actor.id}::uuid OR owner."managerId"=${actor.id}::uuid)`:Prisma.empty}
   ORDER BY t."dueDate" ASC LIMIT 500`);
  return rows.map(row=>({...row,notes:decodeFollowUpNotes(row.rawNotes).notes}));

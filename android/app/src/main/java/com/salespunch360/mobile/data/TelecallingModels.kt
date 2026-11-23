@@ -51,6 +51,7 @@ data class CallbackQueueItem(
     val ownerName: String,
     val assigneeName: String? = null,
     val followUpTaskId: String? = null,
+    val callbackCallId: String? = null,
 )
 
 @Serializable

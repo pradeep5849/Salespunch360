@@ -13,4 +13,10 @@ class CallbackPageTest {
         assertEquals("task",page.items[1].followUpTaskId)
         assertEquals("Call tomorrow",page.items[1].notes)
     }
+    @Test fun decodesLinkedTimestampCallbackWithoutLosingSourceOrDeadline() {
+        val item = Json { ignoreUnknownKeys = true }.decodeFromString<CallbackQueueItem>("""{"id":"task","leadId":"lead","callerUserId":"caller","callerName":"Caller","result":"CALL_BACK","calledAt":"2026-11-23T00:00:00Z","nextCallbackAt":"2026-11-23T05:30:00Z","leadTitle":"Lead","ownerName":"Owner","followUpTaskId":"task","callbackCallId":"source"}""")
+        assertEquals("source", item.callbackCallId)
+        assertEquals("task", item.followUpTaskId)
+        assertEquals("2026-11-23T05:30:00Z", item.nextCallbackAt)
+    }
 }

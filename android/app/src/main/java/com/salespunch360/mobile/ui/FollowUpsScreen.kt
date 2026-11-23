@@ -134,7 +134,7 @@ private fun FollowUpTaskCard(
                 }
             }
             Text("Lead: ${task.leadTitle} · Assigned: ${task.assignedUserName ?: "—"}", style = MaterialTheme.typography.bodyMedium, color = SalesInk)
-            Text("Due: ${task.dueDate.take(10)} · Last action: ${task.lastAction}", style = MaterialTheme.typography.bodyMedium, color = SalesMuted)
+            Text("Due: ${task.callbackAt?.let { followUpTime(it) } ?: task.dueDate.take(10)} · Last action: ${task.lastAction}", style = MaterialTheme.typography.bodyMedium, color = SalesMuted)
             task.notes?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             task.createdByUserName?.let { creator ->
                 Text("Task created by $creator${task.createdAt?.let { " · ${followUpTime(it)}" } ?: ""}", style = MaterialTheme.typography.bodySmall, color = SalesMuted)

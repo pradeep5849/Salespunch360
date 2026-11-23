@@ -37,11 +37,11 @@ export async function generateFollowUpReminders(now=new Date()){
  const soonEnd=new Date(today.getTime()+(FOLLOW_UP_DUE_SOON_DAYS+1)*86_400_000);
  let cursor:string|undefined;let processed=0,created=0;
  for(;;){
- const tasks=await db.followUpTask.findMany({where:{status:"PENDING",dueDate:{lt:soonEnd}},select:{id:true,companyId:true,assignedUserId:true,dueDate:true,lead:{select:{id:true,title:true}},assignedUser:{select:{designation:true,salesRole:true,managerId:true}}},orderBy:{id:"asc"},take:200,...(cursor?{cursor:{id:cursor},skip:1}:{})});
+ const tasks=await db.followUpTask.findMany({where:{status:"PENDING",dueDate:{lt:soonEnd}},select:{id:true,companyId:true,assignedUserId:true,dueDate:true,callbackAt:true,lead:{select:{id:true,title:true}},assignedUser:{select:{designation:true,salesRole:true,managerId:true}}},orderBy:{id:"asc"},take:200,...(cursor?{cursor:{id:cursor},skip:1}:{})});
  if(!tasks.length)break;
  processed+=tasks.length;
  for(const task of tasks){
-  const overdue=task.dueDate<today,eventType=overdue?"FOLLOW_UP_OVERDUE":"FOLLOW_UP_DUE_SOON",dateKey=indiaDateText(task.dueDate);
+  const overdue=task.callbackAt?task.callbackAt<now:task.dueDate<today,eventType=overdue?"FOLLOW_UP_OVERDUE":"FOLLOW_UP_DUE_SOON",dateKey=indiaDateText(task.dueDate);
   const recipients=new Set<string>([task.assignedUserId]);
   const admins=overdue?await db.user.findMany({where:{companyId:task.companyId,isActive:true,salesAccessActive:true,salesRole:{in:["PRIMARY_ADMIN","ADMIN"]}},select:{id:true}}):[];
   admins.forEach(x=>recipients.add(x.id));
