@@ -369,7 +369,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Pick(label:String,value:String,values:List<JsonElement>,enabled:Boolean=true,set:(String)->Unit){
- if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.mapNotNull{it.jsonObject["id"]?.jsonPrimitive?.contentOrNull},set))return
+    if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.mapNotNull{it.jsonObject["id"]?.jsonPrimitive?.contentOrNull},set)) { return }
 
     var open by remember{mutableStateOf(false)}
     val selected=values.map{it.jsonObject}.firstOrNull{it.str("id")==value}

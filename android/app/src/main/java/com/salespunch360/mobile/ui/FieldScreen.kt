@@ -105,7 +105,7 @@ fun FieldScreen(
  LaunchedEffect(initialFollowUpTask?.id){initialFollowUpTask?.let{resetForm("FOLLOW_UP");subjectId=it.leadId;followUpTaskId=it.id;onInitialFollowUpConsumed()}}
  LaunchedEffect(initialLead?.id,state.loading){initialLead?.takeIf{!state.loading}?.let{lead->resetForm("NEW");subjectId=lead.id;linkedLeadId=lead.id;name=lead.contactName?:lead.title;phone=lead.phone.orEmpty();onInitialLeadConsumed()}}
  LaunchedEffect(Unit){
-  vm.refresh() // Reports may have removed an unlinked active visit while this screen was away.
+  if(state.context!=null&&!state.loading)vm.refresh() // Refresh on return; the initial ViewModel load already owns first entry.
   if(ContextCompat.checkSelfPermission(androidContext,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
    locationState="getting"
    val recent=runCatching{recentDeviceLocation(androidContext)}.getOrNull()

@@ -96,7 +96,7 @@ internal suspend fun readExpenseAttachment(context:android.content.Context,uri:U
  fun person(userId:String)=x.array("people").map{it.jsonObject}.firstOrNull{it.str("id")==userId}?.str("name")?:"Historical user"
  AlertDialog(onDismissRequest={if(!saving)onClose()},title={Text(x.str("transactionNumber"))},text={LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
  item{Text("${x.str("type").replace('_',' ')} · ${x.str("status")}",fontWeight=FontWeight.Bold)}
- item{Text("Date ${accountDate(x.str("transactionDate"))} · Branch ${related("branch")}")}
+ item{Text("Date ${accountDate(x.str("transactionDate"))}"+if(com.salespunch360.mobile.ui.LocalBranchUiEnabled.current)" · Branch ${related("branch")}" else "")}
  if(x.str("paidDate").isNotBlank())item{Text("Payment date ${accountDate(x.str("paidDate"))}");Text("Approval review ${x.str("approvalReviewStatus").replace('_',' ')}");if(x.str("approvalReviewReason").isNotBlank())Text("Review reason ${x.str("approvalReviewReason")}")}
  item{Text("Category ${related("category")} · Project ${related("project")}")}
  item{Text("Cash / bank ${related("moneyAccount")}")}

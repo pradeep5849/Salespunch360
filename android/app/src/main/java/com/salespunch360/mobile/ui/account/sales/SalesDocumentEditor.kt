@@ -780,7 +780,7 @@ private fun SalesLineEditor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectField(label: String, value: String, values: List<Pair<String, String>>, modifier: Modifier = Modifier, onChange: (String) -> Unit) {
- if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.map{it.first},onChange))return
+    if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.map{it.first},onChange)) { return }
 
     var open by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = !open }, modifier = modifier) {

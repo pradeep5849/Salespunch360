@@ -1,0 +1,11 @@
+import {expect,it,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+vi.mock('@/app/actions/account-settings',()=>({updateGeneralSettingsAction:vi.fn()}));
+vi.mock('next/link',()=>({default:({children,...props}:{children:React.ReactNode;href:string})=><a {...props}>{children}</a>}));
+import {BranchPresentationProvider} from './branch-presentation';
+import {GeneralSettingsForm} from '@/components/account/general-settings-form';
+const values={appLanguage:'en',baseCurrency:'INR',displayDecimalPlaces:2,dateFormat:'DD/MM/YYYY',warnUnsavedChanges:true,appearance:'STANDARD',fixedAssetsEnabled:true};
+const render=(enabled:boolean,canAdd:boolean)=>renderToStaticMarkup(<BranchPresentationProvider enabled={enabled} canAdd={canAdd}><GeneralSettingsForm values={values}/></BranchPresentationProvider>);
+it('shows only Add Branch for the Main Admin of a single-location company',()=>{const html=render(false,true);expect(html).toContain('>Add Branch<');expect(html).toContain('href="/workspace/branches"');expect(html).not.toContain('>Multi-Branch Settings<');expect(html).toContain('Backup Settings')});
+it('omits branch settings for other single-location users without hiding ordinary settings',()=>{const html=render(false,false);expect(html).not.toContain('>Add Branch<');expect(html).not.toContain('>Multi-Branch Settings<');expect(html).toContain('Business Currency');expect(html).toContain('Backup Settings')});
+it('retains normal branch navigation after a second company location exists',()=>{const html=render(true,true);expect(html).toContain('>Multi-Branch Settings ');expect(html).toContain('href="/workspace/account/settings/multi-branch"')});
