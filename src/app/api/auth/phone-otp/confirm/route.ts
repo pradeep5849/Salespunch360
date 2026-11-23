@@ -45,12 +45,21 @@ export async function POST(request: Request) {
     // Serializes competing bindings for the same Firebase UID and account.
     // A verified identity cannot be reassigned to a different SalesPunch user.
     await db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${proof.firebaseUid}))`;
+      // Lock both identity keys in a deterministic order across app instances.
+      const lockKeys = [`firebase-uid:${proof.firebaseUid}`, `verified-phone:${proof.phoneNumber}`].sort();
+      for (const key of lockKeys) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+      }
       const existing = await tx.user.findUnique({
         where: { firebasePhoneUid: proof.firebaseUid },
         select: { id: true },
       });
       if (existing && existing.id !== principal.id) throw new Error("PHONE_IDENTITY_IN_USE");
+      const phoneOwner = await tx.user.findFirst({
+        where: { phone: proof.phoneNumber, phoneVerifiedAt: { not: null }, id: { not: principal.id } },
+        select: { id: true },
+      });
+      if (phoneOwner) throw new Error("PHONE_IDENTITY_IN_USE");
       const user = await tx.user.findUnique({
         where: { id: principal.id },
         select: { id: true, companyId: true, phoneVerifiedAt: true, firebasePhoneUid: true },
