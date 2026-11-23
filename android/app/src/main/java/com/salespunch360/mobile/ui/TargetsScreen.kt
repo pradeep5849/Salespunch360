@@ -25,7 +25,7 @@ import com.salespunch360.mobile.data.*
   item{
    Text("Sales Targets",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
    Text("${monthly.month.startText} to ${monthly.month.endText}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   Text("Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   Text("Targets are company-wide per employee; actuals use accessible records. Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    state.message?.let{MessageBanner(it,vm::clear)}
    OutlinedButton({vm.loadMonthly()},enabled=!state.loading&&!state.saving){Text(if(state.loading)"Reloading…" else "Reload targets")}
   }
@@ -41,6 +41,8 @@ import com.salespunch360.mobile.data.*
  OutlinedCard(Modifier.fillMaxWidth()){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Text(row.name,fontWeight=FontWeight.Bold,color=SalesInk)
+   Text(if(row.actualScope=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   row.branchActuals.forEach{branch->Text("${branch.branchName}: ${branch.created} leads · ${branch.won} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
    Text(salesTargetRole(row),style=MaterialTheme.typography.labelSmall,color=SalesMuted)
    HorizontalDivider(color=SalesLine)
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){

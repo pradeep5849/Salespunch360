@@ -1,6 +1,6 @@
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 const m=vi.hoisted(()=>({findMany:vi.fn(),upsert:vi.fn(),query:vi.fn()}));
-vi.mock('@/lib/db',()=>({db:{user:{findFirst:async()=>({id:'sales'})},$transaction:async(work:(tx:unknown)=>unknown)=>work({$queryRaw:m.query,salesTarget:{findMany:m.findMany,upsert:m.upsert}})}}));
+vi.mock('@/lib/db',()=>({db:{user:{findFirst:async()=>({id:'sales'})},$transaction:async(work:(tx:unknown)=>unknown)=>work({$queryRaw:m.query,branch:{findFirst:async()=>({id:"branch"})},salesTarget:{findMany:m.findMany,upsert:m.upsert}})}}));
 vi.mock('@/lib/billing/entitlement',()=>({assertOperationalWrite:vi.fn()}));
 vi.mock('@/lib/branches/operational-scope',()=>({resolveOperationalWriteBranch:async()=> 'branch'}));
 import {saveMonthlyTargetsForActor} from './service';

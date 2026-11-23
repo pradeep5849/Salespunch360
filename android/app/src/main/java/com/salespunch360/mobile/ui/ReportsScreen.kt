@@ -354,10 +354,12 @@ private fun GpsDisclaimer(){
 private fun ReportRow(row:JsonObject){
  val isVisit=row.containsKey("checkedInAt")&&row.containsKey("checkInLatitude")
  val title=if(isVisit)row.text("contactName")?:row.objText("customer","name")?:"Contact"else row.objText("user","name")?:row.objText("assignedUser","name")?:row.objText("employee","name")?:row.objText("customer","name")?:row.text("title")?:"Report record"
- val hidden=setOf("id","companyId","branchId","userId","customerId","assignedUserId","user","customer","assignedUser")
+ val hidden=setOf("id","companyId","branchId","userId","customerId","assignedUserId","user","customer","assignedUser","targetScope","actualScope","comparisonAvailable","branchActuals")
  OutlinedCard(Modifier.fillMaxWidth()){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
    Text(title,fontWeight=FontWeight.Bold)
+   if(row.text("targetScope")=="COMPANY")Text(if(row.text("actualScope")=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records; company comparison unavailable" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   (row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.text("branchName").orEmpty()}: ${branch.text("actual").orEmpty()}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
    if(isVisit){row.text("visitKind")?.let{Text(it)};row.text("checkInAddress")?.let{Text(it)};ReportVisitContactAndDetails(row)}else row.entries.filter{it.key !in hidden&&!it.value.isNullish()}.forEach{(k,v)->Text("${prettyLabel(k)}: ${value(v)}",style=MaterialTheme.typography.bodySmall)}
   }
  }

@@ -6,7 +6,7 @@ const read=(path:string)=>readFileSync(path,"utf8");
 describe("monthly Sales targets regression",()=>{
  it("counts created leads instead of customer check-ins",()=>{
   const source=read("src/lib/targets/service.ts");
-  expect(source).toContain('db.lead.groupBy({by:["assignedUserId"],where:{companyId:a.companyId,branchId:branches.branchId,assignedUserId:{in:userIds},createdAt:{gte:month.start,lt:month.endExclusive}}');
+  expect(source).toContain('db.lead.groupBy({by:["assignedUserId","branchId"],where:{companyId:a.companyId,branchId:branches.branchId,assignedUserId:{in:userIds},createdAt:{gte:month.start,lt:month.endExclusive}}');
   expect(source).not.toContain("db.customerVisit.groupBy");
  });
  it("labels Web targets as Leads and Leads won with dynamic values and keeps Admin fields always editable",()=>{
