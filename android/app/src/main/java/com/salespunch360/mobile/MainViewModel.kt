@@ -92,14 +92,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun attendance(start: Boolean, location: LocationPayload?, onSuccess: () -> Unit) {
+    fun attendance(start: Boolean, location: LocationPayload?, branchId:String?, onSuccess: () -> Unit) {
         if (_state.value.submitting) return
         _state.value = _state.value.copy(submitting = true, message = null)
         val previousAttendanceId=_state.value.bootstrap?.attendance?.id
         viewModelScope.launch {
             var confirmation = ""
             try {
-                val saved = api.attendance(if (start) "START" else "END", location).attendance
+                val saved = api.attendance(if (start) "START" else "END", location,branchId).attendance
                 val confirmedAt = if(start) saved.startedAt else saved.endedAt
                 confirmation = confirmedAt?.let { value ->
                     val time = runCatching { java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, h:mm a")) + " IST" }.getOrDefault(value)

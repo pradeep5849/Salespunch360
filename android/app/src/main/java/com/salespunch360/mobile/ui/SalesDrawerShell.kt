@@ -82,7 +82,7 @@ fun SalesDrawerAuthenticatedApp(
     data: Bootstrap,
     message: String?,
     dismiss: () -> Unit,
-    attendance: (Boolean, LocationPayload?, () -> Unit) -> Unit,
+    attendance: (Boolean, LocationPayload?, String?, () -> Unit) -> Unit,
     logout: () -> Unit,
     switchToAccount: (() -> Unit)? = null
 ) {
@@ -313,20 +313,23 @@ private fun SalesDrawerMetric(label: String, value: Int?, modifier: Modifier) {
 @Composable
 private fun SalesDrawerAttendance(
     data: Bootstrap,
-    attendance: (Boolean, LocationPayload?, () -> Unit) -> Unit
+    attendance: (Boolean, LocationPayload?, String?, () -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var locating by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+    var selectedBranchId by remember(data.user.id){mutableStateOf<String?>(null)}
+    val branchId=com.salespunch360.mobile.data.attendanceBranchId(data.branches,selectedBranchId,data.attendance)
 
     fun submit(start: Boolean) {
+        if(start&&branchId==null){status="Choose attendance access before starting.";return}
         scope.launch {
             locating = true
             status = "Getting current location…"
             try {
                 val point = com.salespunch360.mobile.data.attendanceMeasurement(data.features,start){com.salespunch360.mobile.location.currentDeviceLocation(context)}
-                attendance(start, point) {}
+                attendance(start, point,branchId) {}
                 status = if(point!=null)"Location ready"else null
             } catch (e: Exception) {
                 status = com.salespunch360.mobile.location.locationFailureMessage(e)
@@ -364,7 +367,7 @@ private fun SalesDrawerAttendance(
                             val pointLabel = if (active.gpsPointCount == 1) "point" else "points"
                             Text("GPS tracking active · ${active.gpsPointCount} $pointLabel", color = SalesMuted)
                         }
-                        status?.let { Text(it, color = SalesMuted) }
+                        AttendanceBranchPicker(data,selectedBranchId,{selectedBranchId=it},!locating);status?.let { Text(it, color = SalesMuted) }
                         Button(
                             onClick = { if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,data.attendance==null))launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))else submit(data.attendance==null) },
                             enabled = !locating,
@@ -375,10 +378,10 @@ private fun SalesDrawerAttendance(
                 }
             } else {
                 ContentCard("Attendance", if (data.features.attendanceEnabled) "Not currently working" else "Attendance is disabled by your company.") {
-                    status?.let { Text(it, color = SalesMuted) }
+                    AttendanceBranchPicker(data,selectedBranchId,{selectedBranchId=it},!locating);status?.let { Text(it, color = SalesMuted) }
                     Button(
                         onClick = { if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,data.attendance==null))launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))else submit(data.attendance==null) },
-                        enabled = !locating && data.features.attendanceEnabled && data.entitlement.operationalWritesAllowed,
+                        enabled = !locating && data.features.attendanceEnabled && data.entitlement.operationalWritesAllowed&&branchId!=null,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (locating) "Locating…" else "Start Attendance") }
                 }

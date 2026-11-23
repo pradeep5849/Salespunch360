@@ -49,7 +49,7 @@ fun AdminManagerAuthenticatedApp(
  data:Bootstrap,
  message:String?,
  dismiss:()->Unit,
- attendance:(Boolean,LocationPayload?,()->Unit)->Unit,
+ attendance:(Boolean,LocationPayload?,String?,()->Unit)->Unit,
  logout:()->Unit,
  switchToAccount:(()->Unit)?=null
 ){

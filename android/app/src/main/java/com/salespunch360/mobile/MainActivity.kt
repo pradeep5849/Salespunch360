@@ -91,7 +91,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                                 data,
                                 state.message,
                                 vm::clearMessage,
-                                { start, location, done -> vm.attendance(start, location, done) },
+                                { start, location, branchId, done -> vm.attendance(start, location, branchId, done) },
                                 vm::logout,
                                 switch,
                             )
@@ -106,7 +106,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                                 data,
                                 state.message,
                                 vm::clearMessage,
-                                { start, location, done -> vm.attendance(start, location, done) },
+                                { start, location, branchId, done -> vm.attendance(start, location, branchId, done) },
                                 vm::logout,
                                 switch,
                             )
