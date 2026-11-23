@@ -4,7 +4,7 @@ import { reservePhoneOtpSend, PhoneOtpSendLimitError } from "@/lib/auth/phone-ot
 import { assertTrustedOrigin, consumeRateLimit, requestFingerprint } from "@/lib/security/request";
 
 export const runtime = "nodejs";
-const requestSchema = z.object({ phone: z.string().regex(/^\\+[1-9]\\d{1,14}$/) }).strict();
+const requestSchema = z.object({ phone: z.string().regex(/^\+[1-9]\d{1,14}$/) }).strict();
 
 /**
  * Best-effort application-side quota for the official Firebase Phone Auth clients.
