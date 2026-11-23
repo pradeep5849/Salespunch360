@@ -26,6 +26,26 @@ export class FirebaseStorage implements PrivateStorage {
     return getStorage(firebaseApp()).bucket();
   }
 
+  /** Read-only connectivity check; never returns credentials, bucket names, or raw provider errors. */
+  async diagnose(): Promise<{ ok: boolean; category: string }> {
+    try {
+      await this.bucket().getMetadata();
+      return { ok: true, category: "BUCKET_ACCESS_OK" };
+    } catch (error) {
+      const value = error as { code?: number | string; status?: number; message?: string };
+      const code = Number(value.code ?? value.status);
+      const message = String(value.message ?? "").toLowerCase();
+      const category = code === 403 || message.includes("permission denied") ? "PERMISSION_DENIED"
+        : code === 404 ? "BUCKET_NOT_FOUND"
+        : code === 401 || message.includes("invalid_grant") || message.includes("invalid credential") ? "AUTHENTICATION_FAILED"
+        : code === 429 ? "RATE_LIMITED"
+        : code >= 500 ? "PROVIDER_UNAVAILABLE"
+        : message.includes("photo_storage_not_configured") || message.includes("private key") || message.includes("credential") ? "CONFIGURATION_ERROR"
+        : "UNKNOWN_FIREBASE_ERROR";
+      return { ok: false, category };
+    }
+  }
+
   async exists(objectKey: string): Promise<boolean> {
     assertSafeObjectKey(objectKey);
     try {
