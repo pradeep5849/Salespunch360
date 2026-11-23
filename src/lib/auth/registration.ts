@@ -81,6 +81,9 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
     return { company, user };
   }); } catch (error) {
     if (writtenLogoKey) await privateStorage().delete(writtenLogoKey).catch(() => undefined);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new Error("REGISTRATION_CONFLICT");
+    }
     throw error;
   }
 }
