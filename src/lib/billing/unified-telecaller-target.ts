@@ -1,6 +1,6 @@
 import {randomUUID} from "node:crypto";
 import {Prisma} from "@prisma/client";
-import {syncTelecallerSubscriptionToSalesTerm} from "./telecaller";
+import {syncTelecallerSubscriptionToSalesTerm,telecallerBillingState} from "./telecaller";
 
 /** Paid subscription and its purchased Telecaller seats commit together. */
 export async function syncUnifiedTelecallerTargetInTx(tx:Prisma.TransactionClient,orderId:string,companyId:string,now:Date){
@@ -9,6 +9,9 @@ export async function syncUnifiedTelecallerTargetInTx(tx:Prisma.TransactionClien
  if(!metadata||typeof metadata!=="object"||Array.isArray(metadata))return;
  const target=metadata.telecallerSeats;
  if(typeof target!=="number"||!Number.isInteger(target)||target<0)throw new Error("INVALID_TELECALLER_TARGET");
+ const state=await telecallerBillingState(tx,companyId,now);
+ if(target<state.used)throw new Error("TELECALLER_SEATS_BELOW_USAGE");
+ if(metadata.purchasePurpose==="ADDITION"&&typeof metadata.currentTelecallerSeats==="number"&&metadata.currentTelecallerSeats!==state.limit)throw new Error("ADDITION_TERM_CHANGED");
  const term=await tx.companySubscription.findFirst({where:{sourceOrderId:orderId},select:{billingPeriod:true,startsAt:true,endsAt:true}})??await tx.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{billingPeriod:true,startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}});
  if(!term||(term.billingPeriod!=="SIX_MONTH"&&term.billingPeriod!=="YEARLY"))throw new Error("SALES_SUBSCRIPTION_REQUIRED");
  if(term.startsAt<=now){await syncTelecallerSubscriptionToSalesTerm(tx,{companyId,seats:target,billingPeriod:term.billingPeriod,startsAt:term.startsAt,endsAt:term.endsAt});return}

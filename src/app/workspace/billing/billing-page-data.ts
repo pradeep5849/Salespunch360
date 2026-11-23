@@ -6,6 +6,8 @@ export type BillingPeriod='SIX_MONTH'|'YEARLY';
 export type ActiveSalesEmployee={id:string;name:string;salesRole:'ADMIN'|'MANAGER'|'SALES';managerType?:string|null};
 
 export const orderErrors:Record<string,string>={
+ ADDITION_REQUIRES_ACTIVE_TERM:"Add Team needs an active paid term. Use Renewal to buy a new term.",
+ INVALID_ADDITION_SELECTION:"The active subscription or added seats changed. Review Add Team again; use Renewal to reduce seats or change the billing period.",
  INVALID_ACCOUNT_PACKAGE_QUANTITY:"Choose a whole number of Account packages from 1 to 100, then review checkout again.",
  INVALID_BILLING_PERIOD:"Choose the supported six-month or yearly billing period, then review checkout again.",
  SEATS_BELOW_USAGE:'The selected seat count is below your current active users. Keep enough seats for the active team before creating this order.',
