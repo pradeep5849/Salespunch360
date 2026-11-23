@@ -214,3 +214,7 @@ Completed A134-F04 with explicit KEEP/MOVE options on web/native and an identity
 ## Hidden Account-only Billing — 11748e48 / native branch gate 7201c920
 
 Completed A128-F04 using the owner's explicit hide-entirely decision. 36 focused cases and two isolated Chromium menu cases passed; TypeScript/lint/whitespace passed. Native branch API separately permits an authenticated Account-only Main Admin to reach the current-owner gate (ten focused cases) without granting Sales/Billing access. See `docs/account-only-billing-hidden/checkpoint.md`. Slice 6 since the last full run; no new full run. Counts: 150 implemented/acceptance pending, one partial, three not started. Remaining changes are being collected locally before the next batch push to avoid unnecessary CI retriggers.
+
+## Company monthly targets — d2f46fb2
+
+A161-F02 completed pending acceptance. One company target per employee/metric; authorized branch actuals are separate, with no company completion percentage from partial actuals. 53 focused checks and nine guarded SQL scenarios passed; TypeScript/lint/whitespace passed. Two native DTO cases added; native CI/device acceptance pending. See docs/company-target-scope/checkpoint.md. Slice seven since the last full regression. Counts: 151 implemented pending acceptance, one partial, two not started. No production change, deployment or merge.

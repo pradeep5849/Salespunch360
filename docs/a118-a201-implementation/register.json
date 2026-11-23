@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "7201c920",
-  "status": "Implementation continued through owner-approved hidden Account-only Billing and native branch Main Admin access.",
+  "application_revision": "d2f46fb2",
+  "status": "Implementation continued through company-wide monthly targets and separate authorized branch actuals.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -4288,15 +4288,21 @@
         "status": "OPEN",
         "title": "Employee metric target ignores branch while actuals aggregate selected branches"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "checkpoint": "docs/first-branch-transition/checkpoint.md",
           "status": "OWNER_DECISION_RECEIVED",
           "detail": "Keep targets company-wide and show branch actuals separately."
+        },
+        {
+          "checkpoint": "docs/company-target-scope/checkpoint.md",
+          "application_revision": "d2f46fb2",
+          "status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
+          "detail": "53 focused checks and nine guarded SQL cases passed; TypeScript/lint/whitespace passed. Two native DTO cases added; final native CI/device acceptance pending."
         }
       ],
-      "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
+      "reconciliation_reason": "Owner-approved company monthly targets, separate authorized branch actuals and explicit partial-comparison limits implemented; native CI/device acceptance pending.",
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
         "audit_snapshot": "f1f2df9e",
@@ -6401,9 +6407,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 150,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 151,
     "REQUIREMENT SUPERSEDED": 3,
-    "NOT STARTED": 3,
+    "NOT STARTED": 2,
     "PARTIAL": 1,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
