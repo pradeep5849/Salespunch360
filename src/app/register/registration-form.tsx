@@ -197,6 +197,30 @@ export function RegistrationForm({
               errors={state.fieldErrors?.adminEmail}
             />
           </div>
+          {process.env.NEXT_PUBLIC_PHONE_VERIFICATION_ENABLED === "true" && (
+            <div className="field full">
+              <label htmlFor="adminPhone">Mobile number</label>
+              <div className="password-field">
+                <input
+                  id="adminPhone"
+                  name="adminPhone"
+                  type="tel"
+                  required
+                  inputMode="tel"
+                  autoComplete="tel"
+                  pattern="\\+[1-9][0-9]{1,14}"
+                  placeholder="+919876543210"
+                  aria-describedby="adminPhone-help"
+                />
+                <button type="button" disabled title="SMS verification is being connected">
+                  Verify
+                </button>
+              </div>
+              <small id="adminPhone-help">
+                Enter your number with country code. SMS verification will be available when setup is complete.
+              </small>
+            </div>
+          )}
           <div className="field">
             <label htmlFor="adminPassword">Password</label>
             <div className="password-field">
