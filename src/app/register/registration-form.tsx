@@ -36,6 +36,9 @@ export function RegistrationForm({
 }) {
   const [state, formAction, pending] = useActionState(register, initialState);
   const [password, setPassword] = useState("");
+  const [adminPhone, setAdminPhone] = useState("");
+  const [verifiedPhone, setVerifiedPhone] = useState("");
+  const [firebasePhoneToken, setFirebasePhoneToken] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -62,6 +65,9 @@ export function RegistrationForm({
       className="registration-form"
     >
       <input type="hidden" name="productEdition" value={productEdition} />
+      {phoneVerificationEnabled && (
+        <input type="hidden" name="firebasePhoneToken" value={verifiedPhone === adminPhone ? firebasePhoneToken : ""} />
+      )}
       <div className="form-section">
         <div className="section-heading">
           <span>1</span>
@@ -206,6 +212,12 @@ export function RegistrationForm({
                 <input
                   id="adminPhone"
                   name="adminPhone"
+                  value={adminPhone}
+                  onChange={(event) => {
+                    setAdminPhone(event.target.value);
+                    setVerifiedPhone("");
+                    setFirebasePhoneToken("");
+                  }}
                   type="tel"
                   required
                   inputMode="tel"
@@ -335,7 +347,7 @@ export function RegistrationForm({
           {state.error}
         </p>
       )}
-      <button className="register-button" type="submit" disabled={pending}>
+      <button className="register-button" type="submit" disabled={pending || (phoneVerificationEnabled && (!firebasePhoneToken || verifiedPhone !== adminPhone))}>
         {pending ? "Creating workspace…" : "Start my free trial"}
       </button>
       <p className="terms">Your acceptance is required before registration.</p>
