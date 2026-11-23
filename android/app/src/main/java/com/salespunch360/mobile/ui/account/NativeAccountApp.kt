@@ -140,7 +140,7 @@ fun NativeAccountAuthenticatedApp(
                         DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){
                             onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;vm.select("/workspace/company-profile")})
-                            DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
+                            if(data.capabilities.canAccessSalesBilling)DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
                             DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;vm.select("/workspace/change-password")})
                             if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
                             DropdownMenuItem(text={Text("Settings")},onClick={profileMenu=false;vm.select("/workspace/account/settings")})
@@ -194,7 +194,7 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
             state.selectedPath=="/workspace/branches"||state.selectedPath=="/workspace/account/settings/multi-branch"->Box(Modifier.padding(padding)){if(data.user.salesRole==com.salespunch360.mobile.data.MobileRole.PRIMARY_ADMIN)BranchesScreen() else Column(Modifier.padding(16.dp)){Text("Multi-Branch Settings",style=MaterialTheme.typography.headlineSmall);Text("Branch creation and changes require the Primary Admin.")}}
-            state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
+            state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){if(data.capabilities.canAccessSalesBilling)SubscriptionScreen()else Text("This page is not available for your account.")}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
             state.selectedPath.substringBefore("?") in setOf("/workspace/account/inventory","/workspace/account/inventory/catalog")->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),quantityDecimals=account?.itemSettings?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2,catalogMode=state.selectedPath.substringBefore("?").endsWith("/catalog"))
             state.selectedPath.substringBefore("?")=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select,initialService=queryValue(state.selectedPath,"kind")=="services")

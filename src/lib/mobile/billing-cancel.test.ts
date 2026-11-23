@@ -4,7 +4,7 @@ vi.mock('@/lib/db',()=>({db:{}}));
 vi.mock('./auth',()=>({mobileCan:m.can}));
 vi.mock('@/lib/billing/service',()=>({cancelPendingOrderForActor:m.cancel,currentPrices:vi.fn(),createMobileAccountPackageOrder:vi.fn()}));
 vi.mock('@/lib/billing/unified-sales-team',()=>({createUnifiedMobileSalesTeamOrder:vi.fn(),telecallerQuoteForCompany:vi.fn()}));
-import {mobileCancelPendingOrder} from './billing';
+import {mobileBillingContext,mobileBillingQuote,mobileManualOrder,mobileCancelPendingOrder} from './billing';
 import type {MobilePrincipal} from './auth';
 const actor={id:'owner',companyId:'company',salesRole:'PRIMARY_ADMIN'} as MobilePrincipal;
 const orderId='00000000-0000-4000-8000-000000000001';
@@ -14,3 +14,10 @@ it('cancels only an explicitly confirmed authenticated-company request',async()=
 it.each([{...request,confirmed:false},{action:request.action,orderId},{...request,orderId:'invalid'},{...request,companyId:'foreign'}])('rejects unconfirmed or injected input before cancellation',async input=>{await expect(mobileCancelPendingOrder(actor,input)).rejects.toMatchObject({code:'INVALID_INPUT',status:400});expect(m.cancel).not.toHaveBeenCalled()});
 it.each(['ADMIN','SALES','MANAGER',null])('denies non-owner or Account-only role %s before cancellation',async salesRole=>{await expect(mobileCancelPendingOrder({...actor,salesRole} as MobilePrincipal,request)).rejects.toMatchObject({code:'FORBIDDEN',status:403});expect(m.cancel).not.toHaveBeenCalled()});
 it.each([['NOT_FOUND',404],['ORDER_NOT_PENDING',409]])('maps %s without concealing a failed cancellation',async(code,status)=>{m.cancel.mockRejectedValue(new Error(String(code)));await expect(mobileCancelPendingOrder(actor,request)).rejects.toMatchObject({code,status})});
+it('denies Account-only billing reads, quotes and orders before accessing billing data',async()=>{
+ m.can.mockReturnValue(false);
+ await expect(mobileBillingContext(actor)).rejects.toMatchObject({code:'FORBIDDEN',status:403});
+ await expect(mobileBillingQuote(actor,{})).rejects.toMatchObject({code:'FORBIDDEN',status:403});
+ await expect(mobileManualOrder(actor,{})).rejects.toMatchObject({code:'FORBIDDEN',status:403});
+ expect(m.cancel).not.toHaveBeenCalled();
+});

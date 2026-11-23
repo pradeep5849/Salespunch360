@@ -105,7 +105,7 @@ fun PrimaryAdminAuthenticatedApp(
         switchToAccount?.let{action->DropdownMenuItem(text={Text("Switch to Account")},onClick={profileMenu=false;action()})}
         DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;navigate("Company Details")})
         DropdownMenuItem(text={Text("Follow-up Tasks")},onClick={profileMenu=false;navigate("Follow-ups")})
-        DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;navigate("Billing & Subscription")})
+        if(data.capabilities.canAccessSalesBilling)DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;navigate("Billing & Subscription")})
         DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;navigate("Change Password")})
         HorizontalDivider()
         DropdownMenuItem(text={Text("Logout")},onClick={profileMenu=false;logout()})
@@ -132,7 +132,7 @@ fun PrimaryAdminAuthenticatedApp(
      route=="Telecalling"->TelecallingScreen()
      route=="Follow-ups"->FollowUpsScreen(startCheckIn={},viewLead={pendingLeadId=it;nav.navigate("Leads")},viewVisit={visitTask=it})
      route=="Targets"->TargetsScreen(MobileRole.PRIMARY_ADMIN)
-     route=="Billing & Subscription"->SubscriptionScreen()
+     route=="Billing & Subscription"->if(data.capabilities.canAccessSalesBilling)SubscriptionScreen()else Text("This page is not available for your account.")
      route=="Settings"->SettingsScreen()
      route=="Reports"->ReportsScreen(showMenu=true,role=MobileRole.PRIMARY_ADMIN)
      route.startsWith("Report:")->ReportsScreen(initialType=route.substringAfter(':'),showMenu=false,role=MobileRole.PRIMARY_ADMIN)
