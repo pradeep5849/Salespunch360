@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "abe9ebb5",
-  "status": "Ten-slice batch validated locally; single-location presentation source implemented, final Android CI and presentation review pending.",
+  "application_revision": "95b5b52d",
+  "status": "All 154 retained finding implementations are present in source. Final-head CI and browser/device acceptance remain distinct; no production deployment or universal earlier-audit completion is claimed.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -2099,16 +2099,22 @@
         "title": "Branch UI is not hidden during single-location Head Office mode",
         "status": "OPEN"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "checkpoint": "docs/single-location-branch-presentation/checkpoint.md",
           "application_revision": "abe9ebb5",
           "status": "PARTIAL",
           "detail": "Full regression 4334 passed / 525 gated skipped / zero failures; focused and Chromium projection cases passed, TypeScript/lint/whitespace passed. Final native CI and presentation review pending."
+        },
+        {
+          "checkpoint": "docs/single-location-branch-presentation/checkpoint.md",
+          "application_revision": "95b5b52d",
+          "status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
+          "detail": "Presentation source review complete. Full regression 4334 passed / 525 gated skipped; focused settings/projection cases and Chromium passed. Prior combined-head Android compilation/JVM and web passed. Generated CSS and three native lint indentation defects corrected; final CI pending."
         }
       ],
-      "reconciliation_reason": "Company-wide presentation policy and web/native location controls, report metadata and download projection implemented. Final native compilation and remaining presentation review must complete before closing this finding.",
+      "reconciliation_reason": "Company-wide single-location presentation, web/native controls, Main Admin Add Branch entry, read-only metadata and report/download column projection are implemented. Final CI and physical screen acceptance remain pending.",
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
         "audit_snapshot": "f1f2df9e",
@@ -6426,9 +6432,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 153,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 154,
     "REQUIREMENT SUPERSEDED": 3,
-    "PARTIAL": 1,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
   }
