@@ -337,6 +337,7 @@ async function enforceAccountSeat(
 
 export async function getProductUserManagementContextForActor(
   provided: Awaited<ReturnType<typeof requireUser>>,
+  options:{omitDirectory?:boolean}={},
 ) {
   const { actor, company } = await administrationActor(false, provided),
     canManageSalesUsers = canUsePermission(
@@ -351,7 +352,7 @@ export async function getProductUserManagementContextForActor(
     );
   const now = new Date(),
     [users, branches, seatUsers, packageSubscriptions] = await Promise.all([
-      db.user.findMany({
+      options.omitDirectory?Promise.resolve([]):db.user.findMany({
         where: {
           companyId: company.id,
           role: { not: "SUPER_ADMIN" },
@@ -594,8 +595,8 @@ async function createProductUser(
   );
 }
 
-export async function getProductUserManagementContext() {
-  return getProductUserManagementContextForActor(await requireUser());
+export async function getProductUserManagementContext(options:{omitDirectory?:boolean}={}) {
+  return getProductUserManagementContextForActor(await requireUser(),options);
 }
 export async function createAccountUser(raw: unknown) {
   return createAccountUserForActor(await requireUserForMutation(), raw);

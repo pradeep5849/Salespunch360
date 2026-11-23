@@ -1,3 +1,4 @@
+import {directoryPageForActor} from "@/lib/users/directory-page";
 import {googleBackupStatus} from "@/lib/account/google-drive-backup";
 import {ACCOUNT_NOTIFICATION_TABS,accountNotificationCategory} from "@/lib/account/notification-tabs";
 import { pendingExpenseAlertsForActor } from "@/lib/account/expense-alerts";
@@ -523,23 +524,28 @@ export async function mobileRecycleRestore(u: MobileAppPrincipal, id: string) {
   const { restoreMasterForActor } = await import("@/lib/account/utilities");
   return restoreMasterForActor(a, id);
 }
-export async function mobileAccountUsers(u: MobileAppPrincipal) {
-  actor(u, "ACCOUNT_USER_ADMIN");
+export async function mobileAccountUsers(u: MobileAppPrincipal,query?:{q?:string;page?:string}) {
+  const a=actor(u, "ACCOUNT_USER_ADMIN");
   const { getProductUserManagementContextForActor } =
     await import("@/lib/users/product-user-management");
-  return getProductUserManagementContextForActor(u as never);
+  const context=await getProductUserManagementContextForActor(a as never,{omitDirectory:!!query});
+  if(!query)return context;
+  const page=await directoryPageForActor(a,"account-access",query);
+  return {...context,users:page.users,directory:{q:page.q,page:page.page,pageSize:page.pageSize,total:page.total,totalPages:page.totalPages,hasMore:page.hasMore}};
 }
 export async function mobileAccountUserSave(
   u: MobileAppPrincipal,
   raw: unknown,
   edit = false,
 ) {
-  actor(u, "ACCOUNT_USER_ADMIN");
+  const a=actor(u, "ACCOUNT_USER_ADMIN");
   await assertOperationalWrite(u.companyId);
   const service = await import("@/lib/users/product-user-management");
-  return edit
-    ? service.editAccountUserForActor(u as never, raw)
-    : service.createAccountUserForActor(u as never, raw);
+  const saved=await (edit
+    ? service.editAccountUserForActor(a as never, raw)
+    : service.createAccountUserForActor(a as never, raw));
+  const id=saved&&typeof saved==="object"&&"id" in saved?String(saved.id):edit?(raw as {userId?:string}).userId:undefined;
+  return {ok:true,id};
 }
 
 export async function mobileCompleteServiceReminder(

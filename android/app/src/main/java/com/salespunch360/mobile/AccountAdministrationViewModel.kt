@@ -16,7 +16,8 @@ data class AdministrationState(
     val loading: Boolean = false,
     val data: JsonElement = JsonObject(emptyMap()),
     val error: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    val usersQuery:String=""
 )
 
 class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
@@ -26,20 +27,32 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
 
     private var contextQuery=""
     private var notificationOffset=0
+    private var usersPage=1
+    private var usersSearchJob:kotlinx.coroutines.Job?=null
+    fun searchUsers(query:String){
+        usersPage=1;loadJob?.cancel();++loadGeneration;usersSearchJob?.cancel()
+        _state.value=_state.value.copy(usersQuery=query.take(100),loading=true,error=null)
+        usersSearchJob=viewModelScope.launch{kotlinx.coroutines.delay(300);load("users")}
+    }
+    fun usersPage(page:Int){usersSearchJob?.cancel();usersPage=page.coerceAtLeast(1);load("users")}
     private var loadGeneration=0L
     private var loadJob:kotlinx.coroutines.Job?=null
     fun notificationsPage(offset:Int){notificationOffset=offset.coerceAtLeast(0);load("notifications")}
     fun load(mode: String,query:String?=null) {
+        if(mode!="users")usersSearchJob?.cancel()
+        if(mode=="users"&&query!=null&&query!=contextQuery){val uri=android.net.Uri.parse("https://directory.invalid/?$query");usersPage=(uri.getQueryParameter("page")?.toIntOrNull()?:1).coerceAtLeast(1);_state.value=_state.value.copy(usersQuery=(uri.getQueryParameter("q")?:"").take(100))}
         if(query!=null&&query!=contextQuery){contextQuery=query;notificationOffset=0;_state.value=_state.value.copy(data=JsonObject(emptyMap()))}
         loadJob?.cancel()
         val generation=++loadGeneration
         val selectedQuery=contextQuery
+        val userQuery=_state.value.usersQuery
+        val userPage=usersPage
         val offset=notificationOffset
         _state.value = _state.value.copy(mode = mode, loading = true, error = null)
         loadJob=viewModelScope.launch {
             runCatching {
                 when (mode) {
-                    "users" -> api.accountUsers()
+                    "users" -> api.accountUsers(userQuery,userPage)
                     "settings", "backup-settings", "transaction-defaults", "business-currency", "general", "party-settings", "party-additional-fields", "transaction-sms", "transaction-settings", "custom-fields", "modules", "print-templates", "item-settings", "reminders", "payment-reminders", "payment-reminder-message", "service-reminders", "tax-settings", "tax-list" -> api.accountAdministration("settings")
                     "notifications" -> api.accountAdministration("notifications",listOf(com.salespunch360.mobile.account.moneyContextQuery(selectedQuery),"offset=$offset").filter{it.isNotBlank()}.joinToString("&"))
                     "tax-reports" -> api.accountTax(
@@ -54,7 +67,7 @@ class AccountAdministrationViewModel(app: Application) : AndroidViewModel(app) {
                 if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, data = it)
             }.onFailure {
                 if(it is kotlinx.coroutines.CancellationException)throw it
-                if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, error = it.message ?: "Unable to load")
+                if(generation==loadGeneration)_state.value = _state.value.copy(loading = false, data=if(it is ApiException&&(it.status==401||it.status==403))JsonObject(emptyMap())else _state.value.data, error = (it as? ApiException)?.serverMessage ?: it.message ?: "Unable to load")
             }
         }
     }

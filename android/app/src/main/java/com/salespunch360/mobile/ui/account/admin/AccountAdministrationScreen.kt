@@ -26,7 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.salespunch360.mobile.accountUserMatches
+import com.salespunch360.mobile.accountDirectoryUsers
 import com.salespunch360.mobile.AccountAdministrationViewModel
 import com.salespunch360.mobile.account.str
 import com.salespunch360.mobile.ui.account.sales.SelectField
@@ -93,7 +93,7 @@ fun AccountAdministrationScreen(
         }
 
         when (mode) {
-            "users" -> UserView(state.data, vm,state.loading)
+            "users" -> UserView(state.data, vm,state.loading,state.usersQuery)
             "settings" -> SettingsForm(state.data, vm)
             "general" -> androidx.compose.runtime.CompositionLocalProvider(com.salespunch360.mobile.ui.account.LocalAccountDisplayPreferences provides com.salespunch360.mobile.ui.account.AccountDisplayPreferences.from(state.data.jsonObject["settings"]?.jsonObject)){GeneralSettingsView(state.data, vm,navigate)}
             "party-settings" -> PartySettingsView(state.data,vm,navigate,state.loading)
@@ -448,13 +448,16 @@ private val accountUserRoles=listOf("ACCOUNT_ADMIN","ACCOUNTANT","PROJECT_MANAGE
 }
 
 @Composable
-private fun UserView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean){
+private fun UserView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boolean,search:String){
  val root=data as? JsonObject?:return
  val branches=root["branches"]?.jsonArray?.map{it.jsonObject}.orEmpty()
  val canManage=root["canManageAccountUsers"]?.jsonPrimitive?.booleanOrNull==true
- var search by remember{mutableStateOf("")}
  val directory=root["users"]?.jsonArray?.toList().orEmpty()
- val matches=directory.filter{accountUserMatches(it.jsonObject,search)}
+ val pageInfo=root["directory"] as? JsonObject
+ val matches=accountDirectoryUsers(root,search)
+ val page=pageInfo?.get("page")?.jsonPrimitive?.intOrNull?:1
+ val pages=pageInfo?.get("totalPages")?.jsonPrimitive?.intOrNull?:1
+ val total=pageInfo?.get("total")?.jsonPrimitive?.intOrNull?:matches.size
  var name by remember{mutableStateOf("")};var email by remember{mutableStateOf("")};var password by remember{mutableStateOf("")};var role by remember{mutableStateOf("ACCOUNTANT")};var scope by remember{mutableStateOf("ALL_BRANCHES")};val selected=remember{mutableStateListOf<String>()}
  LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
   if(canManage)item{
@@ -467,7 +470,8 @@ private fun UserView(data:JsonElement,vm:AccountAdministrationViewModel,busy:Boo
     Button({vm.saveUser(buildJsonObject{put("name",name.trim());put("email",email.trim());put("password",password);put("confirmPassword",password);put("accountRole",role);put("branchAccessScope",scope);putJsonArray("branchIds"){if(scope=="SELECTED_BRANCHES")selected.forEach{add(it)}}})},enabled=!busy&&name.isNotBlank()&&email.isNotBlank()&&password.isNotBlank()&&(scope=="ALL_BRANCHES"||selected.isNotEmpty())){Text("Create Account user")}
    }
   }
-  item{Text("Effective roles and access",fontWeight=FontWeight.Bold);OutlinedTextField(search,{search=it},label={Text("Search name, email, phone or role")},singleLine=true,modifier=Modifier.fillMaxWidth());Text("${matches.size} of ${directory.size} loaded employees");if(matches.isEmpty()&&!busy)Text("No employees match this search.")}
+  item{Text("Effective roles and access",fontWeight=FontWeight.Bold);OutlinedTextField(search,vm::searchUsers,label={Text("Search name, email, phone or role")},singleLine=true,modifier=Modifier.fillMaxWidth());Text(if(pageInfo==null)"${matches.size} of ${directory.size} loaded employees"else"$total matching employees · Page $page of $pages");if(matches.isEmpty()&&!busy)Text("No employees match this search.")}
+  if(pageInfo!=null)item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton({vm.usersPage(page-1)},enabled=!busy&&page>1){Text("Previous")};OutlinedButton({vm.usersPage(page+1)},enabled=!busy&&page<pages){Text("Next")}}}
   items(matches,key={it.jsonObject.str("id")}){element->AccountUserEditor(element.jsonObject,branches,canManage,busy,vm)}
  }
 }
