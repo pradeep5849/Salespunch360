@@ -206,3 +206,7 @@ Completed A120-F05 with authorized affected-record and review-area links on web/
 ## Financial verification coverage — 232db949 / bff82eb8
 
 Completed A120-F02 with independent saved line/discount/header, effective allocation, original settlement/advance, year-date and current-lock checks. Independent opening/physical stock comparison is explicitly NOT_CHECKED per the original finding's disclosed-coverage alternative. No false live-balance-cache comparison is made. See `docs/verification-financial-reconciliation/checkpoint.md`. 47 focused/close checks and 23 SQL producer/verification cases passed; TypeScript/lint/whitespace passed. Slice 4 since last full regression, no new full run. Counts: 148 implemented/acceptance pending, one partial, five not started; six retained findings unfinished. Three owner questions are pending while branch work continues.
+
+## First branch split — 53392b6d
+
+Completed A134-F04 with explicit KEEP/MOVE options on web/native and an identity-preserving atomic transition. Seven SQL scenarios, schema cases (ten total), four isolated Chromium cases, TypeScript/lint/whitespace passed. See `docs/first-branch-transition/checkpoint.md`. Slice 5 since the last full run; no new full run. Counts: 149 implemented/acceptance pending, one partial, four not started. Owner answered all three policy questions: Billing hidden for Account-only Admins; only unlinked visits may be deleted; targets remain company-wide with separate branch actuals. A134-F03 global branch UI hiding remains open.
