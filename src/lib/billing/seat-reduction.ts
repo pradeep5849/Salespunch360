@@ -1,3 +1,5 @@
+import {applyAccountPackageReduction} from "./account-seat-reduction";
+import {PLUS_ORDER_PROVIDER} from "./combined-order";
 import {db} from "@/lib/db";
 import {suspendSalesAccessInTransaction} from "@/lib/auth/lifecycle";
 import {lockBillingCompany} from "./company-lock";
@@ -14,12 +16,13 @@ export async function applyDueSeatReductions(companyId:string,now=new Date()){
   const sub=candidates.find(item=>item.sourceOrder?.provider!==ACCOUNT_PACKAGE_ORDER_PROVIDER);
   if(!sub?.sourceOrderId)return;
   await tx.$queryRaw`SELECT 1::int AS "locked" FROM "billing_orders" WHERE "id"=${sub.sourceOrderId}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
-  const order=await tx.billingOrder.findFirst({where:{id:sub.sourceOrderId,companyId},select:{seatReductionAppliedAt:true,retainAdminUserIds:true,retainManagerUserIds:true,retainSalesUserIds:true,adminSeats:true,managerSeats:true,salesSeats:true}});
+  const order=await tx.billingOrder.findFirst({where:{id:sub.sourceOrderId,companyId},select:{provider:true,accountPackages:true,seatReductionAppliedAt:true,retainAdminUserIds:true,retainManagerUserIds:true,retainSalesUserIds:true,adminSeats:true,managerSeats:true,salesSeats:true}});
   if(!order||order.seatReductionAppliedAt)return;
   const active=await tx.user.findMany({where:{companyId,isActive:true,salesAccessActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]}},select:{id:true,salesRole:true,createdAt:true},orderBy:[{createdAt:"asc"},{id:"asc"}]});
   const suspendedUserIds:string[]=[];const byRole=[{role:"ADMIN",limit:order.adminSeats,retain:order.retainAdminUserIds},{role:"MANAGER",limit:order.managerSeats,retain:order.retainManagerUserIds},{role:"SALES",limit:order.salesSeats,retain:order.retainSalesUserIds}] as const;
   for(const item of byRole){const users=active.filter(u=>u.salesRole===item.role);if(users.length>item.limit){const validRetain=item.retain.filter(id=>users.some(u=>u.id===id));const retained=validRetain.length===item.limit?new Set(validRetain):new Set(users.slice(0,item.limit).map(u=>u.id));for(const u of users)if(!retained.has(u.id))suspendedUserIds.push(u.id)}}
   for(const userId of suspendedUserIds.sort())await suspendSalesAccessInTransaction(tx,userId);
+  if(order.provider===PLUS_ORDER_PROVIDER){const suspendedAccountUserIds=await applyAccountPackageReduction(tx,companyId,Math.max(1,order.accountPackages));if(suspendedAccountUserIds.length)await tx.billingAuditEvent.create({data:{companyId,type:"SEATS_CHANGED",entityId:sub.sourceOrderId,metadata:{reason:"PAID_RENEWAL_ACCOUNT_REDUCTION_LAST_ADDED_FIRST",accountPackages:order.accountPackages,suspendedAccountUserIds}}});}
   await tx.billingOrder.update({where:{id:sub.sourceOrderId},data:{seatReductionAppliedAt:now}});
   await tx.billingAuditEvent.create({data:{companyId,type:"SEATS_CHANGED",entityId:sub.id,metadata:{reason:"PAID_RENEWAL_SALES_SEAT_REDUCTION_LAST_ADDED_FIRST",adminSeats:order.adminSeats,managerSeats:order.managerSeats,salesSeats:order.salesSeats,suspendedSalesUserIds:suspendedUserIds}}});
  });

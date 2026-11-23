@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, FinancialYear } from "@prisma/client";
 import { db } from "@/lib/db";
 
 function indianFinancialYearBounds(date: Date) {
@@ -18,8 +18,12 @@ function indianFinancialYearBounds(date: Date) {
  * Apr-Mar financial year when a company has no FY covering the sale date yet.
  * Existing closed/inactive years are never reopened automatically.
  */
-export async function ensureOpenFinancialYearForDate(companyId: string, date: Date, transaction?: Prisma.TransactionClient) {
-  const client = transaction ?? db;
+export async function ensureOpenFinancialYearForDate(companyId: string, date: Date, transaction?: Prisma.TransactionClient): Promise<FinancialYear> {
+  if (!transaction) return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${companyId}::uuid FOR UPDATE`;
+    return ensureOpenFinancialYearForDate(companyId,date,tx);
+  });
+  const client = transaction;
   const existing = await client.financialYear.findFirst({
     where: { companyId, startDate: { lte: date }, endDate: { gte: date } },
     orderBy: { startDate: "desc" },
@@ -42,8 +46,7 @@ export async function ensureOpenFinancialYearForDate(companyId: string, date: Da
   const isCurrent = now >= bounds.startDate && now <= new Date(bounds.endDate.getTime() + 86_399_999);
   if (isCurrent) await client.financialYear.updateMany({ where: { companyId, isCurrent: true }, data: { isCurrent: false } });
 
-  try {
-    return await client.financialYear.create({
+  return client.financialYear.create({
       data: {
         companyId,
         name: bounds.name,
@@ -54,11 +57,4 @@ export async function ensureOpenFinancialYearForDate(companyId: string, date: Da
         status: "OPEN",
       },
     });
-  } catch (error) {
-    if (transaction) throw error;
-    // Concurrent first-post requests can race on the company/name unique key.
-    const raced = await client.financialYear.findFirst({ where: { companyId, name: bounds.name } });
-    if (raced?.isActive && raced.status === "OPEN" && raced.startDate <= date && raced.endDate >= date) return raced;
-    throw error;
-  }
 }

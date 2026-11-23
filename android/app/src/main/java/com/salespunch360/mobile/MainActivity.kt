@@ -60,6 +60,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
         }
     }
 
+    CompanyBranchPresentationProvider(bootstrap?.company?.branchUiEnabled?:true,bootstrap?.user?.salesRole==MobileRole.PRIMARY_ADMIN){
     when (state.status) {
         AppStatus.STARTING -> LoadingScreen("Securing your session…")
         AppStatus.SIGNED_OUT -> if (showSignUp) {
@@ -91,7 +92,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                                 data,
                                 state.message,
                                 vm::clearMessage,
-                                { start, location, done -> vm.attendance(start, location, done) },
+                                { start, location, branchId, done -> vm.attendance(start, location, branchId, done) },
                                 vm::logout,
                                 switch,
                             )
@@ -106,7 +107,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                                 data,
                                 state.message,
                                 vm::clearMessage,
-                                { start, location, done -> vm.attendance(start, location, done) },
+                                { start, location, branchId, done -> vm.attendance(start, location, branchId, done) },
                                 vm::logout,
                                 switch,
                             )
@@ -121,5 +122,6 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                 )
             }
         }
+    }
     }
 }

@@ -43,7 +43,7 @@ export default async function Page({
         title="Account Parties"
         backHref={`/workspace/account?tab=parties&${new URLSearchParams(scope)}`}
       />
-      <p>
+      <p data-branch-ui>
         Scope:{" "}
         {context.context.mode === "COMPANY"
           ? "All company branches"
@@ -69,6 +69,7 @@ export default async function Page({
           {data.customers.map((p) => (
             <li key={p.id}>
               <h2>{p.name}</h2>
+              <Link href={`/workspace/account/parties/customers/${p.id}/edit`}>Edit Party</Link>
               {p.contactPerson && <p>{p.contactPerson}</p>}
               {p.phone && <p>Phone: {p.phone}</p>}
               {p.email && <p>Email: {p.email}</p>}

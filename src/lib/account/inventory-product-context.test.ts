@@ -1,0 +1,10 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({batches:vi.fn(),serials:vi.fn(),products:vi.fn(),movements:vi.fn()}));
+vi.mock('@/lib/account/modules',()=>({requireAccountModules:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{accountSettings:{findUnique:async()=>null},inventoryBatch:{findMany:m.batches},inventorySerialNumber:{findMany:m.serials},accountProduct:{findMany:m.products},stockMovement:{findMany:m.movements}}}));
+import {listBatchesForActor,listSerialNumbersForActor} from './inventory';
+import type {ProjectActor} from './projects';
+const actor={id:'admin',companyId:'company'} as ProjectActor;
+beforeEach(()=>{vi.clearAllMocks();m.movements.mockResolvedValue([]);m.products.mockResolvedValue([{id:'one',name:'Paint',code:'P1'},{id:'two',name:'Cement',code:'C1'}])});
+it('distinguishes identical batch labels using a company-scoped product lookup',async()=>{m.batches.mockResolvedValue([{id:'a',productId:'one',batchNumber:'Batch1'},{id:'b',productId:'two',batchNumber:'Batch1'}]);const rows=await listBatchesForActor(actor);expect(rows.map(row=>row.product?.name)).toEqual(['Paint','Cement']);expect(m.products).toHaveBeenCalledWith({where:{companyId:'company',id:{in:['one','two']}},select:{id:true,name:true,code:true}})});
+it('adds product identity to serial rows without changing their saved movement quantity',async()=>{m.serials.mockResolvedValue([{id:'serial',productId:'one',serialNumber:'SN1'}]);const rows=await listSerialNumbersForActor(actor);expect(rows[0].product?.name).toBe('Paint');expect(rows[0].quantity.toString()).toBe('0');expect(m.serials).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:'company'}}))});

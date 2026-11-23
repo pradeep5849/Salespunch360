@@ -1,0 +1,15 @@
+# A156 cumulative daily travel implementation
+
+Owner decision: 10 km morning + 10 km evening = 20 km for the same IST day. Each attendance stop updates that day’s cumulative stopped-session total. A later session updates the same daily row, without adding the prior snapshot again.
+
+Shared stop transaction (web and native) now recalculates accepted GPS per closed attendance session/day and upserts the existing branch/employee/day key. Open-session points are excluded until stopped; routes never bridge attendance sessions. Accepted native GPS queued after a stop refreshes the affected stopped day, with duplicate acknowledgement preserving replay safety. User-row locks serialize stop, late-point and manual-review writers. A saved day rate is retained across later stops. Explicit admin-reviewed decisions are preserved; manual-mode snapshots remain pending until reviewed.
+
+Expense report now reads saved snapshots only: it neither creates nor approves entries and does not recalculate distance against a frozen amount. Snapshot distance/rate/amount remain visible if current travel eligibility is disabled or GPS history is absent. Scope still uses existing employee/branch authority. No production data changed.
+
+Validation: 30 focused model/attendance/travel authorization checks passed; four real PostgreSQL cases passed, including native END updating one 10km row to 20km, repeated calculation/read not double counting or mutating the snapshot, report visibility after GPS removal/eligibility disable, and accepted late GPS plus duplicate acknowledgement. Initial two-point test fixture exceeded the established route gap limit; corrected to legitimate one-minute samples before passing. TypeScript and changed-file lint passed at this checkpoint. Full regression is running; final-head Android/browser/CI validation remains required.
+
+Limits: no production historical backfill executed. Historical days with GPS but no saved snapshot need a separate explicit rebuild outside report reads. Report retains current per-branch daily storage/authorization; it does not merge restricted branches into a cross-scope row. Late-GPS server acceptance is SQL-tested; installed-device/offline queue behavior still needs acceptance. Very large route recalculation/scanning remains performance follow-up; no truncation is silently treated as a complete payable total.
+
+The first full suite run found one obsolete Excel source-contract expectation (report-side live GPS calculation). Updated it to assert saved snapshot reads and cleaned-distance calculation at the new write boundary; the focused export/authorization run passed 25 cases. Final full regression rerun is required before final-head validation claims.
+
+Final validation: full suite 4049 passed, 409 skipped, zero failed; the four opt-in travel SQL cases also passed separately against the guarded disposable fixture. Full TypeScript and changed-file ESLint passed. Final-head GitHub Android/web/migration checks still required before merge; PR remains draft.

@@ -82,7 +82,7 @@ export function ManualJournalForm({
           ))}
         </JournalSelect>
       </label>
-      <label>
+      <label data-branch-ui>
         Branch
         <JournalSelect
           name="branchId"

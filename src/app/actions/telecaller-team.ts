@@ -33,3 +33,10 @@ export async function setTelecallerActiveAction(form: FormData) {
   revalidatePath("/workspace/employees");
   revalidatePath("/workspace/billing/telecaller");
 }
+export async function setTelecallerActiveWithFeedback(form:FormData){
+ if(form.get('confirmStatusChange')!=='yes')return {saveError:'CONFIRMATION_REQUIRED'};
+ try{await setTelecallerActiveAction(form);return{saved:true}}catch(error){
+  const code=error instanceof Error?error.message:'';
+  return{saveError:['TELECALLER_SEAT_LIMIT','TELECALLER_SUBSCRIPTION_REQUIRED'].includes(code)?code:'STATUS_SAVE_FAILED'};
+ }
+}

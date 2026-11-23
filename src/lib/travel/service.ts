@@ -64,6 +64,7 @@ export async function reviewDailyTravel(employeeId:string,date:string,status:"AP
  const companyId=admin.companyId;const branchId=await resolveOperationalWriteBranch({id:admin.id,companyId},requestedBranchId);
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error("INVALID_DATE");
  return db.$transaction(async tx=>{
+  await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${employeeId}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
   const employee=await tx.user.findFirst({where:{id:employeeId,companyId,salesRole:{in:["MANAGER","SALES"]},travelAllowanceEnabled:true},select:{id:true,travelRatePerKm:true}});
   if(!employee)throw new Error("NOT_FOUND");
   await resolveOperationalWriteBranch({id:employee.id,companyId},branchId,tx);

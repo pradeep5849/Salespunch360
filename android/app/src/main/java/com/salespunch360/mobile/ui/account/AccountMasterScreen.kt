@@ -65,4 +65,6 @@ import kotlinx.serialization.json.booleanOrNull
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun SimpleSelect(label:String,value:String,items:List<Pair<String,String>>,onChange:(String)->Unit){var open by remember{mutableStateOf(false)};ExposedDropdownMenuBox(open,{open=!open}){OutlinedTextField(items.firstOrNull{it.first==value}?.second.orEmpty(),{},readOnly=true,label={Text(label)},modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable));ExposedDropdownMenu(open,{open=false}){items.forEach{item->DropdownMenuItem({Text(item.second)},{onChange(item.first);open=false})}}}}
+@Composable private fun SimpleSelect(label:String,value:String,items:List<Pair<String,String>>,onChange:(String)->Unit){
+ if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,items.map{it.first},onChange))return
+var open by remember{mutableStateOf(false)};ExposedDropdownMenuBox(open,{open=!open}){OutlinedTextField(items.firstOrNull{it.first==value}?.second.orEmpty(),{},readOnly=true,label={Text(label)},modifier=Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable));ExposedDropdownMenu(open,{open=false}){items.forEach{item->DropdownMenuItem({Text(item.second)},{onChange(item.first);open=false})}}}}

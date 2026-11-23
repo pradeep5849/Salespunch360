@@ -1019,6 +1019,7 @@ model EmailVerificationToken {
   userId    String    @db.Uuid
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
   tokenHash String    @unique @db.Char(64)
+  destinationEmail String? @db.VarChar(320)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
@@ -1083,6 +1084,8 @@ model Customer {
   notes                     String?
   isActive                  Boolean              @default(true)
   isAccountCustomer         Boolean              @default(false)
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.Char(64)
   createdAt                 DateTime             @default(now())
   updatedAt                 DateTime             @updatedAt
   visits                    CustomerVisit[]
@@ -1094,6 +1097,7 @@ model Customer {
   settlements               AccountSettlement[]  @relation("SettlementCustomer")
   paymentReminders          PaymentReminder[]    @relation("PaymentReminderCustomer")
 
+  @@unique([companyId, creationRequestKey])
   @@unique([companyId, id])
   @@index([companyId, name])
   @@index([companyId, createdAt])
@@ -1209,14 +1213,19 @@ model FollowUpTask {
   createdByUserId  String             @db.Uuid
   createdByUser    User               @relation("FollowUpTaskCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   dueDate          DateTime           @db.Date
+  callbackAt       DateTime?          @db.Timestamp(3)
+  callbackCallId   String?            @unique @db.Uuid
   notes            String?            @db.VarChar(2000)
   status           FollowUpTaskStatus @default(PENDING)
   completedVisitId String?            @unique @db.Uuid
   completedVisit   CustomerVisit?     @relation(fields: [completedVisitId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   completedAt      DateTime?
+  creationRequestKey String? @db.Uuid
+  creationRequestHash String? @db.Char(64)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
+  @@unique([companyId, creationRequestKey])
   @@index([companyId, assignedUserId, status, dueDate])
   @@index([companyId, leadId, status, dueDate])
   @@index([companyId, status, dueDate])

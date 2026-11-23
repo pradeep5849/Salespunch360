@@ -51,9 +51,14 @@ export async function changePassword(_:ChangePasswordState,formData:FormData):Pr
   const actor=await requireUser(),current=String(formData.get("currentPassword")||""),next=String(formData.get("newPassword")||""),confirmation=String(formData.get("confirmPassword")||"");
   if(next!==confirmation)return{error:"New password and confirmation do not match."};
   const valid=strongPasswordSchema.safeParse(next);if(!valid.success)return{error:valid.error.issues[0]?.message||"New password does not meet the password policy."};
+  try {
+    if (!await consumeRateLimit(`change-password-account:${actor.id}`,10,15*60_000) || !await consumeRateLimit(await requestFingerprint("change-password",actor.id),10,15*60_000)) return {error:"Too many password attempts. Wait 15 minutes before trying again."};
   const user=await db.user.findUnique({where:{id:actor.id},select:{passwordHash:true}});
   if(!user||!await verifyPassword(user.passwordHash,current))return{error:"Current password is incorrect."};
   if(await verifyPassword(user.passwordHash,next))return{error:"New password must be different from the current password."};
   await replacePasswordAndRevoke(actor.id,await hashPassword(next),user.passwordHash);
   return{success:"Password changed. Sign in again with your new password."};
+  } catch(error) {
+    return {error:error instanceof Error && error.message==="STALE_CREDENTIALS"?"Your credentials changed while saving. Sign in again before changing your password.":"The password change was not confirmed. Sign in again or retry when connected."};
+  }
 }

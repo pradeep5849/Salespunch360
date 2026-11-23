@@ -1,8 +1,9 @@
+import {callbackPageForActor} from '@/lib/telecalling/callback-page';
 import { ZodError } from "zod";
 import { authenticateMobileSalesToken } from "@/lib/mobile/auth";
 import { mobileAuthorizationFailure, mobileJson, mobileUnexpected } from "@/lib/mobile/http";
 import { mobileCallbackQueue, mobileLeadCallHistory, mobileRecordLeadCall, mobileSalesActions, mobileTelecallingQueue, mobileUpdateSalesAction } from "@/lib/mobile/telecalling";
-import {completeAssignedTelecallerCallForActor,listAssignedTelecallerCallsForActor} from "@/lib/follow-up-tasks/telecaller-assignment";
+import {listAssignedTelecallerCallsForActor} from "@/lib/follow-up-tasks/telecaller-assignment";
 
 function fail(error: unknown) {
   const auth = mobileAuthorizationFailure(error);
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
       return mobileJson(await mobileLeadCallHistory(actor, leadId));
     }
     if (view === "callbacks") {
+      if(url.searchParams.has("page"))return mobileJson(await callbackPageForActor(actor,Number(url.searchParams.get("page"))));
       const [callbacks,assigned]=await Promise.all([mobileCallbackQueue(actor),listAssignedTelecallerCallsForActor(actor)]);
       return mobileJson([...callbacks,...assigned].sort((a,b)=>new Date(a.nextCallbackAt||0).getTime()-new Date(b.nextCallbackAt||0).getTime()));
     }
@@ -44,7 +46,6 @@ export async function POST(request: Request) {
     const action = body.action;
     if (action === "RECORD_CALL") {
       const saved=await mobileRecordLeadCall(actor, body);
-      if(typeof body.followUpTaskId==="string"&&typeof body.leadId==="string")await completeAssignedTelecallerCallForActor(actor,body.followUpTaskId,body.leadId);
       return mobileJson(saved, 201);
     }
     if (action === "UPDATE_SALES_ACTION") return mobileJson(await mobileUpdateSalesAction(actor, body));

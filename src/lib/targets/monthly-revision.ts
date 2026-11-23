@@ -1,0 +1,1 @@
+export function monthlyRevision(month:string,rows:{id:string;version:number}[]){return JSON.stringify([month,...rows.map(row=>[row.id,row.version]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))])}

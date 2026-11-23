@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -57,7 +58,8 @@ fun AccountUtilityScreen(
     vm: AccountUtilityViewModel = viewModel(),
     initialImportType: String = "CUSTOMERS",
     initialExportType: String? = null,
-    backupMode: String? = null
+    backupMode: String? = null,
+    onNavigate: (String) -> Unit = {}
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
@@ -223,7 +225,41 @@ fun AccountUtilityScreen(
                 Button(enabled=!state.loading && !fileBusy,onClick = {vm.backup(true)}) { Text(if(backupMode=="phone") "Save records and private files" else "Share records and private files") }
                 }
             }
+            "verification" -> Column {
+                Text("Company-wide read-only checks. A PASS applies only to the named check.")
+                Text("Checks cover saved document totals/discounts, effective allocations, settlement totals and current period locks. Bank statements, physical stock and historical lock changes need independent review.")
+                Text("Interactive limits: 10,000 records per collection; 50,000 child or branch-assignment rows per relation. An incomplete scan is not a clean result.")
+                state.verificationCompletedAt?.let { Text("Last verification response: $it") }
+                if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if(state.error!=null)Text("Current verification did not complete. Previous results are hidden; refresh to retry.")
+                if(!state.loading && state.error==null && state.rows.isEmpty()) Text("No verification result available. Refresh to run checks.")
+                Button(enabled=!state.loading,onClick={vm.load("verification")}) { Text("Refresh verification") }
+                LazyColumn {
+                    items(if(state.loading||state.error!=null)emptyList()else state.rows.toList()) { element ->
+                        val check=element.jsonObject
+                        Card(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("${check["status"]?.jsonPrimitive?.content.orEmpty()} · ${check["check"]?.jsonPrimitive?.content.orEmpty()}")
+                                if(check["coverage"]?.jsonPrimitive?.content=="NOT_CHECKED")Text("Not checked; affected count unavailable.")else if(check["incomplete"]?.jsonPrimitive?.booleanOrNull==true)Text("Scan incomplete; affected count unavailable.")else Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
+                                if(check["status"]?.jsonPrimitive?.content!="PASS")Text(check["recommendation"]?.jsonPrimitive?.content.orEmpty())
+                                check["samples"]?.jsonArray?.takeIf { it.isNotEmpty() }?.let { samples -> Text("Sample identifiers: " + samples.joinToString { it.jsonPrimitive.content }) }
+                                (check["records"] as? JsonArray)?.take(5)?.forEach { record ->
+                                    val row=record.jsonObject
+                                    com.salespunch360.mobile.data.verificationReviewPath(row["href"]?.jsonPrimitive?.content)?.let { target -> TextButton({onNavigate(target)}) { Text("Review ${row["label"]?.jsonPrimitive?.content.orEmpty()}") } }
+                                }
+                                com.salespunch360.mobile.data.verificationReviewPath(check["reviewHref"]?.jsonPrimitive?.content)?.let { target -> TextButton({onNavigate(target)}) { Text("Open relevant records") } }
+
+                            }
+                        }
+                    }
+                }
+            }
             else -> Column {
+                if(mode=="recycle"){
+                    OutlinedTextField(state.recycleQuery,vm::setRecycleQuery,label={Text("Search archived name")},enabled=!state.loading,modifier=Modifier.fillMaxWidth())
+                    Row(Modifier.horizontalScroll(rememberScrollState())){listOf("","CUSTOMER","VENDOR","PRODUCT","PROJECT").forEach{type->FilterChip(selected=state.recycleType==type,onClick={vm.setRecycleType(type)},enabled=!state.loading,label={Text(type.ifEmpty{"All types"})})}}
+                    Button(enabled=!state.loading,onClick={vm.load("recycle")}){Text("Search archived records")}
+                }
                 if(state.recycleHasMore) Button(enabled=!state.loading,onClick={vm.load("recycle",true)}) { Text("Load more archived records") }
                 JsonList(state.rows, !state.loading) { id -> confirmRestore = id }
             }

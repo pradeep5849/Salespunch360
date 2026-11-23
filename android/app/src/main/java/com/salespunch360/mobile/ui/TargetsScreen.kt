@@ -25,21 +25,24 @@ import com.salespunch360.mobile.data.*
   item{
    Text("Sales Targets",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
    Text("${monthly.month.startText} to ${monthly.month.endText}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
-   Text("Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   Text("Targets are company-wide per employee; actuals use accessible records. Monthly targets carry forward; Leads and Leads Won actuals restart each month.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
    state.message?.let{MessageBanner(it,vm::clear)}
+   OutlinedButton({vm.loadMonthly()},enabled=!state.loading&&!state.saving){Text(if(state.loading)"Reloading…" else "Reload targets")}
   }
   if(monthly.rows.isEmpty())item{ContentCard("No employees","No active field employees are visible in your current scope.")}
-  items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won,onSaved->vm.saveMonthly(row.id,lead,won,onSaved)}}
+  items(monthly.rows,key={it.id}){row->MonthlyTargetCard(row,canEdit,state.saving){lead,won,onSaved->vm.saveMonthly(row.id,lead,won,row.revision,onSaved)}}
  }
 }
 
 @Composable private fun MonthlyTargetCard(row:MonthlyTargetRow,canEdit:Boolean,saving:Boolean,save:(Int,Int,()->Unit)->Unit){
- var editing by remember(row.id,row.leadTarget,row.wonTarget){mutableStateOf(false)}
- var leads by remember(row.id,row.leadTarget){mutableStateOf(row.leadTarget.toString())}
- var won by remember(row.id,row.wonTarget){mutableStateOf(row.wonTarget.toString())}
+ var editing by remember(row.id,row.revision,row.leadTarget,row.wonTarget){mutableStateOf(false)}
+ var leads by remember(row.id,row.revision,row.leadTarget){mutableStateOf(row.leadTarget.toString())}
+ var won by remember(row.id,row.revision,row.wonTarget){mutableStateOf(row.wonTarget.toString())}
  OutlinedCard(Modifier.fillMaxWidth()){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Text(row.name,fontWeight=FontWeight.Bold,color=SalesInk)
+   Text(if(row.actualScope=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   if(LocalBranchUiEnabled.current)row.branchActuals.forEach{branch->Text("${branch.branchName}: ${branch.created} leads · ${branch.won} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
    Text(salesTargetRole(row),style=MaterialTheme.typography.labelSmall,color=SalesMuted)
    HorizontalDivider(color=SalesLine)
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){
@@ -50,7 +53,9 @@ import com.salespunch360.mobile.data.*
    TargetCompactField("Leads won",won,canEdit&&editing,{won=it},row.won,Modifier.fillMaxWidth())
    if(canEdit&&!editing)OutlinedButton({editing=true},modifier=Modifier.fillMaxWidth()){Text("Edit")}
    if(canEdit&&editing){
-    Button({save(leads.toIntOrNull()?.coerceAtLeast(0)?:0,won.toIntOrNull()?.coerceAtLeast(0)?:0){editing=false}},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save")}
+    val leadCount=leads.toIntOrNull()?.takeIf{it>=0};val wonCount=won.toIntOrNull()?.takeIf{it>=0}
+    if(leadCount==null||wonCount==null)Text("Enter whole numbers of zero or more.",color=MaterialTheme.colorScheme.error)
+    Button({if(leadCount!=null&&wonCount!=null)save(leadCount,wonCount){editing=false}},enabled=!saving&&leadCount!=null&&wonCount!=null,modifier=Modifier.fillMaxWidth()){Text(if(saving)"Saving…" else "Save")}
     TextButton({leads=row.leadTarget.toString();won=row.wonTarget.toString();editing=false},enabled=!saving,modifier=Modifier.fillMaxWidth()){Text("Cancel")}
    }
   }

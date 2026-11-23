@@ -1,0 +1,16 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({sessions:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{company:{findUnique:async()=>null},user:{findFirst:async()=>({id:'sales',name:'Sales'})},attendance:{findMany:m.sessions}}}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:async()=>({branchId:'branch'})}));
+vi.mock('./scope',()=>({reportActor:vi.fn(),reportEmployeeOptions:async()=>[],resolveEmployeeScope:async()=>['sales']}));
+import {gpsReport} from './gps';
+import type {ReportActor} from './scope';
+const actor={id:'sales',companyId:'company',salesRole:'SALES'} as ReportActor;
+const at=(hour:number)=>new Date(`2026-11-21T0${hour}:00:00Z`);
+const points=[{id:'latest',latitude:12,longitude:77,accuracyMeters:1,capturedAt:at(4),sequenceNumber:1},{id:'older',latitude:12.001,longitude:77,accuracyMeters:1,capturedAt:at(3),sequenceNumber:2}];
+const session={id:'session',startedAt:at(2),endedAt:null,startLatitude:null,startLongitude:null,endLatitude:null,endLongitude:null,locationPoints:points,customerVisits:[]};
+beforeEach(()=>m.sessions.mockResolvedValue([session]));
+it('does not assert GPS ended for an open attendance session',async()=>{const result=await gpsReport({date:'2026-11-21'},actor);expect(result.events.some(event=>event.type==='GPS_ENDED')).toBe(false);expect(result.events.find(event=>event.type==='GPS_LAST_RECORDED')?.at).toEqual(at(4));expect(result.lastSpottedAt).toEqual(at(4));expect(m.sessions).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({companyId:'company',branchId:'branch',userId:'sales'})}))});
+it('uses confirmed attendance end time instead of pretending the final point was a stop',async()=>{m.sessions.mockResolvedValue([{...session,endedAt:at(5)}]);const result=await gpsReport({date:'2026-11-21'},actor);expect(result.events.find(event=>event.type==='GPS_ENDED')?.at).toEqual(at(5))});
+it('does not place a next-day end event into the selected day',async()=>{m.sessions.mockResolvedValue([{...session,endedAt:new Date('2026-11-22T02:00:00Z')}]);const result=await gpsReport({date:'2026-11-21'},actor);expect(result.events.some(event=>event.type==='GPS_ENDED')).toBe(false)});
+it('keeps last-recorded time even when poor accuracy excludes every map point',async()=>{m.sessions.mockResolvedValue([{...session,locationPoints:points.map(point=>({...point,accuracyMeters:100}))}]);const result=await gpsReport({date:'2026-11-21'},actor);expect(result.points).toEqual([]);expect(result.segments).toEqual([]);expect(result.routeDistanceMeters).toBe(0);expect(result.lastSpottedAt).toEqual(at(4))});

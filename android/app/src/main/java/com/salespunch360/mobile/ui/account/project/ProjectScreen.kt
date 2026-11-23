@@ -433,6 +433,8 @@ private fun Pick(
     enabled: Boolean = true,
     set: (String) -> Unit,
 ) {
+    if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.mapNotNull{it.jsonObject["id"]?.jsonPrimitive?.contentOrNull},set)) { return }
+
     var open by remember { mutableStateOf(false) }
     val selected = values.map { it.jsonObject }.firstOrNull { it.str("id") == value }
     ExposedDropdownMenuBox(open && enabled, { if(enabled)open = it }) {

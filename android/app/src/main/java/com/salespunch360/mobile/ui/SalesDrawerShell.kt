@@ -32,7 +32,6 @@ import com.salespunch360.mobile.BuildConfig
 import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.SalesNotificationsViewModel
 import com.salespunch360.mobile.data.*
-import com.salespunch360.mobile.location.TrackingService
 import kotlinx.coroutines.launch
 
 private data class SalesVisitDetails(
@@ -83,7 +82,7 @@ fun SalesDrawerAuthenticatedApp(
     data: Bootstrap,
     message: String?,
     dismiss: () -> Unit,
-    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit,
+    attendance: (Boolean, LocationPayload?, String?, () -> Unit) -> Unit,
     logout: () -> Unit,
     switchToAccount: (() -> Unit)? = null
 ) {
@@ -97,6 +96,7 @@ fun SalesDrawerAuthenticatedApp(
     val leadsState = leadsVm.state.collectAsStateWithLifecycle().value
     var pendingTask by remember { mutableStateOf<FollowUpTask?>(null) }
     var pendingLeadId by remember { mutableStateOf<String?>(null) }
+    var pendingFollowUpTarget by remember { mutableStateOf<FollowUpNotificationTarget?>(null) }
     var pendingCheckInLead by remember { mutableStateOf<LeadSummary?>(null) }
     var visitDetails by remember { mutableStateOf<SalesVisitDetails?>(null) }
     var profileMenu by remember { mutableStateOf(false) }
@@ -199,7 +199,7 @@ fun SalesDrawerAuthenticatedApp(
                     },
                     onBack = { if (nav.canGoBack) nav.back() else navigate("Dashboard") },
                 )
-                route == "Notifications" -> SalesNotificationsScreen(notificationsState,notificationsVm::refresh,{notificationsVm.read(it)},{notification->when(notification.relatedEntityType){"LEAD"->{pendingLeadId=notification.relatedEntityId;navigate("Leads")};"FOLLOW_UP"->navigate("Follow-ups");else->Unit}})
+                route == "Notifications" -> SalesNotificationsScreen(notificationsState,notificationsVm::refresh,{notificationsVm.read(it)},{notification->notificationsVm.read(notification.id){saved->if(nav.current=="Notifications")saved?.let{when(it.relatedEntityType){"LEAD"->{leadsVm.close();pendingLeadId=it.relatedEntityId;navigate("Leads")};"FOLLOW_UP"->{pendingFollowUpTarget=followUpNotificationTarget(it.navigationTarget);navigate("Follow-ups")};else->Unit}}}},loadMore=notificationsVm::loadMore)
                 route == "Leads" -> LeadsScreen(
                     allowStageActions = !telecaller,
                     initialLeadId = pendingLeadId,
@@ -211,6 +211,8 @@ fun SalesDrawerAuthenticatedApp(
                     vm = leadsVm
                 )
                 route == "Follow-ups" -> FollowUpsScreen(
+                    initialTarget=pendingFollowUpTarget,
+                    targetApplied={pendingFollowUpTarget=null},
                     startCheckIn = { if(!telecaller){pendingCheckInLead = null; pendingTask = it; navigate("Check-ins")} },
                     viewLead = { pendingLeadId = it; navigate("Leads") },
                     viewVisit = { task ->
@@ -219,16 +221,7 @@ fun SalesDrawerAuthenticatedApp(
                 )
                 !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
                 !telecaller && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
-                route == "Company Details" -> LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
-                    item {
-                        Text("Company Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        ContentCard(data.company.name, data.company.address ?: "Company address is not available.") {
-                            CompanyIdentity(data.company.name, data.company.address, data.company.logoUrl)
-                            Text("Signed in as ${data.user.name}")
-                        }
-                    }
-                }
+                route == "Company Details" -> ReadOnlyCompanyDetailsScreen()
                 route == "Change Password" -> ChangePasswordScreen()
                 else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
             }
@@ -320,24 +313,24 @@ private fun SalesDrawerMetric(label: String, value: Int?, modifier: Modifier) {
 @Composable
 private fun SalesDrawerAttendance(
     data: Bootstrap,
-    attendance: (Boolean, LocationPayload, () -> Unit) -> Unit
+    attendance: (Boolean, LocationPayload?, String?, () -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var locating by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+    var selectedBranchId by remember(data.user.id){mutableStateOf<String?>(null)}
+    val branchId=com.salespunch360.mobile.data.attendanceBranchId(data.branches,selectedBranchId,data.attendance)
 
     fun submit(start: Boolean) {
+        if(start&&branchId==null){status="Choose attendance access before starting.";return}
         scope.launch {
             locating = true
             status = "Getting current location…"
             try {
-                val point = com.salespunch360.mobile.location.currentDeviceLocation(context)
-                attendance(start, point) {
-                    if (start && data.features.gpsTrackingEnabled) TrackingService.start(context)
-                    if (!start) TrackingService.stop(context)
-                }
-                status = "Location ready"
+                val point = com.salespunch360.mobile.data.attendanceMeasurement(data.features,start){com.salespunch360.mobile.location.currentDeviceLocation(context)}
+                attendance(start, point,branchId) {}
+                status = if(point!=null)"Location ready"else null
             } catch (e: Exception) {
                 status = com.salespunch360.mobile.location.locationFailureMessage(e)
             } finally {
@@ -374,9 +367,9 @@ private fun SalesDrawerAttendance(
                             val pointLabel = if (active.gpsPointCount == 1) "point" else "points"
                             Text("GPS tracking active · ${active.gpsPointCount} $pointLabel", color = SalesMuted)
                         }
-                        status?.let { Text(it, color = SalesMuted) }
+                        AttendanceBranchPicker(data,selectedBranchId,{selectedBranchId=it},!locating);status?.let { Text(it, color = SalesMuted) }
                         Button(
-                            onClick = { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+                            onClick = { if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,data.attendance==null))launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))else submit(data.attendance==null) },
                             enabled = !locating,
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC62828))
@@ -385,10 +378,10 @@ private fun SalesDrawerAttendance(
                 }
             } else {
                 ContentCard("Attendance", if (data.features.attendanceEnabled) "Not currently working" else "Attendance is disabled by your company.") {
-                    status?.let { Text(it, color = SalesMuted) }
+                    AttendanceBranchPicker(data,selectedBranchId,{selectedBranchId=it},!locating);status?.let { Text(it, color = SalesMuted) }
                     Button(
-                        onClick = { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
-                        enabled = !locating && data.features.attendanceEnabled && data.entitlement.operationalWritesAllowed,
+                        onClick = { if(com.salespunch360.mobile.data.attendanceNeedsLocation(data.features,data.attendance==null))launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))else submit(data.attendance==null) },
+                        enabled = !locating && data.features.attendanceEnabled && data.entitlement.operationalWritesAllowed&&branchId!=null,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (locating) "Locating…" else "Start Attendance") }
                 }

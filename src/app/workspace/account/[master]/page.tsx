@@ -1,3 +1,4 @@
+import { MasterSummary } from "@/components/account/master-summary";
 import Link from "next/link";
 import { CustomFieldInput } from "@/components/account/custom-field-input";
 import { notFound } from "next/navigation";
@@ -43,7 +44,7 @@ export default async function MasterPage({
   searchParams,
 }: {
   params: Promise<{ master: string }>;
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; workCategoryId?: string }>;
 }) {
   const { master } = await params;
   if (!titles[master]) notFound();
@@ -132,7 +133,9 @@ export default async function MasterPage({
         {work && (
           <label>
             Work category
-            <select name="workCategoryId" required>
+            <Link href="/workspace/account/work-categories">Browse all work categories / choose category</Link>
+            <small>The quick selector shows up to 200 categories. Browse all categories to choose any active category and add work.</small>
+            <select name="workCategoryId" required defaultValue={query.workCategoryId ?? ""}>
               <option value="">Select</option>
               {d.workCategories.map((x) => (
                 <option value={x.id} key={x.id}>
@@ -194,7 +197,7 @@ export default async function MasterPage({
                     ? d.workPackages
                     : d.financialYears;
   const href = (page: number) =>
-    `/workspace/account/${master}?${new URLSearchParams({ ...(d.q ? { q: d.q } : {}), page: String(page) }).toString()}`;
+    `/workspace/account/${master}?${new URLSearchParams({ ...(d.q ? { q: d.q } : {}), ...(query.workCategoryId ? {workCategoryId:query.workCategoryId} : {}), page: String(page) }).toString()}`;
   return (
     <div className="employees-shell">
       <section className="employees-content">
@@ -203,6 +206,7 @@ export default async function MasterPage({
           backHref="/workspace/account"
         />
         <form method="get" className="account-master-form">
+          {query.workCategoryId && <input type="hidden" name="workCategoryId" value={query.workCategoryId}/>}
           <label>
             Search
             <input
@@ -213,6 +217,9 @@ export default async function MasterPage({
           </label>
           <button>Search</button>
         </form>
+        {master === "products" && d.canCreate && <p>Products created with this quick form are untracked. <Link href="/workspace/account/inventory/items/new">Create inventory item with tracking / opening stock</Link></p>}
+        {master === "categories" && d.canCreate && <Link href="/workspace/account/inventory/categories">Manage / Edit categories</Link>}
+        {master === "units" && d.canCreate && <Link href="/workspace/account/inventory/units">Manage / Edit units</Link>}
         {d.canCreate && (
           <SaveFeedbackForm
             action={saveAccountMaster}
@@ -230,6 +237,17 @@ export default async function MasterPage({
           {rows.map((x) => (
             <article key={x.id}>
               <h2>{x.name}</h2>
+              <MasterSummary value={x} canViewCosts={d.canViewCosts}/>
+              {["products","services","work-packages"].includes(master)&&d.canCreate&&<Link href={`/workspace/account/items/${master}/${x.id}/edit`}>Edit {master==="products"?"Product":master==="services"?"Service":"Work / Package"}</Link>}
+              {master==="vendors"&&d.canCreate&&<Link href={`/workspace/account/parties/vendors/${x.id}/edit`}>Edit Vendor</Link>}
+              {master==="vendors"&&"address"in x&&Boolean(x.address)&&<p>Address: {String(x.address)}</p>}
+              {"description" in x && Boolean(x.description) && <p>{String(x.description)}</p>}
+              {"scope" in x && <p>Applies to: {String(x.scope).toLowerCase()}</p>}
+              {"phone" in x && Boolean(x.phone) && <p>Phone: {String(x.phone)}</p>}
+              {"email" in x && Boolean(x.email) && <p>Email: {String(x.email)}</p>}
+              {"startDate" in x && "endDate" in x && <p>{new Date(String(x.startDate)).toISOString().slice(0,10)} – {new Date(String(x.endDate)).toISOString().slice(0,10)}</p>}
+              {"status" in x && <p>Status: {String(x.status)}</p>}
+              {master === "work-categories" && <Link href={`/workspace/account/work-packages?workCategoryId=${encodeURIComponent(x.id)}`}>View work / Add work</Link>}
               {"symbol" in x && <p>{String(x.symbol)}</p>}
               {"code" in x && <p>{String(x.code ?? "")}</p>}
               {"isCurrent" in x && Boolean(x.isCurrent) && (

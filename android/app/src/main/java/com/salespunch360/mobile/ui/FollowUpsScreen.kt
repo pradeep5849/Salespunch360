@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.salespunch360.mobile.FollowUpsViewModel
 import com.salespunch360.mobile.data.FollowUpTask
+import com.salespunch360.mobile.data.FollowUpNotificationTarget
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -25,8 +26,11 @@ fun FollowUpsScreen(
     viewLead: (String) -> Unit,
     viewVisit: (FollowUpTask) -> Unit = {},
     vm: FollowUpsViewModel = viewModel(),
+    initialTarget:FollowUpNotificationTarget?=null,
+    targetApplied:()->Unit={},
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
+    LaunchedEffect(initialTarget){initialTarget?.let{vm.openNotification(it);targetApplied()}}
     var employeeMenu by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -34,6 +38,7 @@ fun FollowUpsScreen(
         contentPadding = PaddingValues(vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        if(state.leadId!=null)item{Row(Modifier.fillMaxWidth()){Text("Showing the notified lead",Modifier.weight(1f));TextButton(vm::clearLeadFilter){Text("Show all leads")}}}
         item {
             Text("Follow-ups", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = SalesInk)
             HorizontalDivider(Modifier.padding(top = 8.dp, bottom = 10.dp), color = SalesLine)
@@ -129,7 +134,7 @@ private fun FollowUpTaskCard(
                 }
             }
             Text("Lead: ${task.leadTitle} · Assigned: ${task.assignedUserName ?: "—"}", style = MaterialTheme.typography.bodyMedium, color = SalesInk)
-            Text("Due: ${task.dueDate.take(10)} · Last action: ${task.lastAction}", style = MaterialTheme.typography.bodyMedium, color = SalesMuted)
+            Text("Due: ${task.callbackAt?.let { followUpTime(it) } ?: task.dueDate.take(10)} · Last action: ${task.lastAction}", style = MaterialTheme.typography.bodyMedium, color = SalesMuted)
             task.notes?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             task.createdByUserName?.let { creator ->
                 Text("Task created by $creator${task.createdAt?.let { " · ${followUpTime(it)}" } ?: ""}", style = MaterialTheme.typography.bodySmall, color = SalesMuted)

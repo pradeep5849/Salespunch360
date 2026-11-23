@@ -11,3 +11,5 @@ it("keeps company and archived-only scope, stable ordering and bounded paging",a
 });
 it("has no next page when exactly 50 records remain",async()=>{m.findMany.mockResolvedValue(Array.from({length:50},(_,id)=>({id})));expect((await recycleListForCompany("company",{})).hasMore).toBe(false)});
 it.each([0,-1,1.5,"bad",100001])("rejects invalid page %s before reading",async page=>{await expect(recycleListForCompany("company",{page})).rejects.toThrow();expect(m.findMany).not.toHaveBeenCalled()});
+
+it('combines record type and search without losing company or archive-state scope',async()=>{await recycleListForCompany('company',{page:2,q:'Pump',entityType:'PRODUCT'});expect(m.findMany).toHaveBeenCalledWith(expect.objectContaining({where:{companyId:'company',restoredAt:null,purgedAt:null,entityType:'PRODUCT',displayName:{contains:'Pump',mode:'insensitive'}},skip:50,take:51}))});

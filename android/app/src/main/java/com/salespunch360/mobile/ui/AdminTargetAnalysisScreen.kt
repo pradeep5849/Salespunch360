@@ -33,7 +33,7 @@ fun AdminTargetAnalysisScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()-
   item{
    onBack?.let{back->TextButton(onClick=back,contentPadding=PaddingValues(0.dp)){Text("← Reports")}}
    Text("Target Analysis",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)
-   Text("Current calendar-month Target / Actual values use the same rules and data as Web Target Analysis.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   Text("Company-wide monthly targets use the same rules as Web. Actuals use accessible records; branch actuals are shown separately.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
   }
   item{
    OutlinedCard(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,SalesLine)){
@@ -51,8 +51,8 @@ fun AdminTargetAnalysisScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()-
   if(!state.loading&&state.message==null){
    item{
     FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-     TargetMetric("Check-ins Target",summary?.get("checkInsTarget")?.jsonPrimitive?.intOrNull?:0)
-     TargetMetric("Check-ins",summary?.get("checkIns")?.jsonPrimitive?.intOrNull?:0)
+     TargetMetric("Leads Created Target",summary?.get("checkInsTarget")?.jsonPrimitive?.intOrNull?:0)
+     TargetMetric("Leads Created",summary?.get("checkIns")?.jsonPrimitive?.intOrNull?:0)
      TargetMetric("Leads Won Target",summary?.get("leadsWonTarget")?.jsonPrimitive?.intOrNull?:0)
      TargetMetric("Leads Won",summary?.get("leadsWon")?.jsonPrimitive?.intOrNull?:0)
     }
@@ -63,9 +63,11 @@ fun AdminTargetAnalysisScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()-
     OutlinedCard(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),border=BorderStroke(1.dp,SalesLine),colors=CardDefaults.outlinedCardColors(containerColor=Color.White)){
      Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
       Text(row.targetText("name")?:"Employee",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=SalesInk)
+      Text(if(row.targetText("actualScope")=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+      if(LocalBranchUiEnabled.current)(row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.targetText("branchName").orEmpty()}: ${branch.targetInt("created")} leads · ${branch.targetInt("won")} won",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
       Text(if(row.targetText("salesRole")=="MANAGER")"Field Manager" else "Sales",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
-       Column(Modifier.weight(1f)){Text("CHECK-INS TARGET / ACTUAL",style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text("${row.targetInt("leadTarget")} / ${row.targetInt("created")}",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
+       Column(Modifier.weight(1f)){Text("LEADS CREATED TARGET / ACTUAL",style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text("${row.targetInt("leadTarget")} / ${row.targetInt("created")}",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
        Column(Modifier.weight(1f)){Text("LEADS WON TARGET / ACTUAL",style=MaterialTheme.typography.labelSmall,color=SalesMuted);Text("${row.targetInt("wonTarget")} / ${row.targetInt("won")}",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}
       }
      }

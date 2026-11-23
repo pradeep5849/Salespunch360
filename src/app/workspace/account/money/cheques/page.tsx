@@ -107,7 +107,7 @@ export default async function Page({
           title="Cheques"
           backHref="/workspace/account/money"
         />
-        <p>
+        <p data-branch-ui>
           Scope:{" "}
           {context.context.mode === "COMPANY"
             ? "Company consolidated"

@@ -148,7 +148,7 @@ fun ReportsScreen(
   }
   item{ReportExportControls(state,vm)}
   if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
-  state.message?.let{item{ContentCard("Report unavailable",it)}}
+  state.message?.let{item{ContentCard("Report message",it)}}
 
   report?.let{r->
    if(state.type=="gps"){
@@ -181,7 +181,7 @@ fun ReportsScreen(
    }else{
     item{SummaryCards(r["summary"]?.jsonObject)}
     if(rows.isEmpty())item{ContentCard("No report records","No records match the selected filters.")}
-    else items(rows.size){if(state.type=="expenses")ExpenseReportRow(rows[it].jsonObject)else ReportRow(rows[it].jsonObject)}
+    else items(rows.size){if(state.type=="expenses")ExpenseReportRow(rows[it].jsonObject)else ReportRow(rows[it].jsonObject,vm,state.deletingVisit)}
     val pages=r["totalPages"]?.jsonPrimitive?.intOrNull?:1
     if(pages>1)item{
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -351,13 +351,16 @@ private fun GpsDisclaimer(){
 }
 
 @Composable
-private fun ReportRow(row:JsonObject){
- val title=row.objText("user","name")?:row.objText("assignedUser","name")?:row.objText("employee","name")?:row.objText("customer","name")?:row.text("title")?:"Report record"
- val hidden=setOf("id","companyId","branchId","userId","customerId","assignedUserId","user","customer","assignedUser")
+private fun ReportRow(row:JsonObject,vm:ReportsViewModel,deleting:Boolean){
+ val isVisit=row.containsKey("checkedInAt")&&row.containsKey("checkInLatitude")
+ val title=if(isVisit)row.text("contactName")?:row.objText("customer","name")?:"Contact"else row.objText("user","name")?:row.objText("assignedUser","name")?:row.objText("employee","name")?:row.objText("customer","name")?:row.text("title")?:"Report record"
+ val hidden=setOf("id","companyId","branchId","userId","customerId","assignedUserId","user","customer","assignedUser","targetScope","actualScope","comparisonAvailable","branchActuals","canDelete")
  OutlinedCard(Modifier.fillMaxWidth()){
   Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
    Text(title,fontWeight=FontWeight.Bold)
-   row.entries.filter{it.key !in hidden&&!it.value.isNullish()}.forEach{(k,v)->Text("${prettyLabel(k)}: ${value(v)}",style=MaterialTheme.typography.bodySmall)}
+   if(row.text("targetScope")=="COMPANY")Text(if(row.text("actualScope")=="AUTHORIZED_BRANCHES") "Company target · actuals from accessible records; company comparison unavailable" else "Company target · company actuals",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+   if(LocalBranchUiEnabled.current)(row["branchActuals"] as? JsonArray)?.forEach{value->val branch=value.jsonObject;Text("${branch.text("branchName").orEmpty()}: ${branch.text("actual").orEmpty()}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+   if(isVisit){row.text("visitKind")?.let{Text(it)};row.text("checkInAddress")?.let{Text(it)};ReportVisitContactAndDetails(row);DeleteOwnVisitControl(row,deleting,{id,revision->vm.deleteOwnVisit(id,revision)})}else row.entries.filter{it.key !in hidden&&!it.value.isNullish()}.forEach{(k,v)->Text("${prettyLabel(k)}: ${value(v)}",style=MaterialTheme.typography.bodySmall)}
   }
  }
 }
@@ -383,6 +386,17 @@ private fun ReportFilters(state:com.salespunch360.mobile.ReportsState,vm:Reports
    DateField("End",state.end,vm::setEnd,Modifier.weight(1f))
   }
   CycleFilter("Employee",state.employeeId,employees,vm::setEmployee)
+  if(state.type=="geofence"){
+   OutlinedTextField(value=state.geofenceFilters.q,onValueChange=vm::setGeofenceSearch,label={Text("Customer name")},singleLine=true,modifier=Modifier.fillMaxWidth())
+   ChoiceRow("Action",state.geofenceFilters.action,listOf("ALL","ATTENDANCE_START","CUSTOMER_CHECK_IN"),vm::setGeofenceAction)
+   ChoiceRow("Breach type",state.geofenceFilters.eventType,listOf("ALL","OUTSIDE_RADIUS","INSUFFICIENT_ACCURACY"),vm::setGeofenceType)
+  }
+  if(state.type=="leads"){
+   OutlinedTextField(value=state.leadFilters.q,onValueChange=vm::setLeadSearch,label={Text("Search leads")},singleLine=true,modifier=Modifier.fillMaxWidth())
+   ChoiceRow("Stage",state.leadFilters.stage,listOf("ALL","NEW","QUALIFIED","PROPOSAL","NEGOTIATION","WON","LOST"),vm::setLeadStage)
+   ChoiceRow("Source",state.leadFilters.source,listOf("ALL","MANUAL","CUSTOMER_VISIT","REFERRAL","PHONE","EMAIL","WEBSITE","OTHER"),vm::setLeadSource)
+   ChoiceRow("Follow-up",state.leadFilters.followUp,listOf("ALL","OVERDUE","TODAY","UPCOMING","NONE"),vm::setLeadFollowUp)
+  }
   if(state.type.contains("check-ins"))CycleFilter("Customer",state.customerId,customers,vm::setCustomer)
   if(state.type.contains("check-ins")){
    ChoiceRow("Status",state.status,listOf("ALL","ACTIVE","COMPLETED"),vm::setStatus)

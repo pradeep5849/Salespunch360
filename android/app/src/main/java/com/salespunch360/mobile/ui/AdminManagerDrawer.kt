@@ -49,7 +49,7 @@ fun AdminManagerAuthenticatedApp(
  data:Bootstrap,
  message:String?,
  dismiss:()->Unit,
- attendance:(Boolean,LocationPayload,()->Unit)->Unit,
+ attendance:(Boolean,LocationPayload?,String?,()->Unit)->Unit,
  logout:()->Unit,
  switchToAccount:(()->Unit)?=null
 ){
@@ -167,7 +167,7 @@ fun AdminManagerAuthenticatedApp(
      route=="Settings"->SettingsScreen()
      route=="Reports"->ReportsScreen(showMenu=true,role=role)
      route.startsWith("Report:")->ReportsScreen(initialType=route.substringAfter(':'),showMenu=false,role=role)
-     route=="Company Details"->RoleCompanyDetails(data)
+     route=="Company Details"->ReadOnlyCompanyDetailsScreen()
      route=="Change Password"->ChangePasswordScreen()
      else->AdminOverviewScreen(data,role,openCheckIns=if(fieldManager){{navigate("Check-ins")}}else null){navigate("Report:check-ins")}
     }
@@ -196,16 +196,6 @@ private fun RoleVisitDetails(task:FollowUpTask,back:()->Unit){
    task.checkedInAt?.let{Text("Check-in: $it")}
    task.checkedOutAt?.let{Text("Checkout: $it")}
    StatusChip(if(task.checkedOutAt==null)"Checkout pending" else "Checkout completed")
-  }
- }
-}
-
-@Composable
-private fun RoleCompanyDetails(data:Bootstrap){
- Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  Text("Company Details",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-  ContentCard(data.company.name,data.company.address?:"Company address is not available."){
-   CompanyIdentity(data.company.name,data.company.address,data.company.logoUrl)
   }
  }
 }

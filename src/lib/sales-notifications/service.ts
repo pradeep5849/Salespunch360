@@ -1,3 +1,4 @@
+import {pageWindow,pageResult} from "@/lib/pagination";
 import type {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requireSalesWorkspace,requireSalesWorkspaceForMutation} from "@/lib/auth/authorization";
@@ -20,12 +21,13 @@ export async function notifySalesAdmins(tx:NotificationTx,input:Omit<SalesNotifi
  return Promise.all(recipients.map(({id})=>createSalesNotification(tx,{...input,recipientUserId:id})));
 }
 
-export async function listSalesNotificationsForActor(actor:{id:string;companyId:string},take=50){
+export async function listSalesNotificationsForActor(actor:{id:string;companyId:string},take=50,page:unknown=1){
+ const window=pageWindow({page,pageSize:Math.min(Math.max(take,1),100)});
  const where={companyId:actor.companyId,recipientUserId:actor.id};
- const [items,unreadCount]=await Promise.all([db.salesNotification.findMany({where,orderBy:[{createdAt:"desc"},{id:"desc"}],take:Math.min(Math.max(take,1),100)}),db.salesNotification.count({where:{...where,readAt:null}})]);
- return{items,unreadCount};
+ const [items,unreadCount]=await Promise.all([db.salesNotification.findMany({where,orderBy:[{createdAt:"desc"},{id:"desc"}],take:window.take,skip:window.skip}),db.salesNotification.count({where:{...where,readAt:null}})]);
+ return{...pageResult(items,{page:window.page,pageSize:window.pageSize}),unreadCount};
 }
-export async function listSalesNotifications(){const actor=await requireSalesWorkspace();return listSalesNotificationsForActor(actor);}
+export async function listSalesNotifications(page:unknown=1){const actor=await requireSalesWorkspace();return listSalesNotificationsForActor(actor,50,page);}
 export async function markSalesNotificationRead(id:string){const actor=await requireSalesWorkspaceForMutation();return db.salesNotification.updateMany({where:{id,companyId:actor.companyId,recipientUserId:actor.id,readAt:null},data:{readAt:new Date()}});}
 export async function markAllSalesNotificationsRead(){const actor=await requireSalesWorkspaceForMutation();return db.salesNotification.updateMany({where:{companyId:actor.companyId,recipientUserId:actor.id,readAt:null},data:{readAt:new Date()}});}
 
@@ -35,11 +37,11 @@ export async function generateFollowUpReminders(now=new Date()){
  const soonEnd=new Date(today.getTime()+(FOLLOW_UP_DUE_SOON_DAYS+1)*86_400_000);
  let cursor:string|undefined;let processed=0,created=0;
  for(;;){
- const tasks=await db.followUpTask.findMany({where:{status:"PENDING",dueDate:{lt:soonEnd}},select:{id:true,companyId:true,assignedUserId:true,dueDate:true,lead:{select:{id:true,title:true}},assignedUser:{select:{designation:true,salesRole:true,managerId:true}}},orderBy:{id:"asc"},take:200,...(cursor?{cursor:{id:cursor},skip:1}:{})});
+ const tasks=await db.followUpTask.findMany({where:{status:"PENDING",dueDate:{lt:soonEnd}},select:{id:true,companyId:true,assignedUserId:true,dueDate:true,callbackAt:true,lead:{select:{id:true,title:true}},assignedUser:{select:{designation:true,salesRole:true,managerId:true}}},orderBy:{id:"asc"},take:200,...(cursor?{cursor:{id:cursor},skip:1}:{})});
  if(!tasks.length)break;
  processed+=tasks.length;
  for(const task of tasks){
-  const overdue=task.dueDate<today,eventType=overdue?"FOLLOW_UP_OVERDUE":"FOLLOW_UP_DUE_SOON",dateKey=indiaDateText(task.dueDate);
+  const overdue=task.callbackAt?task.callbackAt<now:task.dueDate<today,eventType=overdue?"FOLLOW_UP_OVERDUE":"FOLLOW_UP_DUE_SOON",dateKey=indiaDateText(task.dueDate);
   const recipients=new Set<string>([task.assignedUserId]);
   const admins=overdue?await db.user.findMany({where:{companyId:task.companyId,isActive:true,salesAccessActive:true,salesRole:{in:["PRIMARY_ADMIN","ADMIN"]}},select:{id:true}}):[];
   admins.forEach(x=>recipients.add(x.id));

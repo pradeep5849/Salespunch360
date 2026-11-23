@@ -1,0 +1,16 @@
+# GPS, reports, targets and operations continuation
+
+Ten additional retained findings in the continuing draft PR212. No live GPS, attendance, tasks, targets or company settings changed.
+
+- A158-F01: GPS timeline asserts an end only when attendance has a confirmed end in the selected India day. Otherwise it says Last GPS Recorded and explicitly disclaims a tracking-stop assertion. Confirmed end time uses attendance, with coordinates identified as the last recorded point.
+- A158-F02: shared map segments use the same cleaned travel route as measured distance, splitting long recording gaps and attendance sessions. Poor accuracy/jitter/implausible movement is excluded from the drawn measured route. Raw history is retained, and raw recording timeline context is distinguished from measured points. Web explanatory labels updated; native consumes shared segments.
+- A158-F03: last spotted uses maximum stored capturedAt independently of sequence order or whether quality filtering leaves map points.
+- A159-F01: lead overdue summary and overdue filter use the same India business-day start; today's date-only follow-up is not overdue. Terminal leads stay excluded. Currency aggregation and native lead-filter parity remain open.
+- A153-F02: any open attendance session keeps the day End Time at Now, even if a later-started session ended. Fully closed days use maximum confirmed end. Pagination/complete-day aggregate finding remains open.
+- A161-F01: Target Analysis labels now say Leads Created on web/native; stored metric/legacy API keys and calculations unchanged.
+- A163-F01: monthly target counts reject negative, fractional, nonfinite and unsafe integer input rather than silently clamp/truncate. Blank web inputs reject too. Expected-version concurrent-edit protection remains open.
+- A164-F01: assigned date-only Call tasks carry their existing followUpTaskId distinction into web/native callback buckets. They become overdue after their India due day; explicit timestamp callbacks retain precise-time overdue behavior. Queue paging and lifecycle findings remain open.
+- A162-F01: operational settings return explicit failure/success state through the shared SaveFeedbackForm, with pending protection and reset prevention for drafts. Authorized service failures cannot report success. Geofence/travel forms retain their existing behavior.
+- A160-F01 PARTIAL: existing web header/dashboard report menus now include Leads and Advanced Check-in reports. The earlier final-UI contract requires Reports entry to retain its Check-in redirect, so no new report catalog is introduced. Destination guards retained; no permission expansion or native navigation redesign. Broader entry behavior remains open under the existing UI constraint.
+
+Focused checks: 63 passed across route quality/timeline, day-state, India-day summary, target validation/authorization and settings feedback; another 4 monthly-input service checks passed. Earlier GPS/travel/report run passed 51 (overlapping). Full TypeScript/lint and batched full-suite result recorded in progress.md. Tests use synthetic data/mocked persistence; no actual device/maps/GPS transmission/notification or cross-branch production exercise. Final-head CI and browser/device acceptance remain separate.

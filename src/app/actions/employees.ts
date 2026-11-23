@@ -12,12 +12,13 @@ import {
 } from "@/lib/employees/validation";
 import {updateEmployeeTravelSettings} from "@/lib/travel/service";
 
-export type EmployeeActionState = { error?: string; success?: string; fieldErrors?: Record<string, string[]> };
+export type EmployeeActionState = { error?: string; success?: string; fieldErrors?: Record<string, string[]>; warning?:string;createdEmployeeId?:string };
 
 const safeError = { error: "Unable to complete that employee operation. Check the details and try again." };
 
 export async function manageEmployee(_: EmployeeActionState, formData: FormData): Promise<EmployeeActionState> {
   const operation = formData.get("operation");
+  let travelWarningEmployeeId:string|undefined;
   try {
     if (operation === "create-manager" || operation === "create-sales") {
       const input = {
@@ -42,7 +43,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
         const employee=await createSalesEmployee(parsed.data);
         if(formData.get("configureTravel")==="yes"){
           const mode=formData.get("travelApprovalMode")==="AUTO"?"AUTO":"MANUAL";
-          await updateEmployeeTravelSettings(employee.id,formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null,mode);
+          try{await updateEmployeeTravelSettings(employee.id,formData.get("travelAllowanceEnabled")==="on",formData.get("travelRatePerKm")?String(formData.get("travelRatePerKm")):null,mode);}catch{travelWarningEmployeeId=employee.id;}
         }
       }
     } else if (operation === "edit") {
@@ -82,6 +83,7 @@ export async function manageEmployee(_: EmployeeActionState, formData: FormData)
   }
   revalidatePath("/workspace/employees");
   revalidatePath("/workspace/reports/expenses");
+  if(travelWarningEmployeeId)return{success:"Sales employee created successfully.",warning:"Travel settings were not saved. Open this employee’s details to review and save them. Do not create the employee again.",createdEmployeeId:travelWarningEmployeeId};
   if(formData.get("returnTo")==="/workspace/employees")redirect("/workspace/employees");
   if(operation==="create-manager")return{success:"Manager created successfully."};
   if(operation==="create-sales")return{success:"Sales employee created successfully."};

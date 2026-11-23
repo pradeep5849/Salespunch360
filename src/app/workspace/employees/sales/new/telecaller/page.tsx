@@ -3,12 +3,13 @@ import { createTelecallerEmployeeAction } from "@/app/actions/telecaller-team";
 import { getProductUserManagementContext } from "@/lib/users/product-user-management";
 import { getTelecallerBillingOverviewForCompany } from "@/lib/billing/telecaller";
 
-const errorText=(code?:string)=>({
+const errors:Record<string,string>={
   TELECALLER_SUBSCRIPTION_REQUIRED:"Purchase and activate a Telecaller subscription before adding a Telecaller.",
   TELECALLER_SEAT_LIMIT:"All paid Telecaller seats are already in use.",
   EMAIL_IN_USE:"That email address is already in use.",
   SALES_NOT_ENTITLED:"Telecalling requires the Sales or Plus workspace.",
-}[code??""]??(code?"Could not add the Telecaller. Check the details and try again.":null));
+};
+const errorText=(code?:string)=>code?(Object.hasOwn(errors,code)?errors[code]:"Could not add the Telecaller. Check the details and try again."):null;
 
 export default async function AddTelecallerPage({searchParams}:{searchParams:Promise<{error?:string}>}){
   const ctx=await getProductUserManagementContext();

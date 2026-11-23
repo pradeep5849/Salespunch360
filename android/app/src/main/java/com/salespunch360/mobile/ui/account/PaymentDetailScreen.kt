@@ -19,7 +19,7 @@ import kotlinx.serialization.json.*
   if(data==null&&error==null)LinearProgressIndicator(Modifier.fillMaxWidth())
   data?.let{root->val entry=root["entry"]!!.jsonObject
    Text(if(entry.str("type").startsWith("CUSTOMER"))"Payment-In"else"Payment-Out",style=MaterialTheme.typography.headlineSmall)
-   Text(entry.str("documentNumber"));Text(entry.str("partyName"));Text("${accountDate(entry.str("issueDate"))} · ${entry.str("status")}");Text("Branch: ${root.str("branch")}")
+   Text(entry.str("documentNumber"));Text(entry.str("partyName"));Text("${accountDate(entry.str("issueDate"))} · ${entry.str("status")}");com.salespunch360.mobile.ui.BranchOnly{Text("Branch: ${root.str("branch")}")}
    Text("Amount: ${accountMoney(entry.str("grandTotal"))}");Text("Unused: ${accountMoney(entry.str("balanceDue"))}");Text("Discount: ${accountMoney(root.str("discountAmount"))}");Text("Method: ${root.str("paymentMode")}")
    root.str("reference").takeIf{it.isNotBlank()}?.let{Text("Reference: $it")};root.str("notes").takeIf{it.isNotBlank()}?.let{Text(it)}
    root.str("billingName").takeIf{it.isNotBlank()&&it!="null"}?.let{Text("Billing name: $it")}

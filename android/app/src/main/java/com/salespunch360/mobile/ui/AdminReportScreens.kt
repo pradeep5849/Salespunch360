@@ -81,14 +81,14 @@ fun AdminCheckInReportScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()->
   }
   item{ReportExportControls(state,vm)}
   if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
-  state.message?.let{item{ContentCard("Report unavailable",it)}}
+  state.message?.let{item{ContentCard("Report message",it)}}
   if(!state.loading&&state.message==null&&rows.isEmpty())item{ContentCard("No check-ins","No check-ins match the selected employee and date range.")}
   items(rows,key={it.jsonObject.adminText("id")?:it.toString()}){item->
    val row=item.jsonObject
    val id=row.adminText("id")
    val leadId=row.adminText("leadId")
    val employee=row.adminObjText("user","name")?:"Employee"
-   val customer=row.adminObjText("customer","name")?:row.adminText("contactName")?:"Customer"
+   val customer=row.adminText("contactName")?:row.adminObjText("customer","name")?:"Customer"
    val address=row.adminText("checkInAddress")?:adminCoords(row,"checkInLatitude","checkInLongitude")?:"Address unavailable"
    Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,SalesLine)){
     Column{
@@ -110,6 +110,8 @@ fun AdminCheckInReportScreen(state:ReportsState,vm:ReportsViewModel,onBack:(()->
       row.adminText("checkedInAt")?.let{Text(adminReportDateTime(it),style=MaterialTheme.typography.bodySmall,fontWeight=FontWeight.SemiBold,color=SalesBlue)}
       Text(address,style=MaterialTheme.typography.bodySmall,color=SalesMuted)
       listOfNotNull(row.adminText("checkoutSentiment"),row.adminText("checkoutRemarks"),row.adminText("visitNotes")).takeIf{it.isNotEmpty()}?.let{Text(it.joinToString(" · "),style=MaterialTheme.typography.bodySmall,color=SalesMuted)}
+      ReportVisitContactAndDetails(row)
+      DeleteOwnVisitControl(row,state.deletingVisit,{id,revision->vm.deleteOwnVisit(id,revision)})
       if(leadId!=null)TextButton({linkedLeadsVm.open(leadId)},contentPadding=PaddingValues(0.dp)){Text("Open Lead Details")}
      }
     }
@@ -166,7 +168,7 @@ fun AdminAttendanceReportScreen(state:ReportsState,vm:ReportsViewModel,onBack:((
   }
   item{ReportExportControls(state,vm)}
   if(state.loading)item{LinearProgressIndicator(Modifier.fillMaxWidth())}
-  state.message?.let{item{ContentCard("Report unavailable",it)}}
+  state.message?.let{item{ContentCard("Report message",it)}}
   if(!state.loading&&state.message==null&&state.employeeId==null)item{ContentCard("Select employee","Choose an employee above, select the date range, then tap View Report.")}
   if(!state.loading&&state.message==null&&state.employeeId!=null){
    item{Text(selectedName?:"Employee",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold,color=SalesInk)}

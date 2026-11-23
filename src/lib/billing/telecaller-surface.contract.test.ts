@@ -29,7 +29,7 @@ describe("Unified Sales-team subscription surface", () => {
     expect(renewalPage).toContain("telecallerUsage");
     expect(calculator).toContain("Add Telecaller Seats");
     expect(calculator).toContain('name="telecallerSeats"');
-    expect(telecallerPage).toContain('redirect("/workspace/billing#sales-add-team")');
+    expect(telecallerPage).toContain('redirect("/workspace/billing/add-sales-team")');
   });
 
   it("keeps the locked Telecaller rates while co-term billing uses the Sales expiry", () => {

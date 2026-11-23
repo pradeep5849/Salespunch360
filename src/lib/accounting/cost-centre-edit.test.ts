@@ -1,0 +1,11 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({find:vi.fn(),update:vi.fn(),audit:vi.fn(),transaction:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:m.transaction}}));
+import {updateCostCentreForActor} from './service';
+const actor={id:'owner',companyId:'company',accountRole:'ACCOUNT_ADMIN'} as Parameters<typeof updateCostCentreForActor>[0];
+const input={id:'11111111-1111-4111-8111-111111111111',code:'CC',name:'Cost centre',description:'Updated',updatedAt:'2026-11-22T01:00:00Z'};
+beforeEach(()=>{vi.clearAllMocks();m.find.mockResolvedValue({code:'OLD',name:'Old',description:null});m.update.mockResolvedValue({count:1});m.transaction.mockImplementation((work:(tx:unknown)=>unknown)=>work({costCentre:{findFirst:m.find,updateMany:m.update},accountingAuditEvent:{create:m.audit}}))});
+it('scopes correction and stale guard while retaining the existing cost-centre id',async()=>{await updateCostCentreForActor(actor,input);expect(m.update).toHaveBeenCalledWith(expect.objectContaining({where:{id:input.id,companyId:'company',updatedAt:new Date(input.updatedAt)}}));expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({entityId:input.id,eventType:'SETTINGS_CHANGED'})}))});
+it('rejects stale changes before recording an audit success',async()=>{m.update.mockResolvedValue({count:0});await expect(updateCostCentreForActor(actor,input)).rejects.toThrow('STALE');expect(m.audit).not.toHaveBeenCalled()});
+it('rejects unavailable or cross-company ids',async()=>{m.find.mockResolvedValue(null);await expect(updateCostCentreForActor(actor,input)).rejects.toThrow('NOT_FOUND');expect(m.update).not.toHaveBeenCalled()});
+it('rejects non-admin correction before starting a transaction',async()=>{await expect(updateCostCentreForActor({...actor,accountRole:'ACCOUNTANT'},input)).rejects.toThrow('NOT_AUTHORIZED');expect(m.transaction).not.toHaveBeenCalled()});

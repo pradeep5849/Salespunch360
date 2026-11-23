@@ -184,7 +184,7 @@ export function ExpenseEditor({
     required = false,
     empty = "Select",
   ) => (
-    <label>
+    <label data-branch-ui={name==="branchId"?true:undefined}>
       {label}
       <select
         aria-label={label}

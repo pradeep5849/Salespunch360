@@ -1,0 +1,10 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({count:vi.fn(),find:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{geofenceEvent:{count:m.count,findMany:m.find}}}));
+vi.mock('./scope',()=>({resolveEmployeeScope:async()=>['employee'],reportEmployeeOptions:async()=>[]}));
+vi.mock('@/lib/branches/operational-scope',()=>({operationalBranchContext:async()=>({branchId:'branch'})}));
+import {geofenceReport} from './geofence';
+const actor={name:'Fixture employee',id:'employee',companyId:'company',salesRole:'SALES' as const};
+beforeEach(()=>{vi.clearAllMocks();m.count.mockResolvedValue(0);m.find.mockResolvedValue([])});
+it('intersects summary dimensions with every selected filter rather than replacing them',async()=>{await geofenceReport({start:'2026-11-01',end:'2026-11-22',action:'ATTENDANCE_START',type:'OUTSIDE_RADIUS',q:'A&B'},actor);const base=m.count.mock.calls[0][0].where;expect(base).toMatchObject({companyId:'company',branchId:'branch',action:'ATTENDANCE_START',type:'OUTSIDE_RADIUS',customer:{name:{contains:'A&B',mode:'insensitive'}}});expect(m.count.mock.calls.slice(1).map(([input])=>input.where)).toEqual([{AND:[base,{type:'OUTSIDE_RADIUS'}]},{AND:[base,{type:'INSUFFICIENT_ACCURACY'}]},{AND:[base,{action:'ATTENDANCE_START'}]},{AND:[base,{action:'CUSTOMER_CHECK_IN'}]}])});
+it('accepts native breach-type alias without confusing the report route',async()=>{await geofenceReport({start:'2026-11-01',end:'2026-11-22',geofenceType:'INSUFFICIENT_ACCURACY'},actor);expect(m.find.mock.calls[0][0].where.type).toBe('INSUFFICIENT_ACCURACY')});

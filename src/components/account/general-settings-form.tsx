@@ -1,6 +1,7 @@
 "use client";
 import {AccountText,useAccountLabel} from "./display-preferences";
 import Link from "next/link";
+import {useBranchPresentation} from "@/components/workspace/branch-presentation";
 import {useEffect,useRef,useState} from "react";
 import {updateGeneralSettingsAction} from "@/app/actions/account-settings";
 import {SaveFeedbackForm,SaveSubmitButton,SavePendingFields} from "./save-feedback";
@@ -34,6 +35,7 @@ type BrowserNavigation = {
  removeEventListener(type:"navigate", listener:(event:Event & {destination:{url:string}})=>void):void;
 };
 export function GeneralSettingsForm({values}:{values:Values}){
+ const branchPresentation=useBranchPresentation();
  const translate=useAccountLabel();
  const[warning,setWarning]=useState(values.warnUnsavedChanges);
  const[assetsEnabled,setAssetsEnabled]=useState(values.fixedAssetsEnabled);
@@ -67,7 +69,7 @@ export function GeneralSettingsForm({values}:{values:Values}){
   <h2><AccountText>SECURITY</AccountText></h2>
   {row(<span><AccountText>Passcode / Fingerprint</AccountText> <InfoButton topic="security" onOpen={setInfo}/></span>,<small><AccountText>Not available on Web</AccountText></small>)}
   <h2><AccountText>BUSINESS &amp; DATA</AccountText></h2>
-  <Link className="general-settings-row navigates" href="/workspace/account/settings/multi-branch"><span><AccountText>Multi-Branch Settings</AccountText> <InfoButton topic="branches" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
+  {(branchPresentation.enabled||branchPresentation.canAdd)&&<Link className="general-settings-row navigates" href={branchPresentation.enabled?"/workspace/account/settings/multi-branch":"/workspace/branches"}><span><AccountText>{branchPresentation.enabled?"Multi-Branch Settings":"Add Branch"}</AccountText>{branchPresentation.enabled&&<> <InfoButton topic="branches" onOpen={setInfo}/></>}</span><b aria-hidden>›</b></Link>}
   <Link className="general-settings-row navigates" href="/workspace/account/inventory/warehouses"><span><AccountText>Godown / Warehouse &amp; Stock Transfer</AccountText> <InfoButton topic="warehouse" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
   <Link className="general-settings-row navigates" href="/workspace/account/settings/backup"><span><AccountText>Backup Settings</AccountText> <InfoButton topic="backup" onOpen={setInfo}/></span><b aria-hidden>›</b></Link>
   <h2><AccountText>MORE TRANSACTIONS</AccountText></h2>

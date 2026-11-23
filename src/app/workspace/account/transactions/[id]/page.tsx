@@ -1,3 +1,4 @@
+import {BranchOnly} from "@/components/workspace/branch-presentation";
 import {OrderProgress} from "@/components/account/order-progress";
 import {Money,AccountTimestamp} from "@/components/account/account-ui";
 import {AccountDate} from "@/components/account/display-preferences";
@@ -37,7 +38,7 @@ export default async function Page({
         {x.type} {x.documentNumber}
       </h1>
       <p>
-        {x.partyName} · {x.branch.name} · {x.status}
+        {x.partyName}<BranchOnly> · {x.branch.name}</BranchOnly> · {x.status}
       </p>
       <p>
         Issue {<AccountDate value={x.issueDate.toISOString()}/>}{" "}

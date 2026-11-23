@@ -84,6 +84,13 @@ fun TelecallingScreen(vm: TelecallingViewModel = viewModel()) {
             HorizontalDivider(Modifier.padding(top=8.dp,bottom=8.dp),color=SalesLine)
             state.message?.let { MessageBanner(it, vm::clearMessage) }
         }
+        item(key="callback-pages") {
+            Text("Scheduled calls · Page ${state.callbackPage}. Counts are for this page.",color=SalesMuted)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedButton({vm.changeCallbackPage(state.callbackPage-1)},enabled=state.callbackPage>1&&!state.loading&&!state.busy){Text("Previous")}
+                OutlinedButton({vm.changeCallbackPage(state.callbackPage+1)},enabled=state.callbackHasMore&&!state.loading&&!state.busy){Text("Next")}
+            }
+        }
         groups.forEach{(title,callbacks)->
             item(key="heading-$title"){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold);Text(callbacks.size.toString(),color=SalesMuted)}}
             if(callbacks.isEmpty())item(key="empty-$title"){ContentCard(title,"No calls.")}
@@ -141,7 +148,7 @@ internal fun CallResultDialog(leadTitle:String,busy:Boolean,dismiss:()->Unit,dia
 
 private fun dialDurationSeconds(start:String?,end:String?):Int?{if(start.isNullOrBlank()||end.isNullOrBlank())return null;return runCatching{((Duration.between(Instant.parse(start),Instant.parse(end)).seconds).coerceIn(0,86400)).toInt()}.getOrNull()}
 private fun formatDialDuration(seconds:Int):String{val minutes=seconds/60;val remainder=seconds%60;return if(minutes>0)"${minutes}m ${remainder}s" else "${remainder}s"}
-private fun callbackBucket(item:CallbackQueueItem):String{val zone=ZoneId.of("Asia/Kolkata");val now=ZonedDateTime.now(zone);val due=parseCallTime(item.nextCallbackAt)?.withZoneSameInstant(zone)?:return "Upcoming";return when{due.isBefore(now)->"Overdue";due.toLocalDate()==now.toLocalDate()->"Today";else->"Upcoming"}}
+private fun callbackBucket(item:CallbackQueueItem):String{val zone=ZoneId.of("Asia/Kolkata");val now=ZonedDateTime.now(zone);val due=parseCallTime(item.nextCallbackAt)?.withZoneSameInstant(zone)?:return "Upcoming";return when{(if(item.followUpTaskId!=null&&item.callbackCallId==null)due.toLocalDate().isBefore(now.toLocalDate()) else due.isBefore(now))->"Overdue";due.toLocalDate()==now.toLocalDate()->"Today";else->"Upcoming"}}
 private fun parseCallTime(value:String?):ZonedDateTime?{if(value.isNullOrBlank())return null;return runCatching{Instant.parse(value).atZone(ZoneId.of("UTC"))}.recoverCatching{OffsetDateTime.parse(value).toZonedDateTime()}.getOrNull()}
 private fun parseCallbackIso(value:String):String?=runCatching{LocalDateTime.parse(value.trim(),DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")).atZone(ZoneId.of("Asia/Kolkata")).toInstant().toString()}.getOrNull()
 private fun friendlyCallTime(value:String?):String{if(value.isNullOrBlank())return "—";return runCatching{Instant.parse(value).atZone(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))}.recoverCatching{OffsetDateTime.parse(value).atZoneSameInstant(ZoneId.of("Asia/Kolkata")).format(DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))}.getOrDefault(value)}

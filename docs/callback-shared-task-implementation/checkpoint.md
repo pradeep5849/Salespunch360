@@ -1,0 +1,11 @@
+# Callback lifecycle
+
+A149-F01: web/native Call recording now creates a shared Call follow-up task in the same transaction as its callback history record. The original timestamp and source Call ID are retained separately from the task's India business date. Lead locking serializes outcomes; a new outcome completes only the same caller's pending source callbacks. Explicit assigned Call completion keeps the existing assignee-only guard. Cancellation and completion remain in shared task history and cannot reappear through the raw-history queue.
+
+Migration 169 converts only unsuperseded historical callbacks, retains the original callback owner and exact deadline, and updates the lead's date cache. Already converted source IDs are excluded. Raw Call history is retained. The nullable source ID is a retained history identifier, not a new foreign key that would prevent company snapshot restoration when legacy call-history tables are not in that archive.
+
+Web/native paged and compatible queues merge linked tasks once. Ordinary date-only Call tasks retain day-based buckets; timestamp callbacks become overdue after their exact deadline. Shared reminders notify the assignee before due and escalate only overdue tasks to Admins/Manager. Existing task completion/cancellation and notification routing are retained. No additional pre-due Admin notifications were added. Native date/time presentation and source decoding are updated without redesigning the screen.
+
+Validation: 58 focused checks passed (gated SQL cases excluded in that run). A fresh isolated database applied all 169 migrations, then 31 real SQL cases passed across callback lifecycle and creation/paging regressions, including the 602-row mixed callback paging fixture. Thirteen SQL callback cases cover atomic task creation, replacement, assignee isolation, cancellation/completion, rollback, timestamp/date-only buckets, and replay-safe historical backfill across India midnight. Latest focused combination: 28 passed including those 13 SQL cases. TypeScript, targeted ESLint and whitespace checks passed. One native source/deadline DTO case added; Android build/JVM/lint acceptance awaits CI. No production data or real Calls changed.
+
+No full regression run for this slice; this is implementation slice 2 since the last full run, following the agreed approximately ten-slice cadence.

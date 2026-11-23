@@ -1,0 +1,5 @@
+# Pending payment, legacy navigation and password slices
+
+21 November 2026, same PR212. Expired pending orders derive EXPIRED display state without changing the database and no longer invite WhatsApp payment. Pending confirmation/support message includes recorded Telecaller target; absent legacy target is explicitly not recorded. Display preserves paise. Legacy Telecaller billing route now targets authorized Add Sales Team page rather than removed hub anchor. Twelve focused pending/legacy/manual-flow checks passed.
+
+Web password change adds authenticated-account and request fingerprint throttles before hash reads/verification (10 attempts per 15 minutes). Trusted-origin and requireUser run outside the recoverable-save catch, retaining authentication redirect semantics. Stale expected-hash replacements and failed hash/database saves return sanitized recovery without success. Existing replacement/session revocation transaction unchanged. Nine focused action/throttle checks passed. No real password/session/payment changes executed. Native password parity and full UI/device acceptance remain separate limits.

@@ -55,7 +55,7 @@ export function ManagerCreateForm({ branches }: { branches: Branch[] }) {
         <input name="dateOfJoining" type="date" />
         {fieldError("dateOfJoining") ? <span className="form-error">{fieldError("dateOfJoining")}</span> : null}
       </label>
-      <label>
+      <label data-branch-ui>
         Branch scope
         <select name="branchAccessScope" defaultValue="ALL_BRANCHES">
           <option value="ALL_BRANCHES">All Branches</option>
@@ -66,11 +66,11 @@ export function ManagerCreateForm({ branches }: { branches: Branch[] }) {
       <fieldset>
         <legend>Selected Branches</legend>
         {branches.length ? branches.map((branch) => (
-          <label key={branch.id}>
+          <label key={branch.id} data-branch-ui>
             <input type="checkbox" name="branchIds" value={branch.id} />
             {branch.name} ({branch.code})
           </label>
-        )) : <p className="muted">No branches configured.</p>}
+        )) : <p className="muted" data-branch-ui>No branches configured.</p>}
         {fieldError("branchIds") ? <span className="form-error">{fieldError("branchIds")}</span> : null}
       </fieldset>
       <label>

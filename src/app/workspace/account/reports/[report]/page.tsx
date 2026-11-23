@@ -205,7 +205,7 @@ function Select({
   }>;
 }) {
   return (
-    <label>
+    <label data-branch-ui={name==="branchId"?true:undefined}>
       {label}
       <select name={name} aria-label={label} defaultValue={value ?? ""}>
         <option value="">All / select</option>

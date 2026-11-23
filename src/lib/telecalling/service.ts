@@ -1,3 +1,5 @@
+import {lockCallbackLead,reconcileCallbackTasksInTx} from "@/lib/telecalling/callback-task";
+import {completeAssignedTelecallerCallInTx,listAssignedTelecallerCallsForActor} from "@/lib/follow-up-tasks/telecaller-assignment";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -15,7 +17,7 @@ export type LeadCallHistoryItem={
 export type TelecallingQueueLead={
  id:string; title:string; contactName:string|null; phone:string|null; stage:string; assignedUserId:string; ownerName:string; calls:number;
 };
-export type CallbackQueueItem=LeadCallHistoryItem&{leadTitle:string;phone:string|null;ownerName:string};
+export type CallbackQueueItem=LeadCallHistoryItem&{leadTitle:string;phone:string|null;ownerName:string;followUpTaskId?:string;callbackCallId?:string|null};
 export type SalesActionItem={
  id:string;leadId:string;leadTitle:string;phone:string|null;leadCallId:string;assignedUserId:string;ownerName:string;createdByUserId:string;callerName:string;
  trigger:"INTERESTED"|"WANTS_VISIT"|"WANTS_QUOTATION";status:"PENDING"|"ACKNOWLEDGED"|"ACTION_TAKEN";notes:string|null;calledAt:Date;createdAt:Date;
@@ -56,9 +58,10 @@ function assertResult(value:string):TelecallingResult{
 
 export function splitCallbackQueue(callbacks:CallbackQueueItem[],now=new Date()){
  const todayKey=indiaDayKey(now),nowMs=now.getTime();
- const overdue=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()<nowMs);
- const today=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&indiaDayKey(x.nextCallbackAt)===todayKey);
- const upcoming=callbacks.filter(x=>x.nextCallbackAt&&x.nextCallbackAt.getTime()>=nowMs&&indiaDayKey(x.nextCallbackAt)!==todayKey);
+ const isOverdue=(x:CallbackQueueItem)=>Boolean(x.nextCallbackAt&&(x.followUpTaskId&&!x.callbackCallId?indiaDayKey(x.nextCallbackAt)<todayKey:x.nextCallbackAt.getTime()<nowMs));
+ const overdue=callbacks.filter(isOverdue);
+ const today=callbacks.filter(x=>x.nextCallbackAt&&!isOverdue(x)&&indiaDayKey(x.nextCallbackAt)===todayKey);
+ const upcoming=callbacks.filter(x=>x.nextCallbackAt&&!isOverdue(x)&&indiaDayKey(x.nextCallbackAt)!==todayKey);
  return [["Overdue",overdue],["Today",today],["Upcoming",upcoming]] as const;
 }
 
@@ -91,17 +94,21 @@ export async function getLeadCallHistory(leadId:string):Promise<LeadCallHistoryI
   WHERE c."companyId"=${actor.companyId}::uuid AND c."leadId"=${leadId}::uuid ORDER BY c."calledAt" DESC LIMIT 100`);
 }
 
-export async function recordLeadCall(input:{leadId:string;result:string;notes?:string|null;nextCallbackAt?:Date|null;dialStartedAt?:unknown;dialEndedAt?:unknown;timingSource?:unknown}){
+export async function recordLeadCall(input:{followUpTaskId?:string;leadId:string;result:string;notes?:string|null;nextCallbackAt?:Date|null;dialStartedAt?:unknown;dialEndedAt?:unknown;timingSource?:unknown}){
  const {actor,lead}=await requireLeadAccess(input.leadId,true);
  const result=assertResult(input.result);
  const notes=input.notes?.trim()?.slice(0,2000)||null;
  const nextCallbackAt=result==="CALL_BACK"?input.nextCallbackAt??null:null;
  if(result==="CALL_BACK"&&!nextCallbackAt)throw new Error("CALLBACK_DATE_REQUIRED");
+ if(nextCallbackAt&&Number.isNaN(nextCallbackAt.getTime()))throw new Error("INVALID_DATE");
  if(nextCallbackAt&&nextCallbackAt.getTime()<=Date.now())throw new Error("CALLBACK_DATE_MUST_BE_FUTURE");
  const timing=normalizeDialTiming(input);
  const id=randomUUID();
  await db.$transaction(async tx=>{
+  await lockCallbackLead(tx,actor.companyId!,lead.id);
+  if(input.followUpTaskId)await completeAssignedTelecallerCallInTx(tx,{...actor,companyId:lead.companyId},input.followUpTaskId,lead.id);
   await tx.$executeRaw(Prisma.sql`INSERT INTO "lead_calls" (id,"companyId","leadId","callerUserId",result,notes,"calledAt","nextCallbackAt","callbackAssigneeUserId","dialStartedAt","dialEndedAt","dialDurationSeconds","timingSource","createdAt","updatedAt") VALUES (${id}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${actor.id}::uuid,${result},${notes},NOW(),${nextCallbackAt},${nextCallbackAt?actor.id:null}::uuid,${timing.dialStartedAt},${timing.dialEndedAt},${timing.dialDurationSeconds},${timing.timingSource},NOW(),NOW())`);
+  await reconcileCallbackTasksInTx(tx,{companyId:actor.companyId!,leadId:lead.id,callerId:actor.id,callId:id,nextCallbackAt,notes});
   if(SALES_HANDOFF_RESULTS.has(result)&&lead.assignedUserId!==actor.id){
    const actionId=randomUUID();
    await tx.$executeRaw(Prisma.sql`INSERT INTO "lead_sales_actions" (id,"companyId","leadId","leadCallId","assignedUserId","createdByUserId",trigger,status,"createdAt","updatedAt") VALUES (${actionId}::uuid,${actor.companyId}::uuid,${lead.id}::uuid,${id}::uuid,${lead.assignedUserId}::uuid,${actor.id}::uuid,${result},'PENDING',NOW(),NOW())`);
@@ -122,9 +129,11 @@ export async function listCallbackQueue():Promise<CallbackQueueItem[]>{
  WHERE c."companyId"=${actor.companyId}::uuid AND c.result='CALL_BACK' AND c."nextCallbackAt" IS NOT NULL
  ${ownOnly?Prisma.sql`AND c."callbackAssigneeUserId"=${actor.id}::uuid`:Prisma.empty}
  ${manager?Prisma.sql`AND (l."assignedUserId"=${actor.id}::uuid OR owner."managerId"=${actor.id}::uuid)`:Prisma.empty}
+ AND NOT EXISTS (SELECT 1 FROM "follow_up_tasks" linked WHERE linked."callbackCallId"=c.id)
  AND NOT EXISTS (SELECT 1 FROM "lead_calls" n WHERE n."companyId"=c."companyId" AND n."leadId"=c."leadId" AND n."callerUserId"=c."callbackAssigneeUserId" AND n."calledAt">c."calledAt")
  ORDER BY c."nextCallbackAt" ASC LIMIT 500`);
- return rows;
+ const assigned=await listAssignedTelecallerCallsForActor({...actor,companyId:actor.companyId!,salesRole:actor.salesRole!});
+ return [...rows,...assigned].sort((a,b)=>new Date(a.nextCallbackAt??0).getTime()-new Date(b.nextCallbackAt??0).getTime());
 }
 
 export async function listSalesActions():Promise<SalesActionItem[]>{

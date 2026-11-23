@@ -1,0 +1,14 @@
+import {afterEach,beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({findMany:vi.fn(),upsert:vi.fn(),query:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{user:{findFirst:async()=>({id:'sales'})},$transaction:async(work:(tx:unknown)=>unknown)=>work({$queryRaw:m.query,branch:{findFirst:async()=>({id:"branch"})},salesTarget:{findMany:m.findMany,upsert:m.upsert}})}}));
+vi.mock('@/lib/billing/entitlement',()=>({assertOperationalWrite:vi.fn()}));
+vi.mock('@/lib/branches/operational-scope',()=>({resolveOperationalWriteBranch:async()=> 'branch'}));
+import {saveMonthlyTargetsForActor} from './service';
+import {monthlyRevision} from './monthly-revision';
+afterEach(()=>vi.useRealTimers());
+const actor={id:'admin',name:'Admin',companyId:'company',salesRole:'PRIMARY_ADMIN' as const};
+beforeEach(()=>{vi.clearAllMocks();vi.useFakeTimers();vi.setSystemTime(new Date('2026-11-22T04:00Z'));m.findMany.mockResolvedValue([{id:'target',version:2,branchId:'branch'}])});
+it('rejects an older revision before either metric is written',async()=>{await expect(saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:10,wonTarget:2,revision:monthlyRevision('2026-11-01',[{id:'target',version:1}])})).rejects.toThrow('STALE');expect(m.upsert).not.toHaveBeenCalled()});
+it('rejects missing revisions from old clients without overwriting data',async()=>{await expect(saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:10,wonTarget:2})).rejects.toThrow('STALE');expect(m.upsert).not.toHaveBeenCalled()});
+it('writes both metrics only for the reviewed revision',async()=>{await saveMonthlyTargetsForActor(actor,{assignedUserId:'sales',leadTarget:10,wonTarget:2,revision:monthlyRevision('2026-11-01',[{id:'target',version:2}])});expect(m.query).toHaveBeenCalledOnce();expect(m.upsert).toHaveBeenCalledTimes(2)});
+it('changes the revision across month rollover and ignores database row order',()=>{const rows=[{id:'b',version:1},{id:'a',version:2}];expect(monthlyRevision('2026-11-01',rows)).toBe(monthlyRevision('2026-11-01',[...rows].reverse()));expect(monthlyRevision('2026-12-01',rows)).not.toBe(monthlyRevision('2026-11-01',rows))});

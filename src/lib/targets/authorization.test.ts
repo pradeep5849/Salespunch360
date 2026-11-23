@@ -2,7 +2,7 @@ import{beforeEach,describe,expect,it,vi}from"vitest";
 const m=vi.hoisted(()=>({read:vi.fn(),mutation:vi.fn(),assignee:vi.fn(),targets:vi.fn(),create:vi.fn(),current:vi.fn(),update:vi.fn(),users:vi.fn(),leadFind:vi.fn(),leadCount:vi.fn(),aggregate:vi.fn(),transaction:vi.fn()}));
 vi.mock("@/lib/auth/authorization",()=>({AuthorizationError:class AuthorizationError extends Error{constructor(){super("Not authorized");this.name="AuthorizationError"}},requirePermission:m.read,requirePermissionForMutation:m.mutation}));
 vi.mock("@/lib/billing/entitlement",()=>({assertOperationalWrite:vi.fn()}));
-vi.mock("@/lib/db",()=>({db:{user:{findFirst:m.assignee,findMany:m.users},salesTarget:{findMany:m.targets,count:vi.fn(),create:m.create,findFirst:m.current,updateMany:m.update,upsert:vi.fn()},lead:{findMany:m.leadFind,count:m.leadCount,aggregate:m.aggregate},$transaction:m.transaction}}));
+vi.mock("@/lib/db",()=>({db:{branch:{findFirst:async()=>({id:"00000000-0000-4000-8000-000000000001"})},user:{findFirst:m.assignee,findMany:m.users},salesTarget:{findMany:m.targets,count:vi.fn(),create:m.create,findFirst:m.current,updateMany:m.update,upsert:vi.fn()},lead:{findMany:m.leadFind,count:m.leadCount,aggregate:m.aggregate},$transaction:m.transaction}}));
 import{createTarget,createTargetForActor,editTarget,listTargets,listTargetsForActor,saveMonthlyTargets}from"./service";
 const companyId="cccccccc-cccc-4ccc-8ccc-cccccccccccc",assignedUserId="11111111-1111-4111-8111-111111111111",targetId="22222222-2222-4222-8222-222222222222";
 const actor=(salesRole:"PRIMARY_ADMIN"|"ADMIN"|"MANAGER"|"SALES")=>({id:"actor",name:"Actor",companyId,salesRole,managerType:salesRole==="MANAGER"?"FIELD_MANAGER" as const:null});

@@ -1,0 +1,10 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const m=vi.hoisted(()=>({auth:vi.fn(),list:vi.fn(),create:vi.fn()}));
+vi.mock("@/lib/mobile/auth",()=>({authenticateMobileToken:m.auth}));
+vi.mock("@/lib/mobile/branches",()=>({mobileBranches:m.list,mobileCreateBranch:m.create,mobileEditBranch:vi.fn(),mobileSetBranchActive:vi.fn()}));
+vi.mock("@/lib/mobile/http",()=>({mobileJson:(body:unknown,status=200)=>Response.json(body,{status}),mobileUnauthorized:()=>null,mobileUnexpected:()=>Response.json({error:"UNEXPECTED"},{status:500})}));
+import {GET,POST} from "./route";
+const principal={id:"owner",companyId:"company",salesRole:"PRIMARY_ADMIN",accountRole:"ACCOUNT_ADMIN",authorizedWorkspaces:["ACCOUNT"],productEdition:"SALESPUNCH360_ACCOUNT"};
+beforeEach(()=>{vi.clearAllMocks();m.auth.mockResolvedValue(principal);m.list.mockResolvedValue([]);m.create.mockResolvedValue({id:"branch"})});
+it("allows authenticated Account-only Main Admin requests to reach the current-owner service gate",async()=>{const result=await GET(new Request("https://example.invalid/api/v1/mobile/branches",{headers:{authorization:"Bearer token"}}));expect(result.status).toBe(200);expect(m.auth).toHaveBeenCalledWith("Bearer token");expect(m.list).toHaveBeenCalledWith(principal)});
+it("passes the reviewed first-branch choice without requiring a Sales workspace",async()=>{const body={name:"First branch",code:"B1",firstBranchAction:"KEEP_HEAD_OFFICE"};const response=await POST(new Request("https://example.invalid/api/v1/mobile/branches",{method:"POST",headers:{authorization:"Bearer token","content-type":"application/json"},body:JSON.stringify(body)}));expect(response.status).toBe(201);expect(m.create).toHaveBeenCalledWith(principal,body)});

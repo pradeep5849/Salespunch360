@@ -5,13 +5,14 @@ import { LEGACY_DEFAULT_ACCOUNT_MODULES } from "@/lib/account/modules";
 
 export type WonLeadProjectActor = { id: string; companyId: string };
 
-async function wonProjectEntitled(client: Prisma.TransactionClient | typeof db, companyId: string) {
+async function wonHandoffEntitlements(client: Prisma.TransactionClient | typeof db, companyId: string) {
   const company = await client.company.findUnique({
     where: { id: companyId },
     select: { productEdition: true, accountSettings: { select: { enabledModules: true } } },
   });
   const enabledModules = company?.accountSettings?.enabledModules ?? LEGACY_DEFAULT_ACCOUNT_MODULES;
-  return Boolean(company && company.productEdition === "SALESPUNCH360_PLUS" && enabledModules.includes("PROJECTS"));
+  const account = company?.productEdition === "SALESPUNCH360_PLUS";
+  return { account, projects: account && enabledModules.includes("PROJECTS") };
 }
 
 export async function ensureWonLeadProjectInTx(
@@ -26,7 +27,8 @@ export async function ensureWonLeadProjectInTx(
     select: { id: true, projectNumber: true },
   });
   if (existing) return existing;
-  if (!await wonProjectEntitled(tx, actor.companyId)) return null;
+  const entitlement = await wonHandoffEntitlements(tx, actor.companyId);
+  if (!entitlement.account) return null;
 
   const lead = await tx.lead.findFirst({
     where: { id: leadId, companyId: actor.companyId, stage: "WON" },
@@ -66,6 +68,9 @@ export async function ensureWonLeadProjectInTx(
     customerId = customer.id;
     await tx.lead.update({ where: { id: lead.id }, data: { customerId } });
   }
+
+  // Account customer handoff is independent of the optional Projects module.
+  if (!entitlement.projects) return null;
 
   const projectNumber = await allocateDocumentNumberInTx(tx, {
     companyId: actor.companyId,
@@ -118,7 +123,8 @@ export async function ensureWonLeadProjectForActor(actor: WonLeadProjectActor, l
  * ensureWonLeadProjectInTx before creating anything.
  */
 export async function reconcileWonLeadProjectsForActor(actor: WonLeadProjectActor, limit = 100) {
-  if (!await wonProjectEntitled(db, actor.companyId)) return { eligible: false, created: 0 };
+  const entitlement = await wonHandoffEntitlements(db, actor.companyId);
+  if (!entitlement.projects) return { eligible: false, created: 0 };
   const safeLimit = Math.max(1, Math.min(250, Math.trunc(limit)));
   const missing = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
     SELECT l.id

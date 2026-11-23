@@ -1,3 +1,4 @@
+import {ListPagination} from "@/components/workspace/list-pagination";
 import Link from "next/link";
 import {
   markAllSalesNotificationsReadAction,
@@ -10,8 +11,9 @@ const when = (date: Date) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-export default async function SalesNotificationsPage() {
-  const { items, unreadCount } = await listSalesNotifications();
+export default async function SalesNotificationsPage({searchParams}:{searchParams:Promise<{page?:string}>}) {
+  const query=await searchParams;
+  const { items, unreadCount,page,hasMore } = await listSalesNotifications(query.page??1);
   return (
     <main className="workspace-page">
       <div className="page-heading">
@@ -73,6 +75,7 @@ export default async function SalesNotificationsPage() {
           </div>
         )}
       </section>
+      <ListPagination path="/workspace/notifications" query={query} page={page} hasMore={hasMore}/>
     </main>
   );
 }

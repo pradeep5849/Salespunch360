@@ -1,3 +1,7 @@
+import {authorizedAccountBranches,canUseCompanyConsolidation} from "@/lib/account/branch-context";
+import {SaveFeedbackForm} from "@/components/account/save-feedback";
+import {StockMovementForm} from "@/components/account/stock-movement-form";
+import {SaveSubmitButton} from "@/components/account/save-feedback";
 import { AccountDate } from "@/components/account/display-preferences";
 import { Money } from "@/components/account/account-ui";
 import { ProductPriceForm } from "@/components/account/product-price-form";
@@ -51,7 +55,7 @@ export default async function Page({
     return (
       <Shell title="Warehouses">
         <form action={warehouseAction} className="stack">
-          <label>
+          <label data-branch-ui>
             Branch
             <select aria-label="Branch" name="branchId" required>
               {o.branches.map((x) => (
@@ -89,6 +93,14 @@ export default async function Page({
               {x.address} {x.isDefault ? "· Default" : ""} ·{" "}
               {x.isActive ? "Active" : "Inactive"}
             </p>
+            <details><summary>Edit warehouse</summary><SaveFeedbackForm action={warehouseAction} successMessage="Warehouse updated" className="stack">
+              <input type="hidden" name="operation" value="update"/><input type="hidden" name="id" value={x.id}/>
+              <label>Name<input name="name" required defaultValue={x.name}/></label>
+              <label>Code<input name="code" required defaultValue={x.code}/></label>
+              <label>Address<textarea name="address" defaultValue={x.address??""}/></label>
+              <label>Default warehouse<select name="isDefault" defaultValue={String(x.isDefault)}><option value="true">Yes</option><option value="false">No</option></select></label>
+              <SaveSubmitButton>Save warehouse</SaveSubmitButton>
+            </SaveFeedbackForm></details>
             {x.isActive && (
               <form action={warehouseAction}>
                 <input type="hidden" name="id" value={x.id} />
@@ -114,7 +126,7 @@ export default async function Page({
             <h2>
               {x.name} {x.code && `(${x.code})`}
             </h2>
-            <form action={inventoryProductAction} className="stack">
+            <SaveFeedbackForm action={inventoryProductAction} className="stack" successMessage="Inventory settings saved">
               <input type="hidden" name="productId" value={x.id} />
               <label>
                 <input
@@ -173,8 +185,8 @@ export default async function Page({
                 placeholder="Sales rate"
                 defaultValue={x.salePrice?.toString()}
               />
-              <button>Save inventory settings</button>
-            </form>
+              <SaveSubmitButton>Save inventory settings</SaveSubmitButton>
+            </SaveFeedbackForm>
             <ProductPriceForm
               productId={x.id}
               productName={x.name}
@@ -258,25 +270,27 @@ export default async function Page({
         </form>
         {batches.map((x) => (
           <p key={x.id}>
-            Batch {x.batchNumber} · Expiry{" "}
+            {x.product?.name??`Unavailable item (${x.productId})`}{x.product?.code?` (${x.product.code})`:""} · Batch {x.batchNumber} · Expiry{" "}
             {x.expiryDate ? <AccountDate value={x.expiryDate.toISOString()}/> : "—"}
           </p>
         ))}
         {serials.map((x) => (
           <p key={x.id}>
-            Serial {x.serialNumber} · Stock {x.quantity.toString()}
+            {x.product?.name??`Unavailable item (${x.productId})`}{x.product?.code?` (${x.product.code})`:""} · Serial {x.serialNumber} · Stock {x.quantity.toString()}
           </p>
         ))}
       </Shell>
     );
   }
   if (section === "stock" || section === "low-stock") {
-    const query = await searchParams,
+    const input = await searchParams,
+      query = input.branchId === "all" ? {...input,branchId:undefined,scope:"all"} : input,
       a = await requirePermission("ACCOUNT_STOCK"),
       scoped = await inventoryContext(
         { ...a, companyId: a.companyId! } as ProjectActor,
         query,
       );
+    const branches=await authorizedAccountBranches({...a,companyId:a.companyId!});
     const rows =
         section === "stock"
           ? await inventorySnapshotForActor(scoped.actor, scoped.asOf)
@@ -285,8 +299,15 @@ export default async function Page({
       warehouses = new Map(o.warehouses.map((x) => [x.id, x]));
     return (
       <Shell title={section === "stock" ? "Stock" : "Low Stock"}>
-        <p>
-          {scoped.context.mode === "COMPANY"
+        <form method="get" className="stack">
+          {branches.length>1&&<label data-branch-ui>View<select name="branchId" defaultValue={scoped.context.mode==="COMPANY"?"all":scoped.context.branchId}>
+            {canUseCompanyConsolidation({...a,companyId:a.companyId!})&&<option value="all">Company consolidated</option>}
+            {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.name}</option>)}
+          </select></label>}
+          <label>As of<input type="date" name="asOf" defaultValue={query.asOf}/></label><button>Apply stock filters</button>
+        </form>
+        <p data-branch-ui>
+          {branches.length<=1 ? "Stock positions" : scoped.context.mode === "COMPANY"
             ? "Company consolidated"
             : scoped.context.branchName}{" "}
           · As of {query.asOf ? <AccountDate value={query.asOf} /> : "today"}. Warehouse positions with recorded
@@ -327,7 +348,7 @@ export default async function Page({
         : transferAction;
   return (
     <Shell title={section.replaceAll("-", " ")}>
-      <form action={action} className="stack">
+      <StockMovementForm action={action} initialRequestKey={crypto.randomUUID()}>
         {section === "transfers" ? (
           <>
             <Warehouse o={o} name="sourceWarehouseId" label="Source" />
@@ -395,8 +416,8 @@ export default async function Page({
             required
           />
         )}
-        <button>Save {section}</button>
-      </form>
+        <SaveSubmitButton pendingLabel="Saving…">Save {section}</SaveSubmitButton>
+      </StockMovementForm>
     </Shell>
   );
 }

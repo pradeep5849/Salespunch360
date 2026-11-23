@@ -1,0 +1,13 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+import {renderToStaticMarkup} from 'react-dom/server';
+const m=vi.hoisted(()=>({actor:vi.fn(),leads:vi.fn(),pending:vi.fn()}));
+vi.mock('@/lib/leads/service',()=>({leadActor:m.actor,listLeadsPageForActor:m.leads,listPendingVisitsPageForActor:m.pending,leadScopeOptions:async()=>[],leadStageCounts:async()=>({NEW:1}),pendingVisitCountScopedForActor:async()=>201}));
+vi.mock('@/components/workspace/workspace-page-header',()=>({WorkspacePageHeader:()=>null}));
+vi.mock('./pending-phone-form',()=>({PendingPhoneForm:()=>null}));
+vi.mock('./stage-form',()=>({StageForm:()=> <span>STAGE_CONTROL</span>}));
+vi.mock('./lead-call-action',()=>({LeadCallAction:()=>null}));
+import Page from './page';
+beforeEach(()=>{vi.clearAllMocks();m.actor.mockResolvedValue({id:'sales',companyId:'company',salesRole:'SALES',designation:null});m.leads.mockResolvedValue({items:[{id:'lead',title:'Lead',stage:'NEW',phone:null,customer:null,companyName:null,assignedUser:{id:'sales',name:'Sales'},source:'MANUAL',visits:[],sourceVisitId:null,estimatedValue:null,updatedAt:new Date()}],page:1,hasMore:false});m.pending.mockResolvedValue({items:[],page:2,pageSize:50,hasMore:true})});
+it('exposes text search to Sales while keeping employee selection privileged',async()=>{const html=renderToStaticMarkup(await Page({searchParams:Promise.resolve({q:'Acme'})}));expect(html).toContain('Search name or phone');expect(html).not.toContain('name="assignedUserId"');expect(html).toContain('STAGE_CONTROL')});
+it('does not show stage mutations to Telecallers',async()=>{m.actor.mockResolvedValue({id:'sales',companyId:'company',salesRole:'SALES',designation:'Telecaller'});const html=renderToStaticMarkup(await Page({searchParams:Promise.resolve({})}));expect(html).not.toContain('STAGE_CONTROL');expect(html).toContain('Search name or phone')});
+it('pages the pending queue and preserves view/search in next-page links',async()=>{const html=renderToStaticMarkup(await Page({searchParams:Promise.resolve({view:'pending',page:'2',q:'Acme'})}));expect(m.pending).toHaveBeenCalledWith(expect.objectContaining({companyId:'company'}),undefined,'Acme',{page:'2',pageSize:50});expect(html).toContain('page=3');expect(html).toContain('view=pending');expect(html).toContain('q=Acme')});

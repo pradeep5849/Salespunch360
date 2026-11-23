@@ -1,0 +1,7 @@
+# A140-F02 / A141-F02 — Native Account employee editors
+
+Existing Account administration Users UI now offers role selection from supported Account roles and All/Selected branch access for creation. Selected scope requires at least one chosen authorized branch. Existing users have explicit Account role/access controls and branch corrections. Dual Sales/Account users retain the saved Sales-owned branch scope and receive guidance to change branches through the Sales user editor. Removing an Account role is offered only for dual Sales users; Account-only users must retain a role. Deactivate/reactivate preserves the saved role/scope. Controls honor the server canManageAccountUsers flag and pending state. Single-location companies receive no new branch labels or chooser. The existing save route and backend locks, package seats, product/role authority and tenant validation remain unchanged.
+
+Twenty-six focused user-management, role-policy and native administration contract tests passed. Whitespace checks passed. This slice changes native UI only: no new TypeScript backend behavior or additional full regression claimed. Native compile/lint and physical browser/device acceptance remain pending. The preceding full suite was 4203 passed / 449 optional skipped; separate queue/retry SQL checks passed as documented in their checkpoints.
+
+Register: 125 implemented pending acceptance, 16 partial, 13 not started; historical exclusions unchanged. PR #212 remains draft. No production migration/data/security change, deployment or merge.

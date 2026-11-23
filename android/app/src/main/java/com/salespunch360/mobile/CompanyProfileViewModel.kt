@@ -110,6 +110,7 @@ class CompanyProfileViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun message(e: Exception) = when {
+        (e as? ApiException)?.code == "TEAM_STRUCTURE_CONFLICT" -> "Remove active Managers and resolve paid or pending Manager capacity before switching to Sales only. Your entered company details have been kept."
         (e as? ApiException)?.code == "INVALID_INPUT" -> "Check the required company details and try again."
         (e as? ApiException)?.code == "LOGO_INVALID" || e is IllegalArgumentException -> "Choose a JPG, PNG or WebP company logo up to 5 MB."
         (e as? ApiException)?.code == "FORBIDDEN" -> "Only an authorized Company Admin can update company details."

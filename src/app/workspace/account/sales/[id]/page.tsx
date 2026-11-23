@@ -39,7 +39,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
       <div><small>Invoice No.</small><strong>{sale.documentNumber}⌄</strong></div>
       <div><small>Date</small><strong><AccountDate value={sale.issueDate.toISOString()}/>⌄</strong></div>
     </section>
-    <div className={styles.firm}><span>Firm Name:</span>{sale.branch.name}</div>
+    <div className={styles.firm} data-branch-ui><span>Firm Name:</span>{sale.branch.name}</div>
     <section className={styles.body}>
       <div className={styles.partyBalance}>Party Balance: <b><Money value={sale.partyBalance}/></b></div>
       <div className={styles.field}><label>Customer Name *</label><strong>{sale.partyName}</strong></div>

@@ -7,7 +7,7 @@ import { SavePendingFields, SaveSubmitButton } from "./save-feedback";
 function AdjustmentField({name,label,value,onChange,type="text",multiline=false,children,defaultValue,pattern}:{name:string;label:string;value?:string;onChange?:(value:string)=>void;type?:string;multiline?:boolean;children?:React.ReactNode;defaultValue?:string;pattern?:string}){
  const error=useAccountFieldError(name),id=useId();
  const attributes={name,"aria-invalid":!!error,"aria-describedby":error?id:undefined,"aria-label":label,required:true};
- return <label>{label}{children?<select {...attributes} defaultValue={defaultValue}>{children}</select>:multiline?<textarea {...attributes} value={value} onChange={event=>onChange?.(event.target.value)} minLength={3} maxLength={1000}/>:<input {...attributes} type={type} value={value} onChange={event=>onChange?.(event.target.value)} pattern={pattern} inputMode={name==="amount"?"decimal":undefined}/>}<AccountFieldError name={name} id={id}/></label>;
+ return <label data-branch-ui={name==="branchId"?true:undefined}>{label}{children?<select {...attributes} defaultValue={defaultValue}>{children}</select>:multiline?<textarea {...attributes} value={value} onChange={event=>onChange?.(event.target.value)} minLength={3} maxLength={1000}/>:<input {...attributes} type={type} value={value} onChange={event=>onChange?.(event.target.value)} pattern={pattern} inputMode={name==="amount"?"decimal":undefined}/>}<AccountFieldError name={name} id={id}/></label>;
 }
 export function MoneyAdjustmentForm({
   accountId,

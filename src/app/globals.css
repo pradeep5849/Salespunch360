@@ -780,3 +780,6 @@ body:has(.account-shell) > .workspace-header{display:none}
 
 /* Reference Utilities accordion: pending actions are visible but never links. */
 .account-menu-section .account-menu-pending{min-height:52px;padding:12px 16px 12px 50px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf0f5;color:#596579;font-size:13px;background:#f8fafc}.account-menu-pending small{font-size:11px}.account-menu-section>details>summary{font-size:16px;font-weight:700;min-height:60px}.account-menu-section>details[open]>summary{border-bottom:1px solid #edf0f5}
+
+/* Single-location mode retains internal form values, without branch presentation. */
+[data-company-branch-ui="single"] [data-branch-ui] { display: none !important; }

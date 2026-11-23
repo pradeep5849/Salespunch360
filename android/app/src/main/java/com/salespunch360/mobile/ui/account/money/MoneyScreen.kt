@@ -85,7 +85,7 @@ fun MoneyScreen(initialMode:String,padding:PaddingValues,vm:AccountMoneyViewMode
     }
     val canCreate=when(s.mode){"owners"->can("postOwnerTransactions");"loans"->can("manageLoans");else->can("postMoneyEntries")}
     Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)){
-        s.data["branchContext"]?.jsonObject?.let{context->Text("Scope: "+if(context.str("mode")=="COMPANY")"All company branches"else context.str("branchName"))}
+        s.data["branchContext"]?.jsonObject?.let{context->com.salespunch360.mobile.ui.BranchOnly{Text("Scope: "+if(context.str("mode")=="COMPANY")"All company branches"else context.str("branchName"))}}
         LazyRow{items(listOf("bank-accounts","cash-in-hand","accounts","transfers","owners","loans")){mode->FilterChip(s.mode==mode,{if(!s.saving)vm.show(mode)},{Text(when(mode){"bank-accounts"->"Bank Accounts";"cash-in-hand"->"Cash In-Hand";"accounts"->"All accounts";"owners"->"Capital & drawings";else->mode.replaceFirstChar{it.uppercase()}})})}}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
             IconButton(vm::load,enabled=!s.saving){Icon(Icons.Default.Refresh,"Refresh")}
@@ -301,7 +301,7 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
                     item{Text("A non-zero starting balance posts against Opening Balance Equity.")}
                 }
             }else{
-                item{if(kind=="loan-payments")Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;fundingAmounts=emptyMap();if(kind=="loans"){source="";openingFeeSource=""}}}
+                item{if(kind=="loan-payments")com.salespunch360.mobile.ui.BranchOnly{Text("Loan branch: "+data.array("branches").firstOrNull{it.jsonObject.str("id")==branch}?.jsonObject?.str("name").orEmpty())}else Pick("Branch",branch,data.array("branches"),enabled=!saving){branch=it;fundingAmounts=emptyMap();if(kind=="loans"){source="";openingFeeSource=""}}}
                 if(kind=="transfers"){
                     item{Text("Deposit / Withdraw");MoneyTransferMode.entries.forEach{mode->Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically){RadioButton(selected=transferMode==mode,onClick={transferMode=mode;source="";destination=""},enabled=!saving);Text(mode.label)}}}
                     item{Pick("Source account",source,accounts.filter{transferModeAccepts(transferMode,it.jsonObject.str("type"),true)&&it.jsonObject.str("id")!=destination},enabled=!saving){source=it}}
@@ -369,6 +369,8 @@ private fun MoneyEditor(kind:String,data:JsonObject,selected:JsonObject?,saving:
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Pick(label:String,value:String,values:List<JsonElement>,enabled:Boolean=true,set:(String)->Unit){
+    if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,values.mapNotNull{it.jsonObject["id"]?.jsonPrimitive?.contentOrNull},set)) { return }
+
     var open by remember{mutableStateOf(false)}
     val selected=values.map{it.jsonObject}.firstOrNull{it.str("id")==value}
     ExposedDropdownMenuBox(open,{if(enabled)open=it}){

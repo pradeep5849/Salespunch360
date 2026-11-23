@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const a=await actor(request);
     const body=await request.json();
     if(body?.action==="SAVE_MONTHLY"){
-      await saveMonthlyTargetsForActor(a,{assignedUserId:body.assignedUserId,leadTarget:body.leadTarget,wonTarget:body.wonTarget,branchId:body.branchId});
+      await saveMonthlyTargetsForActor(a,{revision:body.revision,assignedUserId:body.assignedUserId,leadTarget:body.leadTarget,wonTarget:body.wonTarget,branchId:body.branchId});
       return mobileJson(await monthlyTargetRowsForActor(a));
     }
     await createTargetForActor(a,body);

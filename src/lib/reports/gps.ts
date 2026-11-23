@@ -1,3 +1,4 @@
+import {measuredGpsSegments,latestRecordedGpsPoint} from "./gps-route";
 import { operationalBranchContext } from "@/lib/branches/operational-scope";
 import {AuthorizationError} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
@@ -9,7 +10,7 @@ import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor}
 const one=(v:string|string[]|undefined)=>Array.isArray(v)?v[0]:v;
 export type GpsTimelineEvent={
  id:string;
- type:"ATTENDANCE_STARTED"|"GPS_STARTED"|"VISIT"|"GPS_ENDED"|"ATTENDANCE_ENDED";
+ type:"ATTENDANCE_STARTED"|"GPS_STARTED"|"VISIT"|"GPS_ENDED"|"GPS_LAST_RECORDED"|"ATTENDANCE_ENDED";
  at:Date;
  customer?:string;
  latitude?:number;
@@ -65,9 +66,10 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
   orderBy:[{startedAt:"asc"},{id:"asc"}],
  });
 
- const segments=sessions.map(s=>orderedRoute(s.locationPoints));
+ const recordedRoutes=sessions.map(s=>orderedRoute(s.locationPoints));
+ const segments=measuredGpsSegments(recordedRoutes);
  const points=segments.flat();
- const distanceBySession=calculateTravelDistanceBySession(segments);
+ const distanceBySession=calculateTravelDistanceBySession(recordedRoutes);
  const sessionDistances=sessions.map((session,index)=>({
   sessionId:session.id,
   startedAt:session.startedAt,
@@ -89,12 +91,14 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
    events.push({
     id:`${s.id}:gps-start`,type:"GPS_STARTED",at:route[0].capturedAt,sessionId:s.id,
     latitude:route[0].latitude,longitude:route[0].longitude,
-    detail:`GPS active · ${route.length} accepted point${route.length===1?"":"s"}`,
+    detail:`${route.length} stored GPS point${route.length===1?"":"s"}; the map and distance use quality-filtered points`,
    });
+   const last=latestRecordedGpsPoint(route)!;
+   const endedInDay=Boolean(s.endedAt&&s.endedAt>=start&&s.endedAt<end);
    events.push({
-    id:`${s.id}:gps-end`,type:"GPS_ENDED",at:route.at(-1)!.capturedAt,sessionId:s.id,
-    latitude:route.at(-1)!.latitude,longitude:route.at(-1)!.longitude,
-    detail:"GPS stopped with attendance",
+    id:`${s.id}:gps-end`,type:endedInDay?"GPS_ENDED":"GPS_LAST_RECORDED",at:endedInDay?s.endedAt!:last.capturedAt,sessionId:s.id,
+    latitude:last.latitude,longitude:last.longitude,
+    detail:endedInDay?"Attendance ended; location shows the last recorded GPS point":"Last recorded GPS point; this does not confirm tracking stopped",
    });
   }
 
@@ -121,7 +125,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  }
 
  events.sort((a,b)=>a.at.getTime()-b.at.getTime()||a.id.localeCompare(b.id));
- const lastSpottedAt=points.length?points.at(-1)!.capturedAt:null;
+ const lastSpottedAt=latestRecordedGpsPoint(recordedRoutes.flat())?.capturedAt??null;
  return{
   actor,employees,date,employeeId,segments,points,markers,events,sessionDistances,routeDistanceMeters,dailyDistanceMeters:routeDistanceMeters,employee,
   lastSpottedAt,visitCount:seenVisits.size,geofence,

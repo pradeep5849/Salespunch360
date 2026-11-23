@@ -1,5 +1,7 @@
+vi.mock("@/lib/billing/telecaller",()=>({telecallerBillingState:async()=>({used:0,limit:0})}));
 import {beforeEach,describe,expect,it,vi} from 'vitest';
-const mocks=vi.hoisted(()=>({context:vi.fn(),entitlement:vi.fn(),manager:vi.fn(),sales:vi.fn(),admins:vi.fn(),company:vi.fn(),branches:vi.fn(),setActive:vi.fn()}));
+const mocks=vi.hoisted(()=>({context:vi.fn(),entitlement:vi.fn(),manager:vi.fn(),sales:vi.fn(),admins:vi.fn(),company:vi.fn(),branches:vi.fn(),setActive:vi.fn(),telecaller:vi.fn()}));
+vi.mock('@/lib/telecalling/team',()=>({createTelecallerEmployeeForActor:mocks.telecaller}));
 vi.mock('@/lib/employees/service',()=>({getEmployeeManagementContextForCompany:mocks.context,createManagerForCompany:mocks.manager,createSalesEmployeeForCompany:mocks.sales}));
 vi.mock('@/lib/billing/entitlement',()=>({effectiveEntitlement:mocks.entitlement}));
 vi.mock('@/lib/users/additional-admin',()=>({createAdditionalAdminForCompany:vi.fn(),listAdditionalAdminsForCompany:mocks.admins}));
@@ -16,4 +18,12 @@ describe('mobile employee administration',()=>{
  it('passes Manager and Sales creation to authoritative services with server companyId',async()=>{await mobileCreateEmployee(principal('PRIMARY_ADMIN'),{role:'MANAGER',name:'M'});await mobileCreateEmployee(principal('PRIMARY_ADMIN'),{role:'SALES',name:'S',managerId:'manager'});expect(mocks.manager).toHaveBeenCalledWith('company-a',{name:'M'},'actor');expect(mocks.sales).toHaveBeenCalledWith('company-a',{name:'S',managerId:'manager'},'actor')});
  it('never accepts a client companyId as tenant scope',async()=>{await mobileCreateEmployee(principal('PRIMARY_ADMIN'),{role:'SALES',name:'S',companyId:'company-b'});expect(mocks.sales).toHaveBeenCalledWith('company-a',{name:'S',companyId:'company-b'},'actor')});
  it('uses authoritative scoped lifecycle services for activation changes',async()=>{await mobileSetEmployeeActive(principal('PRIMARY_ADMIN'),{employeeId:'employee',isActive:false});await mobileSetEmployeeActive(principal('PRIMARY_ADMIN'),{employeeId:'employee',isActive:true});expect(mocks.setActive).toHaveBeenNthCalledWith(1,expect.objectContaining({companyId:'company-a',id:'actor'}),'employee',false);expect(mocks.setActive).toHaveBeenNthCalledWith(2,expect.objectContaining({companyId:'company-a',id:'actor'}),'employee',true)});
+});
+
+it('dispatches paid Telecaller creation separately from field Sales and rejects other admins',async()=>{
+ mocks.telecaller.mockResolvedValue({id:'employee'});
+ await mobileCreateEmployee(principal('PRIMARY_ADMIN'),{role:'TELECALLER',name:'Caller',email:'caller@example.invalid',password:'FixtureSecure12345',confirmPassword:'FixtureSecure12345'});
+ expect(mocks.telecaller).toHaveBeenCalledWith(expect.objectContaining({id:'actor',companyId:'company-a',salesRole:'PRIMARY_ADMIN'}),expect.objectContaining({name:'Caller',email:'caller@example.invalid'}));
+ expect(mocks.sales).not.toHaveBeenCalled();expect(mocks.manager).not.toHaveBeenCalled();
+ mocks.telecaller.mockClear();await expect(mobileCreateEmployee(principal('ADMIN'),{role:'TELECALLER'})).rejects.toMatchObject({code:'FORBIDDEN',status:403});expect(mocks.telecaller).not.toHaveBeenCalled();
 });

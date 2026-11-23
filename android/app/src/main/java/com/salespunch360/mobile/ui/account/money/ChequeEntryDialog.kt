@@ -68,6 +68,8 @@ fun ChequeEntryDialog(state:ChequeState, vm:ChequeViewModel, legacy:JsonObject?,
 
 @Composable
 internal fun ChequeSelect(label:String,value:String,choices:List<Pair<String,String>>,enabled:Boolean,onChange:(String)->Unit){
+ if(com.salespunch360.mobile.ui.hideSingleLocationBranchControl(label,value,choices.map{it.first},onChange))return
+
  if(enabled)SelectField(label,value,choices,onChange=onChange)
  else OutlinedTextField(choices.firstOrNull{it.first==value}?.second.orEmpty(),{},label={Text(label)},enabled=false,readOnly=true)
 }

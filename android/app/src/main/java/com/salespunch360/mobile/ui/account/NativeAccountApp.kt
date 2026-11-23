@@ -140,7 +140,7 @@ fun NativeAccountAuthenticatedApp(
                         DropdownMenu(expanded=profileMenu,onDismissRequest={profileMenu=false}){
                             onSwitchToSales?.let{switch->DropdownMenuItem(text={Text("Switch to Sales")},onClick={profileMenu=false;switch()})}
                             DropdownMenuItem(text={Text("Company Details")},onClick={profileMenu=false;vm.select("/workspace/company-profile")})
-                            DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
+                            if(data.capabilities.canAccessSalesBilling)DropdownMenuItem(text={Text("Billing & Subscription")},onClick={profileMenu=false;vm.select("/workspace/billing")})
                             DropdownMenuItem(text={Text("Change Password")},onClick={profileMenu=false;vm.select("/workspace/change-password")})
                             if(canSettings)DropdownMenuItem(text={Text("Module Selection")},onClick={profileMenu=false;vm.select("/workspace/account/settings/modules")})
                             DropdownMenuItem(text={Text("Settings")},onClick={profileMenu=false;vm.select("/workspace/account/settings")})
@@ -179,22 +179,22 @@ fun NativeAccountAuthenticatedApp(
             state.selectedPath.startsWith("/workspace/account/accounting/accounts")->ChartOfAccountsScreen(padding)
             state.selectedPath.startsWith("/workspace/account/accounting/cost-centres")->ChartOfAccountsScreen(padding,true)
             state.selectedPath.startsWith("/workspace/account/accounting/new")->JournalScreen(padding=padding)
-            state.selectedPath.startsWith("/workspace/account/accounting/journals")->JournalScreen(padding=padding)
+            state.selectedPath.startsWith("/workspace/account/accounting/journals")->JournalScreen(padding=padding,initialJournalId=android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(4))
             state.selectedPath.startsWith("/workspace/account/accounting/opening")->JournalScreen(padding=padding,opening=true)
-            state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding,onNavigate=vm::select,initialCreate=state.selectedPath.substringBefore("?").endsWith("/new"),initialBranchId=queryValue(state.selectedPath,"branchId"))
+            state.selectedPath.startsWith("/workspace/account/assets")->AssetScreen(padding,onNavigate=vm::select,initialCreate=state.selectedPath.substringBefore("?").endsWith("/new"),initialBranchId=queryValue(state.selectedPath,"branchId"),initialAssetId=android.net.Uri.parse(state.selectedPath).pathSegments.getOrNull(3)?.takeIf{it!="new"})
             state.selectedPath.substringBefore("?")=="/workspace/account/utilities/financial-year/numbering"->com.salespunch360.mobile.ui.account.accounting.NumberingRestartScreen(padding,vm::back)
             state.selectedPath.startsWith("/workspace/account/utilities/financial-year")->FinancialYearScreen(false,padding,onRestartNumbering=if(data.user.accountRole==com.salespunch360.mobile.data.AccountRole.ACCOUNT_ADMIN){ {vm.select("/workspace/account/utilities/financial-year/numbering")} }else null)
             state.selectedPath.startsWith("/workspace/account/utilities/period-locks")->FinancialYearScreen(true,padding)
             state.selectedPath.substringBefore("?")=="/workspace/account/tax/reports"->AccountReportsScreen("gst-party",padding,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"),onNavigate=vm::select)
             state.selectedPath.startsWith("/workspace/account/reports")->AccountReportsScreen(reportName(state.selectedPath),padding,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),onNavigate=vm::select)
             state.selectedPath.substringBefore("?")=="/workspace/account/utilities/audit"->com.salespunch360.mobile.ui.account.admin.AuditHistoryScreen(padding)
-            utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding,initialImportType=queryValue(state.selectedPath,"type")?:"CUSTOMERS",initialExportType=queryValue(state.selectedPath,"type"),backupMode=queryValue(state.selectedPath,"mode"))
+            utilityMode(state.selectedPath)!=null->AccountUtilityScreen(utilityMode(state.selectedPath)!!,padding,initialImportType=queryValue(state.selectedPath,"type")?:"CUSTOMERS",initialExportType=queryValue(state.selectedPath,"type"),backupMode=queryValue(state.selectedPath,"mode"),onNavigate=vm::select)
             adminMode(state.selectedPath)!=null->AccountAdministrationScreen(adminMode(state.selectedPath)!!,padding,vm::select,initialQuery=com.salespunch360.mobile.account.accountBranchQuery(state.selectedPath,account?.branch?.branchId,account?.branch?.mode=="COMPANY"))
             state.selectedPath=="/workspace/company-profile"->Box(Modifier.padding(padding)){CompanyProfileScreen()}
             state.selectedPath=="/workspace/employees"->AccountAdministrationScreen("users",padding)
             state.selectedPath=="/workspace/account/settings"->AccountSettingsMenuScreen(padding,vm::select,vm::back)
-            state.selectedPath=="/workspace/branches"||state.selectedPath=="/workspace/account/settings/multi-branch"->Box(Modifier.padding(padding)){if(data.user.salesRole==com.salespunch360.mobile.data.MobileRole.PRIMARY_ADMIN)BranchesScreen() else Column(Modifier.padding(16.dp)){Text("Multi-Branch Settings",style=MaterialTheme.typography.headlineSmall);Text("Branch creation and changes require the Primary Admin.")}}
-            state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){SubscriptionScreen()}
+            state.selectedPath=="/workspace/branches"||state.selectedPath=="/workspace/account/settings/multi-branch"->Box(Modifier.padding(padding)){if(data.user.salesRole==com.salespunch360.mobile.data.MobileRole.PRIMARY_ADMIN)BranchesScreen() else Column(Modifier.padding(16.dp)){Text("Settings unavailable",style=MaterialTheme.typography.headlineSmall);Text("Your current role cannot manage these settings.")}}
+            state.selectedPath=="/workspace/billing"->Box(Modifier.padding(padding)){if(data.capabilities.canAccessSalesBilling)SubscriptionScreen()else Text("This page is not available for your account.")}
             state.selectedPath=="/workspace/change-password"->Box(Modifier.padding(padding)){ChangePasswordScreen()}
             state.selectedPath.substringBefore("?") in setOf("/workspace/account/inventory","/workspace/account/inventory/catalog")->com.salespunch360.mobile.ui.account.inventory.AccountItemsScreen(padding,canSettings,vm::select,initialQuery=android.net.Uri.parse(state.selectedPath).query.orEmpty(),quantityDecimals=account?.itemSettings?.get("quantityDecimals")?.jsonPrimitive?.intOrNull?:2,catalogMode=state.selectedPath.substringBefore("?").endsWith("/catalog"))
             state.selectedPath.substringBefore("?")=="/workspace/account/inventory/items/new"->com.salespunch360.mobile.ui.account.inventory.AddItemScreen(vm::back,vm::select,initialService=queryValue(state.selectedPath,"kind")=="services")
@@ -404,6 +404,7 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
     var reportsOpen by rememberSaveable{mutableStateOf(false)}
     var utilitiesOpen by rememberSaveable{mutableStateOf(false)}
     var backupOpen by rememberSaveable{mutableStateOf(false)}
+    val companyBranchUiEnabled=com.salespunch360.mobile.ui.LocalBranchUiEnabled.current
     var advancedOpen by rememberSaveable{mutableStateOf(false)}
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -414,7 +415,7 @@ private fun AccountMenuScreen(groups:List<AccountNavigationGroup>,padding:Paddin
             Text("Menu",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
             Text("All Account modules available to your role.",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if(account!=null&&account.availableBranches.size>1){
+        if(companyBranchUiEnabled&&account!=null&&account.availableBranches.size>1){
             item(key="account-branch-header"){Text("Branch",style=MaterialTheme.typography.titleMedium);if(switching)LinearProgressIndicator(Modifier.fillMaxWidth())}
             items(account.availableBranches,key={"branch-${it.id}"}){branch->FilterChip(selected=account.branch.mode=="BRANCH"&&account.branch.branchId==branch.id,onClick={onBranch(branch.id,false)},label={Text(branch.name)},enabled=!switching,modifier=Modifier.fillMaxWidth())}
             if(account.canConsolidate)item(key="account-all-branches"){FilterChip(selected=account.branch.mode=="COMPANY",onClick={onBranch(null,true)},label={Text("All Branches")},enabled=!switching,modifier=Modifier.fillMaxWidth())}
@@ -473,6 +474,7 @@ private fun AccountDashboardScreen(
     padding:PaddingValues,
     navigate:(String)->Unit
 ){
+    val companyBranchUiEnabled=com.salespunch360.mobile.ui.LocalBranchUiEnabled.current
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
         contentPadding=PaddingValues(16.dp),
@@ -481,8 +483,8 @@ private fun AccountDashboardScreen(
         item{
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
                 Column{
-                    Text(data?.title?:"Account Dashboard",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
-                    Text("${branch?:"Company"} · ${data?.period.orEmpty()}")
+                    Text(if(companyBranchUiEnabled)data?.title?:"Account Dashboard" else "Account Dashboard",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+                    Text(if(companyBranchUiEnabled)"${branch?:"Company"} · ${data?.period.orEmpty()}" else data?.period.orEmpty())
                 }
                 TextButton(enabled=!refreshing,onClick=onRefresh){Text(if(refreshing)"Refreshing…" else "Refresh")}
             }
@@ -511,7 +513,7 @@ private fun AccountDashboardScreen(
             item{Text("Additional financial-year metrics",style=MaterialTheme.typography.titleMedium)}
             items(data?.metrics.orEmpty().filter{it.key !in listOf("cashBank","cash","bank","stockValue")}){metric->DashboardMetricCard(metric.label,formatMetric(metric.value,metric.kind),"")}
         }else items(data?.metrics.orEmpty()){metric->DashboardMetricCard(metric.label,formatMetric(metric.value,metric.kind),"")}
-        if(data?.branchComparison?.isNotEmpty()==true){
+        if(companyBranchUiEnabled&&data?.branchComparison?.isNotEmpty()==true){
             item{Text("Branch comparison",style=MaterialTheme.typography.titleLarge)}
             items(data.branchComparison){row->
                 ListItem(

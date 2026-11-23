@@ -5,7 +5,7 @@ import {MonthlyTargetRow} from "./monthly-target-row";
 export default async function Page(){
  const r=await monthlyTargetRows(),canEdit=r.actor.salesRole!=="SALES";
  return <main className="targets-content"><WorkspacePageHeader title="Sales Targets" backHref="/workspace"/>
-  <p className="muted">Monthly targets run from the 1st to the last day of the month. Target numbers carry forward automatically; Leads and Leads Won actuals restart each month.</p>
+  <p className="muted">Targets are company-wide per employee. Actuals are shown separately by accessible branch. Monthly targets run from the 1st to the last day of the month. Target numbers carry forward automatically; Leads and Leads Won actuals restart each month.</p>
   <div className="monthly-target-table"><div className="monthly-target-head"><span>Employee</span><span>Leads Target / Actual</span><span>Leads Won Target / Actual</span><span>Action</span></div>
    {r.rows.map(row=><MonthlyTargetRow key={row.id} row={row} canEdit={canEdit}/>)}
   </div>

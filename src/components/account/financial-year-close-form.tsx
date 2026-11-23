@@ -18,7 +18,7 @@ export function FinancialYearCloseForm({
       </button>
       {busy&&<p role="status">Checking the year without changing records…</p>}
       {error&&<p role="alert">{error}</p>}
-      {review&&<div><p>{review.companyName} · Review: {review.startDate} – {review.endDate}. Current status: {review.status}.</p><p>{review.checkScope}</p><ul>{review.checks.map(check=><li key={check.check}>{check.status}: {check.check} ({check.affected} affected). {check.status!=="PASS"&&check.recommendation}</li>)}</ul>{review.earlyClose&&<p>An early-close reason is required.</p>}<p>Closing retains documents, balances and audit history, and prevents posting through {review.endDate}. Verification runs again when you confirm.</p></div>}
+      {review&&<div><p>{review.companyName} · Review: {review.startDate} – {review.endDate}. Current status: {review.status}.</p><p>{review.checkScope}</p><ul>{review.checks.map(check=><li key={check.check}>{check.coverage==="NOT_CHECKED"?"NOT CHECKED":check.status}: {check.check} {check.coverage==="NOT_CHECKED"?"(affected count unavailable)":`(${check.affected} affected)`}. {check.status!=="PASS"&&check.recommendation}</li>)}</ul>{review.earlyClose&&<p>An early-close reason is required.</p>}<p>Closing retains documents, balances and audit history, and prevents posting through {review.endDate}. Verification runs again when you confirm.</p></div>}
       {review && (
         <SaveFeedbackForm
           action={closeYearAction}

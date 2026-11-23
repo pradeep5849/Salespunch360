@@ -14,13 +14,13 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
   <DownloadExcel report="expenses" params={raw} ready={reportQueryWasRun(raw)}/>
   <Filters filters={r.filters} employees={r.employees}/>
   <Summary items={[{label:"Daily records",value:r.rows.length},{label:"Pending",value:pending},{label:"Approved",value:approved},{label:"Rejected",value:rejected}]}/>
-  <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Employee</th><th>Date</th><th>Daily distance</th><th>Rate / km</th><th>Calculated amount</th><th>Approval mode</th><th>Status</th><th>Approved amount</th><th>Approval</th></tr></thead><tbody>
+  <div className="report-table-wrap"><p className="muted">Each day includes all stopped attendance sessions. Starting again and stopping later updates the same day’s cumulative total.</p><table className="report-table"><thead><tr><th>Employee</th><th>Date</th><th>Daily distance</th><th>Rate / km</th><th>Calculated amount</th><th>Approval mode</th><th>Status</th><th>Approved amount</th><th>Approval</th></tr></thead><tbody>
    {r.rows.map(row=><tr key={row.key}><td>{row.employee}</td><td>{row.date}</td><td>{distance(row.distanceMeters)}</td><td>{row.ratePerKm?money(row.ratePerKm):"Not configured"}</td><td>{money(row.amount)}</td><td>{row.approvalMode==="AUTO"?"Auto":"Manual"}</td><td><strong>{row.status??"RATE REQUIRED"}</strong></td><td>{money(row.approvedAmount)}</td><td>
     {r.actor.salesRole==="PRIMARY_ADMIN"&&row.approvalMode==="MANUAL"&&row.status&&<div className="expense-approval-actions"><form action={reviewDailyTravelAction}><input type="hidden" name="branchId" value={row.branchId}/><input type="hidden" name="employeeId" value={row.employeeId}/><input type="hidden" name="date" value={row.date}/><input type="hidden" name="status" value="APPROVED"/><button disabled={row.status==="APPROVED"}>Approve</button></form><form action={reviewDailyTravelAction}><input type="hidden" name="branchId" value={row.branchId}/><input type="hidden" name="employeeId" value={row.employeeId}/><input type="hidden" name="date" value={row.date}/><input type="hidden" name="status" value="REJECTED"/><button className="danger-button" disabled={row.status==="REJECTED"}>Reject</button></form></div>}
     {row.approvalMode==="AUTO"&&row.status==="APPROVED"?<span className="muted">Auto-approved</span>:null}
    </td></tr>)}
   </tbody></table></div>
-  {!r.rows.length&&<div className="empty-state">No travel-enabled employee has accepted GPS distance for these filters.</div>}
+  {!r.rows.length&&<div className="empty-state">No saved travel expenses match these filters. Stopping attendance updates the daily total; opening this report does not create or approve expenses.</div>}
   {!r.companyRate&&r.rows.some(row=>!row.ratePerKm)&&<p className="gps-warning">Set a custom rate on each employee (recommended), or configure the company fallback travel rate, before amounts can be calculated.</p>}
  </main>;
 }

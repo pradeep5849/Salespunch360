@@ -1,3 +1,4 @@
+import {db} from "@/lib/db";
 import {WorkspacePageHeader} from "@/components/workspace/workspace-page-header";
 import type {Metadata} from "next";
 import {redirect} from "next/navigation";
@@ -13,6 +14,7 @@ export default async function CheckInsPage({searchParams}:{searchParams:Promise<
  const fieldWorker=user.salesRole==="SALES"||(user.salesRole==="MANAGER"&&user.managerType!=="MANAGER_ONLY");
  if(!fieldWorker)redirect("/workspace/reports/check-ins");
  const employeeId=user.id;
+ const branches=await db.branch.findMany({where:{companyId:user.companyId!,isActive:true,...(user.branchAccessScope==="SELECTED_BRANCHES"?{id:{in:user.branchIds??[]}}:{})},select:{id:true,name:true},orderBy:{name:"asc"}});
  const[customers,pending,overdue,today,upcoming]=await Promise.all([
   searchCustomers(),
   getOwnPendingVisits(),
@@ -26,5 +28,5 @@ export default async function CheckInsPage({searchParams}:{searchParams:Promise<
   ...upcoming.map(task=>({task,bucket:"Upcoming"})),
  ].filter(({task})=>task.type==="VISIT"&&task.assignedUserId===user.id&&task.status==="PENDING"&&!task.completedVisitId)
   .map(({task,bucket})=>({id:task.id,leadId:task.leadId,title:task.lead.title,dueDate:task.dueDate.toISOString().slice(0,10),bucket}));
- return <main className="visits-shell"><section className="visits-content"><WorkspacePageHeader title="Check-ins" backHref="/workspace"/><VisitWorkspace customers={customers} pending={pending} followUps={followUps} initialLeadId={q.leadId} initialFollowUpTaskId={q.followUpTaskId}/></section></main>;
+ return <main className="visits-shell"><section className="visits-content"><WorkspacePageHeader title="Check-ins" backHref="/workspace"/><VisitWorkspace branches={branches} customers={customers} pending={pending} followUps={followUps} initialLeadId={q.leadId} initialFollowUpTaskId={q.followUpTaskId}/></section></main>;
 }

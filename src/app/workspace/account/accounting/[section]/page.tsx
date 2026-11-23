@@ -1,3 +1,4 @@
+import {OpeningPartyFields} from "@/components/account/opening-party-fields";
 import {AccountDate} from "@/components/account/display-preferences";
 import { ManualJournalForm } from "@/components/account/manual-journal-form";
 import { ActionFeedbackForm } from "@/components/account/action-feedback-form";
@@ -66,54 +67,7 @@ export default async function Page({
               Connect an existing posted opening journal to a customer
               receivable or vendor payable. No second journal is posted.
             </p>
-            <label>
-              Branch
-              <select name="branchId" required>
-                {opening.branches.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Party type
-              <select name="partyType" required>
-                <option value="CUSTOMER">Customer opening receivable</option>
-                <option value="VENDOR">Vendor opening payable</option>
-              </select>
-            </label>
-            <label>
-              Customer or vendor
-              <select name="partyId" required>
-                <option value="">Select a party</option>
-                <optgroup label="Customers">
-                  {opening.customers.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Vendors">
-                  {opening.vendors.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-            </label>
-            <label>
-              Posted opening journal
-              <select name="journalEntryId" required>
-                <option value="">Select a journal</option>
-                {opening.journals.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.journalNumber} · {<AccountDate value={x.entryDate.toISOString()}/>}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <OpeningPartyFields options={{...opening,journals:opening.journals.map(row=>({...row,entryDate:row.entryDate.toISOString().slice(0,10)}))}}/>
             <SaveSubmitButton>Register party opening</SaveSubmitButton>
           </ActionFeedbackForm>
         )}
@@ -181,16 +135,25 @@ export default async function Page({
               </ActionFeedbackForm>
             )}
             {d.costCentres.map((x) => (
-              <p key={x.id}>
-                {x.code} · {x.name}
-              </p>
+              <article key={x.id}>
+                <p>{x.code} · {x.name}</p><p>{x.description||"No description"}</p>
+                {d.capabilities.canManageChart&&<details><summary>Edit cost centre</summary>
+                  <ActionFeedbackForm action={accountingAction} className="account-master-form">
+                    <input type="hidden" name="operation" value="edit-cost-centre"/><input type="hidden" name="id" value={x.id}/><input type="hidden" name="updatedAt" value={x.updatedAt.toISOString()}/>
+                    <label>Code<input name="code" required maxLength={30} defaultValue={x.code}/></label>
+                    <label>Name<input name="name" required maxLength={120} defaultValue={x.name}/></label>
+                    <label>Description<textarea name="description" maxLength={2000} defaultValue={x.description??""}/></label>
+                    <SaveSubmitButton>Save cost centre</SaveSubmitButton>
+                  </ActionFeedbackForm>
+                </details>}
+              </article>
             ))}
           </>
         )}
         {(section === "new" || section === "opening") && mayPost && (
           <ManualJournalForm
             opening={section === "opening"}
-            years={d.financialYears}
+            years={d.financialYears.filter(year=>year.status==="OPEN"&&year.isActive)}
             branches={d.branches}
             accounts={d.ledgerAccounts.filter(
               (x) => x.allowPosting && x.isActive,
@@ -204,7 +167,7 @@ export default async function Page({
               Search journals
               <input name="q" defaultValue={query.q} maxLength={160} />
             </label>
-            <label>
+            <label data-branch-ui>
               Branch
               <select name="branchId" defaultValue={query.branchId ?? ""}>
                 <option value="">All accessible branches</option>
@@ -230,7 +193,7 @@ export default async function Page({
           history?.items.map((x) => (
             <article key={x.id}>
               <strong>
-                {x.journalNumber} · {x.status}
+                <Link href={`/workspace/account/accounting/journals/${x.id}`}>{x.journalNumber}</Link> · {x.status}
               </strong>
               <p>
                 {<AccountDate value={x.entryDate.toISOString()}/>} · {x.narration}
@@ -248,6 +211,16 @@ export default async function Page({
             )}
           </nav>
         )}
+        {section === "periods" && <section aria-label="Current period locks"><h2>Current period locks</h2>
+          {d.accountingPeriodLocks.length?d.accountingPeriodLocks.map(lock=><article key={lock.id}>
+            <strong>{d.financialYears.find(year=>year.id===lock.financialYearId)?.name??"Financial year"}</strong>
+            <p>Locked through: {lock.lockedThrough?<AccountDate value={lock.lockedThrough.toISOString().slice(0,10)}/>:"Not set"}</p>
+            <p>Last updated: <AccountDate value={lock.updatedAt.toISOString()}/></p>
+          </article>):<p>No period locks have been set.</p>}
+          <h3>Recent lock history (latest 50 changes)</h3>
+          {(d.accountingAuditEvents??[]).map(event=><p key={event.id}><AccountDate value={event.createdAt.toISOString()}/> · {event.reason||"No reason recorded"}</p>)}
+          <Link href="/workspace/account/utilities/period-locks">Review year locks</Link>
+        </section>}
         {section === "periods" && d.capabilities.canManagePeriods && (
           <ActionFeedbackForm
             action={accountingAction}

@@ -1,3 +1,5 @@
+import {reportPageHref} from "@/lib/reports/page-href";
+import type {SearchParams} from "@/lib/reports/validation";
 import Link from "next/link";
 import { REPORT_TIME_ZONE } from "@/lib/reports/config";
 import { GoogleRouteMap } from "./google-route-map";
@@ -9,7 +11,7 @@ export const distance=(meters:number|null)=>meters==null?"—":meters<1000?`${Ma
 export function ReportHeader({title,description}:{title:string;description:string}){return <><WorkspacePageHeader title={title} backHref="/workspace/reports" backLabel="Back to Reports"/><p className="muted">{description} Times use Asia/Kolkata.</p></>}
 export function Filters({filters,employees,children,showEmployee=true}:{filters:{startText:string;endText:string;employeeId?:string;q?:string};employees:{id:string;name:string;salesRole:string|null;isActive:boolean}[];children?:React.ReactNode;showEmployee?:boolean}){return <form className="report-filters"><label>From Date<input type="date" name="start" defaultValue={filters.startText}/></label><label>To Date<input type="date" name="end" defaultValue={filters.endText}/></label>{showEmployee&&<label>Employee<select name="employeeId" defaultValue={filters.employeeId||""}>{employees.length>1&&<option value="">All authorized employees</option>}{employees.map(e=><option value={e.id} key={e.id}>{e.name} · {e.salesRole}{e.isActive?"":" · inactive"}</option>)}</select></label>}{children}<button>View Report</button></form>}
 export function Summary({items}:{items:{label:string;value:string|number}[]}){return <section className="report-summary">{items.map(i=><article key={i.label}><strong>{i.value}</strong><span>{i.label}</span></article>)}</section>}
-export function Pagination({page,totalPages}:{page:number;totalPages:number}){return <nav className="pagination" aria-label="Report pages"><span>Page {page} of {totalPages}</span>{page>1&&<Link href={`?page=${page-1}`}>Previous</Link>}{page<totalPages&&<Link href={`?page=${page+1}`}>Next</Link>}</nav>}
+export function Pagination({page,totalPages,query={}}:{page:number;totalPages:number;query?:SearchParams}){return <nav className="pagination" aria-label="Report pages"><span>Page {page} of {totalPages}</span>{page>1&&<Link href={reportPageHref(query,page-1)}>Previous</Link>}{page<totalPages&&<Link href={reportPageHref(query,page+1)}>Next</Link>}</nav>}
 export function ErrorState({error}:{error:unknown}){return <main className="reports-content"><ReportHeader title="Report filters need attention" description={error instanceof Error?error.message:"Unable to load this report."}/><Link href="?">Reset filters</Link></main>}
 
 type MapPoint={latitude:number;longitude:number};

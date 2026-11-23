@@ -1,3 +1,4 @@
+import {refreshStoppedAttendanceTravel} from "@/lib/travel/daily-snapshot";
 import {withAttendanceEvent,scheduleFieldJobs} from "@/lib/field-jobs/service";
 import { db } from "@/lib/db";
 import { requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
@@ -165,7 +166,7 @@ export async function endAttendance(raw: unknown) {
     });
     if (!open) throw new AttendancePolicyError("NO_OPEN_ATTENDANCE");
     const acceptedLocation = company?.gpsTrackingEnabled ? location : undefined;
-    return withAttendanceEvent(tx,user.companyId,user.id,"ATTENDANCE_ENDED",tx.attendance.update({
+    const stopped=await withAttendanceEvent(tx,user.companyId,user.id,"ATTENDANCE_ENDED",tx.attendance.update({
       where: { id: open.id },
       data: {
         endedAt: new Date(),
@@ -174,6 +175,8 @@ export async function endAttendance(raw: unknown) {
         endAccuracyMeters: acceptedLocation?.accuracyMeters,
       },
     }));
+    await refreshStoppedAttendanceTravel(tx,user.companyId,open.branchId,user.id,stopped.startedAt,stopped.endedAt!);
+    return stopped;
   });
   scheduleFieldJobs();
   return attendance;

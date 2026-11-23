@@ -1,3 +1,5 @@
+import {retrySerializable} from "@/lib/account/transaction-retry";
+import {revokeUserAuthenticationWithLock} from "@/lib/auth/session-generation";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -6,7 +8,7 @@ import { hashPassword } from "@/lib/auth/crypto";
 import { strongPasswordSchema } from "@/lib/auth/validation";
 import { assertSalesEmployeePhoneUnique } from "@/lib/users/employee-profile";
 import { phoneSchema } from "@/lib/employees/validation";
-import { assertTelecallerSeatAvailable } from "@/lib/billing/telecaller";
+import { assertTelecallerSeatAvailable,telecallerBillingState } from "@/lib/billing/telecaller";
 import { TELECALLER_DESIGNATION } from "./policy";
 
 const createTelecallerSchema = z.object({
@@ -42,14 +44,20 @@ export async function listTelecallerEmployees(): Promise<TelecallerEmployee[]> {
 
 export async function createTelecallerEmployee(raw: unknown) {
   const actor = await requirePermissionForMutation("SALES_USER_ADMIN");
-  const companyId = actor.companyId;
-  if (!companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
+  if(!actor.companyId)throw new Error("NOT_AUTHORIZED");
+  return createTelecallerEmployeeForActor({...actor,companyId:actor.companyId},raw);
+}
+export async function createTelecallerEmployeeForActor(actor:{id:string;companyId:string;salesRole:string|null},raw:unknown){
+  const companyId=actor.companyId;
+  if(actor.salesRole!=="PRIMARY_ADMIN")throw new Error("NOT_AUTHORIZED");
   const data = createTelecallerSchema.parse(raw);
   await assertTelecallerSeatAvailable(companyId);
   const passwordHash = await hashPassword(data.password);
   try {
-    return await db.$transaction(async tx => {
+    return await retrySerializable(()=>db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
+      const primary=await tx.user.findFirst({where:{id:actor.id,companyId,salesRole:"PRIMARY_ADMIN",isActive:true,salesAccessActive:true},select:{id:true}});
+      if(!primary)throw new Error("NOT_AUTHORIZED");
       const company = await tx.company.findUnique({ where: { id: companyId }, select: { productEdition: true } });
       if (!company || (company.productEdition !== "SALESPUNCH360" && company.productEdition !== "SALESPUNCH360_PLUS")) throw new Error("SALES_NOT_ENTITLED");
       const paid = await tx.$queryRaw<{ seats: number }[]>(Prisma.sql`SELECT seats FROM "telecaller_subscriptions" WHERE "companyId"=${companyId}::uuid AND status='ACTIVE' AND "startsAt"<=NOW() AND "endsAt">NOW() ORDER BY "endsAt" DESC LIMIT 1 FOR UPDATE`);
@@ -78,7 +86,7 @@ export async function createTelecallerEmployee(raw: unknown) {
         },
         select: { id: true, name: true, email: true, phone: true, employeeCode: true, isActive: true, createdAt: true },
       });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new Error("EMAIL_IN_USE");
     const message = error instanceof Error ? error.message : "TELECALLER_CREATE_FAILED";
@@ -88,20 +96,22 @@ export async function createTelecallerEmployee(raw: unknown) {
   }
 }
 
-export async function setTelecallerActive(userId: string, active: boolean) {
-  const actor = await requirePermissionForMutation("SALES_USER_ADMIN");
-  const companyId = actor.companyId;
-  if (!companyId || actor.salesRole !== "PRIMARY_ADMIN") throw new Error("NOT_AUTHORIZED");
-  if (active) await assertTelecallerSeatAvailable(companyId, userId);
-  return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
-    const telecaller = await tx.user.findFirst({ where: { id: userId, companyId, salesRole: "SALES", designation: { equals: TELECALLER_DESIGNATION, mode: "insensitive" } }, select: { id: true } });
-    if (!telecaller) throw new Error("NOT_FOUND");
-    const updated = await tx.user.update({ where: { id: userId }, data: { isActive: active, salesAccessActive: false, sessionVersion: { increment: 1 } }, select: { id: true, isActive: true } });
-    if (!active) {
-      await tx.session.deleteMany({ where: { userId } });
-      await tx.pushDevice.deleteMany({ where: { userId } });
-    }
-    return updated;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+export async function setTelecallerActive(userId:string,active:boolean){
+ const actor=await requirePermissionForMutation("SALES_USER_ADMIN");
+ if(!actor.companyId||actor.salesRole!=="PRIMARY_ADMIN")throw new Error("NOT_AUTHORIZED");
+ return setTelecallerActiveForCompany(actor.companyId,userId,active,actor.id);
+}
+export async function setTelecallerActiveForCompany(companyId:string,userId:string,active:boolean,actorId:string){
+ return db.$transaction(async tx=>{
+  await tx.$queryRaw`SELECT id FROM "companies" WHERE id=${companyId}::uuid FOR UPDATE`;
+  const actor=await tx.user.findFirst({where:{id:actorId,companyId,salesRole:"PRIMARY_ADMIN",isActive:true,salesAccessActive:true},select:{id:true}});
+  if(!actor)throw new Error("NOT_AUTHORIZED");
+  await tx.$queryRaw`SELECT id FROM "users" WHERE id=${userId}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
+  const target=await tx.user.findFirst({where:{id:userId,companyId,salesRole:"SALES",designation:{equals:TELECALLER_DESIGNATION,mode:"insensitive"}},select:{id:true,isActive:true}});
+  if(!target)throw new Error("NOT_FOUND");
+  if(active){const state=await telecallerBillingState(tx,companyId);if(!state.subscription)throw new Error("TELECALLER_SUBSCRIPTION_REQUIRED");if(state.used-(target.isActive?1:0)>=state.limit)throw new Error("TELECALLER_SEAT_LIMIT");}
+  const updated=await tx.user.update({where:{id:userId},data:{isActive:active,salesAccessActive:false},select:{id:true,isActive:true}});
+  await revokeUserAuthenticationWithLock(tx,userId);
+  return updated;
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
 }

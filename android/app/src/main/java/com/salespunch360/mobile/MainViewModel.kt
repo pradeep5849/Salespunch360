@@ -92,33 +92,50 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun attendance(start: Boolean, location: LocationPayload, onSuccess: () -> Unit) {
+    fun attendance(start: Boolean, location: LocationPayload?, branchId:String?, onSuccess: () -> Unit) {
         if (_state.value.submitting) return
         _state.value = _state.value.copy(submitting = true, message = null)
+        val previousAttendanceId=_state.value.bootstrap?.attendance?.id
         viewModelScope.launch {
+            var confirmation = ""
             try {
-                val saved = api.attendance(if (start) "START" else "END", location).attendance
+                val saved = api.attendance(if (start) "START" else "END", location,branchId).attendance
+                val confirmedAt = if(start) saved.startedAt else saved.endedAt
+                confirmation = confirmedAt?.let { value ->
+                    val time = runCatching { java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, h:mm a")) + " IST" }.getOrDefault(value)
+                    "Attendance ${if(start) "started" else "stopped"} successfully at $time."
+                } ?: "Attendance saved. Refresh to verify its confirmed time."
                 val bootstrap = _state.value.bootstrap
                 if (bootstrap != null) _state.value = _state.value.copy(bootstrap = bootstrap.copy(attendance = if (start) saved else null))
-                if (start && bootstrap?.features?.gpsTrackingEnabled == true) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
-                session.userId()?.let { LocationSyncWorker.schedule(getApplication(), it) }
+                val warning=attendanceDeviceRecovery(
+                    { if (start && bootstrap?.features?.gpsTrackingEnabled == true) TrackingService.start(getApplication()) else TrackingService.stop(getApplication()) },
+                    { session.userId()?.let { LocationSyncWorker.schedule(getApplication(), it) } }
+                )
+                if(warning!=null)confirmation += " $warning"
                 onSuccess()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (e is IOException) {
-                    try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
-                    catch (cancel: CancellationException) { throw cancel }
-                    catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR) }
+                if (attendanceResponseMayBeLost(e)) {
+                    try {
+                        val refreshed=api.bootstrap()
+                        if(!applyBootstrap(refreshed, forcedWorkspace = Workspace.SALES)||Workspace.SALES !in validatedWorkspaces(refreshed))return@launch
+                        if(!refreshed.features.fieldWorkEnabled){_state.value=_state.value.copy(message="Field attendance is no longer available. Review updated company settings and access.");return@launch}
+                        val recovered=attendanceTransportRecovery(start,previousAttendanceId,refreshed.attendance)
+                        _state.value=_state.value.copy(message=listOfNotNull(recovered,_state.value.message).distinct().joinToString(" "))
+                    } catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) { _state.value = _state.value.copy(status = AppStatus.RECOVERABLE_ERROR,message="Attendance could not be confirmed while disconnected. Reconnect and refresh before retrying.") }
+                    return@launch
                 }
                 _state.value = _state.value.copy(message = apiMessage(e, "Could not confirm attendance. Refresh before trying again."), submitting = false)
                 return@launch
             } finally {
                 _state.value = _state.value.copy(submitting = false)
             }
+            _state.value = _state.value.copy(message=confirmation)
             try { applyBootstrap(api.bootstrap(), forcedWorkspace = Workspace.SALES) }
             catch (e: CancellationException) { throw e }
-            catch (_: Exception) { _state.value = _state.value.copy(message = "Attendance saved; refresh pending. Refresh when connected.") }
+            catch (_: Exception) { _state.value = _state.value.copy(message = "$confirmation Refresh pending; refresh when connected.") }
         }
     }
 
@@ -183,12 +200,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return false
         }
 
+        var deviceWarning:String?=null
         if (Workspace.SALES !in authorized) {
             TrackingService.stop(getApplication())
             purgeSalesLocal(session.userId())
         } else {
-            session.userId()?.let { if (bootstrap.features.gpsTrackingEnabled) LocationSyncWorker.schedule(getApplication(), it) }
-            if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) TrackingService.start(getApplication()) else TrackingService.stop(getApplication())
+            deviceWarning=attendanceDeviceRecovery(
+                { if (bootstrap.features.gpsTrackingEnabled && bootstrap.attendance != null) TrackingService.start(getApplication()) else TrackingService.stop(getApplication()) },
+                { session.userId()?.let { if (bootstrap.features.gpsTrackingEnabled) LocationSyncWorker.schedule(getApplication(), it) } }
+            )
         }
 
         val deepPath = pendingAccountPath
@@ -211,7 +231,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             workspace = desired,
             accountPath = accountPath,
             accountSessionEpoch = _state.value.accountSessionEpoch,
-            message = _state.value.message,
+            message = listOfNotNull(_state.value.message,deviceWarning).distinct().joinToString(" ").ifBlank{null},
         )
         return true
     }

@@ -241,7 +241,7 @@ export function OwnerForms({
                   ))}
                 </select>
               </label>
-              <label>
+              <label data-branch-ui>
                 Branch
                 <select disabled={pending} name="branchId" required>
                   {branches.map((branch) => (
@@ -380,7 +380,7 @@ export function OwnerForms({
             {accounts.find((account) => account.id === activeAccount)
               ?.balance ?? "Unavailable"}
           </p>
-          <label>
+          <label data-branch-ui>
             Branch
             <select disabled={pending} name="branchId" aria-label="Branch" required value={entryBranch} onChange={event=>{setEntryBranch(event.target.value);setFundingAmounts({});}}>
               {branches.map((branch) => (

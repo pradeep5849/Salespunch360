@@ -1,0 +1,7 @@
+# A169-F01 — Category metadata and edit entry
+
+The dedicated inventory category manager now displays saved scope/description and provides name/description editing. The generic Categories page links to this manager. Scope is explicitly unchanged; editing does not move items or rewrite product/service relationships, history or snapshots. Creation returns its saved metadata/revision so new rows can be edited immediately.
+
+The mutation requires ACCOUNT_STOCK and inventory availability, then locks the company/user and rechecks active Account access before updating an active company-owned category with its expected revision. Missing/foreign/stale rows fail without returning data; concurrent edits cannot silently overwrite one another. Strict input excludes scope, company, relation and lifecycle changes. Duplicate/stale/transport errors retain the draft; pending inputs/actions are disabled. No migration or production data change.
+
+Nine focused backend/action checks, TypeScript with a 4 GB heap, changed-file lint and whitespace passed. Five isolated Chromium checks exercised the actual React manager with mocked actions (browser-check.json); authenticated app acceptance remains pending. This is a web finding; native category behavior is unchanged. Combined continuation full suite: 4266 passed / 454 environment-gated skipped, zero failed. Previous visit-report head passed web, Android, migration and both build Lighthouse checks; live Lighthouse failed. Final-head CI remains pending.

@@ -28,7 +28,7 @@ export default async function FollowUpTasksPage({searchParams}:{searchParams:Pro
     return <article key={t.id}>
      <div className="card-title"><h2>{t.lead.customer?.name||t.lead.companyName||t.lead.title}</h2><b>{t.status==="COMPLETED"?"Closed":t.status==="PENDING"?"Pending": "Cancelled"}</b></div>
      <p><strong>Type:</strong> {isCall?"Call":"Visit"} · <strong>Lead:</strong> {t.lead.title}</p>
-     <p><strong>Assigned:</strong> {t.assignedUser.name} · <strong>Due:</strong> {t.dueDate.toISOString().slice(0,10)}</p>
+     <p><strong>Assigned:</strong> {t.assignedUser.name} · <strong>Due:</strong> {t.callbackAt?new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",dateStyle:"medium",timeStyle:"short"}).format(t.callbackAt):t.dueDate.toISOString().slice(0,10)}</p>
      <p><strong>Last action:</strong> {last}</p>
      {t.notes&&<p>{t.notes}</p>}
      <small>Task created by {t.createdByUser.name} · {fmt(t.createdAt)}</small>

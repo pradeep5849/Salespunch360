@@ -7,7 +7,7 @@ export function TransactionNumberingFields({branches,initialBranchId,series,chil
  const [branchId,setBranchId]=useState(initialBranchId);
  const [drafts,setDrafts]=useState<Record<string,string>>({});
  return <>
-  <label className="transaction-firm"><span>Firm / company branch</span><select name="branchId" value={branchId} onChange={event=>setBranchId(event.target.value)}>{branches.map(branch=><option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
+  <label className="transaction-firm" data-branch-ui><span>Firm / company branch</span><select name="branchId" value={branchId} onChange={event=>setBranchId(event.target.value)}>{branches.map(branch=><option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
   {children}
   <section className="transaction-settings-section"><h2>Transaction Prefixes</h2><div>{PREFIX_TYPES.map(([key,label])=>{
    const draftKey=`${branchId}:${key}`;

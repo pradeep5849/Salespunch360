@@ -1,0 +1,18 @@
+import {beforeAll,beforeEach,afterAll,it,expect,vi} from 'vitest';
+import {PrismaClient} from '@prisma/client';
+import {randomUUID,randomBytes} from 'node:crypto';
+vi.mock('@/lib/db',()=>({db:new Proxy({},{get:(_,key)=>client[key as keyof PrismaClient]})}));
+import {mobileEditEmployee} from './employee-admin';
+import type {MobilePrincipal} from './auth';
+const databaseUrl=process.env.SECURITY_REGRESSION_DATABASE_URL;
+const url=new URL(databaseUrl??'postgresql://unused:unused@127.0.0.1:55433/unused_ci');
+if(!['127.0.0.1','localhost'].includes(url.hostname)||!url.pathname.endsWith('_ci'))throw new Error('Isolated local security fixture required');
+const client=new PrismaClient({datasources:{db:{url:url.href}}});
+const companyId=randomUUID(),owner=randomUUID(),employeeId=randomUUID(),branchId=randomUUID();
+const email=`${employeeId}@example.invalid`,actor={id:owner,companyId,salesRole:'PRIMARY_ADMIN'} as MobilePrincipal;
+const profile={employeeId,name:'Fixture Sales',email,travelApprovalMode:'MANUAL'};
+beforeAll(async()=>{if(!databaseUrl)return;await client.company.create({data:{id:companyId,name:'Branch security fixture',slug:`branch-security-${companyId}`,productEdition:'SALESPUNCH360_PLUS'}});await client.branch.create({data:{id:branchId,companyId,name:'Fixture branch',code:'FIXTURE',isPrimary:true}});for(const id of[owner,employeeId])await client.user.create({data:{id,companyId,name:'Fixture user',email:id===employeeId?email:`${id}@example.invalid`,passwordHash:'fixture-only',role:id===owner?'COMPANY_ADMIN':'SALES',salesRole:id===owner?'PRIMARY_ADMIN':'SALES',salesAccessActive:true}})},30000);
+beforeEach(async()=>{if(!databaseUrl)return;await client.mobileSession.deleteMany({where:{userId:employeeId}});await client.userBranchAccess.deleteMany({where:{userId:employeeId}});await client.user.update({where:{id:employeeId},data:{branchAccessScope:'ALL_BRANCHES'}});await client.mobileSession.create({data:{userId:employeeId,tokenHash:randomBytes(32).toString('hex'),expiresAt:new Date(Date.now()+3600000),lastUsedAt:new Date()}})});
+afterAll(async()=>client.$disconnect());
+it.skipIf(!databaseUrl)('persists selected branches and revokes the old mobile authentication generation',async()=>{const old=await client.user.findUniqueOrThrow({where:{id:employeeId}});await mobileEditEmployee(actor,{...profile,branchAccessScope:'SELECTED_BRANCHES',branchIds:[branchId]});const stored=await client.user.findUniqueOrThrow({where:{id:employeeId},include:{branchAccesses:true}});expect(stored.branchAccessScope).toBe('SELECTED_BRANCHES');expect(stored.branchAccesses.map(access=>access.branchId)).toEqual([branchId]);expect(stored.sessionVersion).toBe(old.sessionVersion+1);expect(await client.mobileSession.count({where:{userId:employeeId}})).toBe(0)});
+it.skipIf(!databaseUrl)('preserves selected access for omitted branch fields and does not rotate unchanged assignment',async()=>{await mobileEditEmployee(actor,{...profile,branchAccessScope:'SELECTED_BRANCHES',branchIds:[branchId]});const saved=await client.user.findUniqueOrThrow({where:{id:employeeId}});await mobileEditEmployee(actor,profile);await mobileEditEmployee(actor,{...profile,branchAccessScope:'SELECTED_BRANCHES',branchIds:[branchId]});expect(await client.user.findUniqueOrThrow({where:{id:employeeId}})).toMatchObject({branchAccessScope:'SELECTED_BRANCHES',sessionVersion:saved.sessionVersion});expect(await client.userBranchAccess.count({where:{userId:employeeId,branchId}})).toBe(1)});

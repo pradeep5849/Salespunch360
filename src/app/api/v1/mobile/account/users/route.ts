@@ -15,9 +15,11 @@ const fail = (e: unknown) =>
   mobileUnexpected("MOBILE_ACCOUNT_USERS", e);
 export async function GET(r: Request) {
   try {
+    const params=new URL(r.url).searchParams;
+    const query=params.has("page")||params.has("q")?{q:params.get("q")??"",page:params.get("page")??"1"}:undefined;
     return mobileJson(
       await mobileAccountUsers(
-        await authenticateMobileToken(r.headers.get("authorization")),
+        await authenticateMobileToken(r.headers.get("authorization")),query,
       ),
     );
   } catch (e) {

@@ -20,7 +20,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlinx.serialization.json.*
 
-@Composable fun AssetScreen(padding:PaddingValues,vm:AccountAssetViewModel=viewModel(),onNavigate:(String)->Unit={},initialCreate:Boolean=false,initialBranchId:String?=null){
+@Composable fun AssetScreen(padding:PaddingValues,vm:AccountAssetViewModel=viewModel(),onNavigate:(String)->Unit={},initialCreate:Boolean=false,initialBranchId:String?=null,initialAssetId:String?=null){
+ LaunchedEffect(initialAssetId){initialAssetId?.takeIf{runCatching{java.util.UUID.fromString(it)}.isSuccess}?.let{vm.open(it)}}
  val s=vm.state.collectAsStateWithLifecycle().value
  var initialOpened by remember(initialCreate){mutableStateOf(false)}
  LaunchedEffect(initialCreate,s.loading,s.options){if(initialCreate&&!initialOpened&&!s.loading&&s.options.isNotEmpty()){initialOpened=true;vm.createForBranch(initialBranchId)}}

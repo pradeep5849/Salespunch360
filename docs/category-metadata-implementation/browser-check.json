@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "scope": "isolated actual React manager; mocked actions",
+  "checks": [
+    "saved metadata loads",
+    "pending edit disabled",
+    "stale error preserves draft",
+    "scope/relation fields omitted",
+    "success preserves count and advances revision"
+  ]
+}

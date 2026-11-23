@@ -1,3 +1,6 @@
+import {DeleteOwnVisit} from "./delete-visit";
+import {ReportVisitDetails} from "./visit-details";
+import {reportPageHref as pageHref} from "@/lib/reports/page-href";
 import Image from "next/image";
 import Link from "next/link";
 import {DownloadExcel,reportQueryWasRun} from "@/components/workspace/download-excel";
@@ -8,7 +11,9 @@ import { dateTime,distance,duration,Filters,Summary } from "../report-ui";
 import styles from "../sales-report-cards.module.css";
 
 const one=(value:string|string[]|undefined)=>Array.isArray(value)?value[0]:value;
-const pageHref=(raw:SearchParams,page:number)=>{const q=new URLSearchParams();for(const[key,value]of Object.entries(raw)){const v=Array.isArray(value)?value[0]:value;if(v&&key!=="page")q.set(key,v)}q.set("page",String(page));return`?${q.toString()}`};
+
+
+function RelatedReports(){return <nav className={styles.pager} aria-label="Related reports"><Link href="/workspace/reports/leads">Leads Report</Link><Link href="/workspace/reports/check-ins/advanced">Advanced Check-in Report</Link></nav>}
 
 export default async function Page({searchParams}:{searchParams:Promise<SearchParams>}){
  const raw=await searchParams;
@@ -16,9 +21,10 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
  const selectedDate=one(raw.date)||"";
  const effectiveRaw=actor.salesRole==="SALES"&&selectedDate?{...raw,start:selectedDate,end:selectedDate}:raw;
  const r=await checkInReport(effectiveRaw,false,actor);
- if(actor.salesRole==="SALES")return <SalesCheckInReport r={r} selectedDate={selectedDate}/>;
+ if(actor.salesRole==="SALES")return <SalesCheckInReport r={r} selectedDate={selectedDate} raw={raw}/>;
  return <main className={styles.salesPage}>
   <header className={styles.heading}><h1>Check-in Report</h1><p>Recent check-ins from all authorized users are shown by default. Select an employee and date range when you need a specific report.</p></header>
+  <RelatedReports/>
   <section className={styles.searchCard}>
    <DownloadExcel report="check-ins" params={raw} ready={reportQueryWasRun(raw)}/>
    <Filters filters={r.filters} employees={r.employees}>
@@ -39,21 +45,24 @@ function CheckInCards({rows,showEmployee=false}:{rows:CheckInResult['rows'];show
  return <section className={styles.cards}>{rows.map(v=><article className={styles.checkinCard} key={v.id}>
   {v.photo&&<Image className={styles.checkinPhoto} src={`/api/visit-photos/${v.id}/thumbnail`} alt="Check-in photo" width={900} height={560} unoptimized/>}
   <div className={styles.checkinBody}>
-   <div className={styles.checkinTop}><h2>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.customer?.name||v.contactName||"Customer"}</Link>:v.customer?.name||v.contactName||"Customer"}</h2><span className={styles.timePill}>{v.checkedOutAt?"Completed":"Active"}</span></div>
+   <div className={styles.checkinTop}><h2>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.contactName||v.customer?.name||"Contact"}</Link>:v.contactName||v.customer?.name||"Contact"}</h2><span className={styles.timePill}>{v.checkedOutAt?"Completed":"Active"}</span></div>
    {showEmployee&&<p className={styles.meta}><strong>{v.user.name}</strong> · {v.user.salesRole}</p>}
+   <p className={styles.meta}>Phone: {v.contactPhone?.trim()||"Not recorded"}</p>
    <p className={styles.meta}>{dateTime(v.checkedInAt)}{v.checkedOutAt?` · Checkout ${dateTime(v.checkedOutAt)}`:""}</p>
    <p className={styles.address}>{v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`}</p>
    {(v.checkoutSentiment||v.checkoutRemarks||v.visitNotes)&&<p className={styles.meta}>{[v.checkoutSentiment,v.checkoutRemarks,v.visitNotes].filter(Boolean).join(" · ")}</p>}
+   <ReportVisitDetails row={v}/>{v.canDelete&&<DeleteOwnVisit visitId={v.id} revision={v.updatedAt.toISOString()}/>}
    {v.leadId&&<p><Link href={`/workspace/leads/${v.leadId}`}>Open Lead Details</Link></p>}
   </div>
  </article>)}</section>;
 }
 
-function SalesCheckInReport({r,selectedDate}:{r:CheckInResult;selectedDate:string}){
+function SalesCheckInReport({r,selectedDate,raw}:{r:CheckInResult;selectedDate:string;raw:SearchParams}){
  const page=r.filters.page;
- const salesPageHref=(next:number)=>selectedDate?`?date=${encodeURIComponent(selectedDate)}&page=${next}`:`?page=${next}`;
+ const salesPageHref=(next:number)=>pageHref(raw,next);
  return <main className={styles.salesPage}>
   <header className={styles.heading}><h1>Check-in Report</h1><p>All your check-ins, latest first. Search any particular day using the date below.</p></header>
+  <RelatedReports/>
   <form className={styles.searchCard}>
    <div className={styles.searchRow}>
     <label>Search check-ins by date<input type="date" name="date" defaultValue={selectedDate}/></label>
@@ -66,4 +75,4 @@ function SalesCheckInReport({r,selectedDate}:{r:CheckInResult;selectedDate:strin
  </main>
 }
 
-export function VisitTable({rows}:{rows:CheckInResult['rows']}){if(!rows.length)return <div className="empty-state">No check-ins match the selected filters and date range.</div>;return <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Employee / customer</th><th>Check-in / checkout</th><th>Status / duration</th><th>Visit details</th><th>Check-in address / coordinates</th><th>Leads</th></tr></thead><tbody>{rows.map(v=><tr key={v.id}><td><strong>{v.user.name}</strong><small>{v.user.salesRole} · {v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.customer?.name||v.contactName||"Customer"}</Link>:v.customer?.name||v.contactName||"Customer"}</small></td><td>{dateTime(v.checkedInAt)}<small>{dateTime(v.checkedOutAt)}</small></td><td>{v.checkedOutAt?'COMPLETED':'ACTIVE'}<small>{duration(v.durationMs)}</small></td><td>{v.visitNotes||'—'}<small>{v.visitKind?`${v.visitKind} · `:''}{v.checkoutSentiment||'No sentiment'} · {v.checkoutRemarks||'No remarks'}</small></td><td>{v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`}<small>{v.checkOutLatitude?.toFixed(5)||'—'}, {v.checkOutLongitude?.toFixed(5)||'—'} · Ref. {distance(v.referenceDistanceMeters)}</small></td><td>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>Open lead</Link>:v._count.sourceLeads}</td></tr>)}</tbody></table></div>}
+export function VisitTable({rows}:{rows:CheckInResult['rows']}){if(!rows.length)return <div className="empty-state">No check-ins match the selected filters and date range.</div>;return <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Employee / customer</th><th>Check-in / checkout</th><th>Status / duration</th><th>Visit details</th><th>Check-in address / coordinates</th><th>Leads</th></tr></thead><tbody>{rows.map(v=><tr key={v.id}><td><strong>{v.user.name}</strong><small>{v.user.salesRole} · {v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>{v.contactName||v.customer?.name||"Contact"}</Link>:v.contactName||v.customer?.name||"Contact"}</small></td><td>{dateTime(v.checkedInAt)}<small>{dateTime(v.checkedOutAt)}</small></td><td>{v.checkedOutAt?'COMPLETED':'ACTIVE'}<small>{duration(v.durationMs)}</small></td><td>{v.visitNotes||'—'}<p>Phone: {v.contactPhone?.trim()||'Not recorded'}</p><ReportVisitDetails row={v}/>{v.canDelete&&<DeleteOwnVisit visitId={v.id} revision={v.updatedAt.toISOString()}/>}<small>{v.visitKind?`${v.visitKind} · `:''}{v.checkoutSentiment||'No sentiment'} · {v.checkoutRemarks||'No remarks'}</small></td><td>{v.checkInAddress||`${v.checkInLatitude.toFixed(5)}, ${v.checkInLongitude.toFixed(5)}`}<small>{v.checkOutLatitude?.toFixed(5)||'—'}, {v.checkOutLongitude?.toFixed(5)||'—'} · Ref. {distance(v.referenceDistanceMeters)}</small></td><td>{v.leadId?<Link href={`/workspace/leads/${v.leadId}`}>Open lead</Link>:v._count.sourceLeads}</td></tr>)}</tbody></table></div>}

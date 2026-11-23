@@ -1,0 +1,12 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+const m=vi.hoisted(()=>({create:vi.fn(),notify:vi.fn()}));
+vi.mock('@/lib/billing/service',()=>({createAccountPackageOrder:m.create,cancelCurrentCompanyPendingOrder:vi.fn(),changePrice:vi.fn(),manualOverride:vi.fn()}));
+vi.mock('@/lib/billing/unified-sales-team',()=>({createUnifiedSalesTeamOrder:vi.fn(),confirmUnifiedManualPayment:vi.fn()}));
+vi.mock('@/lib/billing/manual-payment-email',()=>({notifyManualPaymentOrderCreated:m.notify,notifyManualPaymentOrderApproved:vi.fn()}));
+vi.mock('@/lib/billing/diagnostics',()=>({logBillingFailure:vi.fn()}));
+vi.mock('@/lib/security/request',()=>({mutationGuard:vi.fn()}));
+vi.mock('next/cache',()=>({revalidatePath:vi.fn()}));
+vi.mock('next/navigation',()=>({redirect:(url:string)=>{throw new Error(`REDIRECT:${url}`)}}));
+import {createAccountPackageOrderAction} from './billing';
+beforeEach(()=>vi.clearAllMocks());
+it.each(['INVALID_ACCOUNT_PACKAGE_QUANTITY','INVALID_BILLING_PERIOD'])('preserves safe validation code %s and sends no success notification',async code=>{m.create.mockRejectedValue(new Error(code));const form=new FormData();form.set('paymentMethod','MANUAL');form.set('quantity','1');form.set('billingPeriod','YEARLY');await expect(createAccountPackageOrderAction(form)).rejects.toThrow(`REDIRECT:/workspace/billing?orderError=${code}`);expect(m.notify).not.toHaveBeenCalled()});

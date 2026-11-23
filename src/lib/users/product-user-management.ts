@@ -1,3 +1,4 @@
+import {effectiveAccountCapacity} from "@/lib/billing/account-capacity";
 import {
   Prisma,
   type AccountRole,
@@ -267,6 +268,7 @@ async function activeSubscriptions(
       adminSeats: true,
       managerSeats: true,
       salesSeats: true,
+      accountPackages: true,
       sourceOrder: { select: { provider: true } },
     },
   });
@@ -309,13 +311,8 @@ async function accountPackageCount(
   now = new Date(),
 ) {
   if (company.productEdition === "SALESPUNCH360") return 0;
-  const subscriptions = await activeSubscriptions(tx, company.id, now),
-    paidPackages = subscriptions
-      .filter(
-        (item) => item.sourceOrder?.provider === ACCOUNT_PACKAGE_ORDER_PROVIDER,
-      )
-      .reduce((sum, item) => sum + item.adminSeats, 0);
-  return 1 + paidPackages;
+  const subscriptions = await activeSubscriptions(tx, company.id, now);
+  return effectiveAccountCapacity(company,subscriptions,now).packageCount;
 }
 async function enforceAccountSeat(
   tx: Prisma.TransactionClient,
@@ -340,6 +337,7 @@ async function enforceAccountSeat(
 
 export async function getProductUserManagementContextForActor(
   provided: Awaited<ReturnType<typeof requireUser>>,
+  options:{omitDirectory?:boolean}={},
 ) {
   const { actor, company } = await administrationActor(false, provided),
     canManageSalesUsers = canUsePermission(
@@ -354,7 +352,7 @@ export async function getProductUserManagementContextForActor(
     );
   const now = new Date(),
     [users, branches, seatUsers, packageSubscriptions] = await Promise.all([
-      db.user.findMany({
+      options.omitDirectory?Promise.resolve([]):db.user.findMany({
         where: {
           companyId: company.id,
           role: { not: "SUPER_ADMIN" },
@@ -364,6 +362,7 @@ export async function getProductUserManagementContextForActor(
           id: true,
           name: true,
           email: true,
+          phone:true,
           isActive: true,
           salesRole: true,
           accountRole: true,
@@ -399,17 +398,12 @@ export async function getProductUserManagementContextForActor(
         },
         select: {
           adminSeats: true,
+          accountPackages: true,
           sourceOrder: { select: { provider: true } },
         },
       }),
     ]);
-  const paidPackages = packageSubscriptions
-      .filter(
-        (item) => item.sourceOrder?.provider === ACCOUNT_PACKAGE_ORDER_PROVIDER,
-      )
-      .reduce((sum, item) => sum + item.adminSeats, 0),
-    accountPackageTotal =
-      company.productEdition === "SALESPUNCH360" ? 0 : 1 + paidPackages,
+  const accountPackageTotal = effectiveAccountCapacity(company,packageSubscriptions,now).packageCount,
     accountLimits = accountPackageLimits(accountPackageTotal),
     accountUsage = Object.fromEntries(
       ACCOUNT_PACKAGE_ROLES.map((role) => [
@@ -453,6 +447,7 @@ export async function editAccountUserForActor(
     throw new Error("ACCOUNT_ROLE_NOT_ENTITLED");
   return db.$transaction(
     async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${company.id}::uuid FOR UPDATE`;
       await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${input.userId}::uuid AND "companyId"=${company.id}::uuid FOR UPDATE`;
       const target = await tx.user.findFirst({
         where: {
@@ -600,8 +595,8 @@ async function createProductUser(
   );
 }
 
-export async function getProductUserManagementContext() {
-  return getProductUserManagementContextForActor(await requireUser());
+export async function getProductUserManagementContext(options:{omitDirectory?:boolean}={}) {
+  return getProductUserManagementContextForActor(await requireUser(),options);
 }
 export async function createAccountUser(raw: unknown) {
   return createAccountUserForActor(await requireUserForMutation(), raw);

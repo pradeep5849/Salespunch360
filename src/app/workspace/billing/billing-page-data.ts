@@ -1,3 +1,4 @@
+import {operationalSalesStatus,nextAccountPackageExpiry} from "@/lib/billing/subscription-display";
 import {billingDashboard} from '@/lib/billing/service';
 import {getTelecallerBillingOverview} from '@/lib/billing/telecaller';
 
@@ -5,6 +6,10 @@ export type BillingPeriod='SIX_MONTH'|'YEARLY';
 export type ActiveSalesEmployee={id:string;name:string;salesRole:'ADMIN'|'MANAGER'|'SALES';managerType?:string|null};
 
 export const orderErrors:Record<string,string>={
+ ADDITION_REQUIRES_ACTIVE_TERM:"Add Team needs an active paid term. Use Renewal to buy a new term.",
+ INVALID_ADDITION_SELECTION:"The active subscription or added seats changed. Review Add Team again; use Renewal to reduce seats or change the billing period.",
+ INVALID_ACCOUNT_PACKAGE_QUANTITY:"Choose a whole number of Account packages from 1 to 100, then review checkout again.",
+ INVALID_BILLING_PERIOD:"Choose the supported six-month or yearly billing period, then review checkout again.",
  SEATS_BELOW_USAGE:'The selected seat count is below your current active users. Keep enough seats for the active team before creating this order.',
  TELECALLER_SEATS_BELOW_USAGE:'Telecaller seats cannot be below the number of active Telecallers. Deactivate the Telecaller first, then renew.',
  INVALID_SEAT_SELECTION:'The selected users to retain do not match the active team. Review the retention selection and try again.',
@@ -34,9 +39,10 @@ export async function loadBillingPageData(){
  const accountPrices={SIX_MONTH:r.account.sixMonthUnitPrice,YEARLY:r.account.yearlyUnitPrice};
  const accountCurrent=r.account.subscriptions[0];
  const isPlus=r.company?.productEdition==='SALESPUNCH360_PLUS';
- const salesStatus=e?(e.paidActive?'ACTIVE':e.trialActive?'TRIAL':r.company?.subscriptionStatus==='ACTIVE'?'ACTIVE':'INACTIVE'):'INACTIVE';
+ const salesStatus=operationalSalesStatus(e);
+ const accountExpiry=nextAccountPackageExpiry(r.account.subscriptions);
  const accountStatus=accountCurrent?'ACTIVE':r.company?.subscriptionStatus==='TRIAL'&&r.account.packageCount>0?'TRIAL':'INACTIVE';
  const activePeriod=(e?.subscription?.billingPeriod??'SIX_MONTH') as BillingPeriod;
  const activeEmployees=r.activeEmployees as ActiveSalesEmployee[];
- return {r,e,telecaller,managersEnabled,backHref,prices,telecallerPrices,accountPrices,accountCurrent,isPlus,salesStatus,accountStatus,activePeriod,activeEmployees};
+ return {accountExpiry,r,e,telecaller,managersEnabled,backHref,prices,telecallerPrices,accountPrices,accountCurrent,isPlus,salesStatus,accountStatus,activePeriod,activeEmployees};
 }

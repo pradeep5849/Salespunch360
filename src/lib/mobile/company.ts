@@ -1,3 +1,4 @@
+import {storeReplacementCompanyLogo} from "@/lib/company/logo-replacement";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -6,10 +7,9 @@ import { geofenceSettingsSchema } from "@/lib/geofence/validation";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { currentPrices } from "@/lib/billing/service";
 import { PAYMENT_PROVIDER_STATUS } from "@/lib/billing/provider";
-import { companyLogoKey, processCompanyLogo } from "@/lib/company/logo";
+import { processCompanyLogo } from "@/lib/company/logo";
 import { profileComplete } from "@/lib/company/profile";
 import { lockBillingCompany } from "@/lib/billing/company-lock";
-import { privateStorage } from "@/lib/storage";
 import { mobileCan, type MobilePrincipal } from "./auth";
 
 export class MobileCompanyError extends Error {
@@ -150,8 +150,6 @@ export async function mobileUpdateCompanyLogo(principal: MobilePrincipal, file: 
     throw new MobileCompanyError("LOGO_INVALID", 400);
   }
 
-  const key = companyLogoKey(companyId);
-  await privateStorage().put(key, logo);
-  await db.company.update({ where: { id: companyId }, data: { logoObjectKey: key } });
+  await storeReplacementCompanyLogo(companyId,logo);
   return mobileCompanyContext(principal);
 }

@@ -59,6 +59,7 @@ export async function accountingOverviewForActor(
           orderBy: { name: "asc" },
         },
         accountingPeriodLocks: true,
+        accountingAuditEvents:{where:{eventType:"PERIOD_LOCKED"},orderBy:[{createdAt:"desc"},{id:"desc"}],take:50,select:{id:true,reason:true,createdAt:true,entityId:true}},
       },
     });
   return {
@@ -100,6 +101,18 @@ export async function createCostCentreForActor(
   const d = costCentreSchema.parse(raw);
   return db.costCentre.create({ data: { companyId: a.companyId, ...d } });
 }
+export async function updateCostCentreForActor(a:Awaited<ReturnType<typeof actor>>,raw:unknown){
+ if(a.accountRole!=="ACCOUNT_ADMIN")throw new Error("NOT_AUTHORIZED");
+ const input=costCentreSchema.extend({id:z.string().uuid(),updatedAt:z.coerce.date()}).parse(raw);
+ return db.$transaction(async tx=>{
+  const before=await tx.costCentre.findFirst({where:{id:input.id,companyId:a.companyId}});
+  if(!before)throw new Error("NOT_FOUND");
+  const changed=await tx.costCentre.updateMany({where:{id:input.id,companyId:a.companyId,updatedAt:input.updatedAt},data:{code:input.code,name:input.name,description:input.description}});
+  if(changed.count!==1)throw new Error("STALE");
+  await tx.accountingAuditEvent.create({data:{companyId:a.companyId,actorUserId:a.id,eventType:"SETTINGS_CHANGED",entityType:"COST_CENTRE",entityId:input.id,metadata:{before:{code:before.code,name:before.name,description:before.description},after:{code:input.code,name:input.name,description:input.description??null}}}});
+ });
+}
+export async function updateCostCentre(raw:unknown){return updateCostCentreForActor(await actor("ACCOUNT_CHART_ADMIN"),raw)}
 function assertBalanced(lines: { debit: string; credit: string }[]) {
   const debit = lines.reduce((n, l) => n.add(l.debit), new D(0)),
     credit = lines.reduce((n, l) => n.add(l.credit), new D(0));

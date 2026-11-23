@@ -18,6 +18,8 @@ data class TelecallingState(
     val loading: Boolean = true,
     val queue: List<TelecallingLead> = emptyList(),
     val callbacks: List<CallbackQueueItem> = emptyList(),
+    val callbackPage:Int=1,
+    val callbackHasMore:Boolean=false,
     val historyLead: TelecallingLead? = null,
     val history: List<LeadCallHistoryItem> = emptyList(),
     val query: String = "",
@@ -35,22 +37,29 @@ class TelecallingViewModel(app: Application) : AndroidViewModel(app) {
     fun setQuery(value: String) { _state.value = _state.value.copy(query = value.take(100)) }
     fun search(){ _state.value=_state.value.copy(searched=true);refresh(search=true) }
 
-    fun refresh(search:Boolean=_state.value.searched) = viewModelScope.launch {
+    fun refresh(search:Boolean=_state.value.searched,callbackPage:Int=_state.value.callbackPage) = viewModelScope.launch {
         _state.value = _state.value.copy(loading = true, message = null)
         _state.value = try {
             coroutineScope {
                 val queueDeferred = async {
                     if(search&&_state.value.query.isNotBlank()) api.queue(_state.value.query) else emptyList()
                 }
-                val callbacksDeferred = async { api.callbacks() }
+                val callbacksDeferred = async { api.callbacks(callbackPage) }
                 _state.value.copy(
                     loading = false,
                     queue = queueDeferred.await(),
-                    callbacks = callbacksDeferred.await(),
+                    callbacks = callbacksDeferred.await().items,
+                    callbackPage = callbacksDeferred.await().page,
+                    callbackHasMore = callbacksDeferred.await().hasMore,
                     searched = search,
                 )
             }
         } catch (e: Exception) { _state.value.copy(loading = false, message = apiMessage(e, "Telecalling queue couldn't be loaded.")) }
+    }
+
+    fun changeCallbackPage(next:Int) {
+        if(_state.value.loading||_state.value.busy||next<1)return
+        refresh(callbackPage=next)
     }
 
     fun openHistory(lead: TelecallingLead) = viewModelScope.launch {
@@ -70,7 +79,7 @@ class TelecallingViewModel(app: Application) : AndroidViewModel(app) {
                     val queueDeferred = async {
                         if(_state.value.searched&&_state.value.query.isNotBlank()) api.queue(_state.value.query) else emptyList()
                     }
-                    val callbacksDeferred = async { api.callbacks() }
+                    val callbacksDeferred = async { api.callbacks(_state.value.callbackPage) }
                     val historyDeferred = async {
                         if (_state.value.historyLead?.id == lead.id) api.history(lead.id) else _state.value.history
                     }
@@ -78,7 +87,9 @@ class TelecallingViewModel(app: Application) : AndroidViewModel(app) {
                     _state.value = _state.value.copy(
                         busy = false,
                         queue = queue,
-                        callbacks = callbacksDeferred.await(),
+                        callbacks = callbacksDeferred.await().items,
+                        callbackPage = callbacksDeferred.await().page,
+                        callbackHasMore = callbacksDeferred.await().hasMore,
                         history = historyDeferred.await(),
                         historyLead = _state.value.historyLead?.let { current -> queue.firstOrNull { it.id == current.id } ?: current },
                         message = if (saved.handoffCreated) "Call saved. Sales owner was notified." else "Call result saved.",

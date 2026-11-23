@@ -1,3 +1,8 @@
+import {financialVerificationInTx} from "./verification-reconciliation";
+import {verificationActions,type VerificationRecord} from "./verification-actions";
+import {verificationBudget} from "./verification-budget";
+import { missingCanonicalLedgerKeys } from "./verification-ledgers";
+import { mismatchedTransferSources } from "./verification-transfers";
 import {redactAuditMetadata} from "./audit-redaction";
 import {readRestoreSnapshot} from "./restore-snapshot";
 import {isCompanyRestoreOwner,requireCompanyRestoreOwner} from "./restore-owner";
@@ -19,6 +24,10 @@ export type VerificationResult = {
   affected: number;
   samples: string[];
   recommendation: string;
+  incomplete?: boolean;
+  coverage?: "NOT_CHECKED";
+  records?: {label:string;href:string}[];
+  reviewHref?: string;
 };
 const result = (
   check: string,
@@ -37,8 +46,11 @@ const result = (
 export async function verifyAccountDataForActor(actor: {
   id: string;
   companyId: string;
-}, client: Prisma.TransactionClient = db, scope?: {financialYearId:string;startDate:Date;endDate:Date}): Promise<VerificationResult[]> {
+}, client: Prisma.TransactionClient, scope?: {financialYearId:string;startDate:Date;endDate:Date}): Promise<VerificationResult[]> {
   const companyId = actor.companyId;
+  await client.$executeRaw`SET LOCAL statement_timeout = '8s'`;
+  const exceeded=await verificationBudget(client,companyId,scope);
+  if(exceeded.length)return [{status:"ERROR",check:"Verification did not complete",affected:0,incomplete:true,samples:exceeded.slice(0,5).map(row=>`${row.label}: ${row.count} (limit ${row.limit})`),recommendation:"The interactive scan limit was exceeded. This is not a finding of incorrect balances. No PASS results were produced. Use a financial-year-scoped review or arrange an authorized offline audit for the listed records; do not rewrite history to reduce the count."}];
   const [
     journals,
     documents,
@@ -48,11 +60,13 @@ export async function verifyAccountDataForActor(actor: {
     projects,
     assets,
     assignmentHistory,
+    warehouses,
     users,
   ] = await Promise.all([
     client.journalEntry.findMany({
       where: { companyId, ...(scope?{financialYearId:scope.financialYearId}:{}) },
       select: {
+        id: true,
         journalNumber: true,
         lines: { select: { debit: true, credit: true } },
       },
@@ -60,6 +74,7 @@ export async function verifyAccountDataForActor(actor: {
     client.commercialDocument.findMany({
       where: { companyId, ...(scope?{issueDate:{gte:scope.startDate,lte:scope.endDate}}:{}) },
       select: {
+        id: true,
         documentNumber: true,
         balanceDue: true,
         grandTotal: true,
@@ -85,6 +100,13 @@ export async function verifyAccountDataForActor(actor: {
       select: {
         id: true,
         sourceId: true,
+        sourceType: true,
+        branchId: true,
+        batchId: true,
+        serialNumberId: true,
+        unitCost: true,
+        totalCost: true,
+        movementDate: true,
         movementType: true,
         quantity: true,
         warehouseId: true,
@@ -93,7 +115,7 @@ export async function verifyAccountDataForActor(actor: {
     }),
     client.project.findMany({
       where: { companyId },
-      select: { projectNumber: true, branchId: true, customerId: true },
+      select: { id:true,projectNumber: true, branchId: true, customerId: true },
     }),
     client.asset.findMany({
       where: { companyId },
@@ -109,6 +131,7 @@ export async function verifyAccountDataForActor(actor: {
       where: { companyId, returnedAt: null },
       select: { assetId: true, assignedToId: true },
     }),
+    client.warehouse.findMany({where:{companyId},select:{id:true,branchId:true}}),
     client.user.findMany({
       where: { companyId },
       select: {
@@ -142,22 +165,9 @@ export async function verifyAccountDataForActor(actor: {
   const duplicateLedgers = systemLedgers.filter((x) => x._count !== 1),
     unmappedMoney = moneyAccounts.filter((x) => !x.ledgerAccountId);
   const badMovement = movements.filter(
-      (m) => m.quantity.lte(0) || !m.warehouseId || !m.productId,
-    ),
-    transferGroups = new Map<string, Set<string>>();
-  movements
-    .filter(
-      (m) =>
-        m.movementType === "TRANSFER_IN" || m.movementType === "TRANSFER_OUT",
-    )
-    .forEach((m) => {
-      const key = m.sourceId ?? m.id;
-      transferGroups.set(
-        key,
-        (transferGroups.get(key) ?? new Set()).add(m.movementType),
-      );
-    });
-  const unpaired = [...transferGroups].filter(([, x]) => x.size !== 2);
+    (m) => m.quantity.lte(0) || !m.warehouseId || !m.productId,
+  );
+  const unpaired = mismatchedTransferSources(movements,warehouses);
   const branches = new Set(
       (
         await client.branch.findMany({ where: { companyId }, select: { id: true } })
@@ -175,8 +185,11 @@ export async function verifyAccountDataForActor(actor: {
       (p) => !branches.has(p.branchId) || !customers.has(p.customerId),
     ),
     badAssets = assets.filter((a) => !branches.has(a.branchId));
+  const assignmentsByAsset=new Map<string,typeof assignmentHistory>();
+  for(const row of assignmentHistory){const rows=assignmentsByAsset.get(row.assetId)??[];rows.push(row);assignmentsByAsset.set(row.assetId,rows)}
+  const usersById=new Map(users.map(user=>[user.id,user])),userBranches=new Map(users.map(user=>[user.id,new Set(user.branchAccesses.map(access=>access.branchId))]));
   const assignmentIssues = assets.filter((asset) => {
-    const active = assignmentHistory.filter((x) => x.assetId === asset.id);
+    const active = assignmentsByAsset.get(asset.id)??[];
     if (active.length !== 1)
       return (
         active.length > 1 ||
@@ -184,16 +197,16 @@ export async function verifyAccountDataForActor(actor: {
         Boolean(asset.assignedUserId)
       );
     const assignment = active[0],
-      user = users.find((x) => x.id === assignment.assignedToId);
+      user = usersById.get(assignment.assignedToId);
     return (
       asset.status !== "ASSIGNED" ||
       asset.assignedUserId !== assignment.assignedToId ||
       !user?.isActive ||
       (user.branchAccessScope === "SELECTED_BRANCHES" &&
-        !user.branchAccesses.some((x) => x.branchId === asset.branchId))
+        !userBranches.get(user.id)?.has(asset.branchId))
     );
   });
-  return [
+  const checks:VerificationResult[] = [
     result(
       "Journal entries balance",
       badJournals.length,
@@ -206,6 +219,13 @@ export async function verifyAccountDataForActor(actor: {
       negative.map((x) => x.documentNumber),
       "Review settlement and advance allocations.",
     ),
+    ...(!scope ? [result(
+      "Canonical system-ledger readiness",
+      missingCanonicalLedgerKeys(systemLedgers).length,
+      missingCanonicalLedgerKeys(systemLedgers),
+      "Account initialization may be incomplete. Ask an authorized administrator to review the canonical ledger setup; verification does not create ledgers.",
+      true,
+    )] : []),
     result(
       "System ledgers are unique",
       duplicateLedgers.length,
@@ -225,10 +245,10 @@ export async function verifyAccountDataForActor(actor: {
       "Use a controlled stock correction; never rewrite movements.",
     ),
     result(
-      "Inventory transfers are paired",
+      "Warehouse transfer legs reconcile",
       unpaired.length,
-      unpaired.map(([x]) => x),
-      "Complete the matching transfer leg.",
+      unpaired,
+      "Review the transfer source, product/lot, paired quantities/value, dates and warehouse branch attribution. Use controlled inventory correction; never rewrite posted movements.",
     ),
     result(
       "Stored tax components reconcile",
@@ -255,6 +275,15 @@ export async function verifyAccountDataForActor(actor: {
       "Review assignment history and use the controlled return/assign workflow; verification is read-only.",
     ),
   ];
+  const records:Record<string,VerificationRecord[]>={
+    "Journal entries balance":badJournals.map(row=>({id:row.id,label:row.journalNumber,kind:"journal"})),
+    "Document outstanding is valid":negative.map(row=>({id:row.id,label:row.documentNumber,kind:"document"})),
+    "Stored tax components reconcile":badTax.map(row=>({id:row.id,label:row.documentNumber,kind:"document"})),
+    "Project tenant references are valid":badProjects.map(row=>({id:row.id,label:row.projectNumber,kind:"project"})),
+    "Asset Branch references are valid":badAssets.map(row=>({id:row.id,label:row.assetNumber,kind:"asset"})),
+    "Asset assignment history agrees with current assignment":assignmentIssues.map(row=>({id:row.id,label:row.assetNumber,kind:"asset"})),
+  };
+  return [...checks.map(check=>verificationActions(check,records[check.check])),...await financialVerificationInTx(client,companyId,scope)];
 }
 
 async function requireCloseBooksAdmin(actor: {id:string;companyId:string;accountRole?:string|null}, client:Prisma.TransactionClient=db) {
@@ -772,9 +801,13 @@ export async function createAccountBackupForActor(actor: {
   };
 }
 
+export async function verifyCompanyAccountDataForActor(a: { id: string; companyId: string; accountRole?: string | null; branchAccessScope?: string | null }) {
+  if (a.accountRole !== "ACCOUNT_ADMIN" || a.branchAccessScope !== "ALL_BRANCHES") throw new AuthorizationError();
+  return db.$transaction(tx => verifyAccountDataForActor(a, tx), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,timeout:15000,maxWait:5000 });
+}
 export async function verifyAccountData() {
-  const a = await requirePermission("ACCOUNT_REPORTS");
-  return verifyAccountDataForActor({ id: a.id, companyId: a.companyId! });
+  const a = await requirePermission("ACCOUNT_SETTINGS");
+  return verifyCompanyAccountDataForActor({ ...a, companyId: a.companyId! });
 }
 export async function closeFinancialYear(input: {
   financialYearId: string;

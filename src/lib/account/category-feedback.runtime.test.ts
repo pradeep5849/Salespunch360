@@ -40,10 +40,10 @@ describe("A056 category creation feedback", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
   it("returns the saved row and invalidates the category destination", async () => {
-    mocks.createCategory.mockResolvedValue({ id: "saved", name: "Office" });
+    mocks.createCategory.mockResolvedValue({ id: "saved", name: "Office", description:null, scope:"BOTH", updatedAt:new Date("2026-11-22T00:00:00.000Z") });
     expect(
       await createCategoryWithFeedbackAction({ name: "Office", scope: "BOTH" }),
-    ).toEqual({ kind: "success", row: { id: "saved", name: "Office" } });
+    ).toEqual({ kind: "success", row: { id: "saved", name: "Office", description:null, scope:"BOTH", updatedAt:"2026-11-22T00:00:00.000Z" } });
     expect(mocks.createCategory).toHaveBeenCalledWith({
       name: "Office",
       description: undefined,

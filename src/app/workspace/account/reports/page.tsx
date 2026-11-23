@@ -32,7 +32,7 @@ export default async function Page({
             ? "Project reports"
             : "Financial Reports"}
         </h1>
-        <p>
+        <p data-branch-ui>
           Scope:{" "}
           {context.mode === "COMPANY"
             ? "Company consolidated"

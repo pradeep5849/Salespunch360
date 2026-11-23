@@ -5,8 +5,8 @@ export function followUpStatusWhere(status:string,now=new Date()):Prisma.FollowU
  const today=parseIndiaBusinessDate(indiaDateText(now)),tomorrow=new Date(today.getTime()+86400000);
  switch(status){
   case 'ALL':return {};
-  case 'OVERDUE':return {status:'PENDING',dueDate:{lt:today}};
-  case 'TODAY':return {status:'PENDING',dueDate:{gte:today,lt:tomorrow}};
+  case 'OVERDUE':return {status:'PENDING',OR:[{callbackAt:{lt:now}},{callbackAt:null,dueDate:{lt:today}}]};
+  case 'TODAY':return {status:'PENDING',dueDate:{gte:today,lt:tomorrow},OR:[{callbackAt:null},{callbackAt:{gte:now}}]};
   case 'UPCOMING':return {status:'PENDING',dueDate:{gte:tomorrow}};
   case 'CLOSED':case 'COMPLETED':return {status:'COMPLETED'};
   case 'CANCELLED':return {status:'CANCELLED'};

@@ -14,12 +14,17 @@ data class UtilityState(
     val loading: Boolean = false,
     val recyclePage: Int = 1,
     val recycleHasMore: Boolean = false,
+    val recycleQuery:String="",
+    val recycleType:String="",
+    val recycleAppliedQuery:String="",
+    val recycleAppliedType:String="",
     val exportTypes:List<String> = emptyList(),
     val rows: JsonArray = JsonArray(emptyList()),
     val preview: JsonObject? = null,
     val restoreReview: JsonObject? = null,
     val file: Pair<String, ByteArray>? = null,
     val error: String? = null,
+    val verificationCompletedAt: String? = null,
     val message: String? = null
 )
 
@@ -28,8 +33,12 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(UtilityState())
     val state = _state.asStateFlow()
 
+    fun setRecycleQuery(value:String){_state.value=_state.value.copy(recycleQuery=value.take(160))}
+    fun setRecycleType(value:String){_state.value=_state.value.copy(recycleType=value)}
     fun load(mode: String, more: Boolean = false) {
         if (_state.value.loading) return
+        val recycleQuery=if(more)_state.value.recycleAppliedQuery else _state.value.recycleQuery
+        val recycleType=if(more)_state.value.recycleAppliedType else _state.value.recycleType
         val page = if (mode == "recycle" && more) _state.value.recyclePage + 1 else 1
         if(mode == "backup") { _state.value = _state.value.copy(rows=JsonArray(emptyList()),loading=false,error=null); return }
         if(mode=="export"){
@@ -43,11 +52,11 @@ class AccountUtilityViewModel(app: Application) : AndroidViewModel(app) {
                 if (mode == "import") {
                     api.accountImports()
                 } else {
-                    api.accountUtility(if (mode == "recycle") "recycle-bin" else mode, page)
+                    api.accountUtility(if (mode == "recycle") "recycle-bin" else mode, page,if(mode=="recycle")recycleQuery else "",if(mode=="recycle")recycleType else "")
                 }
             }.onSuccess {
                 val rows = if(mode == "recycle") JsonArray(it.filterNot { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true }) else it
-                _state.value = _state.value.copy(rows = if(more) JsonArray(_state.value.rows.toList() + rows.toList()) else rows, loading = false, error = null, recyclePage = page, recycleHasMore = mode == "recycle" && it.any { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true })
+                _state.value = _state.value.copy(rows = if(more) JsonArray(_state.value.rows.toList() + rows.toList()) else rows, loading = false, error = null, verificationCompletedAt = if(mode == "verification") java.time.Instant.now().toString() else _state.value.verificationCompletedAt, recycleAppliedQuery=recycleQuery,recycleAppliedType=recycleType,recyclePage = page, recycleHasMore = mode == "recycle" && it.any { row -> row.jsonObject["hasMore"]?.jsonPrimitive?.booleanOrNull == true })
             }.onFailure {
                 _state.value = _state.value.copy(loading = false, error = it.message)
             }
