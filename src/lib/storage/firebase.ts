@@ -26,6 +26,16 @@ export class FirebaseStorage implements PrivateStorage {
     return getStorage(firebaseApp()).bucket();
   }
 
+  async exists(objectKey: string): Promise<boolean> {
+    assertSafeObjectKey(objectKey);
+    try {
+      const [exists] = await this.bucket().file(objectKey).exists();
+      return exists;
+    } catch {
+      throw new StorageError("PHOTO_STORAGE_UNAVAILABLE");
+    }
+  }
+
   async put(objectKey: string, data: Buffer): Promise<void> {
     assertSafeObjectKey(objectKey);
     try {
