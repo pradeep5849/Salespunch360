@@ -208,7 +208,7 @@ export function RegistrationForm({
                   required
                   inputMode="tel"
                   autoComplete="tel"
-                  pattern="\\+[1-9][0-9]{1,14}"
+                  pattern="\+[1-9][0-9]{1,14}"
                   placeholder="+919876543210"
                   aria-describedby="adminPhone-help"
                 />
