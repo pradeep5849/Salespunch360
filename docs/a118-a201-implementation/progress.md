@@ -210,3 +210,7 @@ Completed A120-F02 with independent saved line/discount/header, effective alloca
 ## First branch split — 53392b6d
 
 Completed A134-F04 with explicit KEEP/MOVE options on web/native and an identity-preserving atomic transition. Seven SQL scenarios, schema cases (ten total), four isolated Chromium cases, TypeScript/lint/whitespace passed. See `docs/first-branch-transition/checkpoint.md`. Slice 5 since the last full run; no new full run. Counts: 149 implemented/acceptance pending, one partial, four not started. Owner answered all three policy questions: Billing hidden for Account-only Admins; only unlinked visits may be deleted; targets remain company-wide with separate branch actuals. A134-F03 global branch UI hiding remains open.
+
+## Hidden Account-only Billing — 11748e48 / native branch gate 7201c920
+
+Completed A128-F04 using the owner's explicit hide-entirely decision. 36 focused cases and two isolated Chromium menu cases passed; TypeScript/lint/whitespace passed. Native branch API separately permits an authenticated Account-only Main Admin to reach the current-owner gate (ten focused cases) without granting Sales/Billing access. See `docs/account-only-billing-hidden/checkpoint.md`. Slice 6 since the last full run; no new full run. Counts: 150 implemented/acceptance pending, one partial, three not started. Remaining changes are being collected locally before the next batch push to avoid unnecessary CI retriggers.

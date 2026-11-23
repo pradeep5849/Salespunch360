@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "53392b6d",
-  "status": "Implementation continued through the atomic first-branch split; owner decisions received for remaining policy-dependent work.",
+  "application_revision": "7201c920",
+  "status": "Implementation continued through owner-approved hidden Account-only Billing and native branch Main Admin access.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1810,7 +1810,7 @@
         "title": "Native billing rejects Account-only administrators",
         "policy_update": "2026-11-12: owner forbids Account-only admins creating/renewing subscriptions. Native purchase denial is expected, not a defect. Permission to view history/subscription details remains unspecified; reevaluate only the read gate."
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "checkpoint": "docs/first-branch-transition/checkpoint.md",
@@ -1826,6 +1826,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "11748e48",
+        "progress": "docs/account-only-billing-hidden/checkpoint.md",
+        "acceptance": "Owner chose hidden Billing; 36 focused cases and two isolated Chromium cases, TypeScript/lint passed. Native/device acceptance pending."
       }
     },
     {
@@ -2127,7 +2132,7 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "53392b6d",
+        "revision": "53392b6d + native Account-only Main Admin HTTP gate 7201c920",
         "progress": "docs/first-branch-transition/checkpoint.md",
         "acceptance": "10 targeted cases including seven guarded SQL scenarios; four isolated Chromium cases, TypeScript/lint passed; global hiding remains separate A134-F03; native/device acceptance pending."
       }
@@ -6396,9 +6401,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 149,
-    "NOT STARTED": 4,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 150,
     "REQUIREMENT SUPERSEDED": 3,
+    "NOT STARTED": 3,
     "PARTIAL": 1,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
