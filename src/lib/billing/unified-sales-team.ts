@@ -1,4 +1,4 @@
-import {Prisma} from "@prisma/client";
+import {Prisma,type BillingOrder} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requirePermission} from "@/lib/auth/authorization";
 import {quoteBillingOrder,createBillingOrder,createMobileBillingOrder,confirmManualPayment} from "./service";
@@ -12,10 +12,10 @@ const TELECALLER_AUDIT_REASON="UNIFIED_TELECALLER_TARGET";
 type ParsedTarget={billingPeriod:TelecallerBillingPeriod;telecallerSeats:number};
 const parsedTarget=(raw:unknown):ParsedTarget=>{const d=orderRequestSchema.parse(raw);return{billingPeriod:d.billingPeriod,telecallerSeats:d.telecallerSeats}};
 
-export async function telecallerQuoteForCompany(companyId:string,period:TelecallerBillingPeriod,targetSeats:number,now=new Date()){
+export async function telecallerQuoteForCompany(companyId:string,period:TelecallerBillingPeriod,targetSeats:number,now=new Date(),client:Prisma.TransactionClient=db){
  const [state,salesTerm]=await Promise.all([
-  telecallerBillingState(db,companyId,now),
-  db.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}}),
+  telecallerBillingState(client,companyId,now),
+  client.companySubscription.findFirst({where:{companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now},OR:[{managerSeats:{gt:0}},{salesSeats:{gt:0}}]},select:{startsAt:true,endsAt:true},orderBy:{endsAt:"desc"}}),
  ]);
  if(targetSeats<state.used)throw new Error("TELECALLER_SEATS_BELOW_USAGE");
  const unit=new Prisma.Decimal(TELECALLER_PRICE_SCHEDULE_INR[period]);
@@ -30,27 +30,27 @@ export async function quoteUnifiedSalesTeam(raw:unknown){
  return{...base,telecallerSubtotal:telecaller.subtotal,subtotal:base.subtotal.plus(telecaller.subtotal),prorated:base.prorated||telecaller.prorated,coTermEndsAt:base.coTermEndsAt??telecaller.coTermEndsAt};
 }
 
-async function attachTelecallerTarget<T extends {id:string;companyId:string;createdByUserId:string;createdAt:Date}>(order:T,target:ParsedTarget){
- const existing=await db.billingAuditEvent.findFirst({where:{entityId:order.id,type:"ORDER_CREATED",reason:TELECALLER_AUDIT_REASON},select:{id:true}});
- if(existing)return db.billingOrder.findUniqueOrThrow({where:{id:order.id}});
- const telecaller=await telecallerQuoteForCompany(order.companyId,target.billingPeriod,target.telecallerSeats,order.createdAt);
- return db.$transaction(async tx=>{
-  const locked=await tx.billingOrder.findUnique({where:{id:order.id},select:{status:true}});if(!locked)throw new Error("ORDER_NOT_FOUND");
-  if(locked.status!=="PENDING")return tx.billingOrder.findUniqueOrThrow({where:{id:order.id}});
-  const updated=await tx.billingOrder.update({where:{id:order.id},data:{subtotal:{increment:telecaller.subtotal},totalAmount:{increment:telecaller.subtotal}}});
-  await tx.billingAuditEvent.create({data:{companyId:order.companyId,actorUserId:order.createdByUserId,type:"ORDER_CREATED",entityId:order.id,reason:TELECALLER_AUDIT_REASON,metadata:{telecallerSeats:target.telecallerSeats,currentTelecallerSeats:telecaller.currentSeats,telecallerSubtotal:telecaller.subtotal.toFixed(2),telecallerUnitPrice:telecaller.unitPrice.toFixed(2),coTermEndsAt:telecaller.coTermEndsAt?.toISOString()??null}}});
-  return updated;
- });
+/** Caller holds the company billing lock. Base order, amount and marker share this transaction. */
+export async function attachTelecallerTargetInTx(tx:Prisma.TransactionClient,order:BillingOrder,target:ParsedTarget){
+ await tx.$queryRaw`SELECT id FROM billing_orders WHERE id=${order.id}::uuid AND "companyId"=${order.companyId}::uuid FOR UPDATE`;
+ const locked=await tx.billingOrder.findUniqueOrThrow({where:{id:order.id,companyId:order.companyId}});
+ const existing=await tx.billingAuditEvent.findFirst({where:{companyId:order.companyId,entityId:order.id,type:"ORDER_CREATED",reason:TELECALLER_AUDIT_REASON},select:{metadata:true}});
+ if(existing){if(metadataTarget(existing.metadata)!==target.telecallerSeats)throw new Error("PENDING_ORDER_CONFLICT");return locked;}
+ if(locked.status!=="PENDING")return locked;
+ const telecaller=await telecallerQuoteForCompany(order.companyId,target.billingPeriod,target.telecallerSeats,order.createdAt,tx);
+ const updated=await tx.billingOrder.update({where:{id:order.id},data:{subtotal:{increment:telecaller.subtotal},totalAmount:{increment:telecaller.subtotal}}});
+ await tx.billingAuditEvent.create({data:{companyId:order.companyId,actorUserId:order.createdByUserId,type:"ORDER_CREATED",entityId:order.id,reason:TELECALLER_AUDIT_REASON,metadata:{telecallerSeats:target.telecallerSeats,currentTelecallerSeats:telecaller.currentSeats,telecallerSubtotal:telecaller.subtotal.toFixed(2),telecallerUnitPrice:telecaller.unitPrice.toFixed(2),coTermEndsAt:telecaller.coTermEndsAt?.toISOString()??null}}});
+ return updated;
 }
 
 export async function createUnifiedSalesTeamOrder(raw:unknown){
- const target=parsedTarget(raw),order=await createBillingOrder(raw);
- return attachTelecallerTarget(order,target);
+ const target=parsedTarget(raw);
+ return createBillingOrder(raw,(tx,order)=>attachTelecallerTargetInTx(tx,order,target));
 }
 
 export async function createUnifiedMobileSalesTeamOrder(actor:{id:string;companyId:string},raw:unknown){
- const target=parsedTarget(raw),order=await createMobileBillingOrder(actor,raw);
- return attachTelecallerTarget(order,target);
+ const target=parsedTarget(raw);
+ return createMobileBillingOrder(actor,raw,(tx,order)=>attachTelecallerTargetInTx(tx,order,target));
 }
 
 function metadataTarget(metadata:Prisma.JsonValue|null):number|null{
