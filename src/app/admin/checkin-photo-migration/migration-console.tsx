@@ -14,8 +14,29 @@ export function MigrationConsole() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
   const [error, setError] = useState("");
+  const [diagnostic, setDiagnostic] = useState("");
+  const [diagnosing, setDiagnosing] = useState(false);
   const [failures, setFailures] = useState<string[]>([]);
   const stop = useRef(false);
+
+  async function diagnose() {
+    if (!token || running || diagnosing) return;
+    setDiagnosing(true);
+    setDiagnostic("");
+    try {
+      const response = await fetch("/api/internal/checkin-photo-migration/diagnose", {
+        method: "POST", credentials: "same-origin", cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`Diagnostic request failed (HTTP ${response.status})`);
+      const result = (await response.json()) as { ok: boolean; category: string };
+      setDiagnostic(result.ok ? "Firebase bucket metadata access: OK. Object read/write permissions are not yet verified." : `Firebase bucket access failed: ${result.category}`);
+    } catch (cause) {
+      setDiagnostic(cause instanceof Error ? cause.message : "Diagnostic failed");
+    } finally {
+      setDiagnosing(false);
+    }
+  }
 
   async function run() {
     if (!token || running) return;
@@ -73,7 +94,9 @@ export function MigrationConsole() {
       <button type="button" disabled={!token || running || finished} onClick={run}>{running ? "Processing..." : cursor ? "Resume" : "Start"}</button>
       <button type="button" disabled={!running} onClick={() => { stop.current = true; }}>Stop after current batch</button>
       <button type="button" disabled={running} onClick={() => reset(mode)}>Reset counts</button>
+      <button type="button" disabled={!token || running || diagnosing} onClick={diagnose}>{diagnosing ? "Checking..." : "Test Firebase access"}</button>
     </div>
+    {diagnostic && <p role="status">{diagnostic}</p>}
     <div aria-live="polite"><strong>{finished ? "Complete" : running ? "Running" : cursor ? "Paused" : "Not started"}</strong>
       <p>Photos: {totals.photos} · Objects: {totals.objects} · Copied: {totals.copied} · Verified: {totals.verified} · Failed: {totals.failed} · Batches: {totals.batches}</p>
       {error && <p role="alert">{error}</p>}
