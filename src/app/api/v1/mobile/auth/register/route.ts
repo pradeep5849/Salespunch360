@@ -11,6 +11,8 @@ type RegistrationBody = {
   companyName?: unknown;
   adminName?: unknown;
   adminEmail?: unknown;
+  adminPhone?: unknown;
+  firebasePhoneToken?: unknown;
   adminPassword?: unknown;
   confirmPassword?: unknown;
   legalConsent?: unknown;
@@ -52,6 +54,7 @@ export async function POST(request: Request) {
       companyName: raw.companyName,
       adminName: raw.adminName,
       adminEmail: raw.adminEmail,
+      ...(process.env.PHONE_VERIFICATION_ENABLED === "true" ? { adminPhone: raw.adminPhone, firebasePhoneToken: raw.firebasePhoneToken } : {}),
       adminPassword: raw.adminPassword,
       confirmPassword: raw.confirmPassword,
     });
