@@ -11,6 +11,31 @@ describe("authentication validation", () => {
     confirmPassword: "StrongPassword1",
   };
 
+  it("requires mobile verification only when the server feature flag is enabled", () => {
+    const previous = process.env.PHONE_VERIFICATION_ENABLED;
+    try {
+      process.env.PHONE_VERIFICATION_ENABLED = "true";
+      expect(registrationSchema.safeParse(validRegistration).success).toBe(false);
+      expect(registrationSchema.safeParse({
+        ...validRegistration,
+        adminPhone: "+919876543210",
+        firebasePhoneToken: "firebase-id-token",
+      }).success).toBe(true);
+      expect(registrationSchema.safeParse({
+        ...validRegistration,
+        adminPhone: "9876543210",
+        firebasePhoneToken: "firebase-id-token",
+      }).success).toBe(false);
+      expect(registrationSchema.safeParse({
+        ...validRegistration,
+        adminPhone: "+919876543210",
+      }).success).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.PHONE_VERIFICATION_ENABLED;
+      else process.env.PHONE_VERIFICATION_ENABLED = previous;
+    }
+  });
+
   it("normalizes login email", () => {
     expect(loginSchema.parse({ email: "  Admin@Example.COM ", password: "secret" }).email).toBe("admin@example.com");
   });
