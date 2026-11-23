@@ -90,6 +90,47 @@ it("retains JSON compatibility when no optional image is selected", async () => 
     expect.objectContaining({ adminEmail: data.adminEmail }),
   );
 });
+it("blocks mobile registration without a verified phone proof when enforcement is enabled", async () => {
+  const previous = process.env.PHONE_VERIFICATION_ENABLED;
+  process.env.PHONE_VERIFICATION_ENABLED = "true";
+  try {
+    const r = await POST(new Request("https://example.test/api/v1/mobile/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: { "Content-Type": "application/json" },
+    }));
+    expect(r.status).toBe(400);
+    expect(await r.json()).toMatchObject({ error: "INVALID_INPUT" });
+    expect(m.register).not.toHaveBeenCalled();
+    expect(m.session).not.toHaveBeenCalled();
+  } finally {
+    if (previous === undefined) delete process.env.PHONE_VERIFICATION_ENABLED;
+    else process.env.PHONE_VERIFICATION_ENABLED = previous;
+  }
+});
+it("passes verified phone fields to shared registration only when enforcement is enabled", async () => {
+  const previous = process.env.PHONE_VERIFICATION_ENABLED;
+  process.env.PHONE_VERIFICATION_ENABLED = "true";
+  try {
+    const r = await POST(new Request("https://example.test/api/v1/mobile/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        adminPhone: "+919876543210",
+        firebasePhoneToken: "firebase-id-token",
+      }),
+      headers: { "Content-Type": "application/json" },
+    }));
+    expect(r.status).toBe(201);
+    expect(m.register).toHaveBeenCalledWith(expect.objectContaining({
+      adminPhone: "+919876543210",
+      firebasePhoneToken: "firebase-id-token",
+    }));
+  } finally {
+    if (previous === undefined) delete process.env.PHONE_VERIFICATION_ENABLED;
+    else process.env.PHONE_VERIFICATION_ENABLED = previous;
+  }
+});
 it("oversized declared uploads are rejected before parsing or persistence", async () => {
   const r = await POST(
     new Request("https://example.test/api/v1/mobile/auth/register", {
