@@ -58,7 +58,8 @@ fun AccountUtilityScreen(
     vm: AccountUtilityViewModel = viewModel(),
     initialImportType: String = "CUSTOMERS",
     initialExportType: String? = null,
-    backupMode: String? = null
+    backupMode: String? = null,
+    onNavigate: (String) -> Unit = {}
 ) {
     val state = vm.state.collectAsStateWithLifecycle().value
     val context = LocalContext.current
@@ -242,6 +243,12 @@ fun AccountUtilityScreen(
                                 if(check["incomplete"]?.jsonPrimitive?.booleanOrNull==true)Text("Scan incomplete; affected count unavailable.")else Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
                                 if(check["status"]?.jsonPrimitive?.content!="PASS")Text(check["recommendation"]?.jsonPrimitive?.content.orEmpty())
                                 check["samples"]?.jsonArray?.takeIf { it.isNotEmpty() }?.let { samples -> Text("Sample identifiers: " + samples.joinToString { it.jsonPrimitive.content }) }
+                                (check["records"] as? JsonArray)?.take(5)?.forEach { record ->
+                                    val row=record.jsonObject
+                                    com.salespunch360.mobile.data.verificationReviewPath(row["href"]?.jsonPrimitive?.content)?.let { target -> TextButton({onNavigate(target)}) { Text("Review ${row["label"]?.jsonPrimitive?.content.orEmpty()}") } }
+                                }
+                                com.salespunch360.mobile.data.verificationReviewPath(check["reviewHref"]?.jsonPrimitive?.content)?.let { target -> TextButton({onNavigate(target)}) { Text("Open relevant records") } }
+
                             }
                         }
                     }

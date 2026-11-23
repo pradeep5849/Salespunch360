@@ -43,7 +43,7 @@ class AccountAssetViewModel(app:Application):AndroidViewModel(app){
  fun create(){if(_state.value.saving)return;_state.value=_state.value.copy(detail=null,editing=buildJsonObject{put("requestKey",java.util.UUID.randomUUID().toString())},error=null)}
  fun edit(){if(!_state.value.saving)_state.value=_state.value.copy(editing=_state.value.detail?.get("asset")?.jsonObject?.let{asset->JsonObject(asset+mapOf("customValues" to (_state.value.detail?.get("customValues")?:buildJsonObject{})))},error=null)}
  fun close(){if(!_state.value.saving){detailJob?.cancel();_state.value=_state.value.copy(detail=null,editing=null)}}
- fun open(id:String){detailJob?.cancel();detailJob=viewModelScope.launch{try{val detail=api.asset(id);currentCoroutineContext().ensureActive();_state.value=_state.value.copy(detail=detail)}catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}}}
+ fun open(id:String){detailJob?.cancel();_state.value=_state.value.copy(detail=null,editing=null,error=null);detailJob=viewModelScope.launch{try{val detail=api.asset(id);currentCoroutineContext().ensureActive();_state.value=_state.value.copy(detail=detail)}catch(e:CancellationException){throw e}catch(e:Exception){fail(e)}}}
  fun save(p:JsonObject,saveNew:Boolean=false)=viewModelScope.launch{
   if(_state.value.saving)return@launch
   _state.value=_state.value.copy(saving=true,error=null)

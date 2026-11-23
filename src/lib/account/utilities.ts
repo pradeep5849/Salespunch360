@@ -1,3 +1,4 @@
+import {verificationActions,type VerificationRecord} from "./verification-actions";
 import {verificationBudget} from "./verification-budget";
 import { missingCanonicalLedgerKeys } from "./verification-ledgers";
 import { mismatchedTransferSources } from "./verification-transfers";
@@ -23,6 +24,8 @@ export type VerificationResult = {
   samples: string[];
   recommendation: string;
   incomplete?: boolean;
+  records?: {label:string;href:string}[];
+  reviewHref?: string;
 };
 const result = (
   check: string,
@@ -61,6 +64,7 @@ export async function verifyAccountDataForActor(actor: {
     client.journalEntry.findMany({
       where: { companyId, ...(scope?{financialYearId:scope.financialYearId}:{}) },
       select: {
+        id: true,
         journalNumber: true,
         lines: { select: { debit: true, credit: true } },
       },
@@ -68,6 +72,7 @@ export async function verifyAccountDataForActor(actor: {
     client.commercialDocument.findMany({
       where: { companyId, ...(scope?{issueDate:{gte:scope.startDate,lte:scope.endDate}}:{}) },
       select: {
+        id: true,
         documentNumber: true,
         balanceDue: true,
         grandTotal: true,
@@ -108,7 +113,7 @@ export async function verifyAccountDataForActor(actor: {
     }),
     client.project.findMany({
       where: { companyId },
-      select: { projectNumber: true, branchId: true, customerId: true },
+      select: { id:true,projectNumber: true, branchId: true, customerId: true },
     }),
     client.asset.findMany({
       where: { companyId },
@@ -199,7 +204,7 @@ export async function verifyAccountDataForActor(actor: {
         !userBranches.get(user.id)?.has(asset.branchId))
     );
   });
-  return [
+  const checks:VerificationResult[] = [
     result(
       "Journal entries balance",
       badJournals.length,
@@ -268,6 +273,15 @@ export async function verifyAccountDataForActor(actor: {
       "Review assignment history and use the controlled return/assign workflow; verification is read-only.",
     ),
   ];
+  const records:Record<string,VerificationRecord[]>={
+    "Journal entries balance":badJournals.map(row=>({id:row.id,label:row.journalNumber,kind:"journal"})),
+    "Document outstanding is valid":negative.map(row=>({id:row.id,label:row.documentNumber,kind:"document"})),
+    "Stored tax components reconcile":badTax.map(row=>({id:row.id,label:row.documentNumber,kind:"document"})),
+    "Project tenant references are valid":badProjects.map(row=>({id:row.id,label:row.projectNumber,kind:"project"})),
+    "Asset Branch references are valid":badAssets.map(row=>({id:row.id,label:row.assetNumber,kind:"asset"})),
+    "Asset assignment history agrees with current assignment":assignmentIssues.map(row=>({id:row.id,label:row.assetNumber,kind:"asset"})),
+  };
+  return checks.map(check=>verificationActions(check,records[check.check]));
 }
 
 async function requireCloseBooksAdmin(actor: {id:string;companyId:string;accountRole?:string|null}, client:Prisma.TransactionClient=db) {
