@@ -12,6 +12,8 @@ export const CLEANUP_DATABASE_STAGES = [
   "CLEAR_LEAD_VISIT_REFERENCES",
   "CLEAR_CUSTOMER_VISIT_REFERENCE",
   "DELETE_ACCOUNT_DATA",
+  "DEFER_TENANT_CONSTRAINTS",
+  "DELETE_ADDITIONAL_TENANT_DATA",
   "DELETE_PUSH_DEVICES",
   "DELETE_SESSIONS",
   "DELETE_MOBILE_SESSIONS",
@@ -96,6 +98,9 @@ const tables: Record<TenantCount, string> = {
   AccountingPeriodLock: "accounting_period_locks", AccountingAuditEvent: "accounting_audit_events",
   QuotationDocument: "quotation_documents", QuotationRevision: "quotation_revisions", QuotationLine: "quotation_lines", QuotationAdjustment: "quotation_adjustments", QuotationPaymentSchedule: "quotation_payment_schedules", QuotationShare: "quotation_shares", QuotationAuditEvent: "quotation_audit_events", CommercialDocument: "commercial_documents", CommercialDocumentLine: "commercial_document_lines", AccountSettlement: "account_settlements", SettlementAllocation: "settlement_allocations", AdvanceApplication: "advance_applications", PaymentReminder: "payment_reminders", CommercialAuditEvent: "commercial_audit_events",
 };
+// Tables introduced after the original tenant purge implementation. Keep the list
+// explicit and scoped: never discover and delete arbitrary tables at runtime.
+const additionalTenantTables = ["lead_sales_actions","lead_calls","telecaller_subscriptions","telecaller_billing_orders","account_backup_records","account_import_jobs","account_recycle_records","account_report_favourites","account_terms_templates","authorized_signature_versions","commercial_attachments","custom_field_values","expense_items","field_jobs","inventory_batches","inventory_serial_numbers","party_opening_balances","payment_attachments","print_templates","project_audit_events","project_budget_lines","project_documents","project_material_movements","project_members","project_milestones","project_tasks","projects","quotation_attachments","sale_lifecycle_snapshots","sale_return_revisions","sales_notifications","warehouses"] as const;
 const userOwned = new Set(["user_branch_accesses", "email_verification_tokens", "sessions", "mobile_sessions"]);
 const deleteStages: Record<string, CleanupDatabaseStage> = {
   push_devices: "DELETE_PUSH_DEVICES", sessions: "DELETE_SESSIONS", mobile_sessions: "DELETE_MOBILE_SESSIONS",
@@ -157,6 +162,12 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
         WHERE "companyId" = ${id}
       `));
       await runCleanupDatabaseStage("CLEAR_CUSTOMER_VISIT_REFERENCE", () => tx.$executeRaw`UPDATE "customers" SET "checkInReferenceVisitId"=NULL WHERE "companyId"=${id}`);
+      // Deferrable cross-module references are checked at transaction commit.
+      // Non-deferrable child relationships are ordered explicitly above.
+      await runCleanupDatabaseStage("DEFER_TENANT_CONSTRAINTS", () => tx.$executeRawUnsafe("SET CONSTRAINTS ALL DEFERRED"));
+      for (const table of additionalTenantTables) {
+        await runCleanupDatabaseStage("DELETE_ADDITIONAL_TENANT_DATA", () => tx.$executeRaw(Prisma.sql`DELETE FROM ${Prisma.raw(`"${table}"`)} WHERE "companyId"=${id}`));
+      }
       await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$queryRaw`SELECT set_config('app.account_cleanup_company_id', ${companyId}, true)`);
       await runCleanupDatabaseStage("DELETE_ACCOUNT_DATA", () => tx.$executeRaw`UPDATE "ledger_accounts" SET "parentId"=NULL WHERE "companyId"=${id}`);
       for (const table of ["commercial_audit_events","payment_reminders","advance_applications","settlement_allocations","account_settlements","commercial_document_lines","commercial_documents","quotation_audit_events","quotation_shares","quotation_payment_schedules","quotation_adjustments","quotation_lines","quotation_revisions","quotation_documents","accounting_audit_events","journal_lines","journal_entries","accounting_period_locks","cost_centres","ledger_accounts","custom_field_definitions","work_packages","work_categories","account_products","account_services","account_categories","account_units","vendors","financial_years","numbering_series","account_settings"]) {
@@ -189,7 +200,7 @@ function lockedAdapter(tx: Prisma.TransactionClient, lockedCompanyId: string): L
       await runCleanupDatabaseStage("DELETE_COMPANY", () => tx.$executeRaw`DELETE FROM "companies" WHERE "id"=${id}`);
     },
     async verifyTenantAbsent(companyId) {
-      const directTables = [...new Set(Object.values(tables).filter(table => !userOwned.has(table)))];
+      const directTables = [...new Set([...Object.values(tables).filter(table => !userOwned.has(table)), ...additionalTenantTables])];
       for (const table of directTables) {
         const column = table === "companies" ? "id" : "companyId";
         const [row] = await runCleanupDatabaseStage("VERIFY_RESIDUE", () => tx.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`SELECT COUNT(*)::bigint AS count FROM ${Prisma.raw(`"${table}"`)} WHERE ${Prisma.raw(`"${column}"`)} = ${companyId}::uuid`));
