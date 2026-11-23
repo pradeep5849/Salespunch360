@@ -50,7 +50,7 @@ describe("authenticated Firebase phone confirmation", () => {
       firebaseUid: "firebase-1", phoneNumber: phone, verifiedAt: new Date(),
     });
     mocks.tx.user.findUnique.mockImplementation(async ({ where }: { where: { id?: string } }) =>
-      where.id ? { id: "user-1", companyId: "company-1", phoneVerifiedAt: null, firebasePhoneUid: null } : null);
+      where.id ? { id: "user-1", companyId: "company-1", phone: null, phoneVerifiedAt: null, firebasePhoneUid: null } : null);
     mocks.tx.user.findFirst.mockResolvedValue(null);
     mocks.tx.user.update.mockResolvedValue({ id: "user-1" });
   });
@@ -86,9 +86,22 @@ describe("authenticated Firebase phone confirmation", () => {
     expect((await POST(req({ phone, idToken: "token" }))).status).toBe(409);
     expect(mocks.tx.user.update).not.toHaveBeenCalled();
   });
+  it("blocks a changed phone even if Firebase returns the same UID", async () => {
+    mocks.tx.user.findUnique.mockImplementation(async ({ where }: { where: { id?: string } }) =>
+      where.id ? { id: "user-1", companyId: "company-1", phone: "+919876543299", phoneVerifiedAt: new Date(), firebasePhoneUid: "firebase-1" } : null);
+    const response = await POST(req({ phone, idToken: "token" }));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "PHONE_CHANGE_REQUIRES_RECOVERY" });
+    expect(mocks.tx.user.update).not.toHaveBeenCalled();
+  });
+  it("allows reverification of the same UID and number", async () => {
+    mocks.tx.user.findUnique.mockImplementation(async ({ where }: { where: { id?: string } }) =>
+      where.id ? { id: "user-1", companyId: "company-1", phone, phoneVerifiedAt: new Date(), firebasePhoneUid: "firebase-1" } : null);
+    expect((await POST(req({ phone, idToken: "token" }))).status).toBe(200);
+  });
   it("blocks phone identity changes without recovery", async () => {
     mocks.tx.user.findUnique.mockImplementation(async ({ where }: { where: { id?: string } }) =>
-      where.id ? { id: "user-1", companyId: "company-1", phoneVerifiedAt: new Date(), firebasePhoneUid: "old-uid" } : null);
+      where.id ? { id: "user-1", companyId: "company-1", phone, phoneVerifiedAt: new Date(), firebasePhoneUid: "old-uid" } : null);
     expect((await POST(req({ phone, idToken: "token" }))).status).toBe(409);
   });
 });
