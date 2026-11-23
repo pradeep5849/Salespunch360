@@ -1,0 +1,9 @@
+# Product, service and work editors
+
+A170-F02, A171-F01 and A173-F01 now have an authorized Edit link on their existing web master cards, alongside the previously implemented summaries. Separate edit pages save name, code, description and future tax-exclusive sale rates; products/services also allow future tax-rate changes.
+
+The mutation rechecks current Account permission, edition and item policy under company/user/settings locks, scopes active records by company and uses the reviewed updatedAt revision. Concurrent edits return a reload requirement. Sparse patches preserve omitted values. Hidden costs, unit mappings, stock/tracking, categories, custom fields and posted document snapshots are untouched. Existing inclusive pricing, discount, wholesale and MRP choices round-trip through the existing pricing normalizer. The form explicitly describes these editing boundaries. This does not claim a replacement for every advanced native item-setting control.
+
+Validation: 30 focused pricing/editor checks; five guarded local PostgreSQL cases (advanced pricing preservation, concurrent edits, tenant/active/read DTO boundaries, work references/cost preservation, duplicate-code rollback); five isolated actual React Chromium cases (three kinds, stale-save lockout, uncertain-save recovery). TypeScript, targeted ESLint and whitespace checks passed. Browser fixture mocked the server action; SQL tests exercised the actual mutation against an isolated local database. No production records changed. Existing native editors remain unchanged; physical device/live acceptance remains pending.
+
+No full regression was run for this slice. The last full combined result remains 4285 passed / 486 gated skipped before this slice. The agreed cadence is approximately ten implementation slices between full runs, plus critical shared/financial changes and final validation.

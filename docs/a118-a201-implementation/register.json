@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "910f96a9",
-  "status": "Implementation continued through server-filtered web/native employee directory pages; retained work and acceptance remain.",
+  "application_revision": "0c6af899",
+  "status": "Implementation continued through web product, service and work metadata editors; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -4781,7 +4781,7 @@
         "status": "OPEN",
         "title": "Web cards omit pricing/stock detail and edit entry"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4793,9 +4793,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "0c6af899",
+        "progress": "docs/item-metadata-editors/checkpoint.md",
+        "acceptance": "30 focused checks, five guarded PostgreSQL cases and five isolated React Chromium cases passed; live/device acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -4808,7 +4808,7 @@
         "status": "OPEN",
         "title": "Web service cards omit pricing/unit detail and edit access"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4820,9 +4820,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "0c6af899",
+        "progress": "docs/item-metadata-editors/checkpoint.md",
+        "acceptance": "30 focused checks, five guarded PostgreSQL cases and five isolated React Chromium cases passed; live/device acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -4926,7 +4926,7 @@
         "status": "OPEN",
         "title": "Work cards omit category/unit/rate detail and edit access"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -4938,9 +4938,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "0c6af899",
+        "progress": "docs/item-metadata-editors/checkpoint.md",
+        "acceptance": "30 focused checks, five guarded PostgreSQL cases and five isolated React Chromium cases passed; live/device acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -6357,9 +6357,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 142,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 145,
     "NOT STARTED": 7,
-    "PARTIAL": 5,
+    "PARTIAL": 2,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1

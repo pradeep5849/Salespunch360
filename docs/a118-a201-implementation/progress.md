@@ -190,3 +190,7 @@ A121-F02 implemented pending acceptance in b0ed9529. Bootstrap/current session a
 ## Server employee-directory search and paging
 
 A142-F02 implemented pending acceptance in 910f96a9. Current web/native paths filter before stable 50-row SQL pages; full counters remain independent. Native actor bridging and safe write-response DTO corrected, with stale-query/auth-failure UI protections. Legacy unpaged request compatibility retained explicitly. Eleven guarded SQL cases, 135 focused checks and full 4285 passed / 486 gated skipped; TypeScript/lint/whitespace passed. Three native cases and final CI/browser/device acceptance pending. Counts: 142 implemented pending acceptance, 5 partial, 7 not started. See docs/employee-directory-paging-implementation/checkpoint.md. No production data/settings/schema change, deployment or merge.
+
+## Product, service and work editors — 0c6af899
+
+Completed A170-F02/A171-F01/A173-F01 through reviewed metadata/rate edit pages on existing web cards. See `docs/item-metadata-editors/checkpoint.md`. 30 focused checks, five guarded SQL cases and five isolated Chromium cases passed; TypeScript/lint/whitespace passed. No new full run (agreed ~10-slice cadence). Counts: 145 implemented/acceptance pending, two partial, seven not started; nine retained findings unfinished. Directory head 47d52f77 CI passed web, Android, migrations and both build Lighthouse checks; both live Lighthouse checks failed. No merge/deployment/physical-device acceptance claim.
