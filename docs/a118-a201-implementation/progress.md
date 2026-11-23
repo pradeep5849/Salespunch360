@@ -174,3 +174,7 @@ A121-F04 remains partial. Tracking/scheduler exceptions no longer invalidate a c
 ## Native attendance recovery validated
 
 A121-F04 implemented pending acceptance in f8809a51: confirmed attendance survives device effects; ambiguous responses refresh authoritative state without replay; permission loss does not block END, while START policy stays enforced. Ten device/transport and eight policy/measurement JVM cases are included. Final application revision passed Android compilation/JVM/lint, web, migration and both build Lighthouse checks; only live desktop/mobile Lighthouse failed. Previous combined JS full suite remains 4266 passed / 454 gated skipped; no unnecessary repeat for the native-only change. Register: 138 implemented pending acceptance, 7 partial, 9 not started. Physical device/network and final documentation-head acceptance remain separate. See docs/native-attendance-device-recovery/checkpoint.md. No production settings/data change, migration, deployment or merge.
+
+## Unified Telecaller order atomicity
+
+A127-F02 implemented pending acceptance in d4db212c. Nine guarded real SQL cases passed, 152 focused checks passed / 11 gated skipped; full regression 4266 passed / 463 gated skipped, zero failed. TypeScript, lint and whitespace passed. Counts: 139 implemented pending acceptance, 7 partial, 8 not started. See docs/unified-order-atomic-implementation/checkpoint.md. No production payment/data/migration/settings change, deployment or merge. Final-head CI/browser/device acceptance pending.
