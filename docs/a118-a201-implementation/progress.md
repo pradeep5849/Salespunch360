@@ -178,3 +178,7 @@ A121-F04 implemented pending acceptance in f8809a51: confirmed attendance surviv
 ## Unified Telecaller order atomicity
 
 A127-F02 implemented pending acceptance in d4db212c. Nine guarded real SQL cases passed, 152 focused checks passed / 11 gated skipped; full regression 4266 passed / 463 gated skipped, zero failed. TypeScript, lint and whitespace passed. Counts: 139 implemented pending acceptance, 7 partial, 8 not started. See docs/unified-order-atomic-implementation/checkpoint.md. No production payment/data/migration/settings change, deployment or merge. Final-head CI/browser/device acceptance pending.
+
+## Renewal/addition intent retained through activation
+
+A127-F01 implemented pending acceptance in a3d1426c. Full renewals charge full selected capacity and queue after paid terms; additions retain expiry and reject stale terms/baselines. Future Plus Account reductions wait until term start. 21 guarded SQL cases and 174 focused checks passed; full 4275 passed / 475 gated skipped, zero failed. TypeScript, lint and whitespace passed. Native final-head CI/browser/device/payment acceptance pending. Register: 140 implemented pending acceptance, 7 partial, 7 not started. See docs/billing-purchase-intent-implementation/checkpoint.md. No production payment/data/migration/settings change, deployment or merge.

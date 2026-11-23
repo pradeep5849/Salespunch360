@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "d4db212c",
-  "status": "Implementation continued through native attendance device/transport recovery; retained findings and acceptance remain.",
+  "application_revision": "a3d1426c",
+  "status": "Implementation continued through atomic unified billing and preserved renewal/addition intent; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -1648,7 +1648,7 @@
         "status": "OPEN",
         "title": "Renewal/addition intent lost; same-capacity active renewal base quote is zero"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1658,6 +1658,11 @@
         "limits": "This is change-history reconciliation, not a fresh line-by-line audit or rerun of all tests. Relevant current source must be checked again when implementing.",
         "source_delta": "source-delta.txt",
         "later_evidence_sources": []
+      },
+      "implementation_evidence": {
+        "revision": "a3d1426c",
+        "progress": "docs/billing-purchase-intent-implementation/checkpoint.md",
+        "acceptance": "21 guarded SQL cases; 174 focused checks; full 4275 passed / 475 gated skipped; TypeScript/lint/whitespace passed. Native final-head CI/browser/device/payment acceptance pending."
       }
     },
     {
@@ -6351,8 +6356,8 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 139,
-    "NOT STARTED": 8,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 140,
+    "NOT STARTED": 7,
     "PARTIAL": 7,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
