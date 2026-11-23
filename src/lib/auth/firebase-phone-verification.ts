@@ -27,7 +27,7 @@ function phoneAuthApp() {
  * and prevent reusing the same verification proof for another registration.
  */
 export async function verifyFirebasePhoneProof(idToken: string, expectedPhone: string) {
-  if (!/^\\+[1-9]\\d{1,14}$/.test(expectedPhone)) {
+  if (!/^\+[1-9]\d{1,14}$/.test(expectedPhone)) {
     throw new Error("INVALID_PHONE_NUMBER");
   }
   if (!idToken || idToken.length > 8192) {
