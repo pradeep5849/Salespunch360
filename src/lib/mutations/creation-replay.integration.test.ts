@@ -7,7 +7,7 @@ vi.mock('@/lib/db',()=>({db:new Proxy({},{get:(_,key)=>{
   if(property==='accountOperationalAudit')return new Proxy(target.accountOperationalAudit,{get:(delegate,method)=>{if(method==='create'&&rejectPartyAudit)return async()=>{throw new Error('FIXTURE_PARTY_AUDIT_REJECTED')};const value=Reflect.get(delegate,method);return typeof value==='function'?value.bind(delegate):value}});
   const value=Reflect.get(target,property);return typeof value==='function'?value.bind(target):value;
  }})),{maxWait:10000,timeout:10000,...options});
- const value=client[key as keyof PrismaClient];return typeof value==='function'?value.bind(client):value;
+ const value:unknown=Reflect.get(client,key);return typeof value==='function'?value.bind(client):value;
 }})}));
 import {editPartyMetadataForActor} from '@/lib/account/party-metadata';
 import {verifyAccountDataForActor} from '@/lib/account/utilities';
