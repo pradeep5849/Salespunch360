@@ -62,11 +62,11 @@ export async function POST(request: Request) {
       if (phoneOwner) throw new Error("PHONE_IDENTITY_IN_USE");
       const user = await tx.user.findUnique({
         where: { id: principal.id },
-        select: { id: true, companyId: true, phoneVerifiedAt: true, firebasePhoneUid: true },
+        select: { id: true, companyId: true, phone: true, phoneVerifiedAt: true, firebasePhoneUid: true },
       });
       if (!user || user.companyId !== principal.companyId) throw new Error("UNAUTHORIZED");
       // Changing an already verified number requires a separate recovery flow.
-      if (user.phoneVerifiedAt && user.firebasePhoneUid !== proof.firebaseUid) {
+      if (user.phoneVerifiedAt && (user.firebasePhoneUid !== proof.firebaseUid || user.phone !== proof.phoneNumber)) {
         throw new Error("PHONE_CHANGE_REQUIRES_RECOVERY");
       }
       await tx.user.update({
