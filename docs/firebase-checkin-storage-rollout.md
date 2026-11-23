@@ -25,3 +25,29 @@ Never commit the downloaded service-account JSON or expose its private key in is
 6. Monitor failures, billing and read latency. Roll back to `hostinger` if needed while retaining old copies.
 
 **Warning:** This PR does not yet implement a migration job or mixed-provider fallback. Do not merge and switch production based on this PR alone.
+
+## Controlled migration script
+
+The script `scripts/migrate-checkin-photos-to-firebase.ts` reads the current
+`visitPhoto` rows, checks both original and thumbnail keys, and uses SHA-256
+comparison after each Firebase copy. It does not delete Hostinger files or
+change database keys.
+
+Run from an authorized deployment environment with a complete database backup
+and the Hostinger photo directory available. Pause check-in writes and retention
+cleanup during the final migration/cutover window; otherwise concurrent writes
+may be missed. Review pending storage deletions before switching.
+
+```sh
+# Inventory only; no Firebase writes
+npx tsx scripts/migrate-checkin-photos-to-firebase.ts
+
+# After reviewing inventory, copy and verify
+CHECKIN_MIGRATION_APPLY=true npx tsx scripts/migrate-checkin-photos-to-firebase.ts
+```
+
+Do not run the copy until Firebase credentials are configured in the execution
+environment. A successful copy report is necessary but not sufficient for
+cutover: verify live access permissions and that new writes and deletion
+workers operate against the intended provider. For multi-tenant safety, do not
+change provider while any retention/deletion jobs are active.
