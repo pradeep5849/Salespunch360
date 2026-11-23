@@ -235,7 +235,7 @@ export function RegistrationForm({
                   placeholder="+919876543210"
                   aria-describedby="adminPhone-help"
                 />
-                <button type="button" disabled={phoneBusy || !/^\\+[1-9]\\d{1,14}$/.test(adminPhone) || verifiedPhone === adminPhone} onClick={async () => {
+                <button type="button" disabled={phoneBusy || !/^\+[1-9]\d{1,14}$/.test(adminPhone) || verifiedPhone === adminPhone} onClick={async () => {
                   setPhoneBusy(true);
                   setPhoneError("");
                   try {
@@ -259,7 +259,7 @@ export function RegistrationForm({
               <div id="registration-recaptcha" />
               {phoneConfirmation && verifiedPhone !== adminPhone && (
                 <div className="password-field">
-                  <input aria-label="SMS verification code" inputMode="numeric" autoComplete="one-time-code" value={smsCode} onChange={(event) => setSmsCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} maxLength={6} placeholder="6-digit OTP" />
+                  <input aria-label="SMS verification code" inputMode="numeric" autoComplete="one-time-code" value={smsCode} onChange={(event) => setSmsCode(event.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} placeholder="6-digit OTP" />
                   <button type="button" disabled={phoneBusy || smsCode.length !== 6} onClick={async () => {
                     setPhoneBusy(true);
                     setPhoneError("");
