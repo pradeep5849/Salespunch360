@@ -43,12 +43,8 @@ async function main() {
           const original = await source.get(key);
           if (destination) {
             // If an object exists and differs, do not overwrite it silently.
-            let existing: Buffer | undefined;
-            try {
-              existing = await destination.get(key);
-            } catch {
-              // Missing destination is expected during first migration.
-            }
+            const exists = await destination.exists(key);
+            const existing = exists ? await destination.get(key) : undefined;
             if (existing && hash(existing) !== hash(original)) {
               throw new Error("DESTINATION_HASH_MISMATCH");
             }
