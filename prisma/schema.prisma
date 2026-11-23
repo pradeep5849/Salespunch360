@@ -883,6 +883,8 @@ model User {
   managerType                ManagerType?
   branchAccessScope          BranchAccessScope        @default(ALL_BRANCHES)
   phone                      String?
+  phoneVerifiedAt           DateTime?
+  firebasePhoneUid          String?                  @unique @db.VarChar(128)
   employeeCode               String?
   designation                String?                  @db.VarChar(120)
   dateOfJoining              DateTime?                @db.Date
