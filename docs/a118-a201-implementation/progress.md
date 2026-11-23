@@ -218,3 +218,7 @@ Completed A128-F04 using the owner's explicit hide-entirely decision. 36 focused
 ## Company monthly targets — d2f46fb2
 
 A161-F02 completed pending acceptance. One company target per employee/metric; authorized branch actuals are separate, with no company completion percentage from partial actuals. 53 focused checks and nine guarded SQL scenarios passed; TypeScript/lint/whitespace passed. Two native DTO cases added; native CI/device acceptance pending. See docs/company-target-scope/checkpoint.md. Slice seven since the last full regression. Counts: 151 implemented pending acceptance, one partial, two not started. No production change, deployment or merge.
+
+## Own unlinked visit deletion — 6cc6f4fb
+
+A136-F01 and A155-F01 completed pending acceptance. Web/native report correction preserves all linked outcomes, attendance and travel, queues private photo cleanup and audits the correction. Eleven guarded SQL cases, 164 focused checks and four isolated Chromium cases passed; TypeScript/lint/whitespace passed. Native CI/device acceptance pending. See docs/own-unlinked-visit-deletion/checkpoint.md. Slice eight since the last full regression. Counts: 153 implemented pending acceptance, zero partial, one not started (global single-location branch UI hiding). No production change, deployment or merge.

@@ -2,8 +2,8 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "d2f46fb2",
-  "status": "Implementation continued through company-wide monthly targets and separate authorized branch actuals.",
+  "application_revision": "6cc6f4fb",
+  "status": "Implementation continued through confirmed own unlinked visit deletion on web and Android.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
     "docs/a104-a117-implementation/README.md"
@@ -2200,15 +2200,21 @@
         "title": "Own-record check-in deletion is missing",
         "status": "OPEN"
       },
-      "reconciliation_status": "NOT STARTED",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "checkpoint": "docs/first-branch-transition/checkpoint.md",
           "status": "OWNER_DECISION_RECEIVED",
           "detail": "Allow own mistaken check-in deletion only when unlinked."
+        },
+        {
+          "checkpoint": "docs/own-unlinked-visit-deletion/checkpoint.md",
+          "application_revision": "6cc6f4fb",
+          "status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
+          "detail": "Eleven guarded SQL scenarios, 164 focused checks and four isolated Chromium cases passed. Native CI/device acceptance remains pending."
         }
       ],
-      "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
+      "reconciliation_reason": "Own unlinked visit deletion, confirmation and current authority/reference guards implemented; prior Details/phone presentation retained. Native CI/device acceptance pending.",
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
         "audit_snapshot": "f1f2df9e",
@@ -3724,15 +3730,21 @@
         "status": "OPEN",
         "title": "Agreed report visit Details/Delete actions and phone display missing"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [
         {
           "checkpoint": "docs/first-branch-transition/checkpoint.md",
           "status": "OWNER_DECISION_RECEIVED",
           "detail": "Allow own mistaken check-in deletion only when unlinked."
+        },
+        {
+          "checkpoint": "docs/own-unlinked-visit-deletion/checkpoint.md",
+          "application_revision": "6cc6f4fb",
+          "status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
+          "detail": "Eleven guarded SQL scenarios, 164 focused checks and four isolated Chromium cases passed. Native CI/device acceptance remains pending."
         }
       ],
-      "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
+      "reconciliation_reason": "Own unlinked visit deletion, confirmation and current authority/reference guards implemented; prior Details/phone presentation retained. Native CI/device acceptance pending.",
       "current_code_review": {
         "application_revision": "09fb3fc7ec55cb5fec9124a9abaacc546c4bc392",
         "audit_snapshot": "f1f2df9e",
@@ -6407,10 +6419,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 151,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 153,
     "REQUIREMENT SUPERSEDED": 3,
-    "NOT STARTED": 2,
-    "PARTIAL": 1,
+    "NOT STARTED": 1,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1
   }
