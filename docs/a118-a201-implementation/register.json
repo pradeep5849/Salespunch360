@@ -2,7 +2,7 @@
   "scope": "A118\u2013A201",
   "date": "2026-11-23",
   "mode": "IMPLEMENTATION_RECONCILIATION",
-  "application_revision": "a3d1426c",
+  "application_revision": "b0ed9529",
   "status": "Implementation continued through atomic unified billing and preserved renewal/addition intent; retained work and acceptance remain.",
   "prior_formats": [
     "docs/a052-a103/implementation-register.md",
@@ -1213,7 +1213,7 @@
         "status": "OPEN",
         "title": "Multi-branch start lacks selection/context"
       },
-      "reconciliation_status": "PARTIAL",
+      "reconciliation_status": "IMPLEMENTED \u2014 ACCEPTANCE PENDING",
       "evidence_updates": [],
       "reconciliation_reason": "Retained implementation candidate after comparing application source snapshots and later audit updates; no final-head repair or device verification claimed.",
       "current_code_review": {
@@ -1225,9 +1225,9 @@
         "later_evidence_sources": []
       },
       "implementation_evidence": {
-        "revision": "f3b9be71",
-        "progress": "docs/a118-a201-implementation/progress.md",
-        "acceptance": "Local focused tests documented per batch; latest full suite 4079 passed/415 skipped. CI/device/browser/live limits retained. This status is not a deployment or full acceptance claim."
+        "revision": "b0ed9529",
+        "progress": "docs/native-attendance-branch-implementation/checkpoint.md",
+        "acceptance": "257 mobile/branch checks passed / 2 gated skipped; TypeScript/lint/whitespace passed. Five native selection/DTO cases and CI/device acceptance pending."
       },
       "implementation_pr": "https://github.com/pradeep5849/Salespunch360/pull/212"
     },
@@ -6356,9 +6356,9 @@
     "depth": "A118-A120 direct source review; remaining pages source delta/saved evidence triage"
   },
   "implementation_status_counts": {
-    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 140,
+    "IMPLEMENTED \u2014 ACCEPTANCE PENDING": 141,
     "NOT STARTED": 7,
-    "PARTIAL": 7,
+    "PARTIAL": 6,
     "REQUIREMENT SUPERSEDED": 3,
     "AUDIT CORRECTION \u2014 WITHDRAWN": 2,
     "DISCLOSED LIMITATION": 1

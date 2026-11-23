@@ -182,3 +182,7 @@ A127-F02 implemented pending acceptance in d4db212c. Nine guarded real SQL cases
 ## Renewal/addition intent retained through activation
 
 A127-F01 implemented pending acceptance in a3d1426c. Full renewals charge full selected capacity and queue after paid terms; additions retain expiry and reject stale terms/baselines. Future Plus Account reductions wait until term start. 21 guarded SQL cases and 174 focused checks passed; full 4275 passed / 475 gated skipped, zero failed. TypeScript, lint and whitespace passed. Native final-head CI/browser/device/payment acceptance pending. Register: 140 implemented pending acceptance, 7 partial, 7 not started. See docs/billing-purchase-intent-implementation/checkpoint.md. No production payment/data/migration/settings change, deployment or merge.
+
+## Native attendance branch choice
+
+A121-F02 implemented pending acceptance in b0ed9529. Bootstrap/current session and all native start/end request paths retain authorized branch context, with no single-location selector. 257 mobile/branch checks passed / 2 gated skipped; TypeScript, lint and whitespace passed. Five native DTO/selection cases and final-head CI/device acceptance pending. Counts: 141 implemented pending acceptance, 6 partial, 7 not started. See docs/native-attendance-branch-implementation/checkpoint.md. No production data/settings/schema change, deployment or merge.
