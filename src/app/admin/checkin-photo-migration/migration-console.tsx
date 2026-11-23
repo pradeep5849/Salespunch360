@@ -60,7 +60,7 @@ export function MigrationConsole() {
   }
 
   return <section style={{ display: "grid", gap: 16 }}>
-    <label>Temporary migration token (kept only in this page's memory)
+    <label>Temporary migration token (kept only in this page memory)
       <input type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} style={{ display: "block", width: "100%", padding: 10 }} />
     </label>
     <fieldset disabled={running} style={{ padding: 12 }}>
