@@ -222,3 +222,7 @@ A161-F02 completed pending acceptance. One company target per employee/metric; a
 ## Own unlinked visit deletion — 6cc6f4fb
 
 A136-F01 and A155-F01 completed pending acceptance. Web/native report correction preserves all linked outcomes, attendance and travel, queues private photo cleanup and audits the correction. Eleven guarded SQL cases, 164 focused checks and four isolated Chromium cases passed; TypeScript/lint/whitespace passed. Native CI/device acceptance pending. See docs/own-unlinked-visit-deletion/checkpoint.md. Slice eight since the last full regression. Counts: 153 implemented pending acceptance, zero partial, one not started (global single-location branch UI hiding). No production change, deployment or merge.
+
+## Single-location presentation — f78748a3 / abe9ebb5
+
+Shared company-wide location mode, web/native presentation controls and report/download column projection implemented. A134-F03 remains PARTIAL until final native CI and remaining presentation review finish. Agreed ten-slice full regression: 4334 passed / 525 gated skipped / zero failed; TypeScript/lint/whitespace and isolated Chromium cases passed. See docs/single-location-branch-presentation/checkpoint.md. Counts: 153 implemented pending acceptance, one partial, zero not started. Prior remote head 1ccda559 passed web, Android, migrations and both build Lighthouse checks; only both live Lighthouse checks failed. Preparing one combined push; no deployment or merge.
