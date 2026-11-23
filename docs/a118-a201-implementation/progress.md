@@ -194,3 +194,7 @@ A142-F02 implemented pending acceptance in 910f96a9. Current web/native paths fi
 ## Product, service and work editors — 0c6af899
 
 Completed A170-F02/A171-F01/A173-F01 through reviewed metadata/rate edit pages on existing web cards. See `docs/item-metadata-editors/checkpoint.md`. 30 focused checks, five guarded SQL cases and five isolated Chromium cases passed; TypeScript/lint/whitespace passed. No new full run (agreed ~10-slice cadence). Counts: 145 implemented/acceptance pending, two partial, seven not started; nine retained findings unfinished. Directory head 47d52f77 CI passed web, Android, migrations and both build Lighthouse checks; both live Lighthouse checks failed. No merge/deployment/physical-device acceptance claim.
+
+## Shared callback lifecycle — 2f650fdc
+
+Completed A149-F01 through transactional source-linked Call tasks, compatible queues, exact deadlines, shared completion/cancellation and overdue-only Admin escalation. See `docs/callback-shared-task-implementation/checkpoint.md`. Fresh local fixture applied all 169 migrations; 31 SQL cases passed including callback and 602-row paging regressions. 58 focused cases passed; TypeScript/lint/whitespace passed. Native CI/device/live acceptance pending. Slice 2 since the last full run; no new full run. Counts: 146 implemented/acceptance pending, two partial, six not started; eight retained findings unfinished.
