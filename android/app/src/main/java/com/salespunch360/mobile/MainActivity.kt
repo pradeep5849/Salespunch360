@@ -60,6 +60,7 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
         }
     }
 
+    CompanyBranchPresentationProvider(bootstrap?.company?.branchUiEnabled?:true){
     when (state.status) {
         AppStatus.STARTING -> LoadingScreen("Securing your session…")
         AppStatus.SIGNED_OUT -> if (showSignUp) {
@@ -121,5 +122,6 @@ fun SalesPunchAppRoot(vm: MainViewModel = viewModel(), deepLink: String? = null)
                 )
             }
         }
+    }
     }
 }

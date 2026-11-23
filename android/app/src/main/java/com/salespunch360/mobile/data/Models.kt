@@ -48,7 +48,7 @@ import kotlinx.serialization.json.buildJsonObject
 @Serializable data class AccountPartyDocument(val id:String,val type:String,val documentNumber:String,val issueDate:String,val status:String,val grandTotal:String?=null,val balanceDue:String?=null)
 @Serializable data class AccountPartySettlement(val id:String,val type:String,val settlementNumber:String,val transactionDate:String,val amount:String?=null)
 @Serializable enum class TeamStructure{MANAGERS_AND_SALES,SALES_ONLY}
-@Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null)
+@Serializable data class CompanyBrand(val name:String,val logoUrl:String?=null,val address:String?=null,val branchUiEnabled:Boolean=true)
 @Serializable data class PasswordChangeRequest(val currentPassword:String,val newPassword:String,val confirmPassword:String)
 @Serializable data class Features(val attendanceEnabled:Boolean,val gpsTrackingEnabled:Boolean,val fieldWorkEnabled:Boolean=false,val attendanceGeofenceEnabled:Boolean=false)
 @Serializable data class Capabilities(val canManageEmployees:Boolean=false,val canManageSalesSettings:Boolean=false,val canAccessSalesBilling:Boolean=false,val canViewReports:Boolean=false)
