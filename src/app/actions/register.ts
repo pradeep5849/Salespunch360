@@ -41,7 +41,24 @@ export async function register(_: RegistrationState, formData: FormData): Promis
     try { await issueEmailVerification(user.id, user.email); } catch { /* Account remains usable; authenticated resend is available. */ }
     await createSession(user.id);
   } catch (error) {
-    return { error: error instanceof Error&&error.message==="LOGO_INVALID" ? "Company logo must be a valid JPEG, PNG, or WebP image up to 5 MB." : "Unable to create your account. Check your details or try again later." };
+    if (error instanceof Error) {
+      if (error.message === "LOGO_INVALID") {
+        return { error: "Company logo must be a valid JPEG, PNG, or WebP image up to 5 MB." };
+      }
+      if (error.message === "INVALID_PHONE_NUMBER" || error.message === "INVALID_PHONE_PROOF") {
+        return {
+          error: "Mobile verification has expired or does not match this number. Please verify again.",
+          fieldErrors: { adminPhone: ["Verify this mobile number again before registration."] },
+        };
+      }
+      if (error.message === "PHONE_VERIFICATION_NOT_CONFIGURED") {
+        return { error: "Mobile verification is temporarily unavailable. Please try again later." };
+      }
+      if (error.message === "REGISTRATION_CONFLICT") {
+        return { error: "This email address is already registered." };
+      }
+    }
+    return { error: "Unable to create your account. Check your details or try again later." };
   }
   redirect(parsed.data.productEdition==="SALESPUNCH360_ACCOUNT"?"/workspace/account":"/workspace");
 }
