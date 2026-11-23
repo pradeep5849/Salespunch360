@@ -56,6 +56,13 @@ describe("verifyFirebasePhoneProof", () => {
     await expect(verifyFirebasePhoneProof("token", phone)).rejects.toThrow("INVALID_PHONE_PROOF");
   });
 
+  it("rejects missing and oversized Firebase UIDs before binding identity", async () => {
+    for (const uid of ["", "x".repeat(129)]) {
+      mocks.verifyIdToken.mockResolvedValue({ ...proof(), uid });
+      await expect(verifyFirebasePhoneProof("token", phone)).rejects.toThrow("INVALID_PHONE_PROOF");
+    }
+  });
+
   it("rejects invalid E.164 numbers before contacting Firebase", async () => {
     await expect(verifyFirebasePhoneProof("token", "9876543210")).rejects.toThrow("INVALID_PHONE_NUMBER");
     expect(mocks.verifyIdToken).not.toHaveBeenCalled();
