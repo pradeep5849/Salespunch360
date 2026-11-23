@@ -186,3 +186,7 @@ A127-F01 implemented pending acceptance in a3d1426c. Full renewals charge full s
 ## Native attendance branch choice
 
 A121-F02 implemented pending acceptance in b0ed9529. Bootstrap/current session and all native start/end request paths retain authorized branch context, with no single-location selector. 257 mobile/branch checks passed / 2 gated skipped; TypeScript, lint and whitespace passed. Five native DTO/selection cases and final-head CI/device acceptance pending. Counts: 141 implemented pending acceptance, 6 partial, 7 not started. See docs/native-attendance-branch-implementation/checkpoint.md. No production data/settings/schema change, deployment or merge.
+
+## Server employee-directory search and paging
+
+A142-F02 implemented pending acceptance in 910f96a9. Current web/native paths filter before stable 50-row SQL pages; full counters remain independent. Native actor bridging and safe write-response DTO corrected, with stale-query/auth-failure UI protections. Legacy unpaged request compatibility retained explicitly. Eleven guarded SQL cases, 135 focused checks and full 4285 passed / 486 gated skipped; TypeScript/lint/whitespace passed. Three native cases and final CI/browser/device acceptance pending. Counts: 142 implemented pending acceptance, 5 partial, 7 not started. See docs/employee-directory-paging-implementation/checkpoint.md. No production data/settings/schema change, deployment or merge.
