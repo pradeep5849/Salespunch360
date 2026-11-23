@@ -159,7 +159,8 @@ private fun FinancialDialog(
                             Text(data.str("checkScope"))
                             data.array("checks").forEach { value ->
                                 val check=value.jsonObject
-                                Text("${check.str("status")}: ${check.str("check")} (${check["affected"]?.jsonPrimitive?.content.orEmpty()})")
+                                Text("${if(check.str("coverage")=="NOT_CHECKED") "NOT CHECKED" else check.str("status")}: ${check.str("check")} ${if(check.str("coverage")=="NOT_CHECKED") "(affected count unavailable)" else "(${check["affected"]?.jsonPrimitive?.content.orEmpty()})"}")
+                                if(check.str("status")!="PASS")Text(check.str("recommendation"))
                             }
                         }
                         OutlinedTextField(
