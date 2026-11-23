@@ -1,3 +1,4 @@
+import {financialVerificationInTx} from "./verification-reconciliation";
 import {verificationActions,type VerificationRecord} from "./verification-actions";
 import {verificationBudget} from "./verification-budget";
 import { missingCanonicalLedgerKeys } from "./verification-ledgers";
@@ -24,6 +25,7 @@ export type VerificationResult = {
   samples: string[];
   recommendation: string;
   incomplete?: boolean;
+  coverage?: "NOT_CHECKED";
   records?: {label:string;href:string}[];
   reviewHref?: string;
 };
@@ -281,7 +283,7 @@ export async function verifyAccountDataForActor(actor: {
     "Asset Branch references are valid":badAssets.map(row=>({id:row.id,label:row.assetNumber,kind:"asset"})),
     "Asset assignment history agrees with current assignment":assignmentIssues.map(row=>({id:row.id,label:row.assetNumber,kind:"asset"})),
   };
-  return checks.map(check=>verificationActions(check,records[check.check]));
+  return [...checks.map(check=>verificationActions(check,records[check.check])),...await financialVerificationInTx(client,companyId,scope)];
 }
 
 async function requireCloseBooksAdmin(actor: {id:string;companyId:string;accountRole?:string|null}, client:Prisma.TransactionClient=db) {

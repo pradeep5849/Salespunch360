@@ -227,8 +227,8 @@ fun AccountUtilityScreen(
             }
             "verification" -> Column {
                 Text("Company-wide read-only checks. A PASS applies only to the named check.")
-                Text("Not checked: bank statements, physical stock, complete allocation reconciliation and every lock anomaly.")
-                Text("Interactive limits: 10,000 records per collection; 50,000 journal-line / branch-assignment rows. An incomplete scan is not a clean result.")
+                Text("Checks cover saved document totals/discounts, effective allocations, settlement totals and current period locks. Bank statements, physical stock and historical lock changes need independent review.")
+                Text("Interactive limits: 10,000 records per collection; 50,000 child or branch-assignment rows per relation. An incomplete scan is not a clean result.")
                 state.verificationCompletedAt?.let { Text("Last verification response: $it") }
                 if(state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if(state.error!=null)Text("Current verification did not complete. Previous results are hidden; refresh to retry.")
@@ -240,7 +240,7 @@ fun AccountUtilityScreen(
                         Card(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
                             Column(Modifier.padding(12.dp)) {
                                 Text("${check["status"]?.jsonPrimitive?.content.orEmpty()} · ${check["check"]?.jsonPrimitive?.content.orEmpty()}")
-                                if(check["incomplete"]?.jsonPrimitive?.booleanOrNull==true)Text("Scan incomplete; affected count unavailable.")else Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
+                                if(check["coverage"]?.jsonPrimitive?.content=="NOT_CHECKED")Text("Not checked; affected count unavailable.")else if(check["incomplete"]?.jsonPrimitive?.booleanOrNull==true)Text("Scan incomplete; affected count unavailable.")else Text("Affected: ${check["affected"]?.jsonPrimitive?.content.orEmpty()}")
                                 if(check["status"]?.jsonPrimitive?.content!="PASS")Text(check["recommendation"]?.jsonPrimitive?.content.orEmpty())
                                 check["samples"]?.jsonArray?.takeIf { it.isNotEmpty() }?.let { samples -> Text("Sample identifiers: " + samples.joinToString { it.jsonPrimitive.content }) }
                                 (check["records"] as? JsonArray)?.take(5)?.forEach { record ->

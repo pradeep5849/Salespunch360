@@ -429,4 +429,11 @@ describe.skipIf(!url)("A058/A062 immutable primary-unit commercial history",()=>
 
  });
 
+ it("reconciles produced immutable commercial history without false payment/cache findings",async()=>{
+  const {financialVerificationInTx}=await import("./verification-reconciliation");
+  const checks=await client.$transaction(tx=>financialVerificationInTx(tx,companyId),{timeout:15000,isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+  expect(checks.filter(row=>row.status==="ERROR"),JSON.stringify(checks.filter(row=>row.status==="ERROR"))).toEqual([]);
+  expect(checks.find(row=>row.check==="Posted settlement and advance totals reconcile")?.status).toBe("PASS");
+  expect(checks.find(row=>row.coverage==="NOT_CHECKED")?.check).toContain("independent opening snapshot");
+ });
 });
