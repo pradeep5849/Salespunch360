@@ -23,7 +23,9 @@ export const mobileError = (status = 401) =>
   );
 
 export const mobileUnauthorized = (error: unknown) =>
-  error instanceof Error && error.message === "MOBILE_UNAUTHORIZED"
+  error instanceof Error && error.message === "MOBILE_PHONE_VERIFICATION_REQUIRED"
+    ? mobileJson({ error: "PHONE_VERIFICATION_REQUIRED" }, 403)
+    : error instanceof Error && error.message === "MOBILE_UNAUTHORIZED"
     ? mobileJson({ error: "UNAUTHORIZED" }, 401)
     : error instanceof Error && error.message === "MOBILE_FORBIDDEN"
       ? mobileJson({ error: "FORBIDDEN" }, 403)
