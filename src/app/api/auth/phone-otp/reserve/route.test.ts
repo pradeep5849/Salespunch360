@@ -23,7 +23,7 @@ import { PhoneOtpSendLimitError } from "@/lib/auth/phone-otp-send-budget";
 const request = (phone: unknown) => new Request("https://example.invalid/api/auth/phone-otp/reserve", {
   method: "POST",
   body: JSON.stringify({ phone }),
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", Origin: "https://example.invalid" },
 });
 
 describe("Firebase SMS reservation API", () => {
@@ -37,6 +37,14 @@ describe("Firebase SMS reservation API", () => {
   it("fails closed when feature is disabled", async () => {
     process.env.PHONE_VERIFICATION_ENABLED = "false";
     expect((await POST(request("+919876543210"))).status).toBe(503);
+    expect(mocks.reservePhoneOtpSend).not.toHaveBeenCalled();
+  });
+  it("rejects requests missing Origin", async () => {
+    const noOrigin = new Request("https://example.invalid/api/auth/phone-otp/reserve", {
+      method: "POST", body: JSON.stringify({ phone: "+919876543210" }),
+      headers: { "Content-Type": "application/json" },
+    });
+    expect((await POST(noOrigin)).status).toBe(403);
     expect(mocks.reservePhoneOtpSend).not.toHaveBeenCalled();
   });
   it("rejects an untrusted origin", async () => {
