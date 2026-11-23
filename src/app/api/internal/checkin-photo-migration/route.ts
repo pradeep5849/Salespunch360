@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../../lib/db";
 import { HostingerStorage } from "../../../../lib/storage/hostinger";
 import { FirebaseStorage } from "../../../../lib/storage/firebase";
+import { getAuthenticatedUser } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ const digest = (value: Buffer) => createHash("sha256").update(value).digest("hex
 const unauthorized = () => NextResponse.json({ error: "Not found" }, { status: 404 });
 
 export async function POST(request: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== "SUPER_ADMIN" || user.companyId !== null) return unauthorized();
   // Off by default. Configure a separate long random token only during migration.
   const token = process.env.CHECKIN_MIGRATION_TOKEN;
   if (process.env.CHECKIN_MIGRATION_ENABLED !== "true" || !token || token.length < 32) {
