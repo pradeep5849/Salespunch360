@@ -6,7 +6,7 @@ import { calculateTrialEndsAt } from "@/lib/trial/status";
 import { randomUUID } from "node:crypto";
 import { companyLogoKey } from "@/lib/company/logo";
 import { privateStorage } from "@/lib/storage";
-import { BusinessType } from "@prisma/client";
+import { BusinessType, Prisma } from "@prisma/client";
 import { recommendedModulesForBusinessType } from "@/lib/account/modules";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 
