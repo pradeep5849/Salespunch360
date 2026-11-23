@@ -1,4 +1,6 @@
 import "../globals.css";
+import { redirect } from "next/navigation";
+import { requiresFirstUsePhoneVerification } from "@/lib/auth/first-use-phone-policy";
 import "../functional-polish.css";
 import { requireUser } from "@/lib/auth/authorization";
 import { WorkspaceHeader } from "@/components/workspace/workspace-header";
@@ -10,6 +12,13 @@ import {isTelecaller} from "@/lib/telecalling/policy";
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  if (process.env.FIRST_USE_PHONE_VERIFICATION_ENABLED === "true") {
+    const phoneState = await db.user.findUnique({
+      where: { id: user.id },
+      select: { role: true, companyId: true, phone: true, phoneVerifiedAt: true },
+    });
+    if (phoneState && requiresFirstUsePhoneVerification(phoneState)) redirect("/verify-mobile");
+  }
   const [company, workspace] = await Promise.all([
     user.companyId ? db.company.findUnique({ where: { id: user.companyId }, select: { name: true, productEdition: true, logoObjectKey: true, updatedAt: true, addressLine1: true, addressLine2: true, locality: true, city: true, state: true, postalCode: true, country: true } }) : null,
     webWorkspaceContext(user),
