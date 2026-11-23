@@ -33,6 +33,7 @@
     "@prisma/client": "6.12.0",
     "@zxing/browser": "^0.1.5",
     "exceljs": "^4.4.0",
+    "firebase": "^12.7.0",
     "firebase-admin": "^14.5.1",
     "next": "16.4.5",
     "nodemailer": "10.5.0",
