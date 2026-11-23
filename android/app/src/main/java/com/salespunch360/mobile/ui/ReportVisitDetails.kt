@@ -38,3 +38,22 @@ internal fun reportVisitCoordinates(lat:Double?,lng:Double?):String=if(lat==null
   Text("Visit notes: ${text("visitNotes")?:"Not recorded"}")
  }
 }
+
+internal fun deletableReportVisit(row:JsonObject):Pair<String,String>? {
+ if(row["canDelete"]?.jsonPrimitive?.booleanOrNull!=true)return null
+ val id=row["id"]?.jsonPrimitive?.contentOrNull?:return null
+ val revision=row["updatedAt"]?.jsonPrimitive?.contentOrNull?:return null
+ return id to revision
+}
+@Composable internal fun DeleteOwnVisitControl(row:JsonObject,pending:Boolean,onDelete:(String,String)->Unit){
+ val visit=deletableReportVisit(row)?:return
+ var confirm by remember(visit){mutableStateOf(false)}
+ OutlinedButton(enabled=!pending,onClick={confirm=true}){Text(if(pending)"Deleting…" else "Delete")}
+ if(confirm)androidx.compose.material3.AlertDialog(
+  onDismissRequest={if(!pending)confirm=false},
+  title={Text("Delete mistaken check-in?")},
+  text={Text("This deletes the check-in and its photo permanently. Linked visits cannot be deleted. Attendance and travel remain unchanged.")},
+  confirmButton={androidx.compose.material3.TextButton(enabled=!pending,onClick={confirm=false;onDelete(visit.first,visit.second)}){Text("Delete check-in")}},
+  dismissButton={androidx.compose.material3.TextButton(enabled=!pending,onClick={confirm=false}){Text("Cancel")}}
+ )
+}

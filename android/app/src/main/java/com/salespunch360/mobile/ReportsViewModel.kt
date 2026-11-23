@@ -14,6 +14,7 @@ import java.time.ZoneId
 data class ReportsState(
  val loading:Boolean=true,
  val exporting:Boolean=false,
+ val deletingVisit:Boolean=false,
  val type:String="attendance",
  val report:JsonObject?=null,
  val start:String="",
@@ -52,6 +53,21 @@ class ReportsViewModel(app:Application):AndroidViewModel(app){
     page=page,
    )
   }catch(e:Exception){base.copy(loading=false,message=apiMessage(e,"Report couldn't be loaded."))}
+ }
+
+ fun deleteOwnVisit(visitId:String,revision:String)=viewModelScope.launch{
+  if(_state.value.deletingVisit)return@launch
+  _state.value=_state.value.copy(deletingVisit=true,message=null)
+  try{
+   api.deleteOwnVisit(visitId,revision)
+   load(_state.value.type,_state.value.page).join()
+   _state.value=_state.value.copy(deletingVisit=false,message="Check-in deleted. Attendance and travel are unchanged.")
+  }catch(e:Exception){
+   if(e is kotlinx.coroutines.CancellationException)throw e
+   // A lost response may follow a commit. Refresh rather than replaying deletion.
+   load(_state.value.type,_state.value.page).join()
+   _state.value=_state.value.copy(deletingVisit=false,message=if(e is ApiException&&e.code=="VISIT_LINKED")"This check-in is linked and cannot be deleted." else "Deletion was not confirmed. Review the refreshed check-ins before trying again.")
+  }
  }
 
  fun exportExcel()=viewModelScope.launch{
