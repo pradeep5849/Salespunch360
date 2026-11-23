@@ -198,3 +198,7 @@ Completed A170-F02/A171-F01/A173-F01 through reviewed metadata/rate edit pages o
 ## Shared callback lifecycle — 2f650fdc
 
 Completed A149-F01 through transactional source-linked Call tasks, compatible queues, exact deadlines, shared completion/cancellation and overdue-only Admin escalation. See `docs/callback-shared-task-implementation/checkpoint.md`. Fresh local fixture applied all 169 migrations; 31 SQL cases passed including callback and 602-row paging regressions. 58 focused cases passed; TypeScript/lint/whitespace passed. Native CI/device/live acceptance pending. Slice 2 since the last full run; no new full run. Counts: 146 implemented/acceptance pending, two partial, six not started; eight retained findings unfinished.
+
+## Verification review navigation — 2ac1814d / fixture typing 55a92385
+
+Completed A120-F05 with authorized affected-record and review-area links on web/native, native journal/Asset detail entry and stale detail request guards. 30 focused cases passed including a real two-company SQL scan and server-rendered pages; TypeScript/lint/whitespace passed. See `docs/verification-review-links/checkpoint.md`. Slice 3 since the last full regression; no new full run. Counts: 147 implemented/acceptance pending, one partial, six not started; seven retained findings unfinished. Callback head 5a05d680 CI passed all non-live checks; live Lighthouse failures retained.
