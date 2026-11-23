@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { requirePermissionForMutation } from "@/lib/auth/authorization";
-import { refreshStoppedTravelDay } from "./daily-snapshot";
+import { refreshStoppedTravelDay, travelBusinessDate } from "./daily-snapshot";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const dateAt = (value: string) => new Date(`${value}T00:00:00.000Z`);
@@ -51,8 +51,8 @@ export async function rebuildEmployeeTravelExpenses(
   const days = new Map<string, { branchId: string; date: string }>();
   for (const session of attendance) {
     if (!session.endedAt) continue;
-    for (let t = Math.max(start.getTime(), new Date(session.startedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) + "T00:00:00Z").getTime());
-      t <= Math.min(end.getTime(), new Date(session.endedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) + "T00:00:00Z").getTime());
+    for (let t = Math.max(start.getTime(), dateAt(travelBusinessDate(session.startedAt)).getTime());
+      t <= Math.min(end.getTime(), dateAt(travelBusinessDate(session.endedAt)).getTime());
       t += 86_400_000) {
       const date = new Date(t).toISOString().slice(0, 10);
       days.set(`${session.branchId}:${date}`, { branchId: session.branchId, date });
