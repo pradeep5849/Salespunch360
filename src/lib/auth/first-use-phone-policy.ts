@@ -28,6 +28,9 @@ export function requiresFirstUsePhoneVerification(
 export function isFirstUsePhoneGateExemptPath(pathname: string): boolean {
   return pathname === "/verify-mobile"
     || pathname.startsWith("/verify-mobile/")
+    || pathname === "/api/auth/phone-otp/reserve"
+    || pathname === "/api/auth/phone-otp/confirm"
+    || pathname === "/api/auth/session-status"
     || pathname === "/api/v1/mobile/auth/verify-phone"
     || pathname.startsWith("/api/v1/mobile/auth/verify-phone/")
     || pathname === "/api/v1/mobile/auth/logout"
