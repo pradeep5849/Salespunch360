@@ -29,6 +29,10 @@ describe("first-use mobile verification gate", () => {
 
   it("only exempts verification and logout endpoints, not workspace APIs", () => {
     expect(isFirstUsePhoneGateExemptPath("/verify-mobile")).toBe(true);
+    expect(isFirstUsePhoneGateExemptPath("/api/auth/phone-otp/reserve")).toBe(true);
+    expect(isFirstUsePhoneGateExemptPath("/api/auth/phone-otp/confirm")).toBe(true);
+    expect(isFirstUsePhoneGateExemptPath("/api/auth/session-status")).toBe(true);
+    expect(isFirstUsePhoneGateExemptPath("/api/auth/phone-otp/confirm/other")).toBe(false);
     expect(isFirstUsePhoneGateExemptPath("/api/v1/mobile/auth/verify-phone")).toBe(true);
     expect(isFirstUsePhoneGateExemptPath("/api/v1/mobile/auth/logout")).toBe(true);
     expect(isFirstUsePhoneGateExemptPath("/workspace")).toBe(false);
