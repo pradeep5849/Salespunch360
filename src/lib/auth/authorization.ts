@@ -20,7 +20,9 @@ async function enforceFirstUsePhoneGate(user: AuthenticatedUser, mutation: boole
     where: { id: user.id },
     select: { role: true, companyId: true, phone: true, phoneVerifiedAt: true },
   });
-  if (state && requiresFirstUsePhoneVerification(state)) {
+  // A missing account record must not bypass mandatory first-use verification.
+  if (!state) throw new AuthorizationError();
+  if (requiresFirstUsePhoneVerification(state)) {
     if (mutation) throw new AuthorizationError();
     redirect("/verify-mobile");
   }
