@@ -77,6 +77,16 @@ function cleanSegment<T extends TravelRoutePoint>(points: T[]): T[] {
       ((anchor.accuracyMeters ?? 0) + (point.accuracyMeters ?? 0)) * TRAVEL_ROUTE_CONFIG.uncertaintyFactor,
     );
     if (distance <= uncertainty) continue;
+    // Suppress a low-confidence departure from a stationary cluster only when
+    // the following independent fix returns to the anchor uncertainty region.
+    const following = usable[index + 1];
+    if (following) {
+      const seconds = (following.capturedAt.getTime() - point.capturedAt.getTime()) / 1000;
+      const returnRadius = Math.max(TRAVEL_ROUTE_CONFIG.minimumMovementMeters, (anchor.accuracyMeters ?? 0) + (following.accuracyMeters ?? 0));
+      if (seconds > 0 && seconds <= 90 && distance <= 80
+        && (point.accuracyMeters ?? 0) > 2 * Math.max(anchor.accuracyMeters ?? 0, following.accuracyMeters ?? 0)
+        && haversineDistanceMeters(anchor, following) <= returnRadius) continue;
+    }
     if (distance / (elapsedMs / 1000) > TRAVEL_ROUTE_CONFIG.maximumSpeedMetersPerSecond) {
       const next = usable[index + 1];
       const nextSeconds = next ? (next.capturedAt.getTime() - point.capturedAt.getTime()) / 1000 : 0;
