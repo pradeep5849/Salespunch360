@@ -53,7 +53,7 @@ export async function mobileEditEmployee(p:MobilePrincipal,raw:unknown){
   }
   await tx.user.update({where:{id:employee.id},data:{name:parsed.name,email:parsed.email,phone:parsed.phone??null,employeeCode:parsed.employeeCode??null,designation:parsed.designation===undefined?employee.designation:parsed.designation,dateOfJoining:parsed.dateOfJoining===undefined?employee.dateOfJoining:parsed.dateOfJoining,managerId,managerType:employee.salesRole==='MANAGER'?(parsed.managerType??employee.managerType??'FIELD_MANAGER'):null,travelAllowanceEnabled:travelEnabled,travelRatePerKm:travelRate,travelApprovalMode}});
   if(travelEnabled)await reconcileEmployeeTravelHistory(tx,employee.companyId,employee.id);
- });
+ },{timeout:120000});
  return{ok:true};
 }
 
