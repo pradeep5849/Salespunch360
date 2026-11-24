@@ -30,7 +30,6 @@ function PasswordIcon({ visible }: { visible: boolean }) {
 }
 
 export function RegistrationForm({
-  initialProduct,
   phoneVerificationEnabled,
 }: {
   phoneVerificationEnabled: boolean;
@@ -56,7 +55,7 @@ export function RegistrationForm({
     },
     [logoPreview],
   );
-  const [productEdition, setProductEdition] = useState(initialProduct ?? "");
+  const productEdition = "SALESPUNCH360";
   const confirmationEntered = confirmation.length > 0;
   const passwordsMatch = confirmationEntered && password === confirmation;
   const attrs = (name: string) => ({
@@ -80,7 +79,7 @@ export function RegistrationForm({
           <span>1</span>
           <div>
             <h2>Choose product</h2>
-            <p>Select one edition for your Company.</p>
+            <p>Field Sales & CRM is available for registration.</p>
           </div>
         </div>
         <div
@@ -90,27 +89,10 @@ export function RegistrationForm({
           aria-required="true"
           {...attrs("productEdition")}
         >
-          {[
-            ["SALESPUNCH360", "SalesPunch360", "Field Sales & CRM"],
-            [
-              "SALESPUNCH360_ACCOUNT",
-              "SalesPunch360 Account",
-              "Accounts & Business Management",
-            ],
-            ["SALESPUNCH360_PLUS", "SalesPunch360 Plus", "Sales + Accounts"],
-          ].map(([value, title, description]) => (
-            <button
-              key={value}
-              className={`product-card ${productEdition === value ? "selected" : ""}`}
-              type="button"
-              role="radio"
-              aria-checked={productEdition === value}
-              onClick={() => setProductEdition(value)}
-            >
-              <strong>{title}</strong>
-              <span>{description}</span>
-            </button>
-          ))}
+          <button className="product-card selected" type="button" role="radio" aria-checked="true">
+            <strong>SalesPunch360</strong>
+            <span>Field Sales & CRM</span>
+          </button>
         </div>
         <FieldError
           name="productEdition"
@@ -385,6 +367,13 @@ export function RegistrationForm({
         {pending ? "Creating workspace…" : "Start my free trial"}
       </button>
       <p className="terms">Your acceptance is required before registration.</p>
+      <section className="form-section" aria-label="Upcoming products">
+        <h2>Coming Soon</h2>
+        <div className="product-grid">
+          <div className="product-card" aria-disabled="true"><strong>SalesPunch360 Account</strong><span>Accounts & Business Management — Coming Soon</span></div>
+          <div className="product-card" aria-disabled="true"><strong>SalesPunch360 Plus</strong><span>Sales + Accounts — Coming Soon</span></div>
+        </div>
+      </section>
     </form>
   );
 }

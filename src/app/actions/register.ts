@@ -20,6 +20,10 @@ export async function register(_: RegistrationState, formData: FormData): Promis
     return { error: "You must agree to the Terms of Service and acknowledge the Privacy Policy.", fieldErrors: { legalConsent: ["Required before registration."] } };
   }
 
+  if (formData.get("productEdition") !== "SALESPUNCH360") {
+    return { error: "Only SalesPunch360 Field Sales & CRM is available for registration.", fieldErrors: { productEdition: ["This edition is coming soon."] } };
+  }
+
   const input = {
     productEdition: formData.get("productEdition"),
     companyName: formData.get("companyName"),
