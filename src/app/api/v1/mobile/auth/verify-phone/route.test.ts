@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => {
   };
   return {
     tx,
-    transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<unknown>) => callback(tx)),
+    transaction: vi.fn(async (callback: (client: { $executeRaw: typeof tx.$executeRaw; user: typeof tx.user }) => Promise<unknown>) => callback(tx)),
     authenticateMobileToken: vi.fn(),
     verifyFirebasePhoneProof: vi.fn(),
     consumeRateLimit: vi.fn(),
