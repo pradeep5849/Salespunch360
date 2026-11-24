@@ -9,6 +9,9 @@ export async function GET() {
     const phoneState = user && process.env.FIRST_USE_PHONE_VERIFICATION_ENABLED === "true" && user.companyId && user.role !== "SUPER_ADMIN"
       ? await db.user.findUnique({ where: { id: user.id }, select: { role: true, companyId: true, phone: true, phoneVerifiedAt: true } })
       : null;
+    if (user && process.env.FIRST_USE_PHONE_VERIFICATION_ENABLED === "true" && user.companyId && user.role !== "SUPER_ADMIN" && !phoneState) {
+      throw new Error("Authenticated account state unavailable");
+    }
     const redirectTo = user
       ? phoneState && requiresFirstUsePhoneVerification(phoneState) ? "/verify-mobile" : authenticatedHome(user)
       : undefined;
