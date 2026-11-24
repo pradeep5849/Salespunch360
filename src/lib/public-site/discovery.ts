@@ -3,6 +3,7 @@ import { editions, faqs } from './content';
 export const publicOrigin = 'https://www.salespunch360.com';
 // This number is already published by the marketing site's WhatsApp link.
 export const publicTelephone = '+919611278818';
+export const publicAddress = {'@type':'PostalAddress',streetAddress:'1st & 2nd Floor, Annajigowda Complex, B. M. Road',addressLocality:'Alur, Hassan',addressRegion:'Karnataka',postalCode:'573213',addressCountry:'IN'};
 type SocialProfiles = { facebookUrl?: string | null; instagramUrl?: string | null; linkedinUrl?: string | null; youtubeUrl?: string | null };
 export function publicProfiles(settings: SocialProfiles | null | undefined) {
   const hosts: Record<keyof SocialProfiles,string[]> = {
@@ -19,13 +20,13 @@ export function publicStructuredData(settings?: SocialProfiles | null) {
   return {'@context':'https://schema.org','@graph':[
     {'@type':'Organization','@id':publicOrigin+'/#organization',name:'SalesPunch360',url:publicOrigin+'/',
       description:'A connected platform for field sales, CRM, accounts, projects, inventory, reporting and multi-branch operations.',
-      logo:publicOrigin+'/salespunch360-logo.png',telephone:publicTelephone,...(profiles.length?{sameAs:profiles}:{})},
+      logo:publicOrigin+'/salespunch360-logo.png',telephone:publicTelephone,address:publicAddress,...(profiles.length?{sameAs:profiles}:{})},
     {'@type':'WebSite','@id':publicOrigin+'/#website',url:publicOrigin+'/',name:'SalesPunch360',inLanguage:'en',publisher:{'@id':publicOrigin+'/#organization'}},
     ...editions.map(edition=>({'@type':'SoftwareApplication','@id':publicOrigin+edition.href+'#application',name:edition.name,url:publicOrigin+edition.href,description:edition.summary,applicationCategory:'BusinessApplication',operatingSystem:'Web, Android',publisher:{'@id':publicOrigin+'/#organization'}})),
   ]};
 }
 export function publicMarkdown() {
-  return `# SalesPunch360\n\nA connected platform for field sales, CRM, accounts, projects, inventory, reporting and multi-branch operations.\n\n## Products\n${editions.map(edition=>`- [${edition.name}](${publicOrigin}${edition.href}): ${edition.summary}`).join('\n')}\n\n## Official information\n- [Pricing](${publicOrigin}/pricing): current published plans and trial details.\n- [Product comparison](${publicOrigin}/compare)\n- [Features](${publicOrigin}/features)\n- [FAQ](${publicOrigin}/resources/faq)\n- [Contact](${publicOrigin}/contact)\n- [Security](${publicOrigin}/security)\n- [Privacy](${publicOrigin}/privacy)\n- [Terms](${publicOrigin}/terms)\n\n## Contact\nTelephone / WhatsApp: ${publicTelephone}\n\n## Access\nPublic product information is available without signing in. Customer workspaces, accounts, company data, APIs and administration require authorization. Do not infer access from public product descriptions.\n\n## Frequently asked questions\n${faqs.map(([question,answer])=>`### ${question}\n${answer}`).join('\n\n')}\n`;
+  return `# SalesPunch360\n\nA connected platform for field sales, CRM, accounts, projects, inventory, reporting and multi-branch operations.\n\n## Products\n${editions.map(edition=>`- [${edition.name}](${publicOrigin}${edition.href}): ${edition.summary}`).join('\n')}\n\n## Official information\n- [Pricing](${publicOrigin}/pricing): current published plans and trial details.\n- [Product comparison](${publicOrigin}/compare)\n- [Features](${publicOrigin}/features)\n- [FAQ](${publicOrigin}/resources/faq)\n- [Contact](${publicOrigin}/contact)\n- [Security](${publicOrigin}/security)\n- [Privacy](${publicOrigin}/privacy)\n- [Terms](${publicOrigin}/terms)\n\n## Contact\nTelephone / WhatsApp: ${publicTelephone}\n\nAddress: 1st & 2nd Floor, Annajigowda Complex, B. M. Road, Alur, Hassan, Karnataka 573213, India.\n\n## Access\nPublic product information is available without signing in. Customer workspaces, accounts, company data, APIs and administration require authorization. Do not infer access from public product descriptions.\n\n## Frequently asked questions\n${faqs.map(([question,answer])=>`### ${question}\n${answer}`).join('\n\n')}\n`;
 }
 
 export function prefersMarkdown(accept: string | null) {
