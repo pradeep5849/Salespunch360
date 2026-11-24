@@ -20,7 +20,14 @@ export async function updateCompanyTravelRate(raw:unknown){
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  const n=Number(raw);
  if(!Number.isFinite(n)||n<0||n>100000)throw new Error("INVALID_RATE");
- return db.company.update({where:{id:admin.companyId},data:{travelRatePerKm:new Prisma.Decimal(n.toFixed(2))}});
+ const companyId=admin.companyId;
+ return db.$transaction(async tx=>{
+ const employees=await tx.user.findMany({where:{companyId,travelAllowanceEnabled:true,travelRatePerKm:null},select:{id:true},orderBy:{id:"asc"}});
+ for(const employee of employees)await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${employee.id}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
+ const company=await tx.company.update({where:{id:companyId},data:{travelRatePerKm:new Prisma.Decimal(n.toFixed(2))}});
+ for(const employee of employees)await reconcileEmployeeTravelHistory(tx,companyId,employee.id);
+ return company;
+ },{timeout:120000});
 }
 
 export async function employeeTravelApprovalMode(employeeId:string){
