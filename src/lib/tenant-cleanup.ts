@@ -96,7 +96,7 @@ export function validateStorageOwnership(inventory: Inventory) {
     let expected: string | undefined;
     if (object.source === "Company.logoObjectKey") expected = `Logo/${companyId}.webp`;
     if (object.source === "VisitPhoto.objectKey") expected = `companies/${companyId}/employees/${object.uploadedByUserId}/check-ins/${object.visitId}/photo.webp`;
-    if (object.source === "VisitPhoto.thumbnailObjectKey") expected = `companies/${companyId}/employees/${object.uploadedByUserId}/check-ins/${object.visitId}/thumb.webp`;
+    if (object.source === "VisitPhoto.thumbnailObjectKey") expected = `companies/${companyId}/employees/${object.uploadedByUserId}/check-ins/${object.visitId}/${object.key.endsWith("/photo.webp") ? "photo.webp" : "thumb.webp"}`;
     if (object.source === "PendingStorageDeletion.objectKey" ? !pendingKeyIsOwned(object.key, companyId) : object.key !== expected)
       throw new Error(`UNSAFE_STORAGE_KEY:${object.source}`);
   }

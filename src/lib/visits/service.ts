@@ -14,9 +14,9 @@ export function hasImmutableReference(value:{checkInReferenceLatitude:number|nul
 export function hasReferenceVisitProvenance(value:{checkInReferenceVisitId:string|null}){return value.checkInReferenceVisitId!==null;}
 export function assertWithinImmutableReference(reference:{latitude:number;longitude:number}|null,actual:{latitude:number;longitude:number}){if(!reference)return;const distance=haversineDistanceMeters(reference,actual);if(distance>RADIUS_METERS)throw new VisitPolicyError("REPEAT_VISIT_OUTSIDE_RADIUS",distance);}
 async function preparePhoto(user:FieldUser,visitId:string,file:File,setStage:(stage:CheckInFailureStage)=>void){
- setStage("PHOTO_PROCESS");const processed=await processVisitPhoto(file),keys=visitPhotoKeys(user.companyId,user.id,visitId),storage=privateStorage();
- try{setStage("PHOTO_MAIN_WRITE");await storage.put(keys.objectKey,processed.main);setStage("PHOTO_THUMB_WRITE");await storage.put(keys.thumbnailObjectKey,processed.thumbnail);}
- catch(error){await Promise.allSettled([storage.delete(keys.objectKey),storage.delete(keys.thumbnailObjectKey)]);throw error;}
+ setStage("PHOTO_PROCESS");const processed=await processVisitPhoto(file,false),paths=visitPhotoKeys(user.companyId,user.id,visitId),keys={objectKey:paths.objectKey,thumbnailObjectKey:paths.objectKey},storage=privateStorage();
+ try{setStage("PHOTO_MAIN_WRITE");await storage.put(keys.objectKey,processed.main);}
+ catch(error){await Promise.allSettled([storage.delete(keys.objectKey)]);throw error;}
  return{keys,data:{companyId:user.companyId,visitId,uploadedByUserId:user.id,...keys,mimeType:processed.mimeType,sizeBytes:processed.main.length,thumbnailSizeBytes:processed.thumbnail.length,width:processed.width,height:processed.height}};
 }
 
