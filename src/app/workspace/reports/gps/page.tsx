@@ -32,6 +32,16 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
     {label:"Total Distance Covered",value:distance(r.routeDistanceMeters)},
    ]}/>
    <section className="gps-warning"><strong>Last spotted</strong><p>{r.lastSpottedAt?dateTime(r.lastSpottedAt):"No GPS point recorded for this day."}</p></section>
+   <section className="gps-warning"><strong>GPS recording quality</strong>
+    <Summary items={[
+     {label:"Recorded points",value:r.quality.recordedPoints},
+     {label:"Measured points",value:r.quality.measuredPoints},
+     {label:"Poor-accuracy points",value:r.quality.poorAccuracyPoints},
+     {label:"Tracking gaps",value:r.quality.gapCount},
+     {label:"Gap duration (minutes)",value:Math.round(r.quality.gapDurationMs/60000)},
+    ]}/>
+    <p>Distance is measured from available reliable readings only; missing travel is not estimated.</p>
+   </section>
    <GoogleRouteMap points={r.points} segments={r.segments} markers={r.markers}/>
    <section className="gps-timeline"><h2>Daily timeline</h2>{r.events.length?r.events.map((e,index)=><article key={e.id}><i>{index+1}</i><div><strong>{names[e.type]}{e.customer?` · ${e.customer}`:""}</strong><time>{dateTime(e.at)}</time>{e.detail&&<p>{e.detail}</p>}{e.latitude!=null&&e.longitude!=null&&<small>{e.latitude.toFixed(6)}, {e.longitude.toFixed(6)}</small>}</div></article>):<div className="empty-state">No stored attendance, GPS, or visit events exist for this date.</div>}</section>
    <section className="gps-warning"><strong>Attendance-linked GPS</strong><p>The map and distance use the same quality-filtered GPS points captured while attendance was ON. Poor accuracy, jitter and implausible movement are excluded. Separate attendance periods and long recording gaps are not connected. Last spotted uses the latest stored GPS timestamp; it does not confirm current tracking.</p></section>
