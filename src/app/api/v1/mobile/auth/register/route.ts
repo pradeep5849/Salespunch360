@@ -11,8 +11,6 @@ type RegistrationBody = {
   companyName?: unknown;
   adminName?: unknown;
   adminEmail?: unknown;
-  adminPhone?: unknown;
-  firebasePhoneToken?: unknown;
   adminPassword?: unknown;
   confirmPassword?: unknown;
   legalConsent?: unknown;
@@ -54,7 +52,6 @@ export async function POST(request: Request) {
       companyName: raw.companyName,
       adminName: raw.adminName,
       adminEmail: raw.adminEmail,
-      ...(process.env.PHONE_VERIFICATION_ENABLED === "true" ? { adminPhone: raw.adminPhone, firebasePhoneToken: raw.firebasePhoneToken } : {}),
       adminPassword: raw.adminPassword,
       confirmPassword: raw.confirmPassword,
     });
@@ -111,15 +108,6 @@ export async function POST(request: Request) {
       );
     if (error instanceof SyntaxError)
       return mobileJson({ error: "INVALID_INPUT" }, 400);
-    if (error instanceof Error && ["INVALID_PHONE_NUMBER", "INVALID_PHONE_PROOF", "PHONE_VERIFICATION_NOT_CONFIGURED"].includes(error.message)) {
-      return mobileJson(
-        { error: error.message === "PHONE_VERIFICATION_NOT_CONFIGURED" ? "PHONE_VERIFICATION_UNAVAILABLE" : "PHONE_VERIFICATION_FAILED" },
-        error.message === "PHONE_VERIFICATION_NOT_CONFIGURED" ? 503 : 400,
-      );
-    }
-    if (error instanceof Error && error.message === "REGISTRATION_CONFLICT" && process.env.PHONE_VERIFICATION_ENABLED === "true") {
-      return mobileJson({ error: "REGISTRATION_CONFLICT" }, 409);
-    }
     if (error instanceof Error && error.message === "REGISTRATION_CONFLICT") {
       return mobileJson({ error: "EMAIL_IN_USE" }, 409);
     }
