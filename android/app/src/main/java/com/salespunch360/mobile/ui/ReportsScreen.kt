@@ -179,6 +179,7 @@ fun ReportsScreen(
 
     item{GpsDisclaimer()}
    }else{
+    if(state.type=="expenses")item{ExpenseTotals(r["totals"]?.jsonObject)}
     item{SummaryCards(r["summary"]?.jsonObject)}
     if(rows.isEmpty())item{ContentCard("No report records","No records match the selected filters.")}
     else items(rows.size){if(state.type=="expenses")ExpenseReportRow(rows[it].jsonObject)else ReportRow(rows[it].jsonObject,vm,state.deletingVisit)}
@@ -209,6 +210,21 @@ fun ReportsScreen(
    },
    confirmButton={TextButton({deviceDetails=null}){Text("Close")}},
   )
+ }
+}
+
+@Composable
+private fun ExpenseTotals(totals:JsonObject?){
+ if(totals==null)return
+ Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+  listOf("Total KM" to "${totals.text("totalDistanceKm")?: "0.00"} km","Total Amount" to "₹${totals.text("totalAmount")?: "0.00"}").forEach{(label,amount)->
+   OutlinedCard(Modifier.weight(1f)){
+    Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
+     Text(amount,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+     Text(label,style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+    }
+   }
+  }
  }
 }
 

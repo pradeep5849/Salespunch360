@@ -4,6 +4,9 @@ import {calculateTravelDistanceMeters} from "@/lib/location/travel-route";
 import {db} from "@/lib/db";
 import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor} from "./scope";
 import {parseReportFilters,type SearchParams} from "./validation";
+export function summarizeTravelExpenses(rows:readonly {distanceMeters:number;amount:Prisma.Decimal}[]){
+ return {totalDistanceKm:(rows.reduce((sum,row)=>sum+row.distanceMeters,0)/1000).toFixed(2),totalAmount:rows.reduce((sum,row)=>sum.plus(row.amount),new Prisma.Decimal(0)).toFixed(2)};
+}
 export async function expenseReport(raw:SearchParams,provided?:ReportActor){
  const actor=provided??await reportActor(),filters=parseReportFilters(raw),ids=await resolveEmployeeScope(actor,filters.employeeId),employees=await reportEmployeeOptions(actor),branches=await operationalBranchContext(actor,typeof raw.branchId==="string"?raw.branchId:undefined);
  const [company,approvals]=await Promise.all([
@@ -27,5 +30,6 @@ export async function expenseReport(raw:SearchParams,provided?:ReportActor){
   rows.push({key,branchId:first.branchId,employeeId:first.userId,employee:first.user.name,date,distanceMeters,rate:new Prisma.Decimal(0),ratePerKm:new Prisma.Decimal(0),amount:new Prisma.Decimal(0),status:null as unknown as typeof rows[number]["status"],approvalMode:"MANUAL",approvedAmount:null,reviewedAt:null});
  }
  rows.sort((a,b)=>b.date.localeCompare(a.date)||a.employeeId.localeCompare(b.employeeId));
- return{actor,filters,employees,rows,pointLimitExceeded:false,companyRate:company?.travelRatePerKm??null};
+ const totals=summarizeTravelExpenses(rows);
+ return{actor,filters,employees,rows,totals,pointLimitExceeded:false,companyRate:company?.travelRatePerKm??null};
 }
