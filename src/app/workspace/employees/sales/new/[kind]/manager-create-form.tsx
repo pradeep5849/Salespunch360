@@ -1,4 +1,5 @@
 "use client";
+import { CountryPhoneField } from "@/components/country-phone-field";
 
 import Link from "next/link";
 import { useActionState, useEffect } from "react";
@@ -37,7 +38,7 @@ export function ManagerCreateForm({ branches }: { branches: Branch[] }) {
       </label>
       <label>
         Phone
-        <input name="phone" />
+        <CountryPhoneField name="phone" />
         {fieldError("phone") ? <span className="form-error">{fieldError("phone")}</span> : null}
       </label>
       <label>
