@@ -32,7 +32,7 @@ export async function employeeTravelApprovalMode(employeeId:string){
 }
 
 export async function updateEmployeeTravelSettings(employeeId:string,enabled:boolean,customRate:string|null,mode:TravelApprovalMode="MANUAL"){
- const admin=await requirePermissionForMutation("SALES_TRAVEL");
+ const admin=await requirePermissionForMutation("SALES_SETTINGS");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
  const companyId=admin.companyId;
@@ -58,7 +58,7 @@ async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string
 }
 
 export async function reviewDailyTravel(employeeId:string,date:string,status:"APPROVED"|"REJECTED",requestedBranchId?:string){
- const admin=await requirePermissionForMutation("SALES_TRAVEL");
+ const admin=await requirePermissionForMutation("SALES_SETTINGS");
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  if(admin.salesRole!=="PRIMARY_ADMIN")throw new AuthorizationError();
  const companyId=admin.companyId;const branchId=await resolveOperationalWriteBranch({id:admin.id,companyId},requestedBranchId);

@@ -23,7 +23,8 @@ export async function updateEmployeeTravelSettingsAction(formData:FormData){
  }catch(error){
   if(error&&typeof error==="object"&&"digest" in error)throw error;
   const code=error instanceof Error?error.message:"";
-  const message=code==="INVALID_RATE"?"Enter a valid KM rate.":code==="NOT_FOUND"?"This employee is unavailable.":"Travel settings could not be saved.";
+  const message=code==="Not authorized"||code==="NOT_AUTHORIZED"?"Only an authorized Primary Admin can save travel settings.":code==="AUTHENTICATION_REQUIRED"?"Your session expired. Sign in again.":code==="RATE_LIMITED"?"Too many attempts. Wait one minute and retry.":code==="UNTRUSTED_ORIGIN"?"Refresh the page and try again from the official website.":code==="INVALID_RATE"?"Enter a valid KM rate.":code==="NOT_FOUND"?"This employee is unavailable.":"Travel settings could not be saved.";
+  console.warn("employee-travel-settings-save-failed",{name:error instanceof Error?error.name:"Unknown",code:code==="INVALID_RATE"||code==="NOT_FOUND"||code==="RATE_LIMITED"||code==="UNTRUSTED_ORIGIN"?code:undefined, databaseCode:error&&typeof error==="object"&&"code" in error?error.code:undefined});
   redirect(`${safeReturnTo}?travelError=${encodeURIComponent(message)}`);
  }
 }
