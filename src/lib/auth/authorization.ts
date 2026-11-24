@@ -2,6 +2,7 @@ import type { Prisma, Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser, type AuthenticatedUser } from "./session";
 import { db } from "@/lib/db";
+import { requiresFirstUsePhoneVerification } from "./first-use-phone-policy";
 import { canAccessAccountWorkspace, canAccessSalesWorkspace } from "./workspace-policy";
 import { canUsePermission, canUsePermissionForMutation, type Permission } from "./permissions";
 
@@ -13,9 +14,24 @@ export class AuthenticationError extends Error {
   constructor() { super("AUTHENTICATION_REQUIRED"); this.name = "AuthenticationError"; }
 }
 
+async function enforceFirstUsePhoneGate(user: AuthenticatedUser, mutation: boolean) {
+  if (process.env.FIRST_USE_PHONE_VERIFICATION_ENABLED !== "true" || !user.companyId || user.role === "SUPER_ADMIN") return;
+  const state = await db.user.findUnique({
+    where: { id: user.id },
+    select: { role: true, companyId: true, phone: true, phoneVerifiedAt: true },
+  });
+  // A missing account record must not bypass mandatory first-use verification.
+  if (!state) throw new AuthorizationError();
+  if (requiresFirstUsePhoneVerification(state)) {
+    if (mutation) throw new AuthorizationError();
+    redirect("/verify-mobile");
+  }
+}
+
 export async function requireUser(): Promise<AuthenticatedUser> {
   const user = await getAuthenticatedUser();
   if (!user) redirect("/sign-in");
+  await enforceFirstUsePhoneGate(user, false);
   return user;
 }
 
@@ -23,6 +39,7 @@ export async function requireUser(): Promise<AuthenticatedUser> {
 export async function requireUserForMutation(): Promise<AuthenticatedUser> {
   const user = await getAuthenticatedUser();
   if (!user) throw new AuthenticationError();
+  await enforceFirstUsePhoneGate(user, true);
   return user;
 }
 

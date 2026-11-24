@@ -22,9 +22,14 @@ export const registrationSchema = z.object({
   companyName: z.string().trim().min(2).max(120),
   adminName: z.string().trim().min(2).max(120),
   adminEmail: emailSchema,
+  adminPhone: z.string().regex(/^\+[1-9]\d{1,14}$/).optional(),
+  firebasePhoneToken: z.string().min(1).max(8192).optional(),
   adminPassword: strongPasswordSchema,
   confirmPassword: z.string().min(1).max(200),
 }).strict().superRefine((data, context) => {
+  if (process.env.PHONE_VERIFICATION_ENABLED === "true" && (!data.adminPhone || !data.firebasePhoneToken)) {
+    context.addIssue({ code: "custom", path: ["adminPhone"], message: "Verify your mobile number before registration" });
+  }
   if (data.adminPassword !== data.confirmPassword) {
     context.addIssue({ code: "custom", path: ["confirmPassword"], message: "Passwords do not match" });
   }

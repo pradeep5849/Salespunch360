@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { register, type RegistrationState } from "@/app/actions/register";
+import { sendFirebasePhoneCode, confirmFirebasePhoneCode } from "@/lib/auth/firebase-web-client";
+import type { ConfirmationResult } from "firebase/auth";
 
 const initialState: RegistrationState = {};
 function FieldError({ errors, name }: { errors?: string[]; name: string }) {
@@ -28,12 +30,21 @@ function PasswordIcon({ visible }: { visible: boolean }) {
 
 export function RegistrationForm({
   initialProduct,
+  phoneVerificationEnabled,
 }: {
+  phoneVerificationEnabled: boolean;
   initialProduct?:
     "SALESPUNCH360" | "SALESPUNCH360_ACCOUNT" | "SALESPUNCH360_PLUS";
 }) {
   const [state, formAction, pending] = useActionState(register, initialState);
   const [password, setPassword] = useState("");
+  const [adminPhone, setAdminPhone] = useState("");
+  const [verifiedPhone, setVerifiedPhone] = useState("");
+  const [firebasePhoneToken, setFirebasePhoneToken] = useState("");
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [smsCode, setSmsCode] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -60,6 +71,9 @@ export function RegistrationForm({
       className="registration-form"
     >
       <input type="hidden" name="productEdition" value={productEdition} />
+      {phoneVerificationEnabled && (
+        <input type="hidden" name="firebasePhoneToken" value={verifiedPhone === adminPhone ? firebasePhoneToken : ""} />
+      )}
       <div className="form-section">
         <div className="section-heading">
           <span>1</span>
@@ -197,6 +211,75 @@ export function RegistrationForm({
               errors={state.fieldErrors?.adminEmail}
             />
           </div>
+          {phoneVerificationEnabled && (
+            <div className="field full">
+              <label htmlFor="adminPhone">Mobile number</label>
+              <div className="password-field">
+                <input
+                  id="adminPhone"
+                  name="adminPhone"
+                  value={adminPhone}
+                  onChange={(event) => {
+                    setAdminPhone(event.target.value);
+                    setVerifiedPhone("");
+                    setFirebasePhoneToken("");
+                    setPhoneConfirmation(null);
+                    setSmsCode("");
+                    setPhoneError("");
+                  }}
+                  type="tel"
+                  required
+                  inputMode="tel"
+                  autoComplete="tel"
+                  pattern="\+[1-9][0-9]{1,14}"
+                  placeholder="+14155552671"
+                  aria-describedby="adminPhone-help"
+                />
+                <button type="button" disabled={phoneBusy || !/^\+[1-9]\d{1,14}$/.test(adminPhone) || verifiedPhone === adminPhone} onClick={async () => {
+                  setPhoneBusy(true);
+                  setPhoneError("");
+                  try {
+                    const response = await fetch("/api/auth/phone-otp/reserve", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ phone: adminPhone }),
+                    });
+                    if (!response.ok) throw new Error(response.status === 429 ? "SMS limit reached. Try again later." : "Unable to reserve SMS. Please try again.");
+                    setPhoneConfirmation(await sendFirebasePhoneCode(adminPhone, "registration-recaptcha"));
+                  } catch (error) {
+                    setPhoneError(error instanceof Error ? error.message : "SMS could not be sent.");
+                  } finally {
+                    setPhoneBusy(false);
+                  }
+                }}>
+                  {phoneBusy ? "Please wait…" : "Send OTP"}
+                </button>
+              </div>
+              <small id="adminPhone-help">Enter your mobile number in international format, including + and country code (for example +14155552671, +447911123456, or +919876543210). SMS availability depends on supported destinations.</small>
+              <div id="registration-recaptcha" />
+              {phoneConfirmation && verifiedPhone !== adminPhone && (
+                <div className="password-field">
+                  <input aria-label="SMS verification code" inputMode="numeric" autoComplete="one-time-code" value={smsCode} onChange={(event) => setSmsCode(event.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} placeholder="6-digit OTP" />
+                  <button type="button" disabled={phoneBusy || smsCode.length !== 6} onClick={async () => {
+                    setPhoneBusy(true);
+                    setPhoneError("");
+                    try {
+                      const token = await confirmFirebasePhoneCode(phoneConfirmation, smsCode);
+                      setFirebasePhoneToken(token);
+                      setVerifiedPhone(adminPhone);
+                      setPhoneConfirmation(null);
+                    } catch {
+                      setPhoneError("Invalid or expired OTP. Please check the code.");
+                    } finally {
+                      setPhoneBusy(false);
+                    }
+                  }}>Verify OTP</button>
+                </div>
+              )}
+              {verifiedPhone === adminPhone && firebasePhoneToken && <small role="status">Mobile number verified.</small>}
+              {phoneError && <span className="field-error" role="alert">{phoneError}</span>}
+            </div>
+          )}
           <div className="field">
             <label htmlFor="adminPassword">Password</label>
             <div className="password-field">
@@ -309,7 +392,7 @@ export function RegistrationForm({
           {state.error}
         </p>
       )}
-      <button className="register-button" type="submit" disabled={pending}>
+      <button className="register-button" type="submit" disabled={pending || (phoneVerificationEnabled && (!firebasePhoneToken || verifiedPhone !== adminPhone))}>
         {pending ? "Creating workspace…" : "Start my free trial"}
       </button>
       <p className="terms">Your acceptance is required before registration.</p>

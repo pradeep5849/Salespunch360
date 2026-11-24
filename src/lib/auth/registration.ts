@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
+import { verifyFirebasePhoneProof } from "./firebase-phone-verification";
 import { hashPassword } from "./crypto";
 import { registrationSchema, type RegistrationInput } from "./validation";
 import { calculateTrialEndsAt } from "@/lib/trial/status";
 import { randomUUID } from "node:crypto";
 import { companyLogoKey } from "@/lib/company/logo";
 import { privateStorage } from "@/lib/storage";
-import { BusinessType } from "@prisma/client";
+import { BusinessType, Prisma } from "@prisma/client";
 import { recommendedModulesForBusinessType } from "@/lib/account/modules";
 import { DEFAULT_LEDGER_ACCOUNTS } from "@/lib/accounting/default-accounts";
 
@@ -17,6 +18,10 @@ export function generateCompanySlug(companyName: string) {
 
 export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
   const data = registrationSchema.parse(input);
+  const requirePhoneVerification = process.env.PHONE_VERIFICATION_ENABLED === "true";
+  const phoneProof = requirePhoneVerification
+    ? await verifyFirebasePhoneProof(data.firebasePhoneToken!, data.adminPhone!)
+    : undefined;
   let writtenLogoKey: string | undefined;
   try { return await db.$transaction(async (tx) => {
     const duplicateEmail = await tx.user.findUnique({ where: { email: data.adminEmail }, select: { id: true } });
@@ -50,6 +55,11 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
       data: {
         name: data.adminName,
         email: data.adminEmail,
+        ...(phoneProof ? {
+          phone: phoneProof.phoneNumber,
+          phoneVerifiedAt: phoneProof.verifiedAt,
+          firebasePhoneUid: phoneProof.firebaseUid,
+        } : {}),
         passwordHash,
         role: "COMPANY_ADMIN",
         salesRole: "PRIMARY_ADMIN",
@@ -71,6 +81,9 @@ export async function registerCompany(input: RegistrationInput, logo?: Buffer) {
     return { company, user };
   }); } catch (error) {
     if (writtenLogoKey) await privateStorage().delete(writtenLogoKey).catch(() => undefined);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new Error("REGISTRATION_CONFLICT");
+    }
     throw error;
   }
 }
