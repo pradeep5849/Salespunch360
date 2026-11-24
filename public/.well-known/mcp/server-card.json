@@ -1,0 +1,13 @@
+{
+  "name": "SalesPunch360",
+  "version": "1.0.0",
+  "description": "Public read-only business and product information",
+  "url": "https://www.salespunch360.com/api/mcp",
+  "endpoint": "https://www.salespunch360.com/api/mcp",
+  "transport": "streamable-http",
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  }
+}
