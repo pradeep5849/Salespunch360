@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       return mobileJson({ error: "INVALID_INPUT" }, 400);
     }
     const raw = json as RegistrationBody;
+    if (raw.productEdition !== "SALESPUNCH360") return mobileJson({error:"INVALID_INPUT"},400);
     if (raw.legalConsent !== true) {
       return mobileJson({ error: "LEGAL_CONSENT_REQUIRED" }, 400);
     }
