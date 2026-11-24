@@ -5,19 +5,20 @@ import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationRes
 
 let activeVerifier: RecaptchaVerifier | null = null;
 
-function config() {
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
-  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  if (!projectId || !apiKey || !appId || !authDomain) {
+type FirebaseWebConfig = { projectId: string; apiKey: string; appId: string; authDomain: string };
+
+async function config(): Promise<FirebaseWebConfig> {
+  const response = await fetch("/api/auth/firebase-web-config", { cache: "no-store" });
+  if (!response.ok) throw new Error("Firebase Web configuration is unavailable");
+  const value: FirebaseWebConfig = await response.json();
+  if (!value.projectId || !value.apiKey || !value.appId || !value.authDomain) {
     throw new Error("Firebase Web configuration is missing");
   }
-  return { projectId, apiKey, appId, authDomain };
+  return value;
 }
 
 export async function sendFirebasePhoneCode(phone: string, containerId: string): Promise<ConfirmationResult> {
-  const app = getApps().length ? getApp() : initializeApp(config());
+  const app = getApps().length ? getApp() : initializeApp(await config());
   const auth = getAuth(app);
   // The widget is single-use across retry attempts; clear the old verifier first.
   activeVerifier?.clear();
