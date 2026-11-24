@@ -26,7 +26,7 @@ import com.salespunch360.mobile.LeadsViewModel
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 
-private val PrimaryAdminItems=listOf("Dashboard","Employees","Branches","Attendance","Customers","Leads","Telecalling","Follow-ups","Targets","Settings")
+private val PrimaryAdminItems=listOf("Dashboard","Employees","Branches","Attendance","Create Lead","Leads","Telecalling","Follow-ups","Targets","Settings")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +123,7 @@ fun PrimaryAdminAuthenticatedApp(
      route=="Employees"->EmployeesScreen()
      route=="Branches"->BranchesScreen()
      route=="Attendance"->TeamAttendanceScreen(MobileRole.PRIMARY_ADMIN)
-     route=="Customers"->CustomerAdminScreen()
+     route=="Create Lead"->CustomerAdminScreen()
      route=="Leads"->LeadsScreen(
       initialLeadId=pendingLeadId,
       onInitialLeadConsumed={pendingLeadId=null},
