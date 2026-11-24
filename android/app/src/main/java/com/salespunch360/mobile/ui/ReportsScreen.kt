@@ -247,6 +247,16 @@ private fun GpsSummary(r:JsonObject){
    StatusChip("Accepted GPS points $points")
    StatusChip("Customer visits $visits")
   }
+  r["quality"]?.takeUnless{it is JsonNull}?.jsonObject?.let{quality->
+   Text("GPS recording quality",fontWeight=FontWeight.SemiBold)
+   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+    StatusChip("Recorded points ${quality["recordedPoints"]?.jsonPrimitive?.intOrNull?:0}")
+    StatusChip("Poor accuracy ${quality["poorAccuracyPoints"]?.jsonPrimitive?.intOrNull?:0}")
+    StatusChip("Tracking gaps ${quality["gapCount"]?.jsonPrimitive?.intOrNull?:0}")
+    StatusChip("Gap minutes ${((quality["gapDurationMs"]?.jsonPrimitive?.doubleOrNull?:0.0)/60000).toInt()}")
+   }
+   Text("Missing travel is not estimated.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  }
   Text("Last spotted: ${last?.let(::reportTime)?:"No GPS point recorded"}",fontWeight=FontWeight.SemiBold)
   Text("Distance is the sum of accepted GPS movement only while attendance is ON. Movement between attendance periods is not counted or connected.",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
  }
