@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {calculateTravelDistanceBySession,calculateTravelDistanceMeters} from "./travel-route";
+import {calculateTravelDistanceBySession,calculateTravelDistanceMeters,cleanedTravelRouteSegments} from "./travel-route";
 
 type P={id:string;sequenceNumber:number;latitude:number;longitude:number;accuracyMeters:number|null;capturedAt:Date};
 const point=(id:string,seconds:number,latitude:number,longitude:number,accuracyMeters:number|null=5,sequenceNumber=seconds):P=>({id,sequenceNumber,latitude,longitude,accuracyMeters,capturedAt:new Date(Date.UTC(2026,0,1,0,0,seconds))});
@@ -9,7 +9,7 @@ describe("cleaned attendance travel distance",()=>{
  it("counts normal realistic movement",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",60,19.005,72),point("c",120,19.01,72)])).toBeGreaterThan(1000));
  it("gives duplicate and near-duplicate points zero distance",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",15,19,72),point("c",30,19.00001,72)])).toBe(0));
  it("rejects a teleport spike and its return",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("spike",15,20,73),point("return",30,19,72),point("b",90,19.005,72)])).toBeLessThan(600));
- it("rejects a plausible-speed medium spike that returns to its origin",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("spike",60,19.0027,72),point("return",120,19,72),point("b",180,19.005,72)])).toBeLessThan(600));
+ it("rejects a low-confidence medium spike that returns to its origin",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("spike",60,19.0027,72,30),point("return",120,19,72),point("b",180,19.005,72)])).toBeLessThan(600));
  it("excludes poor-accuracy points",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("bad",60,20,73,500),point("b",120,19.005,72)])).toBeLessThan(600));
  it.each([60,80,100])("prevents %i m accuracy samples from creating travel",accuracy=>expect(calculateTravelDistanceMeters([point("bad-a",0,19,72,accuracy),point("bad-b",120,19.01,72,accuracy)])).toBe(0));
  it("excludes impossible-speed segments",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",10,19.1,72)])).toBe(0));
@@ -25,5 +25,20 @@ describe("cleaned attendance travel distance",()=>{
   expect(result.totalDistanceMeters).toBeCloseTo(result.sessionDistanceMeters[0]+result.sessionDistanceMeters[1],6);
   expect(result.totalDistanceMeters).toBeGreaterThan(1000);
   expect(result.totalDistanceMeters).toBeLessThan(1200);
+ });
+});
+
+describe("adaptive route verification",()=>{
+ it("preserves an accurate plausible-speed U-turn",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",60,19.0027,72),point("c",120,19,72)])).toBeGreaterThan(590));
+ it("accepts corroborated high-speed movement",()=>expect(calculateTravelDistanceMeters([point("a",0,19,72),point("b",10,19.003,72),point("c",20,19.006,72),point("d",30,19.009,72)])).toBeGreaterThan(650));
+ it("splits only above fifteen minutes",()=>{
+  expect(cleanedTravelRouteSegments([point("a",0,19,72),point("b",900,19.005,72)])).toHaveLength(1);
+  expect(cleanedTravelRouteSegments([point("a",0,19,72),point("b",901,19.005,72)])).toHaveLength(2);
+ });
+ it("retains movement after a continuously observed stationary period",()=>{
+  const route=Array.from({length:31},(_,i)=>point(String(i),i*60,19,72));
+  route.push(point("moving",1860,19.005,72));
+  expect(cleanedTravelRouteSegments(route)).toHaveLength(1);
+  expect(calculateTravelDistanceMeters(route)).toBeGreaterThan(500);
  });
 });

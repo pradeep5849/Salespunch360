@@ -35,6 +35,11 @@ class TrackingService : Service() {
     private lateinit var fused: FusedLocationProviderClient
     private var requestingUpdates = false
     private var foregroundReady = false
+    private var stationaryFixes = 0
+    private var stationaryMode = false
+    private var suspiciousMode = false
+    private var suspiciousFixesRemaining = 0
+    private var previousFix: android.location.Location? = null
 
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -47,6 +52,30 @@ class TrackingService : Service() {
                 return
             }
             result.locations.forEach { location ->
+                val previous = previousFix
+                val elapsedSeconds = if (previous != null) (location.elapsedRealtimeNanos - previous.elapsedRealtimeNanos) / 1_000_000_000.0 else 0.0
+                val suspicious = previous != null && elapsedSeconds > 0 && elapsedSeconds <= 120 &&
+                    location.distanceTo(previous) / elapsedSeconds > 100.0 / 3.6
+                if (suspicious) suspiciousFixesRemaining = 3
+                else if (suspiciousFixesRemaining > 0) suspiciousFixesRemaining--
+                val nextSuspiciousMode = suspiciousFixesRemaining > 0
+                val oldStationaryMode = stationaryMode
+                if (location.accuracy <= 30f) {
+                    val stationary = previous != null && location.distanceTo(previous) <= 10f && (!location.hasSpeed() || location.speed < 0.5f)
+                    stationaryFixes = if (stationary) stationaryFixes + 1 else 0
+                    previousFix = location
+                    val desired = stationaryFixes >= 4
+                    stationaryMode = desired
+                } else {
+                    // A coarse balanced-power fix must not trap tracking in stationary mode.
+                    stationaryFixes = 0
+                    stationaryMode = false
+                }
+                if (nextSuspiciousMode) stationaryMode = false
+                if (oldStationaryMode != stationaryMode || suspiciousMode != nextSuspiciousMode) {
+                    suspiciousMode = nextSuspiciousMode
+                    refreshLocationRequest()
+                }
                 if (location.accuracy <= 100f && isAttendanceTrackingAuthorized(this@TrackingService)) {
                     scope.launch {
                         LocationQueue((application as SalesPunchApp).database.locations()).enqueue(
@@ -101,10 +130,7 @@ class TrackingService : Service() {
         }
         if (requestingUpdates) return START_STICKY
 
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 30_000)
-            .setMinUpdateDistanceMeters(25f)
-            .setMinUpdateIntervalMillis(15_000)
-            .build()
+        val request = locationRequest()
         return try {
             fused.requestLocationUpdates(request, callback, mainLooper)
             requestingUpdates = true
@@ -116,6 +142,25 @@ class TrackingService : Service() {
         } catch (_: IllegalStateException) {
             stopSelf()
             START_NOT_STICKY
+        }
+    }
+
+    private fun locationRequest(): LocationRequest =
+        LocationRequest.Builder(
+            if (stationaryMode) Priority.PRIORITY_BALANCED_POWER_ACCURACY else Priority.PRIORITY_HIGH_ACCURACY,
+            if (suspiciousMode) 10_000L else if (stationaryMode) 60_000L else 15_000L,
+        )
+            .setMinUpdateDistanceMeters(if (stationaryMode || suspiciousMode) 0f else 10f)
+            .setMinUpdateIntervalMillis(if (suspiciousMode) 10_000L else if (stationaryMode) 60_000L else 15_000L)
+            .build()
+
+    private fun refreshLocationRequest() {
+        if (!requestingUpdates || !isAttendanceTrackingAuthorized(this)) return
+        try {
+            fused.requestLocationUpdates(locationRequest(), callback, mainLooper)
+                .addOnFailureListener { stopSelf() }
+        } catch (_: SecurityException) {
+            stopSelf()
         }
     }
 
