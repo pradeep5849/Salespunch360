@@ -33,7 +33,7 @@ private fun roleMenu(data:Bootstrap):List<String>{
   add("Dashboard")
   if(data.capabilities.canManageEmployees)add("Employees")
   add("Attendance")
-  add("Customers")
+  add("Create Lead")
   if(fieldManager)add("Check-ins")
   add("Leads")
   add("Telecalling")
@@ -142,7 +142,7 @@ fun AdminManagerAuthenticatedApp(
      route=="Dashboard"->AdminOverviewScreen(data,role,openCheckIns=if(fieldManager){{navigate("Check-ins")}}else null){navigate("Report:check-ins")}
      route=="Employees"->EmployeesScreen()
      route=="Attendance"->if(fieldManager)FieldManagerAttendanceScreen(data,attendance)else TeamAttendanceScreen(role)
-     route=="Customers"->if(role==MobileRole.ADMIN)CustomerAdminScreen()else CustomersScreen{if(fieldManager)navigate("Check-ins")}
+     route=="Create Lead"->if(role==MobileRole.ADMIN)CustomerAdminScreen()else CustomersScreen{if(fieldManager)navigate("Check-ins")}
      route=="Check-ins"&&fieldManager->FieldScreen(
       initialFollowUpTask=checkInTask,
       onInitialFollowUpConsumed={checkInTask=null},

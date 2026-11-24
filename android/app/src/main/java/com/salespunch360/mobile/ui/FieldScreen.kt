@@ -58,7 +58,7 @@ fun CustomersScreen(openCheckIns:()->Unit={},vm:FieldViewModel=viewModel()){
  if(context==null&&state.loading){LoadingScreen("Loading customers…");return}
  if(context==null){RetryScreen(state.message?:"Customers couldn't be loaded.",vm::refresh);return}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-  item{Text("Customers",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)}
+  item{Text("Create Lead",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold,color=SalesInk)}
   item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(customerSearch,{customerSearch=it.take(100)},label={Text("Search assigned customers")},singleLine=true,modifier=Modifier.weight(1f));Button({vm.searchCustomers(customerSearch)},enabled=!state.customerLoading,modifier=Modifier.padding(top=8.dp)){Text("Search")}}}
   if(context.customers.isEmpty())item{OutlinedCard(Modifier.fillMaxWidth()){Box(Modifier.fillMaxWidth().padding(vertical=32.dp,horizontal=16.dp)){Text("No customers are assigned to you.",color=SalesMuted)}}}
   items(context.customers,key={it.id}){c->
@@ -184,7 +184,7 @@ fun FieldScreen(
       }
       "CUSTOMER"->{
        Text("Customer",fontWeight=FontWeight.SemiBold)
-       Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(customerSearch,{customerSearch=it.take(100)},label={Text("Search customers")},singleLine=true,modifier=Modifier.weight(1f));OutlinedButton({vm.searchCustomers(customerSearch)},enabled=!state.customerLoading,modifier=Modifier.padding(top=8.dp)){Text("Search")}}
+       Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(customerSearch,{customerSearch=it.take(100)},label={Text("Search Lead")},singleLine=true,modifier=Modifier.weight(1f));OutlinedButton({vm.searchCustomers(customerSearch)},enabled=!state.customerLoading,modifier=Modifier.padding(top=8.dp)){Text("Search")}}
        CustomerSelector(context.customers,subjectId){subjectId=it;photo=null}
        if(state.customerHasMore)OutlinedButton(vm::moreCustomers,enabled=!state.customerLoading,modifier=Modifier.fillMaxWidth()){Text(if(state.customerLoading)"Loading…" else "Load more customers")}
       }

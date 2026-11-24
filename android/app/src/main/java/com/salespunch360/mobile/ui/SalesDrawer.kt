@@ -25,7 +25,7 @@ internal data class SalesReportDrawerItem(val label:String,val type:String)
 private val salesDrawerDestinations=listOf(
  SalesDrawerDestination("Dashboard","Dashboard",Icons.Default.Home),
  SalesDrawerDestination("Attendance","Attendance",Icons.Default.AccessTime),
- SalesDrawerDestination("Customers","Customers",Icons.Default.People),
+ SalesDrawerDestination("Create Lead","Create Lead",Icons.Default.People),
  SalesDrawerDestination("Check-ins","Check-ins",Icons.Default.LocationOn),
  SalesDrawerDestination("Leads","Leads",Icons.Default.FilterAlt),
  SalesDrawerDestination("Telecalling","Telecalling",Icons.Default.Phone),

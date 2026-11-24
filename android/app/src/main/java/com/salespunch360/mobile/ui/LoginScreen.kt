@@ -71,7 +71,7 @@ import kotlinx.coroutines.launch
   TextButton(onClick={if(!submitting)onBack()},contentPadding=PaddingValues(0.dp),enabled=!submitting){Text("← Back to sign in")}
   Text("Create your workspace",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text("Start your SalesPunch360 free trial.")
   Text("Choose product",style=MaterialTheme.typography.titleMedium)
-  listOf("SALESPUNCH360" to "SalesPunch360","SALESPUNCH360_ACCOUNT" to "SalesPunch360 Account","SALESPUNCH360_PLUS" to "SalesPunch360 Plus").forEach{(value,label)->FilterChip(selected=product==value,onClick={product=value;edit()},label={Text(label)},enabled=!submitting)}
+  listOf("SALESPUNCH360" to "Sales Tracking").forEach{(value,label)->FilterChip(selected=product==value,onClick={product=value;edit()},label={Text(label)},enabled=!submitting)}
   OutlinedTextField(company,{company=it;edit()},Modifier.fillMaxWidth(),label={Text("Company name")},singleLine=true,enabled=!submitting,isError=attempted&&!validCompany,supportingText={if(attempted&&!validCompany)Text("Enter at least 2 characters")})
   Text("Company logo (optional)");logoUri?.let{AsyncImage(model=it,contentDescription="Company logo preview",modifier=Modifier.size(96.dp))};Row{TextButton({logoPicker.launch("image/*")},enabled=!submitting){Text("Choose logo")};if(logo!=null)TextButton({logo=null;logoUri=null},enabled=!submitting){Text("Remove logo")}};Text("JPEG, PNG or WebP · maximum 5 MB",style=MaterialTheme.typography.bodySmall)
   OutlinedTextField(name,{name=it;edit()},Modifier.fillMaxWidth(),label={Text("Full name")},singleLine=true,enabled=!submitting,isError=attempted&&!validName,supportingText={if(attempted&&!validName)Text("Enter at least 2 characters")})

@@ -13,7 +13,7 @@ class FoundationTest{
  @Test fun `additional admin uses admin family navigation`(){assertEquals(RoleNavigation.destinations(MobileRole.PRIMARY_ADMIN).map{it.label},RoleNavigation.destinations(MobileRole.ADMIN).map{it.label})}
  @Test fun `canonical mobile roles decode without company admin`(){assertEquals(listOf("PRIMARY_ADMIN","ADMIN","MANAGER","SALES"),MobileRole.entries.map{it.name})}
  @Test fun `manager primary navigation is exact`(){assertEquals(listOf("Home","Team","Reports","More"),RoleNavigation.destinations(MobileRole.MANAGER).map{it.label})}
- @Test fun `sales primary navigation is exact`(){assertEquals(listOf("Home","Customers","Leads","More"),RoleNavigation.destinations(MobileRole.SALES).map{it.label})}
+ @Test fun `sales primary navigation is exact`(){assertEquals(listOf("Home","Create Lead","Leads","More"),RoleNavigation.destinations(MobileRole.SALES).map{it.label})}
  @Test fun `older bootstrap compatibility defaults team structure`(){assertEquals(TeamStructure.MANAGERS_AND_SALES,TeamStructure.valueOf("MANAGERS_AND_SALES"))}
  @Test fun `gps states describe honest service conditions`(){assertEquals(10,TrackingState.entries.size);assertEquals("Tracking active",TrackingState.ACTIVE.label);assertTrue(TrackingState.OFFLINE.label.contains("waiting to sync"))}
  @Test fun `checkout sentiments match server contract`(){assertEquals(listOf("POSITIVE","NEUTRAL","NEGATIVE"),com.salespunch360.mobile.data.VisitSentiment.entries.map{it.name})}

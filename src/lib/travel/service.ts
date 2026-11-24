@@ -1,3 +1,4 @@
+import {reconcileEmployeeTravelHistory} from "@/lib/travel/daily-snapshot";
 import {resolveOperationalWriteBranch} from "@/lib/branches/operational-scope";
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
@@ -19,7 +20,14 @@ export async function updateCompanyTravelRate(raw:unknown){
  if(!admin.companyId)throw new Error("NOT_AUTHORIZED");
  const n=Number(raw);
  if(!Number.isFinite(n)||n<0||n>100000)throw new Error("INVALID_RATE");
- return db.company.update({where:{id:admin.companyId},data:{travelRatePerKm:new Prisma.Decimal(n.toFixed(2))}});
+ const companyId=admin.companyId;
+ return db.$transaction(async tx=>{
+ const employees=await tx.user.findMany({where:{companyId,travelAllowanceEnabled:true,travelRatePerKm:null},select:{id:true},orderBy:{id:"asc"}});
+ for(const employee of employees)await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id"=${employee.id}::uuid AND "companyId"=${companyId}::uuid FOR UPDATE`;
+ const company=await tx.company.update({where:{id:companyId},data:{travelRatePerKm:new Prisma.Decimal(n.toFixed(2))}});
+ for(const employee of employees)await reconcileEmployeeTravelHistory(tx,companyId,employee.id);
+ return company;
+ },{timeout:120000});
 }
 
 export async function employeeTravelApprovalMode(employeeId:string){
@@ -43,8 +51,11 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
   rate=new Prisma.Decimal(n.toFixed(2));
  }
  const normalizedMode=approvalMode(mode);
- const changed=await db.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate,travelApprovalMode:normalizedMode}});
+ await db.$transaction(async tx=>{
+ const changed=await tx.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate,travelApprovalMode:normalizedMode}});
  if(changed.count!==1)throw new Error("NOT_FOUND");
+ if(enabled)await reconcileEmployeeTravelHistory(tx,companyId,employeeId);
+ },{timeout:120000});
 }
 
 async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string,branchId:string,employeeId:string,date:string){
