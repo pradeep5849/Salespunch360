@@ -22,9 +22,12 @@ const securityHeaders = [
     : []),
 ];
 const nextConfig: NextConfig = {
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
   outputFileTracingIncludes: { "/*": ["./assets/fonts/*.ttf"] },
   experimental: {
-    // Shared hosting may expose more CPUs than its process/memory allowance.
+    // Shared hosting may expose more CPUs than its process memory allowance.
     // Bound Next.js build/export workers without changing runtime requests.
     cpus: 1,
     memoryBasedWorkersCount: false,
@@ -41,7 +44,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Permissions-Policy",
-            value: "camera=(self), microphone=(), geolocation=(self)",
+            value: "camera=(self), microphone=(self), geolocation=(self)",
           },
         ],
       },
