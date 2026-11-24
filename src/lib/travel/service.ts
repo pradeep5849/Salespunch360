@@ -1,3 +1,4 @@
+import {reconcileEmployeeTravelHistory} from "@/lib/travel/daily-snapshot";
 import {resolveOperationalWriteBranch} from "@/lib/branches/operational-scope";
 import {Prisma} from "@prisma/client";
 import {db} from "@/lib/db";
@@ -43,8 +44,11 @@ export async function updateEmployeeTravelSettings(employeeId:string,enabled:boo
   rate=new Prisma.Decimal(n.toFixed(2));
  }
  const normalizedMode=approvalMode(mode);
- const changed=await db.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate,travelApprovalMode:normalizedMode}});
+ await db.$transaction(async tx=>{
+ const changed=await tx.user.updateMany({where:{id:employeeId,companyId,isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}},data:{travelAllowanceEnabled:enabled,travelRatePerKm:rate,travelApprovalMode:normalizedMode}});
  if(changed.count!==1)throw new Error("NOT_FOUND");
+ if(enabled)await reconcileEmployeeTravelHistory(tx,companyId,employeeId);
+ },{timeout:120000});
 }
 
 async function calculateEmployeeDay(tx:Prisma.TransactionClient,companyId:string,branchId:string,employeeId:string,date:string){
