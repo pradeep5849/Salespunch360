@@ -17,8 +17,8 @@ const positiveNumber = (value: string | undefined, fallback: number) => {
 /** Quality limits used only for reported travel, never for point storage or geofences. */
 export const TRAVEL_ROUTE_CONFIG = Object.freeze({
   maximumAccuracyMeters: positiveNumber(process.env.TRAVEL_MAX_ACCURACY_METERS, 50),
-  maximumSpeedMetersPerSecond: positiveNumber(process.env.TRAVEL_MAX_SPEED_METERS_PER_SECOND, 55),
-  maximumGapMs: positiveNumber(process.env.TRAVEL_MAX_GAP_MINUTES, 30) * 60_000,
+  maximumSpeedMetersPerSecond: positiveNumber(process.env.TRAVEL_MAX_SPEED_METERS_PER_SECOND, 100 / 3.6),
+  maximumGapMs: positiveNumber(process.env.TRAVEL_MAX_GAP_MINUTES, 15) * 60_000,
   minimumMovementMeters: positiveNumber(process.env.TRAVEL_MIN_MOVEMENT_METERS, 5),
   uncertaintyFactor: positiveNumber(process.env.TRAVEL_ACCURACY_UNCERTAINTY_FACTOR, 1),
   minimumSpikeLegMeters: positiveNumber(process.env.TRAVEL_MIN_SPIKE_LEG_METERS, 100),
