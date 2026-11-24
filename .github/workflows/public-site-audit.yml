@@ -14,7 +14,7 @@ jobs:
       matrix:
         device: [mobile, desktop]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b8d5af677262
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '22'
@@ -27,12 +27,12 @@ jobs:
         run: |
           mkdir -p reports
           google-chrome --version
-          curl -sS --max-time 30 -D reports/response-headers.txt -o reports/response-body.html -w "PUBLIC_HTTP_STATUS=%{http_code}\n" https://www.salespunch360.com/
+          curl -sS --max-time 30 -D reports/response-headers.txt -o reports/response-body.html -w "PUBLIC_HTTP_STATUS=${http_code}\n" https://www.salespunch360.com/
           node scripts/inspect-public-response.mjs reports/response-headers.txt reports/response-body.html
           if [ "$DEVICE" = desktop ]; then
-            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --preset=desktop --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
+            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --preset=desktop --only-categories=performance,accessibility,best-practices,seo --chrome-flags='--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-blink-features=AutomationControlled --user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
           else
-            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
+            npm exec --yes --package=lighthouse@13.6.0 -- lighthouse https://www.salespunch360.com/ --only-categories=performance,accessibility,best-practices,seo --chrome-flags='--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --disable-blink-features=AutomationControlled --user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' --save-assets --output=json --output=html --output-path=reports/lighthouse --quiet
           fi
       - name: Inspect actual browser network responses
         if: always()
