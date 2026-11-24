@@ -7,7 +7,7 @@ import type { ConfirmationResult } from "firebase/auth";
 
 export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
   const router = useRouter();
-  const [phone, setPhone] = useState(initialPhone);
+  const phone = initialPhone;
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,8 +49,7 @@ export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
     <div style={{ display: "grid", gap: 12 }}>
       <label htmlFor="verify-phone">Mobile number (international format)</label>
       <input id="verify-phone" type="tel" inputMode="tel" autoComplete="tel" required
-        value={phone} disabled={busy || Boolean(confirmation) || verified}
-        onChange={e => setPhone(e.target.value)} placeholder="+919876543210" />
+        value={phone} readOnly aria-readonly="true" placeholder="+919876543210" />
       {!confirmation && !verified && <button type="button" disabled={busy || !/^\+[1-9]\d{1,14}$/.test(phone)} onClick={send}>
         {busy ? "Please wait…" : "Send OTP"}
       </button>}
@@ -60,7 +59,7 @@ export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
         <input id="verify-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
           value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
         <button type="button" disabled={busy || code.length !== 6} onClick={confirm}>Verify OTP</button>
-        <button type="button" disabled={busy} onClick={() => { clearFirebasePhoneVerifier(); setConfirmation(null); setCode(""); setError(""); }}>Change number or resend</button>
+        <button type="button" disabled={busy} onClick={() => { clearFirebasePhoneVerifier(); setConfirmation(null); setCode(""); setError(""); }}>Resend OTP</button>
       </>}
       {verified && <p role="status">Mobile number verified. Redirecting…</p>}
       {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
