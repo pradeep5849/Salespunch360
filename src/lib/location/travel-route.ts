@@ -34,7 +34,27 @@ export function cleanedTravelRouteSegments<T extends TravelRoutePoint>(points: T
   }
   return segments.flatMap(segment => {
     const route = cleanSegment(segment);
-    return route.length ? [route] : [];
+    return route.length ? [smoothTravelRoute(route)] : [];
+  });
+}
+
+/** Conservative local smoothing: only adjust noisy interior fixes on near-straight legs. */
+function smoothTravelRoute<T extends TravelRoutePoint>(route: T[]): T[] {
+  return route.map((point, index) => {
+    if (index === 0 || index === route.length - 1 || (point.accuracyMeters ?? 0) <= 10) return point;
+    const before = route[index - 1], after = route[index + 1];
+    const left = point.capturedAt.getTime() - before.capturedAt.getTime();
+    const right = after.capturedAt.getTime() - point.capturedAt.getTime();
+    if (left <= 0 || right <= 0 || left > 60000 || right > 60000) return point;
+    const legs = haversineDistanceMeters(before, point) + haversineDistanceMeters(point, after);
+    if (legs <= 0 || haversineDistanceMeters(before, after) < legs * 0.98) return point;
+    const fraction = left / (left + right);
+    const estimate = {latitude: before.latitude + (after.latitude - before.latitude) * fraction,
+      longitude: before.longitude + (after.longitude - before.longitude) * fraction};
+    if (Math.abs(after.longitude - before.longitude) > 180 || haversineDistanceMeters(point, estimate) > (point.accuracyMeters ?? 0)) return point;
+    const weight = Math.min(0.25, (point.accuracyMeters ?? 0) / 200);
+    return {...point, latitude: point.latitude + (estimate.latitude - point.latitude) * weight,
+      longitude: point.longitude + (estimate.longitude - point.longitude) * weight};
   });
 }
 
