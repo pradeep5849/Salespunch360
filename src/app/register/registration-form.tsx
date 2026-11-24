@@ -277,7 +277,7 @@ export function RegistrationForm({
                 </div>
               )}
               {verifiedPhone === adminPhone && firebasePhoneToken && <small role="status">Mobile number verified.</small>}
-              {phoneError && <span className="field-error" role="alert">{phoneError}</span>
+              {phoneError && <span className="field-error" role="alert">{phoneError}</span>}
             </div>
           )}
           <div className="field">
