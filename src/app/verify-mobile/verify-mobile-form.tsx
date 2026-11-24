@@ -50,14 +50,14 @@ export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
       <input id="verify-phone" type="tel" inputMode="tel" autoComplete="tel" required
         value={phone} disabled={busy || Boolean(confirmation) || verified}
         onChange={e => setPhone(e.target.value)} placeholder="+919876543210" />
-      {!confirmation && !verified && <button type="button" disabled={busy || !/^\\+[1-9]\\d{1,14}$/.test(phone)} onClick={send}>
+      {!confirmation && !verified && <button type="button" disabled={busy || !/^\+[1-9]\d{1,14}$/.test(phone)} onClick={send}>
         {busy ? "Please wait…" : "Send OTP"}
       </button>}
       <div id="first-use-recaptcha" />
       {confirmation && !verified && <>
         <label htmlFor="verify-code">6-digit SMS code</label>
         <input id="verify-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
-          value={code} onChange={e => setCode(e.target.value.replace(/\\D/g, "").slice(0, 6))} />
+          value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
         <button type="button" disabled={busy || code.length !== 6} onClick={confirm}>Verify OTP</button>
         <button type="button" disabled={busy} onClick={() => { setConfirmation(null); setCode(""); setError(""); }}>Change number or resend</button>
       </>}
