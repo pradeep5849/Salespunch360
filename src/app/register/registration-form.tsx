@@ -6,6 +6,7 @@ import { useActionState, useEffect, useState } from "react";
 import { register, type RegistrationState } from "@/app/actions/register";
 import { sendFirebasePhoneCode, confirmFirebasePhoneCode } from "@/lib/auth/firebase-web-client";
 import type { ConfirmationResult } from "firebase/auth";
+import { CountryPhoneField } from "@/components/country-phone-field";
 
 const initialState: RegistrationState = {};
 function FieldError({ errors, name }: { errors?: string[]; name: string }) {
@@ -215,26 +216,14 @@ export function RegistrationForm({
             <div className="field full">
               <label htmlFor="adminPhone">Mobile number</label>
               <div className="password-field">
-                <input
-                  id="adminPhone"
-                  name="adminPhone"
-                  value={adminPhone}
-                  onChange={(event) => {
-                    setAdminPhone(event.target.value);
-                    setVerifiedPhone("");
-                    setFirebasePhoneToken("");
-                    setPhoneConfirmation(null);
-                    setSmsCode("");
-                    setPhoneError("");
-                  }}
-                  type="tel"
-                  required
-                  inputMode="tel"
-                  autoComplete="tel"
-                  pattern="\+[1-9][0-9]{1,14}"
-                  placeholder="+14155552671"
-                  aria-describedby="adminPhone-help"
-                />
+                <CountryPhoneField id="adminPhone" name="adminPhone" value={adminPhone} required onChange={(phone) => {
+                  setAdminPhone(phone);
+                  setVerifiedPhone("");
+                  setFirebasePhoneToken("");
+                  setPhoneConfirmation(null);
+                  setSmsCode("");
+                  setPhoneError("");
+                }} />
                 <button type="button" disabled={phoneBusy || !/^\+[1-9]\d{1,14}$/.test(adminPhone) || verifiedPhone === adminPhone} onClick={async () => {
                   setPhoneBusy(true);
                   setPhoneError("");
@@ -255,7 +244,7 @@ export function RegistrationForm({
                   {phoneBusy ? "Please wait…" : "Send OTP"}
                 </button>
               </div>
-              <small id="adminPhone-help">Enter your mobile number in international format, including + and country code (for example +14155552671, +447911123456, or +919876543210). SMS availability depends on supported destinations.</small>
+              <small id="adminPhone-help">Select your country code (India +91 by default), then enter your mobile number. SMS availability depends on supported destinations.</small>
               <div id="registration-recaptcha" />
               {phoneConfirmation && verifiedPhone !== adminPhone && (
                 <div className="password-field">
