@@ -1,9 +1,9 @@
-name: Glob security lockfile
+name: Firebase OTP dependency lockfile
 
 on:
   push:
     branches:
-      - fix/remaining-glob-security
+      - feature/firebase-first-registration-phone-otp
     paths:
       - package.json
       - .github/workflows/firebase-otp-lockfile.yml
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   refresh-lockfile:
-    if: github.ref == 'refs/heads/fix/remaining-glob-security'
+    if: github.ref == 'refs/heads/feature/firebase-first-registration-phone-otp'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,10 +25,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Update lockfile from npm registry
-        run: |
-          node -e 'const fs=require("fs");const p=JSON.parse(fs.readFileSync("package-lock.json"));for(const k of Object.keys(p.packages)){if(k.includes("/rimraf/node_modules/glob")&&p.packages[k].version==="10.5.0")delete p.packages[k]}fs.writeFileSync("package-lock.json",JSON.stringify(p,null,2)+"\n")'
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          node -e 'const p=require("./package-lock.json");if(Object.entries(p.packages).some(([k,v])=>k.endsWith("/glob")&&v.version==="10.5.0"))throw Error("Vulnerable glob remains")'
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Verify clean dependency installation
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Commit lockfile only when changed
@@ -42,5 +39,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
-          git commit -m "build(security): refresh glob dependency lockfile"
-          git push origin HEAD:fix/remaining-glob-security
+          git commit -m "build(firebase): synchronize npm lockfile"
+          git push origin HEAD:feature/firebase-first-registration-phone-otp
