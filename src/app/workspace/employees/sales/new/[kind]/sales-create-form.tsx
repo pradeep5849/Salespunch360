@@ -1,4 +1,5 @@
 "use client";
+import { CountryPhoneField } from "@/components/country-phone-field";
 
 import Link from "next/link";
 import { useActionState, useEffect } from "react";
@@ -26,7 +27,7 @@ export function SalesCreateForm({ branches, managers, managersEnabled }: { branc
     {state.success ? <p className="form-success" role="status">{state.success}</p> : null}{state.warning&&<div className="form-error" role="alert"><p>{state.warning}</p>{state.createdEmployeeId&&<Link href={`/workspace/employees/sales/edit/${state.createdEmployeeId}`}>Review saved employee and travel settings</Link>}</div>}
     <label>Name<input name="name" required/>{fieldError("name")&&<span className="form-error">{fieldError("name")}</span>}</label>
     <label>Email<input name="email" type="email" required/>{fieldError("email")&&<span className="form-error">{fieldError("email")}</span>}</label>
-    <label>Phone<input name="phone"/>{fieldError("phone")&&<span className="form-error">{fieldError("phone")}</span>}</label>
+    <label>Phone<CountryPhoneField name="phone"/>{fieldError("phone")&&<span className="form-error">{fieldError("phone")}</span>}</label>
     <label>Employee code<input name="employeeCode"/>{fieldError("employeeCode")&&<span className="form-error">{fieldError("employeeCode")}</span>}</label>
     <label>Designation<input name="designation"/>{fieldError("designation")&&<span className="form-error">{fieldError("designation")}</span>}</label>
     <label>Date of Joining<input name="dateOfJoining" type="date"/>{fieldError("dateOfJoining")&&<span className="form-error">{fieldError("dateOfJoining")}</span>}</label>
