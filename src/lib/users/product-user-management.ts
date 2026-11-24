@@ -54,7 +54,7 @@ export const createProductUserSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().toLowerCase().email().max(320),
-    phone: z.string().regex(/^\\+[1-9]\\d{1,14}$/).optional().nullable(),
+    phone: z.string().regex(/^\+[1-9]\d{1,14}$/).optional().nullable(),
     password: strongPasswordSchema,
     confirmPassword: z.string(),
     ...roleFields,
