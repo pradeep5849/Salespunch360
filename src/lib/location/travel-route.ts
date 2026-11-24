@@ -40,6 +40,7 @@ export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[]
     if (beforeMs <= 0 || afterMs <= 0 || beforeMs > TRAVEL_ROUTE_CONFIG.maximumGapMs || afterMs > TRAVEL_ROUTE_CONFIG.maximumGapMs) return true;
     const endpointUncertainty = Math.max(TRAVEL_ROUTE_CONFIG.minimumMovementMeters, ((previous.accuracyMeters ?? 0) + (next.accuracyMeters ?? 0)) * TRAVEL_ROUTE_CONFIG.uncertaintyFactor);
     return !(haversineDistanceMeters(previous, next) <= endpointUncertainty
+      && (point.accuracyMeters ?? 0) > Math.max(previous.accuracyMeters ?? 0, next.accuracyMeters ?? 0) * 2
       && haversineDistanceMeters(previous, point) >= TRAVEL_ROUTE_CONFIG.minimumSpikeLegMeters
       && haversineDistanceMeters(point, next) >= TRAVEL_ROUTE_CONFIG.minimumSpikeLegMeters);
   });
@@ -47,7 +48,8 @@ export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[]
 
   const route: T[] = [usable[0]];
   let anchor = usable[0];
-  for (const point of usable.slice(1)) {
+  for (let index = 1; index < usable.length; index += 1) {
+    const point = usable[index];
     const elapsedMs = point.capturedAt.getTime() - anchor.capturedAt.getTime();
     if (elapsedMs <= 0) continue;
     if (elapsedMs > TRAVEL_ROUTE_CONFIG.maximumGapMs) {
@@ -61,7 +63,21 @@ export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[]
       ((anchor.accuracyMeters ?? 0) + (point.accuracyMeters ?? 0)) * TRAVEL_ROUTE_CONFIG.uncertaintyFactor,
     );
     if (distance <= uncertainty) continue;
-    if (distance / (elapsedMs / 1000) > TRAVEL_ROUTE_CONFIG.maximumSpeedMetersPerSecond) continue;
+    if (distance / (elapsedMs / 1000) > TRAVEL_ROUTE_CONFIG.maximumSpeedMetersPerSecond) {
+      const next = usable[index + 1];
+      const nextSeconds = next ? (next.capturedAt.getTime() - point.capturedAt.getTime()) / 1000 : 0;
+      // Require an independent, accurate onward fix consistent with the high-speed leg.
+      if (!next || nextSeconds <= 0 || nextSeconds > 120
+        || (point.accuracyMeters ?? Infinity) > 20
+        || (anchor.accuracyMeters ?? Infinity) > 20
+        || (next.accuracyMeters ?? Infinity) > 20) continue;
+      const onward = haversineDistanceMeters(point, next);
+      const direct = haversineDistanceMeters(anchor, next);
+      const speed = distance / (elapsedMs / 1000);
+      const onwardSpeed = onward / nextSeconds;
+      if (onwardSpeed < speed * 0.5 || onwardSpeed > speed * 1.5
+        || direct < (distance + onward) * 0.8) continue;
+    }
     route.push(point);
     anchor = point;
   }
