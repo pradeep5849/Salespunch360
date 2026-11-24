@@ -65,17 +65,20 @@ export async function POST(request: Request) {
         select: { id: true, companyId: true, phone: true, phoneVerifiedAt: true, firebasePhoneUid: true },
       });
       if (!user || user.companyId !== principal.companyId) throw new Error("UNAUTHORIZED");
+      // First-use verification must match the phone assigned by the administrator.
+      // Never let a client-supplied phone or Firebase proof overwrite it.
+      if (!user.phone || user.phone !== proof.phoneNumber) throw new Error("ADMIN_ASSIGNED_PHONE_MISMATCH");
       // Changing an already verified number requires a separate recovery flow.
       if (user.phoneVerifiedAt && (user.firebasePhoneUid !== proof.firebaseUid || user.phone !== proof.phoneNumber)) {
         throw new Error("PHONE_CHANGE_REQUIRES_RECOVERY");
       }
       await tx.user.update({
         where: { id: principal.id },
-        data: { phone: proof.phoneNumber, phoneVerifiedAt: proof.verifiedAt, firebasePhoneUid: proof.firebaseUid },
+        data: { phoneVerifiedAt: proof.verifiedAt, firebasePhoneUid: proof.firebaseUid },
       });
     });
   } catch (error) {
-    if (error instanceof Error && ["PHONE_IDENTITY_IN_USE", "PHONE_CHANGE_REQUIRES_RECOVERY"].includes(error.message)) {
+    if (error instanceof Error && ["PHONE_IDENTITY_IN_USE", "PHONE_CHANGE_REQUIRES_RECOVERY", "ADMIN_ASSIGNED_PHONE_MISMATCH"].includes(error.message)) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     return NextResponse.json({ error: "PHONE_CONFIRMATION_UNAVAILABLE" }, { status: 503 });
