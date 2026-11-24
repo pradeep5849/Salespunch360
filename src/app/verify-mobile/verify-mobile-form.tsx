@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { sendFirebasePhoneCode, confirmFirebasePhoneCode } from "@/lib/auth/firebase-web-client";
+import { sendFirebasePhoneCode, confirmFirebasePhoneCode, clearFirebasePhoneVerifier } from "@/lib/auth/firebase-web-client";
 import type { ConfirmationResult } from "firebase/auth";
 
 export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
@@ -13,6 +13,7 @@ export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [verified, setVerified] = useState(false);
+  useEffect(() => () => clearFirebasePhoneVerifier(), []);
   async function send() {
     setBusy(true); setError("");
     try {
@@ -59,7 +60,7 @@ export function VerifyMobileForm({ initialPhone }: { initialPhone: string }) {
         <input id="verify-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
           value={code} onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
         <button type="button" disabled={busy || code.length !== 6} onClick={confirm}>Verify OTP</button>
-        <button type="button" disabled={busy} onClick={() => { setConfirmation(null); setCode(""); setError(""); }}>Change number or resend</button>
+        <button type="button" disabled={busy} onClick={() => { clearFirebasePhoneVerifier(); setConfirmation(null); setCode(""); setError(""); }}>Change number or resend</button>
       </>}
       {verified && <p role="status">Mobile number verified. Redirecting…</p>}
       {error && <p role="alert" style={{ color: "crimson" }}>{error}</p>}
