@@ -66,17 +66,21 @@ function cleanSegment<T extends TravelRoutePoint>(points: T[]): T[] {
 
   const route: T[] = [usable[0]];
   let anchor = usable[0];
+  let lastStationaryFix = anchor;
   for (let index = 1; index < usable.length; index += 1) {
     const point = usable[index];
-    const elapsedMs = point.capturedAt.getTime() - anchor.capturedAt.getTime();
+    const elapsedMs = point.capturedAt.getTime() - lastStationaryFix.capturedAt.getTime();
     if (elapsedMs <= 0) continue;
-    
+
     const distance = haversineDistanceMeters(anchor, point);
     const uncertainty = Math.max(
       TRAVEL_ROUTE_CONFIG.minimumMovementMeters,
       ((anchor.accuracyMeters ?? 0) + (point.accuracyMeters ?? 0)) * TRAVEL_ROUTE_CONFIG.uncertaintyFactor,
     );
-    if (distance <= uncertainty) continue;
+    if (distance <= uncertainty) {
+      lastStationaryFix = point;
+      continue;
+    }
     // Suppress a low-confidence departure from a stationary cluster only when
     // the following independent fix returns to the anchor uncertainty region.
     const following = usable[index + 1];
@@ -104,6 +108,7 @@ function cleanSegment<T extends TravelRoutePoint>(points: T[]): T[] {
     }
     route.push(point);
     anchor = point;
+    lastStationaryFix = point;
   }
   return route;
 }
@@ -111,12 +116,9 @@ function cleanSegment<T extends TravelRoutePoint>(points: T[]): T[] {
 export function calculateTravelDistanceMeters(points: TravelRoutePoint[]): number {
   let total = 0;
   for (const route of cleanedTravelRouteSegments(points)) {
-  for (let index = 1; index < route.length; index += 1) {
-    const elapsedMs = route[index].capturedAt.getTime() - route[index - 1].capturedAt.getTime();
-    if (elapsedMs > 0) {
+    for (let index = 1; index < route.length; index += 1) {
       total += haversineDistanceMeters(route[index - 1], route[index]);
     }
-  }
   }
   return total;
 }
