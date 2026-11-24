@@ -14,8 +14,8 @@ jobs:
       matrix:
         device: [mobile, desktop]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b8d5af677262
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Audit the public homepage
@@ -45,7 +45,7 @@ jobs:
         run: |
           echo "::error::The public audit did not complete. Inspect response diagnostics and the Lighthouse runtime error; no speed score is valid."
           exit 1
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: public-lighthouse-${{ matrix.device }}
