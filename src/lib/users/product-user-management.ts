@@ -84,6 +84,7 @@ export const createAccountUserSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().toLowerCase().email().max(320),
+    phone: z.string().regex(/^\+[1-9]\d{1,14}$/),
     password: strongPasswordSchema,
     confirmPassword: z.string(),
     accountRole: z.enum([
