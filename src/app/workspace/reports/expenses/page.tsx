@@ -13,6 +13,7 @@ export default async function Page({searchParams}:{searchParams:Promise<SearchPa
   <ReportHeader title="Expense Report" description="Daily travel uses validated GPS movement only while attendance is active. Each user's ₹/km rate and Manual/Auto approval setting are applied separately."/>
   <DownloadExcel report="expenses" params={raw} ready={reportQueryWasRun(raw)}/>
   <Filters filters={r.filters} employees={r.employees}/>
+  <Summary items={[{label:"Total KM",value:r.totals.totalDistanceKm+" km"},{label:"Total Amount",value:"₹"+r.totals.totalAmount}]}/>
   <Summary items={[{label:"Daily records",value:r.rows.length},{label:"Pending",value:pending},{label:"Approved",value:approved},{label:"Rejected",value:rejected}]}/>
   <div className="report-table-wrap"><p className="muted">Each day includes all stopped attendance sessions. Starting again and stopping later updates the same day’s cumulative total.</p><table className="report-table"><thead><tr><th>Employee</th><th>Date</th><th>Daily distance</th><th>Rate / km</th><th>Calculated amount</th><th>Approval mode</th><th>Status</th><th>Approved amount</th><th>Approval</th></tr></thead><tbody>
    {r.rows.map(row=><tr key={row.key}><td>{row.employee}</td><td>{row.date}</td><td>{distance(row.distanceMeters)}</td><td>{row.ratePerKm?money(row.ratePerKm):"Not configured"}</td><td>{money(row.amount)}</td><td>{row.approvalMode==="AUTO"?"Auto":"Manual"}</td><td><strong>{row.status??"RATE REQUIRED"}</strong></td><td>{money(row.approvedAmount)}</td><td>
