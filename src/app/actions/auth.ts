@@ -32,6 +32,9 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
     return {error:"No access. Please log in using the SalesPunch360 app."};
   }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
+  if (process.env.FIRST_USE_PHONE_VERIFICATION_ENABLED === "true" && user.companyId && user.role !== "SUPER_ADMIN" && !user.phoneVerifiedAt) {
+    return redirect("/verify-mobile");
+  }
   if(user.role==="SUPER_ADMIN")return redirect("/admin");
   // Older test/integration adapters may expose only the User delegate.
   if(!user.companyId||!(db as {company?:unknown}).company)return redirect(authenticatedHome(user));
