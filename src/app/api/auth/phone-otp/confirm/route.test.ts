@@ -62,6 +62,29 @@ describe("authenticated Firebase phone confirmation", () => {
     mocks.getAuthenticatedUser.mockResolvedValue(null);
     expect((await POST(req({ phone, idToken: "token" }))).status).toBe(401);
   });
+  it("rejects requests without an Origin header", async () => {
+    const request = new Request("https://example.invalid/api/auth/phone-otp/confirm", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ phone, idToken: "token" }),
+    });
+    expect((await POST(request)).status).toBe(403);
+    expect(mocks.verifyFirebasePhoneProof).not.toHaveBeenCalled();
+  });
+  it("rejects untrusted origins", async () => {
+    mocks.assertTrustedOrigin.mockRejectedValue(new Error("UNTRUSTED_ORIGIN"));
+    expect((await POST(req({ phone, idToken: "token" }))).status).toBe(403);
+    expect(mocks.verifyFirebasePhoneProof).not.toHaveBeenCalled();
+  });
+  it("rate limits repeated phone confirmation attempts", async () => {
+    mocks.consumeRateLimit.mockResolvedValue(false);
+    expect((await POST(req({ phone, idToken: "token" }))).status).toBe(429);
+    expect(mocks.verifyFirebasePhoneProof).not.toHaveBeenCalled();
+  });
+  it("rejects platform administrators from the employee confirmation endpoint", async () => {
+    mocks.getAuthenticatedUser.mockResolvedValue({ id: "admin-1", companyId: null, role: "SUPER_ADMIN" });
+    expect((await POST(req({ phone, idToken: "token" }))).status).toBe(401);
+    expect(mocks.verifyFirebasePhoneProof).not.toHaveBeenCalled();
+  });
   it("rejects malformed phone proofs", async () => {
     expect((await POST(req({ phone: "123", idToken: "token" }))).status).toBe(400);
     expect(mocks.verifyFirebasePhoneProof).not.toHaveBeenCalled();
