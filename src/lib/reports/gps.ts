@@ -2,7 +2,7 @@ import {measuredGpsSegments,latestRecordedGpsPoint} from "./gps-route";
 import { operationalBranchContext } from "@/lib/branches/operational-scope";
 import {AuthorizationError} from "@/lib/auth/authorization";
 import {db} from "@/lib/db";
-import {calculateTravelDistanceBySession} from "@/lib/location/travel-route";
+import {calculateTravelDistanceBySession,TRAVEL_ROUTE_CONFIG} from "@/lib/location/travel-route";
 import {orderedRoute} from "./metrics";
 import {indiaDateBoundary,reportUuid,type SearchParams} from "./validation";
 import {reportActor,reportEmployeeOptions,resolveEmployeeScope,type ReportActor} from "./scope";
@@ -41,6 +41,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  if(!date||!employeeId)return{
   actor,employees,date,employeeId,segments:[],points:[],markers:[],events:[],sessionDistances:[],routeDistanceMeters:0,dailyDistanceMeters:0,
   employee:undefined,lastSpottedAt:null,visitCount:0,geofence,
+  quality:{recordedPoints:0,measuredPoints:0,poorAccuracyPoints:0,gapCount:0,gapDurationMs:0},
  };
  const ids=await resolveEmployeeScope(actor,employeeId);
  if(ids.length!==1)throw new AuthorizationError();
@@ -69,6 +70,17 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  const recordedRoutes=sessions.map(s=>orderedRoute(s.locationPoints));
  const segments=measuredGpsSegments(recordedRoutes);
  const points=segments.flat();
+ const recordedPoints=recordedRoutes.flat();
+ const quality={recordedPoints:recordedPoints.length,measuredPoints:points.length,
+  poorAccuracyPoints:recordedPoints.filter(p=>p.accuracyMeters==null||p.accuracyMeters<0||p.accuracyMeters>TRAVEL_ROUTE_CONFIG.maximumAccuracyMeters).length,
+  gapCount:0,gapDurationMs:0};
+ for(const session of recordedRoutes){
+  const sorted=[...session].sort((a,b)=>a.capturedAt.getTime()-b.capturedAt.getTime());
+  for(let i=1;i<sorted.length;i++){
+   const gap=sorted[i].capturedAt.getTime()-sorted[i-1].capturedAt.getTime();
+   if(gap>TRAVEL_ROUTE_CONFIG.maximumGapMs){quality.gapCount++;quality.gapDurationMs+=gap;}
+  }
+ }
  const distanceBySession=calculateTravelDistanceBySession(recordedRoutes);
  const sessionDistances=sessions.map((session,index)=>({
   sessionId:session.id,
@@ -128,7 +140,7 @@ export async function gpsReport(raw:SearchParams,providedActor?:ReportActor){
  const lastSpottedAt=latestRecordedGpsPoint(recordedRoutes.flat())?.capturedAt??null;
  return{
   actor,employees,date,employeeId,segments,points,markers,events,sessionDistances,routeDistanceMeters,dailyDistanceMeters:routeDistanceMeters,employee,
-  lastSpottedAt,visitCount:seenVisits.size,geofence,
+  lastSpottedAt,visitCount:seenVisits.size,geofence,quality,
   filters:{startText:date,endText:date},
  };
 }
