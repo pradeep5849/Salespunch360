@@ -5,7 +5,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { BrandLogo } from "@/components/brand-logo";
 import { publicSiteSettings } from "@/lib/public-site/settings";
-import { publicTelephone, publicStructuredData } from "@/lib/public-site/discovery";
+import { publicTelephone, publicStructuredData, publicProfiles } from "@/lib/public-site/discovery";
 export async function PublicFooter() {
   // Public settings and destinations must reflect the current server configuration.
   await connection();
@@ -17,6 +17,7 @@ export async function PublicFooter() {
   const qr = appUrl
     ? await QRCode.toDataURL(appUrl, { width: 120, margin: 1 })
     : null;
+  const validProfiles = new Set(publicProfiles(settings));
   const socials = [
     ["Facebook", settings?.facebookUrl],
     ["LinkedIn", settings?.linkedinUrl],
@@ -31,26 +32,29 @@ export async function PublicFooter() {
           <BrandLogo inverse priority={false} />
           <a href={`tel:${publicTelephone}`}>Sales enquiries: +91 96112 78818</a>
           <p>
-            Track field sales. Manage your business. Grow with one connected
+            Track your field workforce. Manage your business. Grow with one connected
             platform.
           </p>
           <div className="footer-socials">
             {socials.map(([name, url]) => {
+              if (!url) return null;
+              try { if (!validProfiles.has(new URL(url).href)) return null; } catch { return null; }
+              const colors = { Facebook: "#1877F2", Instagram: "#C13584", LinkedIn: "#0077B5", YouTube: "#FF0000" };
               const icon =
                 name === "Facebook" ? (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "#fff", width: 22, height: 22 }}>
                     <path d="M14 8h3V4h-3c-3 0-5 2-5 5v2H6v4h3v5h4v-5h3l1-4h-4V9c0-.7.3-1 1-1Z" />
                   </svg>
                 ) : name === "LinkedIn" ? (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "#fff", width: 22, height: 22 }}>
                     <path d="M6 8H2v12h4V8Zm-2-6a2.3 2.3 0 1 0 0 4.6A2.3 2.3 0 0 0 4 2Zm16 11.2C20 9.6 18.1 8 15.5 8a4.1 4.1 0 0 0-3.5 1.9V8H8v12h4v-6c0-1.6.3-3.1 2.3-3.1s2 1.8 2 3.2V20H20v-6.8Z" />
                   </svg>
                 ) : name === "YouTube" ? (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "#fff", width: 22, height: 22 }}>
                     <path d="M22 7.2a3 3 0 0 0-2.1-2.1C18 4.6 12 4.6 12 4.6s-6 0-7.9.5A3 3 0 0 0 2 7.2 31 31 0 0 0 1.5 12 31 31 0 0 0 2 16.8a3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z" />
                   </svg>
                 ) : (
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style={{ fill: "#fff", width: 22, height: 22 }}>
                     <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7Zm5 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm5.5-3.2a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z" />
                   </svg>
                 );
@@ -61,6 +65,7 @@ export async function PublicFooter() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={name}
+                  style={{ background: colors[name], color: "#fff", borderRadius: "50%", width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                 >
                   {icon}
                 </a>
@@ -75,7 +80,7 @@ export async function PublicFooter() {
         </div>
         <div>
           <b>Product</b>
-          <Link href="/products/salespunch360">Sales Tracking</Link>
+          <Link href="/products/salespunch360">Field Force Tracking</Link>
           <Link href="/products/account">Account & Business</Link>
           <Link href="/features">Features</Link>
           <Link href="/pricing">Pricing</Link>
