@@ -72,6 +72,8 @@ jobs:
         run: npx vitest run scripts/production-build.test.ts scripts/check-runtime-schema.test.mjs
       - name: Lighthouse network diagnostics regression
         run: node --test scripts/inspect-lighthouse-network.test.mjs
+      - name: GPS distance, route and recording state regression
+        run: npx vitest run src/lib/location/travel-route.test.ts src/lib/reports/gps-route.test.ts src/lib/reports/gps-recording-state.test.ts src/lib/travel/daily-snapshot.test.ts
       - run: npm run typecheck
       - run: npm run lint
 
