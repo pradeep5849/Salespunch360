@@ -24,7 +24,25 @@ export const TRAVEL_ROUTE_CONFIG = Object.freeze({
   minimumSpikeLegMeters: positiveNumber(process.env.TRAVEL_MIN_SPIKE_LEG_METERS, 100),
 });
 
+export function cleanedTravelRouteSegments<T extends TravelRoutePoint>(points: T[]): T[][] {
+  const ordered = [...points].sort((a, b) => a.capturedAt.getTime() - b.capturedAt.getTime());
+  const segments: T[][] = [];
+  for (const point of ordered) {
+    const current = segments[segments.length - 1];
+    if (!current || point.capturedAt.getTime() - current[current.length - 1].capturedAt.getTime() > TRAVEL_ROUTE_CONFIG.maximumGapMs) segments.push([point]);
+    else current.push(point);
+  }
+  return segments.flatMap(segment => {
+    const route = cleanSegment(segment);
+    return route.length ? [route] : [];
+  });
+}
+
 export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[] {
+  return cleanedTravelRouteSegments(points).flat();
+}
+
+function cleanSegment<T extends TravelRoutePoint>(points: T[]): T[] {
   const ordered = [...points].sort((a, b) =>
     a.capturedAt.getTime() - b.capturedAt.getTime()
     || (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0)
@@ -52,11 +70,7 @@ export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[]
     const point = usable[index];
     const elapsedMs = point.capturedAt.getTime() - anchor.capturedAt.getTime();
     if (elapsedMs <= 0) continue;
-    if (elapsedMs > TRAVEL_ROUTE_CONFIG.maximumGapMs) {
-      route.push(point);
-      anchor = point;
-      continue;
-    }
+    
     const distance = haversineDistanceMeters(anchor, point);
     const uncertainty = Math.max(
       TRAVEL_ROUTE_CONFIG.minimumMovementMeters,
@@ -85,13 +99,14 @@ export function cleanedTravelRoute<T extends TravelRoutePoint>(points: T[]): T[]
 }
 
 export function calculateTravelDistanceMeters(points: TravelRoutePoint[]): number {
-  const route = cleanedTravelRoute(points);
   let total = 0;
+  for (const route of cleanedTravelRouteSegments(points)) {
   for (let index = 1; index < route.length; index += 1) {
     const elapsedMs = route[index].capturedAt.getTime() - route[index - 1].capturedAt.getTime();
-    if (elapsedMs > 0 && elapsedMs <= TRAVEL_ROUTE_CONFIG.maximumGapMs) {
+    if (elapsedMs > 0) {
       total += haversineDistanceMeters(route[index - 1], route[index]);
     }
+  }
   }
   return total;
 }
