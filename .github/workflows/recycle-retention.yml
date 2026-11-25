@@ -1,7 +1,5 @@
 name: Scheduled seven-day Recycle Bin cleanup
 on:
-  schedule:
-    - cron: "17 * * * *"
   workflow_dispatch:
 permissions: {}
 concurrency:
