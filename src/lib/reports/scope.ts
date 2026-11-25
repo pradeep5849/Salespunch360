@@ -4,8 +4,8 @@ import { AuthorizationError, requirePermission } from "@/lib/auth/authorization"
 import { visibleUserWhere } from "./policy";
 
 export type ReportActor = { id:string; name:string; salesRole:SalesRole; managerType?:ManagerType|null; companyId:string; branchAccessScope?:BranchAccessScope;branchIds?:readonly string[] };
-export async function reportActor(): Promise<ReportActor> {
-  const user = await requirePermission("SALES_REPORTS");
+export async function reportActor(permission:"SALES_REPORTS"|"SALES_ATTENDANCE"="SALES_REPORTS"): Promise<ReportActor> {
+  const user = await requirePermission(permission);
   if (!user.companyId || !user.salesRole) throw new AuthorizationError();
   return { id:user.id, name:user.name, salesRole:user.salesRole, managerType:user.managerType, companyId:user.companyId, branchAccessScope:user.branchAccessScope, branchIds:user.branchIds };
 }
@@ -18,3 +18,9 @@ export async function resolveEmployeeScope(actor:ReportActor, requested?:string)
 export async function reportEmployeeOptions(actor:ReportActor) {
   return db.user.findMany({ where:{...visibleUserWhere(actor),isActive:true,salesAccessActive:true,salesRole:{in:["MANAGER","SALES"]}}, select:{id:true,name:true,salesRole:true,isActive:true}, orderBy:[{name:"asc"},{id:"asc"}] });
 }
+
+export async function attendanceEmployeeOptions(actor:ReportActor){
+ const scope=actor.salesRole==="MANAGER"?{companyId:actor.companyId,OR:[{id:actor.id,salesRole:"MANAGER" as const},{salesRole:"SALES" as const,managerId:actor.id}]}:visibleUserWhere(actor);
+ return db.user.findMany({where:{AND:[scope,{isActive:true,salesRole:{in:["MANAGER","SALES"]},OR:[{salesAccessActive:true},{salesRole:"SALES",designation:{equals:"Telecaller",mode:"insensitive"}}]}]},select:{id:true,name:true,salesRole:true,isActive:true},orderBy:[{name:"asc"},{id:"asc"}]});
+}
+export async function resolveAttendanceEmployeeScope(actor:ReportActor,requested?:string){if(actor.salesRole==="SALES")return [actor.id];const users=await attendanceEmployeeOptions(actor);if(requested&&!users.some(u=>u.id===requested))throw new AuthorizationError();return requested?[requested]:users.map(u=>u.id);}

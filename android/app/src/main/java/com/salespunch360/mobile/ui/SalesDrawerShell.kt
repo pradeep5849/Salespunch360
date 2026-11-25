@@ -183,7 +183,7 @@ fun SalesDrawerAuthenticatedApp(
                 visitDetails != null -> SalesVisitDetailsScreen(visitDetails!!) { visitDetails = null }
                 route == "Dashboard" -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
                 route == "Telecalling" -> TelecallingScreen()
-                !telecaller && route == "Attendance" -> SalesDrawerAttendance(data, attendance)
+                route == "Attendance" -> SalesDrawerAttendance(data, attendance)
                 !telecaller && route == "Create Lead" -> CustomersScreen { navigate("Check-ins") }
                 !telecaller && route == "Check-ins" -> FieldScreen(
                     pendingTask,
@@ -220,7 +220,7 @@ fun SalesDrawerAuthenticatedApp(
                     }
                 )
                 !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
-                !telecaller && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
+                (!telecaller || route == "Report:attendance") && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
                 route == "Company Details" -> ReadOnlyCompanyDetailsScreen()
                 route == "Change Password" -> ChangePasswordScreen()
                 else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
