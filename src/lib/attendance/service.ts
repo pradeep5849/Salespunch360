@@ -252,8 +252,8 @@ export async function getAttendanceOverview() {
     where: {
       companyId: viewer.companyId,
       ...(viewer.salesRole === "MANAGER"
-        ? { salesRole: "SALES" as const, managerId: viewer.id, salesAccessActive: true, isActive: true }
-        : { salesRole: { in: ["MANAGER", "SALES"] as const }, salesAccessActive: true, isActive: true }),
+        ? { salesRole: "SALES" as const, managerId: viewer.id, OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}], isActive: true }
+        : { salesRole: { in: ["MANAGER", "SALES"] as const }, OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}], isActive: true }),
     },
     select: {
       id: true,
