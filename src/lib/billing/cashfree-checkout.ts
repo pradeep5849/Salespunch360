@@ -1,3 +1,4 @@
+import { activateVerifiedPayment } from "./service";
 import { db } from "@/lib/db";
 import { createSandboxOrder } from "./cashfree-sandbox";
 import { verifyCashfreeSandboxPayment } from "./cashfree-verification";
@@ -28,5 +29,6 @@ export async function startCashfreeCheckout(actor: Actor, orderId: string) {
 export async function inspectCashfreeCheckout(actor: Actor, orderId: string) {
   const order = await loadOrder(actor, orderId);
   const verified = await verifyCashfreeSandboxPayment(order);
-  return { verified: Boolean(verified), orderId: order.id };
+  if (verified) await activateVerifiedPayment(verified);
+  return { verified: Boolean(verified), activated: Boolean(verified), orderId: order.id };
 }
