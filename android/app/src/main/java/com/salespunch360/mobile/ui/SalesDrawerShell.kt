@@ -183,7 +183,7 @@ fun SalesDrawerAuthenticatedApp(
                 visitDetails != null -> SalesVisitDetailsScreen(visitDetails!!) { visitDetails = null }
                 route == "Dashboard" -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
                 route == "Telecalling" -> TelecallingScreen()
-                !telecaller && route == "Attendance" -> SalesDrawerAttendance(data, attendance)
+                route == "Attendance" -> SalesDrawerAttendance(data, attendance)
                 !telecaller && route == "Create Lead" -> CustomersScreen { navigate("Check-ins") }
                 !telecaller && route == "Check-ins" -> FieldScreen(
                     pendingTask,
