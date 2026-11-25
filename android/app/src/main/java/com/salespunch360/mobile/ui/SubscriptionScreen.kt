@@ -96,6 +96,7 @@ private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorde
   if(order.provider=="ACCOUNT_PACKAGE")Text("Account packages: ${maxOf(order.accountPackages,order.adminSeats)}") else Text("Admin ${order.adminSeats} · Manager ${order.managerSeats} · Sales ${order.salesSeats} · Account packages ${order.accountPackages}")
   Text("Telecaller target: ${order.telecallerSeats?.toString()?:"Not recorded"}")
   Text("Provider: ${order.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  if(order.status=="PAID" && order.payments.any{it.providerPaymentId.startsWith("cashfree_sandbox_")&&it.status=="CAPTURED"}) CashfreeReceiptButton(order.id)
   if(order.status=="PENDING" && onlinePaymentAvailable) CashfreePaymentControls(order.id,orderChanged)
   if(order.status=="PENDING")OutlinedButton({cancelError=null;confirmCancel=true},enabled=!cancelBusy){Text("Cancel unpaid order")}
   OutlinedButton({details=!details}){Text(if(details)"Hide payment details" else "Order / payment details")}
@@ -181,5 +182,22 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
   try{val verified=api.cashfreeCheckout(orderId,"verify")["verified"]?.jsonPrimitive?.content=="true";message=if(verified)"Sandbox payment verified." else "Payment not confirmed yet.";if(verified)orderChanged()}
   catch(e:Exception){message="Unable to check payment."}finally{busy=false}
  }},enabled=!busy){Text("Check payment status")}
+ message?.let{Text(it)}
+}
+
+@Composable private fun CashfreeReceiptButton(orderId:String){
+ val context=LocalContext.current
+ val api=remember{ApiClient(SecureSession(context))}
+ val scope=rememberCoroutineScope()
+ var busy by remember{mutableStateOf(false)}
+ var message by remember{mutableStateOf<String?>(null)}
+ val launcher=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/pdf")){uri->
+  if(uri!=null){busy=true;scope.launch{try{
+   val bytes=api.cashfreeReceipt(orderId)
+   kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}?:error("Unable to save receipt")}
+   message="Test receipt saved."
+  }catch(e:Exception){message="Unable to save receipt. Try again."}finally{busy=false}}}
+ }
+ OutlinedButton({launcher.launch("sandbox-receipt-"+orderId+".pdf")},enabled=!busy){Text(if(busy)"Downloading..." else "Download test receipt (PDF)")}
  message?.let{Text(it)}
 }
