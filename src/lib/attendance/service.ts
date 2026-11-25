@@ -200,8 +200,8 @@ export async function uploadLocationPoint(raw: unknown) {
   assertCaptureTime(point.capturedAt, receivedAt);
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
-    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true } });
-    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
+    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true,designation:true } });
+    if (!employee || !canUseSalesFieldWorkflow(employee)) throw new AttendancePolicyError("DISABLED");
     const company = await tx.company.findFirst({
       where: { id: user.companyId },
       select: { gpsTrackingEnabled: true },
