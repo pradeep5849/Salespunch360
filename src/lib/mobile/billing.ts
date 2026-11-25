@@ -44,7 +44,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
   hasSales,hasAccount,isPlus,teamStructure:company.teamStructure,
   prices:prices.map(x=>({...x,amount:x.amount.toFixed(2)})),
   orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2),telecallerSeats:telecallerTargets.get(x.id)??null,payments:x.payments.map(payment=>({...payment,amount:payment.amount.toFixed(2)}))})),
-  onlinePaymentAvailable:false,salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
+  onlinePaymentAvailable:process.env.CASHFREE_ENV==='sandbox' && Boolean(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY),salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
   sales:entitlement?{
    status:operationalSalesStatus(entitlement),
    endsAt:entitlement.subscription?.endsAt??company.trialEndsAt,
