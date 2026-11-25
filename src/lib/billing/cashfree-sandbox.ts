@@ -4,11 +4,11 @@ function credentials() {
   if (CASHFREE_ENV !== "sandbox" || !CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) throw new Error("CASHFREE_SANDBOX_UNAVAILABLE");
   return { appId: CASHFREE_APP_ID, secret: CASHFREE_SECRET_KEY };
 }
-async function request(path: string, body?: unknown): Promise<unknown> {
+async function request(path: string, body?: unknown, idempotencyKey?: string): Promise<unknown> {
   const { appId, secret } = credentials();
   const response = await fetch("https://sandbox.cashfree.com/pg" + path, {
     method: body === undefined ? "GET" : "POST",
-    headers: { "x-client-id": appId, "x-client-secret": secret, "x-api-version": "2023-08-01", "content-type": "application/json" },
+    headers: { "x-client-id": appId, "x-client-secret": secret, "x-api-version": "2023-08-01", "content-type": "application/json", ...(idempotencyKey ? {"x-idempotency-key": idempotencyKey} : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000),
   });
@@ -22,7 +22,7 @@ function orderPath(id: string) {
 export async function createSandboxOrder(input: { orderId: string; amount: number; customerId: string; customerPhone: string; returnUrl: string }) {
   orderPath(input.orderId);
   if (!Number.isFinite(input.amount) || input.amount < 1 || Math.abs(input.amount * 100 - Math.round(input.amount * 100)) > 0.000001) throw new Error("INVALID_CASHFREE_AMOUNT");
-  const result = await request("/orders", { order_id: input.orderId, order_amount: input.amount, order_currency: "INR", customer_details: { customer_id: input.customerId, customer_phone: input.customerPhone }, order_meta: { return_url: input.returnUrl } }) as { order_id?: unknown; payment_session_id?: unknown };
+  const result = await request("/orders", { order_id: input.orderId, order_amount: input.amount, order_currency: "INR", customer_details: { customer_id: input.customerId, customer_phone: input.customerPhone }, order_meta: { return_url: input.returnUrl } }, input.orderId) as { order_id?: unknown; payment_session_id?: unknown };
   if (result.order_id !== input.orderId || typeof result.payment_session_id !== "string" || !result.payment_session_id) throw new Error("INVALID_CASHFREE_RESPONSE");
   return { providerOrderId: input.orderId, paymentSessionId: result.payment_session_id };
 }
