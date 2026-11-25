@@ -45,7 +45,7 @@ function passThrough(request: NextRequest) {
   )
     return NextResponse.next();
   const nonce = randomBytes(24).toString("base64");
-  const policy = contentSecurityPolicy(true, nonce);
+  const policy = contentSecurityPolicy(true, nonce, process.env.CASHFREE_ENV === "sandbox" && request.nextUrl.pathname === "/workspace/billing/pending");
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
   headers.set("content-security-policy", policy);
