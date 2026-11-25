@@ -16,13 +16,13 @@ async function loadOrder(actor: Actor, orderId: string) {
   return order;
 }
 // Callers must enforce billing mutation permission before passing the authenticated actor.
-export async function startCashfreeCheckout(actor: Actor, orderId: string) {
+export async function startCashfreeCheckout(actor: Actor, orderId: string, channel: "web" | "android" = "web") {
   const order = await loadOrder(actor, orderId);
   if (order.status !== "PENDING" || !order.expiresAt || order.expiresAt <= new Date() || order.currency !== "INR") throw new Error("ORDER_NOT_PAYABLE");
   const user = await db.user.findFirst({ where: { id: actor.id, companyId: actor.companyId }, select: { phone: true } });
   const phone = user?.phone?.replace(/[^0-9]/g, "").replace(/^91(?=\d{10}$)/, "");
   if (!phone || !/^[6-9]\d{9}$/.test(phone)) throw new Error("VALID_PHONE_REQUIRED");
-  const url = new URL("/workspace/billing/pending", "https://www.salespunch360.com");
+  const url = new URL(channel === "android" ? "/payment/sandbox/complete" : "/workspace/billing/pending", "https://www.salespunch360.com");
   url.searchParams.set("order", order.id);
   return createSandboxOrder({ orderId: order.id, amount: Number(order.totalAmount), customerId: actor.id, customerPhone: phone, returnUrl: url.toString() });
 }
