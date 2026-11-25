@@ -29,7 +29,6 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
  const indiaTodayText=indiaDateText(),indiaToday=parseIndiaBusinessDate(indiaTodayText),indiaTomorrow=new Date(indiaToday.getTime()+86400000);
  const [indiaYear,indiaMonth]=indiaTodayText.split("-");const indiaMonthStart=parseIndiaBusinessDate(`${indiaYear}-${indiaMonth}-01`);
  const fieldManager=isManager(actor)&&actor.managerType!=="MANAGER_ONLY";
- const employeeIds=employees.map(e=>e.id),checkEmployeeIds=checkInEmployees.map(e=>e.id);
  const teamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...checkEmployeeIds]:checkEmployeeIds):checkEmployeeIds;
   const [teamMemberCount,company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks]=await Promise.all([
   db.user.count({where:dashboardTeamCountWhere(actor)}),
