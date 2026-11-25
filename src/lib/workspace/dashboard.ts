@@ -16,7 +16,7 @@ export function dashboardEmployeeWhere(actor:DashboardActor){
 }
 export function dashboardTeamCountWhere(actor:DashboardActor){
  if(!isAdmin(actor))return dashboardEmployeeWhere(actor);
- return {companyId:actor.companyId,isActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"] as ("ADMIN"|"MANAGER"|"SALES")[]},OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}]};
+ return {companyId:actor.companyId,isActive:true,salesRole:{in:["MANAGER","SALES"] as ("MANAGER"|"SALES")[]},OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}]};
 }
 export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:string}){
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};const branches=await operationalBranchContext(actor);
