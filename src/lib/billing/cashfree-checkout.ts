@@ -3,13 +3,13 @@ import { createSandboxOrder } from "./cashfree-sandbox";
 import { verifyCashfreeSandboxPayment } from "./cashfree-verification";
 
 type Actor = { id: string; companyId: string };
-function assertSandbox(companyId: string) {
-  if (process.env.CASHFREE_ENV !== "sandbox" || process.env.CASHFREE_TEST_COMPANY_ID !== companyId) {
+function assertSandbox() {
+  if (process.env.CASHFREE_ENV !== "sandbox") {
     throw new Error("CASHFREE_SANDBOX_UNAVAILABLE");
   }
 }
 async function loadOrder(actor: Actor, orderId: string) {
-  assertSandbox(actor.companyId);
+  assertSandbox();
   const order = await db.billingOrder.findFirst({ where: { id: orderId, companyId: actor.companyId } });
   if (!order) throw new Error("NOT_FOUND");
   return order;
