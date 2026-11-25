@@ -5,6 +5,7 @@ const m = vi.hoisted(() => ({
   createMany: vi.fn(),
   updateMany: vi.fn(),
   generate: vi.fn(),
+  renewal: vi.fn(),
   log: vi.fn(),
   queue: vi.fn(),
 }));
@@ -20,6 +21,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/sales-notifications/service", () => ({
   generateFollowUpReminders: m.generate,
 }));
+vi.mock("@/lib/billing/renewal-reminders", () => ({ generateBillingRenewalReminders: m.renewal }));
 vi.mock("@/lib/logging", () => ({ logEvent: m.log }));
 vi.mock("./service", () => ({ processFieldJobs: m.queue }));
 import {
@@ -36,6 +38,7 @@ beforeEach(() => {
   m.createMany.mockResolvedValue({ count: 1 });
   m.updateMany.mockResolvedValue({ count: 1 });
   m.generate.mockResolvedValue({ processed: 2, created: 1 });
+  m.renewal.mockReset().mockResolvedValue(undefined);
   m.queue.mockResolvedValue({ processed: 0, completed: 0 });
 });
 
@@ -79,6 +82,7 @@ it("completes only the lease it owns after the sweep succeeds", async () => {
   expect(await runHostedFollowUpReminders(now)).toBe("completed");
   const ownerToken = m.createMany.mock.calls[0][0].data[0].ownerToken;
   expect(m.generate).toHaveBeenCalledWith(now);
+  expect(m.renewal).toHaveBeenCalledWith(now);
   expect(m.updateMany).toHaveBeenCalledWith(
     expect.objectContaining({
       where: expect.objectContaining({ ownerToken, completedAt: null }),
@@ -164,4 +168,11 @@ it("runs queued notification retries before reminder time and starts only one ti
   stopHostedReminderScheduler();
   await vi.advanceTimersByTimeAsync(120_000);
   expect(m.queue).toHaveBeenCalledTimes(2);
+});
+
+it("keeps the daily sweep retryable when billing renewal reminders fail", async () => {
+  m.generate.mockResolvedValue({ processed: 2, created: 1 });
+  m.renewal.mockRejectedValueOnce(new Error("renewal delivery failed"));
+  expect(await runHostedFollowUpReminders(new Date("2026-11-20T03:00:00Z"))).toBe("retry-pending");
+  expect(m.updateMany.mock.calls[0][0].data).toMatchObject({lastErrorCode:"REMINDER_SWEEP_FAILED"});
 });
