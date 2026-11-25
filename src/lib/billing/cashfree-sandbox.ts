@@ -22,8 +22,8 @@ function orderPath(id: string) {
 export async function createSandboxOrder(input: { orderId: string; amount: number; customerId: string; customerPhone: string; returnUrl: string }) {
   orderPath(input.orderId);
   if (!Number.isFinite(input.amount) || input.amount < 1 || Math.abs(input.amount * 100 - Math.round(input.amount * 100)) > 0.000001) throw new Error("INVALID_CASHFREE_AMOUNT");
-  const result = await request("/orders", { order_id: input.orderId, order_amount: input.amount, order_currency: "INR", customer_details: { customer_id: input.customerId, customer_phone: input.customerPhone }, order_meta: { return_url: input.returnUrl } }, input.orderId) as { order_id?: unknown; payment_session_id?: unknown };
-  if (result.order_id !== input.orderId || typeof result.payment_session_id !== "string" || !result.payment_session_id) throw new Error("INVALID_CASHFREE_RESPONSE");
+  const result = await request("/orders", { order_id: input.orderId, order_amount: input.amount, order_currency: "INR", customer_details: { customer_id: input.customerId, customer_phone: input.customerPhone }, order_meta: { return_url: input.returnUrl } }, input.orderId) as { order_id?: unknown; payment_session_id?: unknown; order_amount?: unknown; order_currency?: unknown; order_status?: unknown };
+  if (result.order_id !== input.orderId || result.order_currency !== "INR" || typeof result.order_amount !== "number" || result.order_amount.toFixed(2) !== input.amount.toFixed(2) || result.order_status !== "ACTIVE" || typeof result.payment_session_id !== "string" || !result.payment_session_id) throw new Error("INVALID_CASHFREE_RESPONSE");
   return { providerOrderId: input.orderId, paymentSessionId: result.payment_session_id };
 }
 export function fetchSandboxOrder(id: string) { return request(orderPath(id)); }
