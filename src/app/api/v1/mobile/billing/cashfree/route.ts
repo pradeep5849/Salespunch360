@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return mobileJson({ error: "INVALID_INPUT" }, 400);
     const identity = { id: actor.id, companyId: actor.companyId };
-    const result = parsed.data.action === "start" ? await startCashfreeCheckout(identity, parsed.data.orderId) : await inspectCashfreeCheckout(identity, parsed.data.orderId);
+    const result = parsed.data.action === "start" ? await startCashfreeCheckout(identity, parsed.data.orderId, "android") : await inspectCashfreeCheckout(identity, parsed.data.orderId);
     return mobileJson(result);
   } catch (error) {
     return mobileUnauthorized(error) ?? mobileJson({ error: "CHECKOUT_FAILED" }, 400);
