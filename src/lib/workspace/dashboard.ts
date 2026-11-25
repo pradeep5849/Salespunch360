@@ -22,6 +22,7 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};const branches=await operationalBranchContext(actor);
  const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true,salesRole:true,managerType:true,designation:true},orderBy:{name:"asc"}});
  const checkInEmployees=employees.filter(employee=>(employee.salesRole==="SALES"&&!isTelecallerDesignation(employee.designation))||(employee.salesRole==="MANAGER"&&employee.managerType!=="MANAGER_ONLY"));
+ const checkEmployeeIds=checkInEmployees.map(e=>e.id);
  const liveEmployees=employees.filter(employee=>employee.salesRole==="SALES");
  const allowedLive=new Set(liveEmployees.map(e=>e.id)),allowedCheck=new Set(checkInEmployees.map(e=>e.id));
  const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowedCheck.has(requestedCheck)?requestedCheck:undefined;
