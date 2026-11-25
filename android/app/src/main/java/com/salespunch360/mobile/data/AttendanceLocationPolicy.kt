@@ -1,8 +1,8 @@
 package com.salespunch360.mobile.data
 
-/** Only a start needs a policy-required measurement; ending attendance must remain possible. */
+/** Office geofence requires both measurements; field tracking requires only start. */
 internal fun attendanceNeedsLocation(features:Features,start:Boolean):Boolean =
- start && (features.gpsTrackingEnabled || features.attendanceGeofenceEnabled)
+ features.attendanceGeofenceEnabled || (start && features.gpsTrackingEnabled)
 
 internal suspend fun attendanceMeasurement(features:Features,start:Boolean,measure:suspend ()->LocationPayload):LocationPayload? {
  if(attendanceNeedsLocation(features,start))return measure()

@@ -1,5 +1,6 @@
 import type { AccountRole, ProductEdition, SalesRole } from "@prisma/client";
 import { canAccessAccountWorkspace, canAccessSalesWorkspace, canUseSalesFieldWorkflow, isPlatformSuperAdmin, type WorkspacePrincipal } from "./workspace-policy";
+import {canMarkPersonalAttendance} from "@/lib/attendance/role-policy";
 import {isTelecallerDesignation} from "@/lib/telecalling/policy";
 
 export const PERMISSIONS = [
@@ -45,7 +46,7 @@ export function canUsePermission(user: WorkspacePrincipal, edition: ProductEditi
   const category = PERMISSION_CATEGORY[permission];
   if (category === "SALES") {
     if(!salesActive||!user.salesRole)return false;
-    if(user.salesRole==="SALES"&&isTelecallerDesignation(user.designation))return ["SALES_DASHBOARD","SALES_LEADS","SALES_FOLLOW_UPS","SALES_TELECALLING"].includes(permission);
+    if(user.salesRole==="SALES"&&isTelecallerDesignation(user.designation))return ["SALES_DASHBOARD","SALES_ATTENDANCE","SALES_LEADS","SALES_FOLLOW_UPS","SALES_TELECALLING"].includes(permission);
     return SALES_ROLE_PERMISSIONS[user.salesRole].includes(permission);
   }
   if (category === "ACCOUNT") return accountActive && !!user.accountRole && ACCOUNT_ROLE_PERMISSIONS[user.accountRole].includes(permission);
@@ -59,6 +60,7 @@ export function canUsePermission(user: WorkspacePrincipal, edition: ProductEditi
 export function canUsePermissionForMutation(user:WorkspacePrincipal,edition:ProductEdition|null,permission:Permission){
   const allowed=canUsePermission(user,edition,permission);
   if(!allowed)return false;
+  if(permission==="SALES_ATTENDANCE")return canMarkPersonalAttendance(user);
   if(permission==="SALES_TELECALLING")return true;
   if(permission==="SALES_TARGETS")return true;
   if(permission==="SALES_CUSTOMERS")return user.salesRole==="PRIMARY_ADMIN"||user.salesRole==="ADMIN";

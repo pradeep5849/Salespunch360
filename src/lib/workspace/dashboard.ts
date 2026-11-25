@@ -22,6 +22,7 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
  const user=await requireSalesWorkspace();if(!user.salesRole)throw new Error("SALES_ROLE_REQUIRED");const actor={...user,salesRole:user.salesRole,companyId:user.companyId};const branches=await operationalBranchContext(actor);
  const employees=await db.user.findMany({where:dashboardEmployeeWhere(actor),select:{id:true,name:true,role:true,salesRole:true,managerType:true,designation:true},orderBy:{name:"asc"}});
  const checkInEmployees=employees.filter(employee=>(employee.salesRole==="SALES"&&!isTelecallerDesignation(employee.designation))||(employee.salesRole==="MANAGER"&&employee.managerType!=="MANAGER_ONLY"));
+ const checkEmployeeIds=checkInEmployees.map(e=>e.id);
  const liveEmployees=employees.filter(employee=>employee.salesRole==="SALES");
  const allowedLive=new Set(liveEmployees.map(e=>e.id)),allowedCheck=new Set(checkInEmployees.map(e=>e.id));
  const requestedCheck=raw.checkInEmployee,checkUserId=isSales(actor)?actor.id:requestedCheck&&allowedCheck.has(requestedCheck)?requestedCheck:undefined;
@@ -29,15 +30,13 @@ export async function dashboardData(raw:{checkInEmployee?:string;liveEmployee?:s
  const indiaTodayText=indiaDateText(),indiaToday=parseIndiaBusinessDate(indiaTodayText),indiaTomorrow=new Date(indiaToday.getTime()+86400000);
  const [indiaYear,indiaMonth]=indiaTodayText.split("-");const indiaMonthStart=parseIndiaBusinessDate(`${indiaYear}-${indiaMonth}-01`);
  const fieldManager=isManager(actor)&&actor.managerType!=="MANAGER_ONLY";
- const employeeIds=employees.map(e=>e.id),checkEmployeeIds=checkInEmployees.map(e=>e.id);
  const teamIds=isSales(actor)?[actor.id]:isManager(actor)?(fieldManager?[actor.id,...checkEmployeeIds]:checkEmployeeIds):checkEmployeeIds;
- const presentIds=isSales(actor)?[actor.id]:employeeIds;
- const [teamMemberCount,company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks]=await Promise.all([
+  const [teamMemberCount,company,openAttendance,visits,presentCount,todayVisitCount,todayLeadCount,monthVisitCount,monthLeadCount,latestLocation,pendingTodayTasks,overdueTasks]=await Promise.all([
   db.user.count({where:dashboardTeamCountWhere(actor)}),
   db.company.findUniqueOrThrow({where:{id:actor.companyId},select:{name:true,logoObjectKey:true,updatedAt:true,addressLine1:true,addressLine2:true,locality:true,city:true,state:true,postalCode:true,country:true,subscriptionStatus:true,trialEndsAt:true,attendanceEnabled:true,gpsTrackingEnabled:true}}),
-  (isAdmin(actor)||(isManager(actor)&&!fieldManager))?null:db.attendance.findFirst({where:{companyId:actor.companyId,branchId:branches.branchId,userId:actor.id,endedAt:null},include:{_count:{select:{locationPoints:true}}}}),
+  isAdmin(actor)?null:db.attendance.findFirst({where:{companyId:actor.companyId,branchId:branches.branchId,userId:actor.id,endedAt:null},include:{_count:{select:{locationPoints:true}}}}),
   db.customerVisit.findMany({where:{companyId:actor.companyId,branchId:branches.branchId,userId:checkUserId?checkUserId:{in:teamIds},checkedOutAt:{not:null}},orderBy:[{checkedOutAt:"desc"},{id:"desc"}],take:5,select:{id:true,contactName:true,photo:{select:{id:true}},checkedInAt:true,checkedOutAt:true,checkInLatitude:true,checkInLongitude:true,checkInAddress:true,checkoutSentiment:true,checkoutRemarks:true,visitNotes:true,user:{select:{name:true}},customer:{select:{name:true}}}}),
-  db.user.count({where:{companyId:actor.companyId,id:{in:presentIds},isActive:true,attendances:{some:{companyId:actor.companyId,branchId:branches.branchId,startedAt:{gte:indiaToday,lt:indiaTomorrow}}}}}),
+  db.user.count({where:{...dashboardTeamCountWhere(actor),isActive:true,attendances:{some:{companyId:actor.companyId,branchId:branches.branchId,startedAt:{gte:indiaToday,lt:indiaTomorrow}}}}}),
   db.customerVisit.count({where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:teamIds},checkedInAt:{gte:indiaToday,lt:indiaTomorrow}}}),
   db.lead.count({where:{companyId:actor.companyId,branchId:branches.branchId,assignedUserId:{in:teamIds},createdAt:{gte:indiaToday,lt:indiaTomorrow}}}),
   db.customerVisit.count({where:{companyId:actor.companyId,branchId:branches.branchId,userId:{in:teamIds},checkedInAt:{gte:indiaMonthStart,lt:indiaTomorrow}}}),

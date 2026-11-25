@@ -18,7 +18,7 @@ function currentPosition(): Promise<LocationMeasurement> {
 export function AttendanceControls({ initialOpen, startedAt, gpsEnabled, geofenceEnabled = false, attendanceEnabled, pointCount, branches = [] }: { initialOpen: boolean; startedAt?: string; gpsEnabled: boolean; geofenceEnabled?: boolean; attendanceEnabled: boolean; pointCount: number; branches?: { id: string; name: string }[] }) {
   const [branchId, setBranchId] = useState(branches.length === 1 ? branches[0].id : "");
   const [message, setMessage] = useState<string>();
-  const [locationState, setLocationState] = useState(initialOpen&&gpsEnabled ? "Starting GPS tracking…" : gpsEnabled ? "GPS required to start" : "GPS tracking off");
+  const [locationState, setLocationState] = useState(initialOpen&&gpsEnabled ? "Starting GPS tracking…" : gpsEnabled ? "GPS required to start" : geofenceEnabled ? "Office location required for clock-in and clock-out" : "GPS tracking off");
   const [trackingStopped, setTrackingStopped] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -46,7 +46,7 @@ export function AttendanceControls({ initialOpen, startedAt, gpsEnabled, geofenc
 
   const submit = (ending: boolean) => startTransition(async () => {
     if (!ending && branches.length > 1 && !branchId) { setMessage("Select a branch before starting attendance."); return; }
-    const needsLocation = gpsEnabled || (!ending && geofenceEnabled);
+    const needsLocation = gpsEnabled || geofenceEnabled;
     setMessage(needsLocation ? "Requesting a fresh location…" : undefined);
     try {
       let location: LocationMeasurement | undefined;

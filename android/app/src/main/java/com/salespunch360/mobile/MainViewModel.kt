@@ -120,7 +120,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     try {
                         val refreshed=api.bootstrap()
                         if(!applyBootstrap(refreshed, forcedWorkspace = Workspace.SALES)||Workspace.SALES !in validatedWorkspaces(refreshed))return@launch
-                        if(!refreshed.features.fieldWorkEnabled){_state.value=_state.value.copy(message="Field attendance is no longer available. Review updated company settings and access.");return@launch}
+                        if(!refreshed.features.attendanceEnabled){_state.value=_state.value.copy(message="Attendance is no longer available. Review updated company settings and access.");return@launch}
                         val recovered=attendanceTransportRecovery(start,previousAttendanceId,refreshed.attendance)
                         _state.value=_state.value.copy(message=listOfNotNull(recovered,_state.value.message).distinct().joinToString(" "))
                     } catch (cancel: CancellationException) { throw cancel }

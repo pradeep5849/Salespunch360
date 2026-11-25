@@ -5,7 +5,7 @@ import org.junit.Test
 
 class AttendanceLocationPolicyTest {
  @Test fun neitherPolicyRequestsLocation(){val f=Features(true,false);assertFalse(attendanceNeedsLocation(f,true));assertFalse(attendanceNeedsLocation(f,false));assertNull(attendanceRequest("START",null).location)}
- @Test fun geofenceOnlyValidatesStart(){val f=Features(true,false,attendanceGeofenceEnabled=true);assertTrue(attendanceNeedsLocation(f,true));assertFalse(attendanceNeedsLocation(f,false))}
+ @Test fun geofenceValidatesStartAndEnd(){val f=Features(true,false,attendanceGeofenceEnabled=true);assertTrue(attendanceNeedsLocation(f,true));assertTrue(attendanceNeedsLocation(f,false))}
  @Test fun trackingRequiresStartButNotEnd(){val f=Features(true,true);assertTrue(attendanceNeedsLocation(f,true));assertFalse(attendanceNeedsLocation(f,false))}
  @Test fun noPolicyDoesNotAcquireLocation()=kotlinx.coroutines.runBlocking{assertNull(attendanceMeasurement(Features(true,false),true){throw AssertionError("Must not request location")})}
  @Test fun successfulEndRetainsOptionalMeasurement()=kotlinx.coroutines.runBlocking{val point=LocationPayload(1.0,2.0,capturedAt="2026-11-22T10:00:00Z");assertEquals(point,attendanceMeasurement(Features(true,true),false){point})}

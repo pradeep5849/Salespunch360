@@ -1,3 +1,5 @@
+import {canMarkPersonalAttendance,attendanceLocationPolicy} from "./role-policy";
+import {canUseSalesFieldWorkflow} from "@/lib/auth/workspace-policy";
 import {refreshStoppedAttendanceTravel} from "@/lib/travel/daily-snapshot";
 import {withAttendanceEvent,scheduleFieldJobs} from "@/lib/field-jobs/service";
 import { db } from "@/lib/db";
@@ -22,7 +24,7 @@ import { operationalBranchContext, resolveWriteBranch } from "@/lib/branches/ope
 
 async function requireEmployee(mutation = true) {
   const user = await (mutation ? requirePermissionForMutation("SALES_ATTENDANCE") : requirePermission("SALES_ATTENDANCE"));
-  if (!user.companyId || (user.salesRole !== "SALES" && !(user.salesRole === "MANAGER" && user.managerType !== "MANAGER_ONLY"))) throw new AttendancePolicyError("DISABLED");
+  if (!user.companyId || !canMarkPersonalAttendance(user)) throw new AttendancePolicyError("DISABLED");
   return { ...user, companyId: user.companyId };
 }
 
@@ -44,7 +46,7 @@ export async function getCurrentAttendance() {
     }),
   ]);
   if (!company) throw new AttendancePolicyError("DISABLED");
-  return { attendance, settings: company };
+  return { attendance, settings: {...company,...attendanceLocationPolicy(user,company)} };
 }
 
 export async function startAttendance(raw: unknown) {
@@ -60,14 +62,14 @@ export async function startAttendance(raw: unknown) {
         id: user.id,
         companyId: user.companyId,
         isActive: true,
-        salesAccessActive: true,
+        OR: [{salesAccessActive:true},{salesRole:"SALES",designation:{equals:"Telecaller",mode:"insensitive"}}],
         salesRole: { in: ["MANAGER", "SALES"] },
       },
-      select: { id: true, salesRole: true, managerType: true },
+      select: { id: true, salesRole: true, managerType: true, designation:true },
     });
-    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
+    if (!employee || !canMarkPersonalAttendance(employee)) throw new AttendancePolicyError("DISABLED");
     await tx.$queryRaw`SELECT "id" FROM "companies" WHERE "id"=${user.companyId}::uuid FOR SHARE`;
-    const company = await tx.company.findFirst({
+    const rawCompany = await tx.company.findFirst({
       where: { id: user.companyId },
       select: {
         attendanceEnabled: true,
@@ -78,6 +80,7 @@ export async function startAttendance(raw: unknown) {
         attendanceGeofenceRadiusMeters: true,
       },
     });
+    const company=rawCompany?{...rawCompany,...attendanceLocationPolicy(employee,rawCompany)}:null;
     if (!company?.attendanceEnabled)
       throw new AttendancePolicyError("DISABLED");
     if (company.gpsTrackingEnabled && !location)
@@ -154,18 +157,25 @@ export async function endAttendance(raw: unknown) {
   const branches = await operationalBranchContext(user, requestedBranchId);
   const attendance = await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
-    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true } });
-    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
-    const company = await tx.company.findFirst({
+    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, OR: [{salesAccessActive:true},{salesRole:"SALES",designation:{equals:"Telecaller",mode:"insensitive"}}], salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true, designation:true } });
+    if (!employee || !canMarkPersonalAttendance(employee)) throw new AttendancePolicyError("DISABLED");
+    const rawCompany = await tx.company.findFirst({
       where: { id: user.companyId },
-      select: { gpsTrackingEnabled: true },
+      select: { gpsTrackingEnabled: true,attendanceGeofenceEnabled:true,attendanceReferenceLatitude:true,attendanceReferenceLongitude:true,attendanceGeofenceRadiusMeters:true },
     });
     const open = await tx.attendance.findFirst({
       where: { companyId: user.companyId, branchId: branches.branchId, userId: user.id, endedAt: null },
       select: { id: true, branchId: true },
     });
     if (!open) throw new AttendancePolicyError("NO_OPEN_ATTENDANCE");
-    const acceptedLocation = company?.gpsTrackingEnabled ? location : undefined;
+    const company=rawCompany?{...rawCompany,...attendanceLocationPolicy(employee,rawCompany)}:null;
+    if(company?.attendanceGeofenceEnabled){
+      if(!location||company.attendanceReferenceLatitude==null||company.attendanceReferenceLongitude==null)throw new AttendancePolicyError("GEOFENCE_CONFIGURATION");
+      assertAttendanceStartFresh(location.capturedAt);
+      const verdict=evaluateGeofence(location,{latitude:company.attendanceReferenceLatitude,longitude:company.attendanceReferenceLongitude},company.attendanceGeofenceRadiusMeters??50);
+      if(!verdict.allowed)throw new AttendancePolicyError(verdict.type);
+    }
+    const acceptedLocation = company?.gpsTrackingEnabled||company?.attendanceGeofenceEnabled ? location : undefined;
     const stopped=await withAttendanceEvent(tx,user.companyId,user.id,"ATTENDANCE_ENDED",tx.attendance.update({
       where: { id: open.id },
       data: {
@@ -175,7 +185,7 @@ export async function endAttendance(raw: unknown) {
         endAccuracyMeters: acceptedLocation?.accuracyMeters,
       },
     }));
-    await refreshStoppedAttendanceTravel(tx,user.companyId,open.branchId,user.id,stopped.startedAt,stopped.endedAt!);
+    if(canUseSalesFieldWorkflow(employee))await refreshStoppedAttendanceTravel(tx,user.companyId,open.branchId,user.id,stopped.startedAt,stopped.endedAt!);
     return stopped;
   });
   scheduleFieldJobs();
@@ -184,13 +194,14 @@ export async function endAttendance(raw: unknown) {
 
 export async function uploadLocationPoint(raw: unknown) {
   const user = await requireEmployee();
+  if(!canUseSalesFieldWorkflow(user))throw new AttendancePolicyError("DISABLED");
   const point = locationPointSchema.parse(raw);
   const receivedAt = new Date();
   assertCaptureTime(point.capturedAt, receivedAt);
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "users" WHERE "id" = ${user.id}::uuid FOR UPDATE`;
-    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true } });
-    if (!employee || (employee.salesRole === "MANAGER" && employee.managerType === "MANAGER_ONLY")) throw new AttendancePolicyError("DISABLED");
+    const employee = await tx.user.findFirst({ where: { id: user.id, companyId: user.companyId, isActive: true, salesAccessActive: true, salesRole: { in: ["MANAGER", "SALES"] } }, select: { salesRole: true, managerType: true,designation:true } });
+    if (!employee || !canUseSalesFieldWorkflow(employee)) throw new AttendancePolicyError("DISABLED");
     const company = await tx.company.findFirst({
       where: { id: user.companyId },
       select: { gpsTrackingEnabled: true },
@@ -241,8 +252,8 @@ export async function getAttendanceOverview() {
     where: {
       companyId: viewer.companyId,
       ...(viewer.salesRole === "MANAGER"
-        ? { salesRole: "SALES" as const, managerId: viewer.id, salesAccessActive: true, isActive: true }
-        : { salesRole: { in: ["MANAGER", "SALES"] as const }, salesAccessActive: true, isActive: true }),
+        ? { salesRole: "SALES" as const, managerId: viewer.id, OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}], isActive: true }
+        : { salesRole: { in: ["MANAGER", "SALES"] as const }, OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}], isActive: true }),
     },
     select: {
       id: true,
