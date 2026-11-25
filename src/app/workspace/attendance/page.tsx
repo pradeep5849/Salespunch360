@@ -1,3 +1,4 @@
+import {canMarkPersonalAttendance} from "@/lib/attendance/role-policy";
 import { AttendanceRefresh } from "./attendance-refresh";
 import type { Metadata } from "next";
 import { WorkspacePageHeader } from "@/components/workspace/workspace-page-header";
@@ -13,7 +14,7 @@ const istTime=(value:Date)=>`${value.toLocaleTimeString("en-IN",{hour:"numeric",
 
 export default async function AttendancePage() {
   const user = await requirePermission("SALES_ATTENDANCE");
-  const isEmployee = user.salesRole === "SALES" || (user.salesRole === "MANAGER" && user.managerType !== "MANAGER_ONLY");
+  const isEmployee = canMarkPersonalAttendance(user);
   const canViewOverview =
     user.salesRole === "PRIMARY_ADMIN" ||
     user.salesRole === "ADMIN" ||
