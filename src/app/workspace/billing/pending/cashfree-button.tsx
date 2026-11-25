@@ -15,7 +15,8 @@ export default function CashfreeButton({ orderId }: { orderId: string }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error === "VALID_PHONE_REQUIRED" ? "Please update your mobile number before paying." : "Unable to complete checkout. Please try again.");
       if (action === "verify") {
-        setMessage(data.verified ? "Sandbox payment verified. Subscription activation is not yet enabled." : "Payment has not been confirmed yet.");
+        if (data.activated) { window.location.reload(); return; }
+        setMessage(data.verified ? "Sandbox payment verified. Subscription activated." : "Payment has not been confirmed yet.");
       } else {
         const factory = (window as unknown as { Cashfree?: CashfreeFactory }).Cashfree;
         if (!factory || typeof data.paymentSessionId !== "string") throw new Error("Checkout is unavailable.");
