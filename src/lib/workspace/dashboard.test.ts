@@ -8,6 +8,6 @@ describe("dashboard employee scopes",()=>{
 });
 
 describe("dashboard active team count",()=>{
- it("includes active telecallers without field access and excludes primary admin",()=>expect(dashboardTeamCountWhere(actor("COMPANY_ADMIN","PRIMARY_ADMIN"))).toEqual({companyId:"tenant-a",isActive:true,salesRole:{in:["ADMIN","MANAGER","SALES"]},OR:[{salesAccessActive:true},{salesRole:"SALES",designation:{equals:"Telecaller",mode:"insensitive"}}]}));
+ it("includes active telecallers without field access and excludes all admins",()=>expect(dashboardTeamCountWhere(actor("COMPANY_ADMIN","PRIMARY_ADMIN"))).toEqual({companyId:"tenant-a",isActive:true,salesRole:{in:["MANAGER","SALES"]},OR:[{salesAccessActive:true},{salesRole:"SALES",designation:{equals:"Telecaller",mode:"insensitive"}}]}));
  it("preserves manager scope",()=>expect(dashboardTeamCountWhere(actor("MANAGER","MANAGER"))).toEqual(dashboardEmployeeWhere(actor("MANAGER","MANAGER"))));
 });
