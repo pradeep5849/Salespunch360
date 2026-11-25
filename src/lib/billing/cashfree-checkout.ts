@@ -1,0 +1,32 @@
+import { db } from "@/lib/db";
+import { createSandboxOrder } from "./cashfree-sandbox";
+import { verifyCashfreeSandboxPayment } from "./cashfree-verification";
+
+type Actor = { id: string; companyId: string };
+function assertSandbox(companyId: string) {
+  if (process.env.CASHFREE_ENV !== "sandbox" || process.env.CASHFREE_TEST_COMPANY_ID !== companyId) {
+    throw new Error("CASHFREE_SANDBOX_UNAVAILABLE");
+  }
+}
+async function loadOrder(actor: Actor, orderId: string) {
+  assertSandbox(actor.companyId);
+  const order = await db.billingOrder.findFirst({ where: { id: orderId, companyId: actor.companyId } });
+  if (!order) throw new Error("NOT_FOUND");
+  return order;
+}
+// Callers must enforce billing mutation permission before passing the authenticated actor.
+export async function startCashfreeCheckout(actor: Actor, orderId: string) {
+  const order = await loadOrder(actor, orderId);
+  if (order.status !== "PENDING" || !order.expiresAt || order.expiresAt <= new Date() || order.currency !== "INR") throw new Error("ORDER_NOT_PAYABLE");
+  const user = await db.user.findFirst({ where: { id: actor.id, companyId: actor.companyId }, select: { phone: true } });
+  const phone = user?.phone?.replace(/[^0-9]/g, "").replace(/^91(?=\d{10}$)/, "");
+  if (!phone || !/^[6-9]\d{9}$/.test(phone)) throw new Error("VALID_PHONE_REQUIRED");
+  const url = new URL("/workspace/billing/pending", "https://www.salespunch360.com");
+  url.searchParams.set("order", order.id);
+  return createSandboxOrder({ orderId: order.id, amount: Number(order.totalAmount), customerId: actor.id, customerPhone: phone, returnUrl: url.toString() });
+}
+export async function inspectCashfreeCheckout(actor: Actor, orderId: string) {
+  const order = await loadOrder(actor, orderId);
+  const verified = await verifyCashfreeSandboxPayment(order);
+  return { verified: Boolean(verified), orderId: order.id };
+}
