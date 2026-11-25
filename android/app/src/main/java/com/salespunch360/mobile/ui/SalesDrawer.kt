@@ -87,7 +87,7 @@ internal fun SalesCompactNavigationMenu(
     contentPadding=PaddingValues(horizontal=14.dp,vertical=0.dp),
    )
   }
-  if(!telecaller){
+  run {
    DropdownMenuItem(
     text={Text("Reports",color=Color.White,fontSize=13.sp,fontWeight=if(current?.startsWith("Report:")==true)FontWeight.Bold else FontWeight.Medium)},
     leadingIcon={Icon(Icons.Default.Assessment,null,tint=Color.White,modifier=Modifier.size(19.dp))},
@@ -96,7 +96,7 @@ internal fun SalesCompactNavigationMenu(
     contentPadding=PaddingValues(horizontal=14.dp,vertical=0.dp),
    )
    if(reportsOpen){
-    salesReportDrawerItems(MobileRole.SALES).forEach{report->
+    salesReportDrawerItems(MobileRole.SALES).filter{!telecaller||it.type=="attendance"}.forEach{report->
      DropdownMenuItem(
       text={Text(report.label,color=Color.White.copy(alpha=.9f),fontSize=12.sp)},
       onClick={navigate("Report:${report.type}")},
@@ -152,7 +152,7 @@ internal fun SalesNavigationDrawerContent(
    }
    Spacer(Modifier.height(6.dp))
    destinations.forEach{item->DrawerRow(item.label,item.icon,current==item.route,onClick={navigate(item.route)})}
-   if(!telecaller){
+   if(telecaller){DrawerRow("My Attendance",Icons.Default.Assessment,current=="Report:attendance",onClick={navigate("Report:attendance")})}else{
     SalesReportsDrawerSection(MobileRole.SALES,current,reportsOpen,{reportsOpen=it},navigate)
    }
   }
