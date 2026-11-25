@@ -1,0 +1,13 @@
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { createHmac } from "node:crypto";
+import { createSandboxOrder, verifySandboxWebhook } from "./cashfree-sandbox";
+const id="11111111-1111-4111-8111-111111111111";
+const input={orderId:id,amount:100,customerId:"customer",customerPhone:"9876543210",returnUrl:"https://www.salespunch360.com/workspace/billing/pending"};
+const remote={order_id:id,order_amount:100,order_currency:"INR",order_status:"ACTIVE",payment_session_id:"session"};
+const fetchMock=vi.fn();
+beforeEach(()=>{vi.resetAllMocks();vi.stubEnv("CASHFREE_ENV","sandbox");vi.stubEnv("CASHFREE_APP_ID","test");vi.stubEnv("CASHFREE_SECRET_KEY","test-secret");vi.stubGlobal("fetch",fetchMock);fetchMock.mockImplementation(async()=>Response.json(remote));});
+afterEach(()=>{vi.unstubAllEnvs();vi.unstubAllGlobals();});
+it("reuses the order UUID as idempotency key and uses only sandbox",async()=>{await createSandboxOrder(input);await createSandboxOrder(input);expect(fetchMock).toHaveBeenCalledTimes(2);for(const [url,options] of fetchMock.mock.calls){expect(url).toBe("https://sandbox.cashfree.com/pg/orders");expect(options.headers["x-idempotency-key"]).toBe(id);}});
+it("rejects incorrect order amounts",async()=>{fetchMock.mockResolvedValueOnce(Response.json({...remote,order_amount:99}));await expect(createSandboxOrder(input)).rejects.toThrow("INVALID_CASHFREE_RESPONSE");});
+it("blocks non-sandbox requests",async()=>{vi.stubEnv("CASHFREE_ENV","production");await expect(createSandboxOrder(input)).rejects.toThrow("CASHFREE_SANDBOX_UNAVAILABLE");expect(fetchMock).not.toHaveBeenCalled();});
+it("authenticates the exact raw webhook body",()=>{const timestamp="1795600800000",body='{"status":"SUCCESS"}';const signature=createHmac("sha256","test-secret").update(timestamp+body).digest("base64");expect(verifySandboxWebhook(body,timestamp,signature)).toBe(true);expect(verifySandboxWebhook(body+" ",timestamp,signature)).toBe(false);expect(verifySandboxWebhook(body,timestamp,"invalid")).toBe(false);});

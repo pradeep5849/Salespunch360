@@ -1,3 +1,4 @@
+import {WebPushButton} from './web-push-button';
 import Link from 'next/link';
 import {WorkspacePageHeader} from '@/components/workspace/workspace-page-header';
 import {orderErrors} from './billing-page-data';
@@ -14,5 +15,6 @@ export default async function Page({searchParams}:{searchParams:Search}){
  return <main className="billing-content"><WorkspacePageHeader title="Billing & Subscription" backHref={backHref}/>
   {orderError&&<section className="billing-card"><p className="form-error">{Object.hasOwn(orderErrors,orderError)?orderErrors[orderError]:orderErrors.ORDER_CREATE_FAILED}</p></section>}
   <section className="billing-card"><div style={hubGrid}><Link href="/workspace/billing/subscription" style={hubButton}>Subscription</Link><Link href="/workspace/billing/actions" style={hubButton}>Billing</Link><Link href="/workspace/billing/history" style={hubButton}>Payment History</Link></div></section>
+  <section className="billing-card"><WebPushButton/></section>
  </main>;
 }

@@ -12,6 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 private const val MANUAL_PAYMENT_MOBILE="9611278818"
 
@@ -75,14 +77,14 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
    "ADD_SALES"->item{if(!data.hasSales)ContentCard("Unavailable","This company edition does not include Sales-team billing.") else if(data.sales?.status!="ACTIVE")ContentCard("Start Sales first","Add Sales Team is for mid-term additions. Use Renewal to start or renew the Sales subscription.") else AddTeamPurchase(data,onQuote,quoteFailed)}
    "ADD_ACCOUNT"->item{if(!data.hasAccount)ContentCard("Unavailable","This company edition does not include Account team billing.") else if(data.isPlus){if(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")AccountIncreasePurchase(data,onQuote,quoteFailed) else ContentCard("Start Plus first","Mid-term Account team additions require an active Plus subscription.")}else AccountPurchase(data,onQuote,quoteFailed)}
    "RENEWAL"->item{if(data.hasSales)SalesPurchase(data,onQuote,quoteFailed) else if(data.hasAccount)AccountPurchase(data,onQuote,quoteFailed) else ContentCard("Unavailable","No renewable subscription is available.")}
-   else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){order->BillingHistoryOrder(order,orderChanged)};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
+   else->{if(data.orders.isEmpty())item{ContentCard("Payment History","No orders yet.")}else items(data.orders,key={it.id}){order->BillingHistoryOrder(order,orderChanged,data.onlinePaymentAvailable)};if(data.hasMoreOrders)item{OutlinedButton(loadMore,enabled=!loadingMore,modifier=Modifier.fillMaxWidth()){Text(if(loadingMore)"Loading…" else "Load More (${data.orderPage} / ${data.orderTotalPages})")}}}
 
   }
  }
 }
 
 private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorded" else runCatching{java.time.OffsetDateTime.parse(value).atZoneSameInstant(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"))+" IST"}.getOrDefault(value)
-@Composable private fun BillingHistoryOrder(order:MobileBillingOrder,orderChanged:()->Unit){
+@Composable private fun BillingHistoryOrder(order:MobileBillingOrder,orderChanged:()->Unit,onlinePaymentAvailable:Boolean){
  val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var confirmCancel by remember(order.id){mutableStateOf(false)};var cancelBusy by remember(order.id){mutableStateOf(false)};var cancelError by remember(order.id){mutableStateOf<String?>(null)}
  if(confirmCancel)AlertDialog(onDismissRequest={if(!cancelBusy)confirmCancel=false},title={Text("Cancel this unpaid order?")},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("Order ${order.id.take(8).uppercase()} · ${periodLabel(order.billingPeriod)} · ${order.currency} ${order.totalAmount}");Text("Admin ${order.adminSeats} · Manager ${order.managerSeats} · Sales ${order.salesSeats} · Telecaller ${order.telecallerSeats?.toString()?:"Not recorded"} · Account packages ${order.accountPackages}");Text("Cancel this request before reviewing a different selection. An already paid order cannot be canceled here.");cancelError?.let{Text(it,color=MaterialTheme.colorScheme.error)}}},confirmButton={Button({cancelBusy=true;cancelError=null;scope.launch{try{api.cancelPendingBillingOrder(order.id);confirmCancel=false;orderChanged()}catch(e:Exception){cancelError=when((e as? ApiException)?.code){"ORDER_NOT_PENDING"->"This order is no longer pending. Refresh Payment History.";"NOT_FOUND"->"This order is no longer available.";else->"The order could not be canceled. Reload its status and try again."}}finally{cancelBusy=false}}},enabled=!cancelBusy){Text(if(cancelBusy)"Canceling…" else "Cancel unpaid order")}},dismissButton={TextButton({confirmCancel=false},enabled=!cancelBusy){Text("Keep order")}})
 
@@ -94,6 +96,8 @@ private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorde
   if(order.provider=="ACCOUNT_PACKAGE")Text("Account packages: ${maxOf(order.accountPackages,order.adminSeats)}") else Text("Admin ${order.adminSeats} · Manager ${order.managerSeats} · Sales ${order.salesSeats} · Account packages ${order.accountPackages}")
   Text("Telecaller target: ${order.telecallerSeats?.toString()?:"Not recorded"}")
   Text("Provider: ${order.provider.replace('_',' ')}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)
+  if(order.status=="PAID" && order.payments.any{it.providerPaymentId.startsWith("cashfree_sandbox_")&&it.status=="CAPTURED"}) CashfreeReceiptButton(order.id)
+  if(order.status=="PENDING" && onlinePaymentAvailable) CashfreePaymentControls(order.id,orderChanged)
   if(order.status=="PENDING")OutlinedButton({cancelError=null;confirmCancel=true},enabled=!cancelBusy){Text("Cancel unpaid order")}
   OutlinedButton({details=!details}){Text(if(details)"Hide payment details" else "Order / payment details")}
   if(details){
@@ -158,4 +162,42 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
   item{TextButton(back){Text("← Back")};Text("Checkout",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Review","${q.kind.replace('_',' ')} · ${periodLabel(q.billingPeriod)}"){q.salesSubtotal?.let{if(it!="0.00")Text("Sales subtotal ₹$it")};q.telecallerSubtotal?.let{if(it!="0.00")Text("Telecaller subtotal ₹$it")};q.accountSubtotal?.let{if(it!="0.00")Text("Account subtotal ₹$it")};if(q.prorated){Text("Only mid-term additions are charged for the remaining time.",style=MaterialTheme.typography.bodySmall,color=SalesMuted);q.coTermEndsAt?.let{Text("Existing expiry stays ${it.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}};Text("Total payable",style=MaterialTheme.typography.bodySmall);Text("₹${q.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}}
   item{ContentCard("Manual Payment","After creating the request, WhatsApp / call $MANUAL_PAYMENT_MOBILE. Super Admin activates the subscription after verification."){error?.let{Text(it,color=MaterialTheme.colorScheme.error)};Button({busy=true;error=null;scope.launch{val key="android_"+java.util.UUID.randomUUID().toString().replace("-","");val request=com.salespunch360.mobile.data.manualOrderFromQuote(q,key);runCatching{api.createManualOrder(request)}.onSuccess{pending=it}.onFailure{pendingConflict=(it as? ApiException)?.code=="PENDING_ORDER_CONFLICT";error=if(pendingConflict)"An unpaid order has a different selection. Review and explicitly cancel it in Payment History before creating a new request." else (it as? ApiException)?.serverMessage?:"Unable to create payment request."};busy=false}},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(if(busy)"Creating…" else "Manual Payment")};if(pendingConflict)OutlinedButton(reviewPending,enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Review unpaid orders")}}}
  }
+}
+
+@Composable private fun CashfreePaymentControls(orderId:String,orderChanged:()->Unit){
+ val context=LocalContext.current
+ val api=remember{ApiClient(SecureSession(context))}
+ val scope=rememberCoroutineScope()
+ var busy by remember(orderId){mutableStateOf(false)}
+ var message by remember(orderId){mutableStateOf<String?>(null)}
+ Text("Sandbox test payment — no real money is charged.")
+ Button({busy=true;message=null;scope.launch{
+  try{
+   val session=api.cashfreeCheckout(orderId,"start")["paymentSessionId"]?.jsonPrimitive?.contentOrNull ?: error("Missing session")
+   val url=android.net.Uri.parse("https://www.salespunch360.com/payment/sandbox").buildUpon().encodedFragment("session="+android.net.Uri.encode(session)).build()
+   context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,url))
+  }catch(e:Exception){message="Unable to open test checkout."}finally{busy=false}
+ }},enabled=!busy){Text("Pay Online – Cashfree")}
+ OutlinedButton({busy=true;scope.launch{
+  try{val verified=api.cashfreeCheckout(orderId,"verify")["verified"]?.jsonPrimitive?.content=="true";message=if(verified)"Sandbox payment verified." else "Payment not confirmed yet.";if(verified)orderChanged()}
+  catch(e:Exception){message="Unable to check payment."}finally{busy=false}
+ }},enabled=!busy){Text("Check payment status")}
+ message?.let{Text(it)}
+}
+
+@Composable private fun CashfreeReceiptButton(orderId:String){
+ val context=LocalContext.current
+ val api=remember{ApiClient(SecureSession(context))}
+ val scope=rememberCoroutineScope()
+ var busy by remember{mutableStateOf(false)}
+ var message by remember{mutableStateOf<String?>(null)}
+ val launcher=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/pdf")){uri->
+  if(uri!=null){busy=true;scope.launch{try{
+   val bytes=api.cashfreeReceipt(orderId)
+   kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}?:error("Unable to save receipt")}
+   message="Test receipt saved."
+  }catch(e:Exception){message="Unable to save receipt. Try again."}finally{busy=false}}}
+ }
+ OutlinedButton({launcher.launch("sandbox-receipt-"+orderId+".pdf")},enabled=!busy){Text(if(busy)"Downloading..." else "Download test receipt (PDF)")}
+ message?.let{Text(it)}
 }

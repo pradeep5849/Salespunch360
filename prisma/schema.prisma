@@ -742,6 +742,7 @@ enum ProjectAuditEventType {
 }
 
 model Company {
+  webPushDevices WebPushDevice[]
   saleLifecycleSnapshots SaleLifecycleSnapshot[]
   saleReturnRevisions SaleReturnRevision[]
   reportFavourites AccountReportFavourite[]
@@ -860,6 +861,7 @@ model Company {
 }
 
 model User {
+  webPushDevices WebPushDevice[]
   saleReturnRevisions SaleReturnRevision[] @relation("SaleReturnRevisionCreator")
   reportFavourites AccountReportFavourite[]
   loanOperations LoanOperation[] @relation("LoanOperationCreator")
@@ -1334,6 +1336,7 @@ model LocationPoint {
 }
 
 model Session {
+  webPushDevices WebPushDevice[]
   id             String   @id @default(uuid()) @db.Uuid
   userId         String   @db.Uuid
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
@@ -3916,4 +3919,20 @@ model SaleLifecycleSnapshot {
   @@index([companyId,state,invoiceId])
   @@index([companyId,replacementId])
   @@map("sale_lifecycle_snapshots")
+}
+
+model WebPushDevice {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  userId String @db.Uuid
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  sessionId String @db.Uuid
+  session Session @relation(fields:[sessionId], references:[id], onDelete:Cascade)
+  fcmToken String @unique @db.VarChar(4096)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId,userId])
+  @@index([sessionId])
+  @@map("web_push_devices")
 }

@@ -40,11 +40,18 @@ export async function processFieldJobs(limit=10){
    }else if(job.kind==='PUSH'){
     const event=eventSchema.parse(job.payload);
     if(await db.user.findFirst({where:{id:event.actorUserId,companyId:job.companyId},select:{id:true}}))await deliverFieldEvent(event,new Date(),true,job.id);
+   }else if(job.kind==='BILLING_EMAIL'||job.kind==='BILLING_PUSH'){
+    const {orderId}=z.object({orderId:z.string().uuid()}).parse(job.payload);
+    const payment=await db.paymentTransaction.findFirst({where:{orderId,companyId:job.companyId,provider:"CASHFREE_SANDBOX",status:"CAPTURED"},select:{providerPaymentId:true}});
+    if(payment){
+     if(job.kind==='BILLING_EMAIL'){const {notifyCashfreePaymentCaptured}=await import('@/lib/billing/cashfree-payment-email');await notifyCashfreePaymentCaptured(orderId,payment.providerPaymentId);}
+     else {const {notifyCashfreePush}=await import('@/lib/billing/cashfree-push');await notifyCashfreePush(job.companyId,orderId);}
+    }
    }else throw new Error('INVALID_JOB_TYPE');
    await db.fieldJob.updateMany({where:{id:job.id,leaseToken},data:{completedAt:new Date(),lockedUntil:null,leaseToken:null,lastError:null}});completed++;
   }catch(error){
    const message=error instanceof Error?error.message:'DELIVERY_FAILED';
-   await db.fieldJob.updateMany({where:{id:job.id,leaseToken},data:{attempts:{increment:1},lastError:message.slice(0,500),lockedUntil:null,leaseToken:null,nextAttemptAt:new Date(Date.now()+Math.min(3600000,15000*2**Math.min(job.attempts,8)))}});
+   await db.fieldJob.updateMany({where:{id:job.id,leaseToken},data:{attempts:{increment:1},lastError:message.slice(0,80),lockedUntil:null,leaseToken:null,nextAttemptAt:new Date(Date.now()+Math.min(3600000,15000*2**Math.min(job.attempts,8)))}});
   }
  }
  return{processed:jobs.length,completed};

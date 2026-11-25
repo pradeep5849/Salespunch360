@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 const excluded = new Set([
   "User",
   "PushDevice",
+  "WebPushDevice", // Session-bound credentials must never be restored from business backups.
   "CompanySubscription",
   "BillingOrder",
   "PaymentTransaction",
