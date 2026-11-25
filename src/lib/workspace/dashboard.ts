@@ -6,15 +6,15 @@ import{indiaDateText,parseIndiaBusinessDate}from"@/lib/follow-up-tasks/date";
 import {isTelecallerDesignation} from "@/lib/telecalling/policy";
 
 export type DashboardActor={id:string;name:string;email:string;role:Role;salesRole:SalesRole;managerType:ManagerType|null;companyId:string};
-const isAdmin=(actor:DashboardActor)=>actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN";
-const isManager=(actor:DashboardActor)=>actor.salesRole==="MANAGER";
-const isSales=(actor:DashboardActor)=>actor.salesRole==="SALES";
-export function dashboardEmployeeWhere(actor:DashboardActor){
+const isAdmin=(actor:Pick<DashboardActor,"id"|"companyId"|"salesRole">)=>actor.salesRole==="PRIMARY_ADMIN"||actor.salesRole==="ADMIN";
+const isManager=(actor:Pick<DashboardActor,"id"|"companyId"|"salesRole">)=>actor.salesRole==="MANAGER";
+const isSales=(actor:Pick<DashboardActor,"id"|"companyId"|"salesRole">)=>actor.salesRole==="SALES";
+export function dashboardEmployeeWhere(actor:Pick<DashboardActor,"id"|"companyId"|"salesRole">){
  if(isAdmin(actor))return{companyId:actor.companyId,salesRole:{in:["MANAGER","SALES"] as ("MANAGER"|"SALES")[]},salesAccessActive:true,isActive:true};
  if(isManager(actor))return{companyId:actor.companyId,salesRole:"SALES" as const,salesAccessActive:true,managerId:actor.id,isActive:true};
  return{companyId:actor.companyId,id:actor.id,salesRole:"SALES" as const,salesAccessActive:true,isActive:true};
 }
-export function dashboardTeamCountWhere(actor:DashboardActor){
+export function dashboardTeamCountWhere(actor:Pick<DashboardActor,"id"|"companyId"|"salesRole">){
  if(!isAdmin(actor))return dashboardEmployeeWhere(actor);
  return {companyId:actor.companyId,isActive:true,salesRole:{in:["MANAGER","SALES"] as ("MANAGER"|"SALES")[]},OR:[{salesAccessActive:true},{salesRole:"SALES" as const,designation:{equals:"Telecaller",mode:"insensitive" as const}}]};
 }
