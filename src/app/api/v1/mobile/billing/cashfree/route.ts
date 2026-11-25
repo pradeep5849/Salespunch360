@@ -6,14 +6,14 @@ const schema = z.object({ orderId: z.string().uuid(), action: z.enum(["start", "
 export async function POST(request: Request) {
   try {
     const actor = await authenticateMobileSalesToken(request.headers.get("authorization"));
-    if (!actor) return mobileUnauthorized();
+    if (!actor) return mobileJson({error:"UNAUTHORIZED"},401);
     if (!actor.companyId || actor.salesRole !== "PRIMARY_ADMIN" || !mobileCan(actor, "SALES_BILLING")) return mobileJson({ error: "FORBIDDEN" }, 403);
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return mobileJson({ error: "INVALID_INPUT" }, 400);
     const identity = { id: actor.id, companyId: actor.companyId };
     const result = parsed.data.action === "start" ? await startCashfreeCheckout(identity, parsed.data.orderId) : await inspectCashfreeCheckout(identity, parsed.data.orderId);
     return mobileJson(result);
-  } catch {
-    return mobileJson({ error: "CHECKOUT_FAILED" }, 400);
+  } catch (error) {
+    return mobileUnauthorized(error) ?? mobileJson({ error: "CHECKOUT_FAILED" }, 400);
   }
 }
