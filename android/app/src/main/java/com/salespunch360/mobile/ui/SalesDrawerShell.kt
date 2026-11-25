@@ -220,7 +220,7 @@ fun SalesDrawerAuthenticatedApp(
                     }
                 )
                 !telecaller && route == "Targets" -> TargetsScreen(MobileRole.SALES)
-                !telecaller && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
+                (!telecaller || route == "Report:attendance") && route.startsWith("Report:") -> SalesReportScreen(type = route.substringAfter(':'))
                 route == "Company Details" -> ReadOnlyCompanyDetailsScreen()
                 route == "Change Password" -> ChangePasswordScreen()
                 else -> SalesDrawerHome(data, ::navigate, ::openRecentVisit)
