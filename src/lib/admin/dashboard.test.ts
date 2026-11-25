@@ -10,3 +10,5 @@ describe("Super Admin Company data", () => {
   it("denies dashboard data before any query", async () => { mocks.auth.mockRejectedValue(new Error("Not authorized")); await expect(getAdminDashboard()).rejects.toThrow("Not authorized"); expect(mocks.group).not.toHaveBeenCalled(); expect(mocks.companies).not.toHaveBeenCalled(); });
   it("lists Companies with one user-count query and UUID identity", async () => { mocks.companies.mockResolvedValue([{ ...company, _count: { users: 4 } }]); const result = await getAdminCompanies(); expect(result[0]).toMatchObject({ id: company.id, _count: { users: 4 } }); expect(mocks.companies.mock.calls[0][0].select).not.toHaveProperty("contactEmail"); });
 });
+
+it("excludes sandbox captures from real payment counts and revenue", async () => { await getAdminDashboard(); expect(mocks.payments).toHaveBeenCalledWith({where:{status:"CAPTURED",provider:{not:"CASHFREE_SANDBOX"}},_count:{_all:true},_sum:{amount:true}}); });
