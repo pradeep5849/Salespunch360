@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { logEvent } from "@/lib/logging";
 import { generateFollowUpReminders } from "@/lib/sales-notifications/service";
 
+async function generateDailyReminders(now: Date) {
+  await generateFollowUpReminders(now);
+  const { generateBillingRenewalReminders } = await import("@/lib/billing/renewal-reminders");
+  await generateBillingRenewalReminders(now);
+}
+
 const jobName = "daily-follow-up-reminders";
 const leaseMs = 15 * 60_000;
 
@@ -32,7 +38,7 @@ export async function runHostedFollowUpReminders(
   now = new Date(),
   {
     client = db,
-    generate = generateFollowUpReminders,
+    generate = generateDailyReminders,
   }: {
     client?: Pick<typeof db, "hostedJobRun">;
     generate?: (now: Date) => Promise<unknown>;
