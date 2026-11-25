@@ -1,4 +1,5 @@
 import "server-only";
+import { renderCashfreeReceipt } from "./cashfree-receipt";
 import { db } from "@/lib/db";
 import { sendTransactionalEmail } from "@/lib/email/mailer";
 import { env } from "@/lib/env";
@@ -25,6 +26,8 @@ export async function notifyCashfreePaymentCaptured(orderId:string, paymentRefer
     ...(subscription ? ["Valid from: "+subscription.startsAt.toISOString(),"Valid until: "+subscription.endsAt.toISOString()] : []),
     "Billing: "+new URL("/workspace/billing",env.APP_URL).toString()
   ].join("\n");
-  const results = await Promise.allSettled(recipients.map(to=>sendTransactionalEmail(to,"[SANDBOX] SalesPunch360 payment successful",body)));
+  const pdf = await renderCashfreeReceipt(order.id,order.companyId);
+  const attachment = pdf ? {filename:"sandbox-receipt-"+order.id+".pdf",content:Buffer.from(pdf),contentType:"application/pdf"} : undefined;
+  const results = await Promise.allSettled(recipients.map(to=>sendTransactionalEmail(to,"[SANDBOX] SalesPunch360 payment successful",body,attachment)));
   if (results.some(r=>r.status==="rejected")) throw new Error("CASHFREE_NOTIFICATION_SEND_FAILED");
 }
