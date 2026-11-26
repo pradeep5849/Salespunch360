@@ -8,6 +8,7 @@ const excluded = new Set([
   "WebPushDevice", // Session-bound credentials must never be restored from business backups.
   "CompanySubscription",
   "BillingOrder",
+  "BillingCart", // Current subscription checkout state must not be rolled back by business-data restore.
   "PaymentTransaction",
   "BillingAuditEvent",
   "PendingStorageDeletion",
