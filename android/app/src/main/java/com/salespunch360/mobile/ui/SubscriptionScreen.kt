@@ -16,6 +16,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.decodeFromString
 
@@ -33,14 +37,14 @@ import kotlinx.serialization.decodeFromString
 }
 
 @Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit,loadingMore:Boolean,loadMore:()->Unit,initialPage:String?,reviewPending:()->Unit){
- var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(initialPage)}
- if(checkout!=null){CheckoutCard(checkout!!,onlinePaymentAvailable=data.onlinePaymentAvailable,back={checkout=null;reload()},reviewPending={checkout=null;reviewPending()});return}
+ var fromCart by remember{mutableStateOf(false)};var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(initialPage)}
+ if(checkout!=null){CheckoutCard(checkout!!,fromCart=fromCart,saveComplete={checkout=null;page="CART"},onlinePaymentAvailable=data.onlinePaymentAvailable,back={checkout=null;reload()},reviewPending={checkout=null;reviewPending()});return}
  when(page){
-  "CART"->{SavedBillingCart({page=null},{checkout=it});return}
+  "CART"->{SavedBillingCart({page=null},{fromCart=true;checkout=it});return}
   "SUBSCRIPTION"->{SubscriptionSummaryPage(data){page=null};return}
   "BILLING"->{BillingActionsPage(data,{page=null}){page=it};return}
   null->Unit
-  else->{SubscriptionActionPage(data,page!!,{page="BILLING"},{checkout=it},loadingMore,loadMore,reload);return}
+  else->{SubscriptionActionPage(data,page!!,{page="BILLING"},{fromCart=false;checkout=it},loadingMore,loadMore,reload);return}
  }
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=14.dp),contentPadding=PaddingValues(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{Text("Billing & Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
@@ -159,13 +163,14 @@ private fun billingHistoryTime(value:String?):String=if(value==null)"Not recorde
 private fun packageContents(count:Int)="$count package${if(count==1)"" else "s"} = $count Account Admin, $count Accountant, $count Project Manager, $count Data Entry"
 private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY"->"Yearly";else->value.replace('_',' ')}
 
-@Composable private fun CheckoutCard(q:BillingQuote,onlinePaymentAvailable:Boolean,back:()->Unit,reviewPending:()->Unit){
+@Composable private fun CheckoutCard(q:BillingQuote,fromCart:Boolean,saveComplete:()->Unit,onlinePaymentAvailable:Boolean,back:()->Unit,reviewPending:()->Unit){
  val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var pending by remember{mutableStateOf<ManualOrderResponse?>(null)};var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)};var pendingConflict by remember{mutableStateOf(false)}
  pending?.let{order->LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Text("Payment Pending",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Online Payment","Order ref ${order.id.take(8).uppercase()}"){Text("₹${order.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);CashfreePaymentControls(order.id,back);error?.let{Text(it,color=MaterialTheme.colorScheme.error)}};Button(back,Modifier.fillMaxWidth()){Text("Back")}}};return}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{TextButton(back){Text("← Back")};Text("Checkout",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Review","${q.kind.replace('_',' ')} · ${periodLabel(q.billingPeriod)}"){q.salesSubtotal?.let{if(it!="0.00")Text("Sales subtotal ₹$it")};q.telecallerSubtotal?.let{if(it!="0.00")Text("Telecaller subtotal ₹$it")};q.accountSubtotal?.let{if(it!="0.00")Text("Account subtotal ₹$it")};if(q.prorated){Text("Only mid-term additions are charged for the remaining time.",style=MaterialTheme.typography.bodySmall,color=SalesMuted);q.coTermEndsAt?.let{Text("Existing expiry stays ${it.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}};Text("Total payable",style=MaterialTheme.typography.bodySmall);Text("₹${q.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}}
   item{error?.let{Text(it,color=MaterialTheme.colorScheme.error)};if(pendingConflict)OutlinedButton(reviewPending){Text("Review unpaid orders")}} 
-  if(onlinePaymentAvailable)item{ContentCard("Online Payment","Cashfree sandbox — no real money is charged."){Button({busy=true;error=null;scope.launch{try{val key="android_"+java.util.UUID.randomUUID().toString().replace("-","");val order=api.createManualOrder(com.salespunch360.mobile.data.manualOrderFromQuote(q,key).copy(paymentMethod="ONLINE"));pending=order;val session=api.cashfreeCheckout(order.id,"start")["paymentSessionId"]?.jsonPrimitive?.contentOrNull ?: error("Missing session");val url=android.net.Uri.parse("https://www.salespunch360.com/payment/sandbox").buildUpon().encodedFragment("session="+android.net.Uri.encode(session)).build();context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,url))}catch(e:Exception){pendingConflict=(e as? ApiException)?.code=="PENDING_ORDER_CONFLICT";error=(e as? ApiException)?.serverMessage?:"Unable to open online payment. Retry or review Payment History."}finally{busy=false}}},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Pay Online – Cashfree")}}}
+  if(!fromCart)item{Button({busy=true;error=null;scope.launch{try{val cart=api.billingCart();val selection=buildJsonObject{put("kind",q.kind);put("billingPeriod",q.billingPeriod);q.purchaseMode?.let{put("purchaseMode",it)};put("adminSeats",q.adminSeats);put("managerSeats",q.managerSeats);put("salesSeats",q.salesSeats);put("telecallerSeats",q.telecallerSeats);put("accountPackages",q.accountPackages);q.quantity?.let{put("quantity",it)};put("retainAdminUserIds",JsonArray(q.retainAdminUserIds.map{JsonPrimitive(it)}));put("retainManagerUserIds",JsonArray(q.retainManagerUserIds.map{JsonPrimitive(it)}));put("retainSalesUserIds",JsonArray(q.retainSalesUserIds.map{JsonPrimitive(it)}))};api.updateBillingCart(cart["revision"]!!.jsonPrimitive.int,selection);saveComplete()}catch(e:Exception){error="Unable to save cart. Please retry."}finally{busy=false}}},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Add to Cart")}}
+  if(fromCart&&onlinePaymentAvailable)item{ContentCard("Online Payment","Cashfree sandbox — no real money is charged."){Button({busy=true;error=null;scope.launch{try{val key="android_"+java.util.UUID.randomUUID().toString().replace("-","");val order=api.createManualOrder(com.salespunch360.mobile.data.manualOrderFromQuote(q,key).copy(paymentMethod="ONLINE"));pending=order;val session=api.cashfreeCheckout(order.id,"start")["paymentSessionId"]?.jsonPrimitive?.contentOrNull ?: error("Missing session");val url=android.net.Uri.parse("https://www.salespunch360.com/payment/sandbox").buildUpon().encodedFragment("session="+android.net.Uri.encode(session)).build();context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,url))}catch(e:Exception){pendingConflict=(e as? ApiException)?.code=="PENDING_ORDER_CONFLICT";error=(e as? ApiException)?.serverMessage?:"Unable to open online payment. Retry or review Payment History."}finally{busy=false}}},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text("Pay Online – Cashfree")}}}
  }
 }
 
