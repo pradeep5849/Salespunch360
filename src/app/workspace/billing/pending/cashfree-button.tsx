@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Script from "next/script";
 import styles from "../cart/cart.module.css";
 
@@ -16,7 +16,7 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
   const [busy, setBusy] = useState<"start" | "verify" | null>(null);
   const [message, setMessage] = useState("");
   const attempted = useRef(false);
-  useEffect(() => { if (attempted.current || !new URLSearchParams(window.location.search).has("paymentDocument")) return; const q=new URLSearchParams(window.location.search); if(q.get("returned")==="1"){attempted.current=true;void run("verify");} else if(ready && q.get("launch")==="1"){attempted.current=true;const url=new URL(window.location.href);url.searchParams.delete("launch");window.history.replaceState(null,"",url.href);void run("start");} },[ready]);
+
   useEffect(() => {
     const report = (event: string) => { void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{}); };
     const seen = new Set<string>();
@@ -24,8 +24,8 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
     document.addEventListener("securitypolicyviolation",listener);
     return ()=>document.removeEventListener("securitypolicyviolation",listener);
   },[orderId]);
-  function diagnostic(event:string){void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{});}
-  async function run(action: "start" | "verify") {
+  const diagnostic=useCallback((event:string)=>{void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{});},[orderId]);
+  const run=useCallback(async (action: "start" | "verify") => {
     setBusy(action);
     setMessage("");
     try {
@@ -48,7 +48,8 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
       if (action === "start") { diagnostic("CHECKOUT_ERROR"); sessionStorage.removeItem("cashfree-start:"+orderId); }
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
     } finally { setBusy(null); }
-  }
+  },[orderId,diagnostic]);
+  useEffect(() => { if (attempted.current || !new URLSearchParams(window.location.search).has("paymentDocument")) return; const q=new URLSearchParams(window.location.search); if(q.get("returned")==="1"){attempted.current=true;void run("verify");} else if(ready && q.get("launch")==="1"){attempted.current=true;const url=new URL(window.location.href);url.searchParams.delete("launch");window.history.replaceState(null,"",url.href);void run("start");} },[ready,run]);
   return <section className={styles.payment} aria-label="Online payment">
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY");  }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
