@@ -168,7 +168,8 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
 @Composable private fun CheckoutCard(q:BillingQuote,fromCart:Boolean,cartRevision:Int,saveComplete:()->Unit,onlinePaymentAvailable:Boolean,back:()->Unit,reviewPending:()->Unit){
  val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope();var pending by remember{mutableStateOf<OnlineOrderResponse?>(null)};var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)};var pendingConflict by remember{mutableStateOf(false)}
  if(fromCart){LaunchedEffect(q,cartRevision){if(onlinePaymentAvailable){busy=true;error=null;scope.launch{try{val key="android_"+java.util.UUID.randomUUID().toString().replace("-","");val order=api.createOnlineOrder(com.salespunch360.mobile.data.onlineOrderFromQuote(q,key),cartRevision);pending=order;val session=api.cashfreeCheckout(order.id,"start")["paymentSessionId"]?.jsonPrimitive?.contentOrNull ?: error("Missing session");val url=android.net.Uri.parse("https://www.salespunch360.com/payment/sandbox").buildUpon().encodedFragment("session="+android.net.Uri.encode(session)).build();context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,url))}catch(e:Exception){pendingConflict=(e as? ApiException)?.code=="PENDING_ORDER_CONFLICT";error=(e as? ApiException)?.serverMessage?:"Unable to open online payment. Retry or review Payment History."}finally{busy=false}}}else error="Online payment is unavailable."}}
- pending?.let{order->LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){item{Text("Payment Pending",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Online Payment","Order ref ${order.id.take(8).uppercase()}"){Text("₹${order.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);CashfreePaymentControls(order.id,back);error?.let{Text(it,color=MaterialTheme.colorScheme.error)}};Button(back,Modifier.fillMaxWidth()){Text("Back")}}};return}
+ pending?.let{order->AndroidPaymentResult(order,busy,error,back);return}
+
  if(fromCart){Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){if(busy)CircularProgressIndicator();Text(if(busy)"Opening secure payment…" else error?:"Preparing payment…");if(pendingConflict)OutlinedButton(reviewPending){Text("Review unpaid orders")};TextButton(back){Text("Back to billing")}};return}
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
   item{TextButton(back){Text("← Back")};Text(if(fromCart)"Checkout" else "Review subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);ContentCard("Review","${q.kind.replace('_',' ')} · ${periodLabel(q.billingPeriod)}"){q.salesSubtotal?.let{if(it!="0.00")Text("Sales subtotal ₹$it")};q.telecallerSubtotal?.let{if(it!="0.00")Text("Telecaller subtotal ₹$it")};q.accountSubtotal?.let{if(it!="0.00")Text("Account subtotal ₹$it")};if(q.prorated){Text("Only mid-term additions are charged for the remaining time.",style=MaterialTheme.typography.bodySmall,color=SalesMuted);q.coTermEndsAt?.let{Text("Existing expiry stays ${it.take(10)}",style=MaterialTheme.typography.bodySmall,color=SalesMuted)}};Text("Total payable",style=MaterialTheme.typography.bodySmall);Text("₹${q.totalAmount}",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}}
@@ -230,5 +231,47 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
  if(selection!=savedSelection)Text("Save your changes before checkout.");Button({checkout(q,revision)},enabled=selection==savedSelection&&!busy,modifier=Modifier.fillMaxWidth()){Text("Proceed to Payment")}
  OutlinedButton({busy=true;scope.launch{try{val cleared=api.updateBillingCart(revision,JsonNull);revision=cleared["revision"]!!.jsonPrimitive.int;selection=null;savedSelection=null;quote=null}catch(e:Exception){error="Unable to clear cart. Reopen and try again."}finally{busy=false}}}){Text("Remove selection")}
  };error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+ }
+}
+
+@Composable private fun AndroidPaymentResult(order:OnlineOrderResponse,opening:Boolean,launchError:String?,back:()->Unit){
+ val context=LocalContext.current
+ val api=remember{ApiClient(SecureSession(context))}
+ var result by remember(order.id){mutableStateOf<JsonObject?>(null)}
+ var checking by remember(order.id){mutableStateOf(false)}
+ var message by remember(order.id){mutableStateOf<String?>(null)}
+ var retry by remember(order.id){mutableStateOf(0)}
+ LaunchedEffect(order.id,opening,retry){
+  if(!opening){
+   checking=true
+   try{
+    repeat(30){
+     val response=runCatching{api.cashfreeCheckout(order.id,"verify")}.getOrNull()
+     if(response?.get("verified")?.jsonPrimitive?.content=="true"){result=response;return@LaunchedEffect}
+     kotlinx.coroutines.delay(3000)
+    }
+    message="Payment not confirmed yet. You can check again or recover it from Payment History."
+   }finally{checking=false}
+  }
+ }
+ LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+  item{
+   val verified=result
+   Text(if(verified!=null)"Payment successful" else if(opening)"Opening secure payment…" else "Verifying payment",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+   if(verified!=null){
+    Text("₹"+(verified["amount"]?.jsonPrimitive?.contentOrNull?:order.totalAmount),style=MaterialTheme.typography.headlineMedium)
+    Text("Order ID: "+order.id)
+    Text("Payment ID: "+(verified["paymentId"]?.jsonPrimitive?.contentOrNull?:""))
+    Text("Payment date: "+(verified["capturedAt"]?.jsonPrimitive?.contentOrNull?:""))
+    Text("Paid · Subscription activated")
+    CashfreeReceiptButton(order.id)
+   }else{
+    if(opening||checking)CircularProgressIndicator()
+    launchError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+    message?.let{Text(it)}
+    if(!opening&&!checking)OutlinedButton({retry++}){Text("Check payment status")}
+   }
+   Button(back,Modifier.fillMaxWidth()){Text("Back to Billing & Subscription")}
+  }
  }
 }
