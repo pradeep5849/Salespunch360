@@ -2,7 +2,7 @@ import {adminOrderQuery,ADMIN_ORDER_PAGE_SIZE} from "./admin-order-query";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { requireGlobalSuperAdmin, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import { requireGlobalSuperAdminForMutation, requireGlobalSuperAdmin, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { TELECALLER_PRICE_SCHEDULE_INR, type TelecallerBillingPeriod } from "./sales-pricing";
 
 export const TELECALLER_ORDER_PROVIDER = "TELECALLER_PACKAGE" as const;
