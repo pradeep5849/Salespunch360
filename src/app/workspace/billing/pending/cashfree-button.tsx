@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Script from "next/script";
 
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
@@ -8,6 +8,14 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    const report = (event: string) => { void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{}); };
+    const seen = new Set<string>();
+    const listener = (e: SecurityPolicyViolationEvent) => { const directive=e.effectiveDirective; const event=directive.startsWith("frame")?"CSP_FRAME":directive.startsWith("script")?"CSP_SCRIPT":directive.startsWith("connect")?"CSP_CONNECT":"CSP_OTHER"; if(!seen.has(event)){seen.add(event);report(event);} };
+    document.addEventListener("securitypolicyviolation",listener);
+    return ()=>document.removeEventListener("securitypolicyviolation",listener);
+  },[orderId]);
+  function diagnostic(event:string){void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{});}
   async function run(action: "start" | "verify") {
     setBusy(true);
     setMessage("");
@@ -21,16 +29,18 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
       } else {
         const factory = (window as unknown as { Cashfree?: CashfreeFactory }).Cashfree;
         if (!factory || typeof data.paymentSessionId !== "string") throw new Error("Checkout is unavailable.");
+        diagnostic("CHECKOUT_START");
         const result = await factory({ mode: "sandbox" }).checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
+        diagnostic("CHECKOUT_RETURN");
         if (result?.error) throw new Error(result.error.message || "Cashfree checkout could not open.");
       }
     } catch (error) {
-      if (action === "start") sessionStorage.removeItem("cashfree-start:"+orderId);
+      if (action === "start") { diagnostic("CHECKOUT_ERROR"); sessionStorage.removeItem("cashfree-start:"+orderId); }
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
     } finally { setBusy(false); }
   }
   return <section aria-label="Online payment">
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(true); if(autoStart && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => setMessage("Payment SDK could not load.")}/>
+    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(true); diagnostic("SDK_READY"); if(autoStart && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
     <button className="button-link" type="button" disabled={!ready || busy} onClick={() => void run("start")}>Pay Online – Cashfree</button>
     <button className="button-link" type="button" disabled={busy} onClick={() => void run("verify")}>Check payment status</button>
