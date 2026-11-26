@@ -91,9 +91,9 @@ export async function mobileBillingQuote(p:MobilePrincipal,raw:unknown){
  return{purchaseMode:purchaseMode??undefined,kind:plus?"PLUS":"SALES",billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,telecallerSeats,accountPackages,retainAdminUserIds:ids("retainAdminUserIds"),retainManagerUserIds:ids("retainManagerUserIds"),retainSalesUserIds:ids("retainSalesUserIds"),totalAmount:base.subtotal.plus(telecaller.subtotal).toFixed(2),salesSubtotal:base.salesSubtotal.toFixed(2),telecallerSubtotal:telecaller.subtotal.toFixed(2),accountSubtotal:base.accountSubtotal.toFixed(2),prorated:base.prorated||telecaller.prorated,coTermEndsAt:base.coTermEndsAt??telecaller.coTermEndsAt,currency:"INR"};
 }
 
-export async function mobileManualOrder(p:MobilePrincipal,raw:unknown){
+export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown){
  access(p);const input=(raw&&typeof raw==="object"?raw:{}) as Record<string,unknown>;
- if(input.paymentMethod!=="MANUAL")throw new MobileCompanyError("INVALID_PAYMENT_METHOD");
+ if(!(process.env.CASHFREE_ENV==="sandbox"&&process.env.CASHFREE_APP_ID&&process.env.CASHFREE_SECRET_KEY))throw new MobileCompanyError("ONLINE_PAYMENT_UNAVAILABLE",503);
  if(input.kind==="ACCOUNT_PACKAGE"){
   const quantity=Number(input.quantity),period=input.billingPeriod;
   if(period!=="SIX_MONTH"&&period!=="YEARLY")throw new MobileCompanyError("INVALID_INPUT");
