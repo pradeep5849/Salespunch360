@@ -1,7 +1,7 @@
 "use server";
 import {requirePermissionForMutation} from "@/lib/auth/authorization";
 import {readBillingCart,cartSelectionSchema,associateCartOrder} from "@/lib/billing/cart";
-import {PendingOrderConflict} from '@/lib/billing/pending-order-intent';import {cancelCurrentCompanyPendingOrder} from '@/lib/billing/service';import {revalidatePath} from 'next/cache';import {redirect} from 'next/navigation';import {changePrice,createAccountPackageOrder,manualOverride} from '@/lib/billing/service';import {createUnifiedSalesTeamOrder,confirmUnifiedManualPayment} from '@/lib/billing/unified-sales-team';import {notifyManualPaymentOrderApproved} from '@/lib/billing/manual-payment-email';import {logBillingFailure} from '@/lib/billing/diagnostics';import {mutationGuard} from '@/lib/security/request';
+import {PendingOrderConflict} from '@/lib/billing/pending-order-intent';import {cancelCurrentCompanyPendingOrder} from '@/lib/billing/service';import {revalidatePath} from 'next/cache';import {redirect} from 'next/navigation';import {changePrice,createAccountPackageOrder,manualOverride} from '@/lib/billing/service';import {createUnifiedSalesTeamOrder} from '@/lib/billing/unified-sales-team';import {logBillingFailure} from '@/lib/billing/diagnostics';import {mutationGuard} from '@/lib/security/request';
 const knownOrderErrors=new Set(['SEATS_BELOW_USAGE','TELECALLER_SEATS_BELOW_USAGE','INVALID_SEAT_SELECTION','SEAT_SELECTION_REQUIRED','SEAT_REDUCTION_SELECTION_REQUIRED','PRICING_UNAVAILABLE','MANAGERS_DISABLED','PLUS_ACCOUNT_PACKAGE_REQUIRED','ACCOUNT_PACKAGE_NOT_ALLOWED','RATE_LIMITED','UNTRUSTED_ORIGIN','INVALID_INPUT','INVALID_ACCOUNT_PACKAGE_QUANTITY','INVALID_BILLING_PERIOD','ADDITION_REQUIRES_ACTIVE_TERM','INVALID_ADDITION_SELECTION']);
 const orderErrorCode=(error:unknown)=>{const code=error instanceof Error?error.message:'ORDER_CREATE_FAILED';return knownOrderErrors.has(code)?code:'ORDER_CREATE_FAILED'};
 
@@ -11,7 +11,6 @@ export async function createAccountPackageOrderAction(form:FormData){let orderId
 export async function changePriceAction(form:FormData){await mutationGuard('pricing-change',10);await changePrice({role:form.get('role'),period:form.get('period'),amount:form.get('amount'),currency:'INR'});revalidatePath('/admin/pricing')}
 export async function overrideSubscriptionAction(form:FormData){await mutationGuard('billing-override',10);await manualOverride({companyId:form.get('companyId'),status:form.get('status'),billingPeriod:form.get('billingPeriod'),adminSeats:form.get('adminSeats'),managerSeats:form.get('managerSeats'),salesSeats:form.get('salesSeats'),endsAt:new Date(String(form.get('endsAt'))).toISOString(),reason:form.get('reason')});revalidatePath('/admin/billing')}
 
-export async function confirmManualPaymentAction(form:FormData){await mutationGuard('manual-payment-confirm',10);const reference=String(form.get('reference')??''),order=await confirmUnifiedManualPayment(String(form.get('orderId')??''),reference);await notifyManualPaymentOrderApproved(order.id,reference);revalidatePath('/admin/billing');revalidatePath('/workspace/billing')}
 
 export async function cancelPendingOrderAction(form:FormData){
  await mutationGuard('billing-order-cancel',10);
