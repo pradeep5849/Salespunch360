@@ -1,3 +1,4 @@
+import {bindCartOrderInTx} from "./cart";
 import {PendingOrderConflict} from "./pending-order-intent";
 import {recordedPurchasePurpose,type PurchasePurpose} from "./purchase-purpose";
 import {Prisma,type BillingOrder} from "@prisma/client";
@@ -46,14 +47,14 @@ export async function attachTelecallerTargetInTx(tx:Prisma.TransactionClient,ord
  return updated;
 }
 
-export async function createUnifiedSalesTeamOrder(raw:unknown){
+export async function createUnifiedSalesTeamOrder(raw:unknown,cartRevision?:number){
  const target=parsedTarget(raw);
- return createBillingOrder(raw,(tx,order)=>attachTelecallerTargetInTx(tx,order,target));
+ return createBillingOrder(raw,async(tx,order)=>{if(cartRevision!==undefined)await bindCartOrderInTx(tx,order.companyId,cartRevision,order.id);return attachTelecallerTargetInTx(tx,order,target)});
 }
 
-export async function createUnifiedMobileSalesTeamOrder(actor:{id:string;companyId:string},raw:unknown){
+export async function createUnifiedMobileSalesTeamOrder(actor:{id:string;companyId:string},raw:unknown,cartRevision?:number){
  const target=parsedTarget(raw);
- return createMobileBillingOrder(actor,raw,(tx,order)=>attachTelecallerTargetInTx(tx,order,target));
+ return createMobileBillingOrder(actor,raw,async(tx,order)=>{if(cartRevision!==undefined)await bindCartOrderInTx(tx,order.companyId,cartRevision,order.id);return attachTelecallerTargetInTx(tx,order,target)});
 }
 
 function metadataTarget(metadata:Prisma.JsonValue|null):number|null{
