@@ -3939,6 +3939,7 @@ model WebPushDevice {
 }
 
 model BillingCart {
+  checkoutOrderId String? @db.Uuid
   companyId String @id @db.Uuid
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   selection Json
