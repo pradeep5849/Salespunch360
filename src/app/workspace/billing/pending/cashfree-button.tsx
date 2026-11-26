@@ -14,7 +14,7 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
     try {
       const response = await fetch("/api/billing/cashfree", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, action }) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error === "VALID_PHONE_REQUIRED" ? "Please update your mobile number before paying." : "Unable to complete checkout. Please try again.");
+      if (!response.ok) throw new Error(data.error === "VALID_PHONE_REQUIRED" ? "Add a valid mobile number to your profile or company contact details before paying." : "Unable to complete checkout. Please try again.");
       if (action === "verify") {
         if (data.activated) { window.location.reload(); return; }
         setMessage(data.verified ? "Sandbox payment verified. Subscription activated." : "Payment has not been confirmed yet.");
@@ -30,8 +30,8 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
   return <section aria-label="Online payment">
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(true); if(autoStart && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => setMessage("Payment SDK could not load.")}/>
     <p>Sandbox test payment — no real money is charged.</p>
-    <button type="button" disabled={!ready || busy} onClick={() => void run("start")}>Pay Online – Cashfree</button>
-    <button type="button" disabled={busy} onClick={() => void run("verify")}>Check payment status</button>
+    <button className="button-link" type="button" disabled={!ready || busy} onClick={() => void run("start")}>Pay Online – Cashfree</button>
+    <button className="button-link" type="button" disabled={busy} onClick={() => void run("verify")}>Check payment status</button>
     {message && <p role="status">{message}</p>}
   </section>;
 }
