@@ -4,7 +4,7 @@ import Script from "next/script";
 import styles from "../cart/cart.module.css";
 
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
-export default function CashfreeButton({ orderId }: { orderId: string; autoStart?: boolean }) {
+export default function CashfreeButton({ orderId, autoStart }: { orderId: string; autoStart?: boolean }) {
   useEffect(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has("paymentDocument")) {
@@ -42,6 +42,7 @@ export default function CashfreeButton({ orderId }: { orderId: string; autoStart
         const result = await factory({ mode: "sandbox" }).checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
         diagnostic("CHECKOUT_RETURN");
         if (result?.error) throw new Error(result.error.message || "Cashfree checkout could not open.");
+        setMessage("If checkout did not open, retry or check payment status.");
       }
     } catch (error) {
       if (action === "start") { diagnostic("CHECKOUT_ERROR"); sessionStorage.removeItem("cashfree-start:"+orderId); }
@@ -51,8 +52,9 @@ export default function CashfreeButton({ orderId }: { orderId: string; autoStart
   return <section className={styles.payment} aria-label="Online payment">
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY");  }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
-    <button className={`button-link ${styles.checkout}`} type="button" disabled={!ready || busy !== null} onClick={() => void run("start")}>{busy === "start" ? "Opening Cashfree…" : "Pay Now – Cashfree"}</button>
-    <details className={styles.recovery}><summary>Already completed payment?</summary><p>Use this only to recover a payment that has already been attempted.</p><button className="button-link" type="button" disabled={busy !== null} onClick={() => void run("verify")}>{busy === "verify" ? "Checking…" : "Check payment status"}</button></details>
+    {(!autoStart || message) && <button className={`button-link ${styles.checkout}`} type="button" disabled={!ready || busy !== null} onClick={() => void run("start")}>{busy === "start" ? "Opening Cashfree…" : "Pay Now – Cashfree"}</button>}
+    {autoStart&&!message&&<p role="status">{busy==="verify"?"Checking payment status…":"Preparing secure checkout…"}</p>}
+    {(!autoStart||message)&&<details className={styles.recovery}><summary>Already completed payment?</summary><p>Use this only to recover a payment that has already been attempted.</p><button className="button-link" type="button" disabled={busy !== null} onClick={() => void run("verify")}>{busy === "verify" ? "Checking…" : "Check payment status"}</button></details>}
     {message && <p role="status">{message}</p>}
   </section>;
 }
