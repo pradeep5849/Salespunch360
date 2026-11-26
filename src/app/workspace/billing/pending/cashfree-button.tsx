@@ -49,7 +49,23 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
     } finally { setBusy(null); }
   },[orderId,diagnostic]);
-  useEffect(() => { if (attempted.current || !new URLSearchParams(window.location.search).has("paymentDocument")) return; const q=new URLSearchParams(window.location.search); if(q.get("returned")==="1"){attempted.current=true;void run("verify");} else if(ready && q.get("launch")==="1"){attempted.current=true;const url=new URL(window.location.href);url.searchParams.delete("launch");window.history.replaceState(null,"",url.href);void run("start");} },[ready,run]);
+  useEffect(() => {
+    if (attempted.current || !new URLSearchParams(window.location.search).has("paymentDocument")) return;
+    const q = new URLSearchParams(window.location.search);
+    const action = q.get("returned")==="1" ? "verify" : ready && q.get("launch")==="1" ? "start" : null;
+    if (!action) return;
+    const timer = window.setTimeout(() => {
+      if (attempted.current) return;
+      attempted.current = true;
+      if (action === "start") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("launch");
+        window.history.replaceState(null,"",url.href);
+      }
+      void run(action);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [ready,run]);
   return <section className={styles.payment} aria-label="Online payment">
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY");  }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
