@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Script from "next/script";
 import styles from "../cart/cart.module.css";
 
@@ -15,6 +15,8 @@ export default function CashfreeButton({ orderId }: { orderId: string; autoStart
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState<"start" | "verify" | null>(null);
   const [message, setMessage] = useState("");
+  const attempted = useRef(false);
+  useEffect(() => { if (attempted.current || !new URLSearchParams(window.location.search).has("paymentDocument")) return; const q=new URLSearchParams(window.location.search); if(q.get("returned")==="1"){attempted.current=true;void run("verify");} else if(ready && q.get("launch")==="1"){attempted.current=true;const url=new URL(window.location.href);url.searchParams.delete("launch");window.history.replaceState(null,"",url.href);void run("start");} },[ready]);
   useEffect(() => {
     const report = (event: string) => { void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{}); };
     const seen = new Set<string>();
