@@ -20,6 +20,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.decodeFromString
 
@@ -37,8 +38,9 @@ import kotlinx.serialization.decodeFromString
 }
 
 @Composable private fun SubscriptionContent(data:MobileBillingContext,reload:()->Unit,loadingMore:Boolean,loadMore:()->Unit,initialPage:String?,reviewPending:()->Unit){
+ val cartContext=LocalContext.current;val cartApi=remember{ApiClient(SecureSession(cartContext))};var cartCount by remember{mutableStateOf(0)};LaunchedEffect(Unit){runCatching{cartApi.billingCart()}.onSuccess{cartCount=if(it["selection"]!=null&&it["selection"]!=JsonNull)1 else 0}}
  var fromCart by remember{mutableStateOf(false)};var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(initialPage)}
- if(checkout!=null){CheckoutCard(checkout!!,fromCart=fromCart,saveComplete={checkout=null;page="CART"},onlinePaymentAvailable=data.onlinePaymentAvailable,back={checkout=null;reload()},reviewPending={checkout=null;reviewPending()});return}
+ if(checkout!=null){CheckoutCard(checkout!!,fromCart=fromCart,saveComplete={cartCount=1;checkout=null;page="CART"},onlinePaymentAvailable=data.onlinePaymentAvailable,back={checkout=null;reload()},reviewPending={checkout=null;reviewPending()});return}
  when(page){
   "CART"->{SavedBillingCart({page=null},{fromCart=true;checkout=it});return}
   "SUBSCRIPTION"->{SubscriptionSummaryPage(data){page=null};return}
@@ -50,7 +52,7 @@ import kotlinx.serialization.decodeFromString
   item{Text("Billing & Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
   item{Button({page="SUBSCRIPTION"},modifier=Modifier.fillMaxWidth()){Text("Subscription")}}
   item{Button({page="BILLING"},modifier=Modifier.fillMaxWidth()){Text("Billing")}}
-  item{Button({page="CART"},modifier=Modifier.fillMaxWidth()){Text("Shopping Cart")}}
+  item{Button({page="CART"},modifier=Modifier.fillMaxWidth()){Text("Shopping Cart ($cartCount)")}}
   item{Button({page="HISTORY"},modifier=Modifier.fillMaxWidth()){Text("Payment History")}}
  }
 }
@@ -214,12 +216,13 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
 
 @Composable private fun SavedBillingCart(back:()->Unit,checkout:(BillingQuote)->Unit){
  val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope()
- var quote by remember{mutableStateOf<BillingQuote?>(null)};var revision by remember{mutableStateOf(0)};var busy by remember{mutableStateOf(true)};var error by remember{mutableStateOf<String?>(null)}
- LaunchedEffect(Unit){try{val cart=api.billingCart();revision=cart["revision"]!!.jsonPrimitive.int;quote=cart["quote"]?.takeUnless{it==JsonNull}?.let{Json{ignoreUnknownKeys=true}.decodeFromString<BillingQuote>(it.toString())}}catch(e:Exception){error="Unable to load cart."}finally{busy=false}}
+ var selection by remember{mutableStateOf<JsonObject?>(null)};var quote by remember{mutableStateOf<BillingQuote?>(null)};var revision by remember{mutableStateOf(0)};var busy by remember{mutableStateOf(true)};var error by remember{mutableStateOf<String?>(null)}
+ LaunchedEffect(Unit){try{val cart=api.billingCart();revision=cart["revision"]!!.jsonPrimitive.int;selection=cart["selection"] as? JsonObject;quote=cart["quote"]?.takeUnless{it==JsonNull}?.let{Json{ignoreUnknownKeys=true}.decodeFromString<BillingQuote>(it.toString())}}catch(e:Exception){error="Unable to load cart."}finally{busy=false}}
  Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
  TextButton(back){Text("← Billing & Subscription")};Text("Shopping Cart",style=MaterialTheme.typography.headlineSmall)
  if(busy)CircularProgressIndicator() else if(quote==null)Text("Your cart is empty.") else quote?.let{q->
  Text(q.kind.replace('_',' '));Text(periodLabel(q.billingPeriod));Text("Admin ${q.adminSeats} · Manager ${q.managerSeats} · Sales ${q.salesSeats} · Telecaller ${q.telecallerSeats}");Text("Account packages: ${q.quantity?:q.accountPackages}");Text("Total ₹${q.totalAmount}")
+ selection?.let{saved->val fields=if(q.kind=="ACCOUNT_PACKAGE")listOf("quantity") else listOf("adminSeats","managerSeats","salesSeats","telecallerSeats","accountPackages");fields.forEach{field->val value=saved[field]?.jsonPrimitive?.int?:0;Row(verticalAlignment=Alignment.CenterVertically){Text(field,Modifier.weight(1f));TextButton({selection=JsonObject(saved+ (field to JsonPrimitive((value-1).coerceAtLeast(if(field=="quantity")1 else 0))))}){Text("−")};Text(value.toString());TextButton({selection=JsonObject(saved+(field to JsonPrimitive(value+1)))}){Text("+")}}};OutlinedButton({busy=true;scope.launch{try{val updated=api.updateBillingCart(revision,saved);revision=updated["revision"]!!.jsonPrimitive.int;selection=updated["selection"] as? JsonObject;quote=updated["quote"]?.takeUnless{it==JsonNull}?.let{Json{ignoreUnknownKeys=true}.decodeFromString<BillingQuote>(it.toString())}}catch(e:Exception){error="Unable to update cart."}finally{busy=false}}}){Text("Update cart")}}
  Button({checkout(q)},modifier=Modifier.fillMaxWidth()){Text("Proceed to checkout")}
  OutlinedButton({busy=true;scope.launch{try{api.updateBillingCart(revision,JsonNull);quote=null}catch(e:Exception){error="Unable to clear cart. Reopen and try again."}finally{busy=false}}}){Text("Remove selection")}
  };error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
