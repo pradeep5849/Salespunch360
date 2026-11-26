@@ -14,6 +14,10 @@ import com.salespunch360.mobile.data.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.decodeFromString
 
 
 @Composable fun SubscriptionScreen(){
@@ -32,6 +36,7 @@ import kotlinx.serialization.json.contentOrNull
  var checkout by remember{mutableStateOf<BillingQuote?>(null)};var page by remember{mutableStateOf<String?>(initialPage)}
  if(checkout!=null){CheckoutCard(checkout!!,onlinePaymentAvailable=data.onlinePaymentAvailable,back={checkout=null;reload()},reviewPending={checkout=null;reviewPending()});return}
  when(page){
+  "CART"->{SavedBillingCart({page=null},{checkout=it});return}
   "SUBSCRIPTION"->{SubscriptionSummaryPage(data){page=null};return}
   "BILLING"->{BillingActionsPage(data,{page=null}){page=it};return}
   null->Unit
@@ -41,6 +46,7 @@ import kotlinx.serialization.json.contentOrNull
   item{Text("Billing & Subscription",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)}
   item{Button({page="SUBSCRIPTION"},modifier=Modifier.fillMaxWidth()){Text("Subscription")}}
   item{Button({page="BILLING"},modifier=Modifier.fillMaxWidth()){Text("Billing")}}
+  item{Button({page="CART"},modifier=Modifier.fillMaxWidth()){Text("Shopping Cart")}}
   item{Button({page="HISTORY"},modifier=Modifier.fillMaxWidth()){Text("Payment History")}}
  }
 }
@@ -199,4 +205,18 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
  }
  OutlinedButton({launcher.launch("sandbox-receipt-"+orderId+".pdf")},enabled=!busy){Text(if(busy)"Downloading..." else "Download test receipt (PDF)")}
  message?.let{Text(it)}
+}
+
+@Composable private fun SavedBillingCart(back:()->Unit,checkout:(BillingQuote)->Unit){
+ val context=LocalContext.current;val api=remember{ApiClient(SecureSession(context))};val scope=rememberCoroutineScope()
+ var quote by remember{mutableStateOf<BillingQuote?>(null)};var revision by remember{mutableStateOf(0)};var busy by remember{mutableStateOf(true)};var error by remember{mutableStateOf<String?>(null)}
+ LaunchedEffect(Unit){try{val cart=api.billingCart();revision=cart["revision"]!!.jsonPrimitive.int;quote=cart["quote"]?.takeUnless{it==JsonNull}?.let{Json{ignoreUnknownKeys=true}.decodeFromString<BillingQuote>(it.toString())}}catch(e:Exception){error="Unable to load cart."}finally{busy=false}}
+ Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+ TextButton(back){Text("← Billing & Subscription")};Text("Shopping Cart",style=MaterialTheme.typography.headlineSmall)
+ if(busy)CircularProgressIndicator() else if(quote==null)Text("Your cart is empty.") else quote?.let{q->
+ Text(q.kind.replace('_',' '));Text(periodLabel(q.billingPeriod));Text("Admin ${q.adminSeats} · Manager ${q.managerSeats} · Sales ${q.salesSeats} · Telecaller ${q.telecallerSeats}");Text("Account packages: ${q.quantity?:q.accountPackages}");Text("Total ₹${q.totalAmount}")
+ Button({checkout(q)},modifier=Modifier.fillMaxWidth()){Text("Proceed to checkout")}
+ OutlinedButton({busy=true;scope.launch{try{api.updateBillingCart(revision,JsonNull);quote=null}catch(e:Exception){error="Unable to clear cart. Reopen and try again."}finally{busy=false}}}){Text("Remove selection")}
+ };error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+ }
 }
