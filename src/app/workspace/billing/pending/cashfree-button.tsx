@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Script from "next/script";
+import styles from "../cart/cart.module.css";
 
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
 export default function CashfreeButton({ orderId }: { orderId: string; autoStart?: boolean }) {
@@ -45,11 +46,11 @@ export default function CashfreeButton({ orderId }: { orderId: string; autoStart
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
     } finally { setBusy(null); }
   }
-  return <section aria-label="Online payment">
+  return <section className={styles.payment} aria-label="Online payment">
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY");  }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
-    <button className="button-link" type="button" disabled={!ready || busy !== null} onClick={() => void run("start")}>{busy === "start" ? "Opening Cashfree…" : "Pay Now – Cashfree"}</button>
-    <details><summary>Already completed payment?</summary><p>Use this only to recover a payment that has already been attempted.</p><button className="button-link" type="button" disabled={busy !== null} onClick={() => void run("verify")}>{busy === "verify" ? "Checking…" : "Check payment status"}</button></details>
+    <button className={`button-link ${styles.checkout}`} type="button" disabled={!ready || busy !== null} onClick={() => void run("start")}>{busy === "start" ? "Opening Cashfree…" : "Pay Now – Cashfree"}</button>
+    <details className={styles.recovery}><summary>Already completed payment?</summary><p>Use this only to recover a payment that has already been attempted.</p><button className="button-link" type="button" disabled={busy !== null} onClick={() => void run("verify")}>{busy === "verify" ? "Checking…" : "Check payment status"}</button></details>
     {message && <p role="status">{message}</p>}
   </section>;
 }
