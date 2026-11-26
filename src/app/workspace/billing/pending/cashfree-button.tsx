@@ -1,10 +1,9 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Script from "next/script";
 
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
-export default function CashfreeButton({ orderId, autoStart = false }: { orderId: string; autoStart?: boolean }) {
-  const started = useRef(false);
+export default function CashfreeButton({ orderId }: { orderId: string; autoStart?: boolean }) {
   useEffect(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has("paymentDocument")) {
@@ -13,7 +12,7 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
     }
   }, []);
   const [ready, setReady] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"start" | "verify" | null>(null);
   const [message, setMessage] = useState("");
   useEffect(() => {
     const report = (event: string) => { void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{}); };
@@ -24,7 +23,7 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
   },[orderId]);
   function diagnostic(event:string){void fetch("/api/billing/cashfree",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId,action:"diagnostic",event}),keepalive:true}).catch(()=>{});}
   async function run(action: "start" | "verify") {
-    setBusy(true);
+    setBusy(action);
     setMessage("");
     try {
       const response = await fetch("/api/billing/cashfree", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, action }) });
@@ -44,13 +43,13 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
     } catch (error) {
       if (action === "start") { diagnostic("CHECKOUT_ERROR"); sessionStorage.removeItem("cashfree-start:"+orderId); }
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
-    } finally { setBusy(false); }
+    } finally { setBusy(null); }
   }
   return <section aria-label="Online payment">
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY"); if(autoStart && new URLSearchParams(window.location.search).has("paymentDocument") && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
+    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY");  }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
-    <button className="button-link" type="button" disabled={!ready || busy} onClick={() => void run("start")}>Pay Online – Cashfree</button>
-    <button className="button-link" type="button" disabled={busy} onClick={() => void run("verify")}>Check payment status</button>
+    <button className="button-link" type="button" disabled={!ready || busy !== null} onClick={() => void run("start")}>{busy === "start" ? "Opening Cashfree…" : "Pay Now – Cashfree"}</button>
+    <details><summary>Already completed payment?</summary><p>Use this only to recover a payment that has already been attempted.</p><button className="button-link" type="button" disabled={busy !== null} onClick={() => void run("verify")}>{busy === "verify" ? "Checking…" : "Check payment status"}</button></details>
     {message && <p role="status">{message}</p>}
   </section>;
 }
