@@ -14,6 +14,6 @@ export async function POST(request: Request) {
     const result = parsed.data.action === "start" ? await startCashfreeCheckout(identity, parsed.data.orderId, "android") : await inspectCashfreeCheckout(identity, parsed.data.orderId);
     return mobileJson(result);
   } catch (error) {
-    return mobileUnauthorized(error) ?? mobileJson({ error: "CHECKOUT_FAILED" }, 400);
+    return mobileUnauthorized(error) ?? mobileJson({ error: error instanceof Error && error.message === "VALID_PHONE_REQUIRED" ? "VALID_PHONE_REQUIRED" : "CHECKOUT_FAILED", message: error instanceof Error && error.message === "VALID_PHONE_REQUIRED" ? "Add a valid mobile number to your profile or company contact details before paying." : "Unable to complete checkout." }, 400);
   }
 }
