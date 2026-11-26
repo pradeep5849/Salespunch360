@@ -742,6 +742,7 @@ enum ProjectAuditEventType {
 }
 
 model Company {
+  billingCart BillingCart?
   webPushDevices WebPushDevice[]
   saleLifecycleSnapshots SaleLifecycleSnapshot[]
   saleReturnRevisions SaleReturnRevision[]
@@ -3935,4 +3936,13 @@ model WebPushDevice {
   @@index([companyId,userId])
   @@index([sessionId])
   @@map("web_push_devices")
+}
+
+model BillingCart {
+  companyId String @id @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  selection Json
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt
+  @@map("billing_carts")
 }
