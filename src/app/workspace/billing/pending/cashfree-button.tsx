@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import Script from "next/script";
 
-type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<unknown> };
+type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
 export default function CashfreeButton({ orderId, autoStart = false }: { orderId: string; autoStart?: boolean }) {
   const started = useRef(false);
   const [ready, setReady] = useState(false);
@@ -21,9 +21,11 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
       } else {
         const factory = (window as unknown as { Cashfree?: CashfreeFactory }).Cashfree;
         if (!factory || typeof data.paymentSessionId !== "string") throw new Error("Checkout is unavailable.");
-        await factory({ mode: "sandbox" }).checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
+        const result = await factory({ mode: "sandbox" }).checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
+        if (result?.error) throw new Error(result.error.message || "Cashfree checkout could not open.");
       }
     } catch (error) {
+      if (action === "start") sessionStorage.removeItem("cashfree-start:"+orderId);
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
     } finally { setBusy(false); }
   }
