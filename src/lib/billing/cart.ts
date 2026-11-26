@@ -26,3 +26,7 @@ export async function writeBillingCart(companyId:string,raw:unknown){
   return tx.billingCart.upsert({where:{companyId},create:{companyId,selection:value,revision:1},update:{selection:value,revision:{increment:1}},select:{selection:true,revision:true,updatedAt:true}});
  });
 }
+
+export async function associateCartOrder(companyId:string,revision:number,orderId:string){
+ await db.billingCart.updateMany({where:{companyId,revision},data:{checkoutOrderId:orderId}});
+}
