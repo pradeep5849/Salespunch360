@@ -93,7 +93,7 @@ export async function billingQuoteForCompany(companyId:string,raw:unknown){
  return{purchaseMode:purchaseMode??undefined,kind:plus?"PLUS":"SALES",billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,telecallerSeats,accountPackages,retainAdminUserIds:ids("retainAdminUserIds"),retainManagerUserIds:ids("retainManagerUserIds"),retainSalesUserIds:ids("retainSalesUserIds"),totalAmount:base.subtotal.plus(telecaller.subtotal).toFixed(2),salesSubtotal:base.salesSubtotal.toFixed(2),telecallerSubtotal:telecaller.subtotal.toFixed(2),accountSubtotal:base.accountSubtotal.toFixed(2),prorated:base.prorated||telecaller.prorated,coTermEndsAt:base.coTermEndsAt??telecaller.coTermEndsAt,currency:"INR"};
 }
 
-export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown){
+export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown,cartRevision?:number){
  access(p);const input=(raw&&typeof raw==="object"?raw:{}) as Record<string,unknown>;
  if(!(process.env.CASHFREE_ENV==="sandbox"&&process.env.CASHFREE_APP_ID&&process.env.CASHFREE_SECRET_KEY))throw new MobileCompanyError("ONLINE_PAYMENT_UNAVAILABLE",503);
  if(input.kind==="ACCOUNT_PACKAGE"){
@@ -102,7 +102,7 @@ export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown){
   return createMobileAccountPackageOrder({id:p.id,companyId:p.companyId},quantity,period);
  }
  const key=typeof input.idempotencyKey==="string"?input.idempotencyKey:"";
- return createUnifiedMobileSalesTeamOrder({id:p.id,companyId:p.companyId},{purchaseMode:input.purchaseMode,billingPeriod:input.billingPeriod as "SIX_MONTH"|"YEARLY",adminSeats:Number(input.adminSeats??0),managerSeats:Number(input.managerSeats??0),salesSeats:Number(input.salesSeats??0),telecallerSeats:Number(input.telecallerSeats??0),accountPackages:Number(input.accountPackages??0),retainAdminUserIds:Array.isArray(input.retainAdminUserIds)?input.retainAdminUserIds.filter((x):x is string=>typeof x==="string"):[],retainManagerUserIds:Array.isArray(input.retainManagerUserIds)?input.retainManagerUserIds.filter((x):x is string=>typeof x==="string"):[],retainSalesUserIds:Array.isArray(input.retainSalesUserIds)?input.retainSalesUserIds.filter((x):x is string=>typeof x==="string"):[],idempotencyKey:key});
+ return createUnifiedMobileSalesTeamOrder({id:p.id,companyId:p.companyId},{purchaseMode:input.purchaseMode,billingPeriod:input.billingPeriod as "SIX_MONTH"|"YEARLY",adminSeats:Number(input.adminSeats??0),managerSeats:Number(input.managerSeats??0),salesSeats:Number(input.salesSeats??0),telecallerSeats:Number(input.telecallerSeats??0),accountPackages:Number(input.accountPackages??0),retainAdminUserIds:Array.isArray(input.retainAdminUserIds)?input.retainAdminUserIds.filter((x):x is string=>typeof x==="string"):[],retainManagerUserIds:Array.isArray(input.retainManagerUserIds)?input.retainManagerUserIds.filter((x):x is string=>typeof x==="string"):[],retainSalesUserIds:Array.isArray(input.retainSalesUserIds)?input.retainSalesUserIds.filter((x):x is string=>typeof x==="string"):[],idempotencyKey:key},cartRevision);
 }
 
 export async function mobileCancelPendingOrder(p:MobilePrincipal,raw:unknown){
