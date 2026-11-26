@@ -68,7 +68,9 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
 }
 
 export async function mobileBillingQuote(p:MobilePrincipal,raw:unknown){
- access(p);const input=(raw&&typeof raw==="object"?raw:{}) as Record<string,unknown>;const prices=await currentPrices();
+ access(p);return billingQuoteForCompany(p.companyId,raw);}
+export async function billingQuoteForCompany(companyId:string,raw:unknown){
+ const input=(raw&&typeof raw==="object"?raw:{}) as Record<string,unknown>;const prices=await currentPrices();
  if(input.kind==="ACCOUNT_PACKAGE"){
   const quantity=Number(input.quantity),period=input.billingPeriod;
   if(!Number.isInteger(quantity)||quantity<1||quantity>100||(period!=="SIX_MONTH"&&period!=="YEARLY"))throw new MobileCompanyError("INVALID_INPUT");
@@ -83,24 +85,24 @@ export async function mobileBillingQuote(p:MobilePrincipal,raw:unknown){
  if(![a,m,s,telecallerSeats,accountPackages].every(Number.isInteger)||Math.min(a,m,s,telecallerSeats,accountPackages)<0||m+s<1)throw new MobileCompanyError("INVALID_INPUT");
  const ap=prices.find(x=>x.role==="ADMIN"&&x.period===period),mp=prices.find(x=>x.role==="MANAGER"&&x.period===period),sp=prices.find(x=>x.role==="SALES"&&x.period===period);
  if(!ap||!mp||!sp)throw new MobileCompanyError("PRICING_UNAVAILABLE",409);
- const company=await db.company.findUnique({where:{id:p.companyId},select:{productEdition:true}}),plus=company?.productEdition==="SALESPUNCH360_PLUS";
+ const company=await db.company.findUnique({where:{id:companyId},select:{productEdition:true}}),plus=company?.productEdition==="SALESPUNCH360_PLUS";
  if(plus&&accountPackages<1)throw new MobileCompanyError("PLUS_ACCOUNT_PACKAGE_REQUIRED",409);
  if(!plus&&accountPackages!==0)throw new MobileCompanyError("INVALID_INPUT");
- const accountUnit=plus?(prices.find(x=>x.role==="ACCOUNT_PACKAGE"&&x.period===period)?.amount??new Prisma.Decimal(period==="SIX_MONTH"?ACCOUNT_PACKAGE_SIX_MONTH_PRICE_INR:ACCOUNT_PACKAGE_YEARLY_PRICE_INR)):new Prisma.Decimal(0),now=new Date(),active=await db.companySubscription.findMany({where:{companyId:p.companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},select:{billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}},orderBy:{endsAt:"desc"}}),currentTerm=effectiveCurrentTerm(active),purchasePurpose=await purchasePurposeForCompany(db,p.companyId,{purchaseMode:purchaseMode??undefined,billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,telecallerSeats,accountPackages},now,currentTerm),base=quoteCombinedOrder({purchasePurpose,period:period as "SIX_MONTH"|"YEARLY",adminSeats:a,managerSeats:m,salesSeats:s,accountPackages:plus?accountPackages:0,adminPrice:ap.amount,managerPrice:mp.amount,salesPrice:sp.amount,accountPrice:plus?accountUnit:undefined,now,currentTerm});
- const telecaller=await telecallerQuoteForCompany(p.companyId,period as "SIX_MONTH"|"YEARLY",telecallerSeats,now,db,purchasePurpose),ids=(key:string)=>Array.isArray(input[key])?input[key].filter((x):x is string=>typeof x==="string"):[];
+ const accountUnit=plus?(prices.find(x=>x.role==="ACCOUNT_PACKAGE"&&x.period===period)?.amount??new Prisma.Decimal(period==="SIX_MONTH"?ACCOUNT_PACKAGE_SIX_MONTH_PRICE_INR:ACCOUNT_PACKAGE_YEARLY_PRICE_INR)):new Prisma.Decimal(0),now=new Date(),active=await db.companySubscription.findMany({where:{companyId:companyId,status:"ACTIVE",startsAt:{lte:now},endsAt:{gt:now}},select:{billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,startsAt:true,endsAt:true,sourceOrder:{select:{provider:true}}},orderBy:{endsAt:"desc"}}),currentTerm=effectiveCurrentTerm(active),purchasePurpose=await purchasePurposeForCompany(db,companyId,{purchaseMode:purchaseMode??undefined,billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,telecallerSeats,accountPackages},now,currentTerm),base=quoteCombinedOrder({purchasePurpose,period:period as "SIX_MONTH"|"YEARLY",adminSeats:a,managerSeats:m,salesSeats:s,accountPackages:plus?accountPackages:0,adminPrice:ap.amount,managerPrice:mp.amount,salesPrice:sp.amount,accountPrice:plus?accountUnit:undefined,now,currentTerm});
+ const telecaller=await telecallerQuoteForCompany(companyId,period as "SIX_MONTH"|"YEARLY",telecallerSeats,now,db,purchasePurpose),ids=(key:string)=>Array.isArray(input[key])?input[key].filter((x):x is string=>typeof x==="string"):[];
  return{purchaseMode:purchaseMode??undefined,kind:plus?"PLUS":"SALES",billingPeriod:period,adminSeats:a,managerSeats:m,salesSeats:s,telecallerSeats,accountPackages,retainAdminUserIds:ids("retainAdminUserIds"),retainManagerUserIds:ids("retainManagerUserIds"),retainSalesUserIds:ids("retainSalesUserIds"),totalAmount:base.subtotal.plus(telecaller.subtotal).toFixed(2),salesSubtotal:base.salesSubtotal.toFixed(2),telecallerSubtotal:telecaller.subtotal.toFixed(2),accountSubtotal:base.accountSubtotal.toFixed(2),prorated:base.prorated||telecaller.prorated,coTermEndsAt:base.coTermEndsAt??telecaller.coTermEndsAt,currency:"INR"};
 }
 
-export async function mobileManualOrder(p:MobilePrincipal,raw:unknown){
+export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown,cartRevision?:number){
  access(p);const input=(raw&&typeof raw==="object"?raw:{}) as Record<string,unknown>;
- if(input.paymentMethod!=="MANUAL")throw new MobileCompanyError("INVALID_PAYMENT_METHOD");
+ if(!(process.env.CASHFREE_ENV==="sandbox"&&process.env.CASHFREE_APP_ID&&process.env.CASHFREE_SECRET_KEY))throw new MobileCompanyError("ONLINE_PAYMENT_UNAVAILABLE",503);
  if(input.kind==="ACCOUNT_PACKAGE"){
   const quantity=Number(input.quantity),period=input.billingPeriod;
   if(period!=="SIX_MONTH"&&period!=="YEARLY")throw new MobileCompanyError("INVALID_INPUT");
-  return createMobileAccountPackageOrder({id:p.id,companyId:p.companyId},quantity,period);
+  return createMobileAccountPackageOrder({id:p.id,companyId:p.companyId},quantity,period,cartRevision);
  }
  const key=typeof input.idempotencyKey==="string"?input.idempotencyKey:"";
- return createUnifiedMobileSalesTeamOrder({id:p.id,companyId:p.companyId},{purchaseMode:input.purchaseMode,billingPeriod:input.billingPeriod as "SIX_MONTH"|"YEARLY",adminSeats:Number(input.adminSeats??0),managerSeats:Number(input.managerSeats??0),salesSeats:Number(input.salesSeats??0),telecallerSeats:Number(input.telecallerSeats??0),accountPackages:Number(input.accountPackages??0),retainAdminUserIds:Array.isArray(input.retainAdminUserIds)?input.retainAdminUserIds.filter((x):x is string=>typeof x==="string"):[],retainManagerUserIds:Array.isArray(input.retainManagerUserIds)?input.retainManagerUserIds.filter((x):x is string=>typeof x==="string"):[],retainSalesUserIds:Array.isArray(input.retainSalesUserIds)?input.retainSalesUserIds.filter((x):x is string=>typeof x==="string"):[],idempotencyKey:key});
+ return createUnifiedMobileSalesTeamOrder({id:p.id,companyId:p.companyId},{purchaseMode:input.purchaseMode,billingPeriod:input.billingPeriod as "SIX_MONTH"|"YEARLY",adminSeats:Number(input.adminSeats??0),managerSeats:Number(input.managerSeats??0),salesSeats:Number(input.salesSeats??0),telecallerSeats:Number(input.telecallerSeats??0),accountPackages:Number(input.accountPackages??0),retainAdminUserIds:Array.isArray(input.retainAdminUserIds)?input.retainAdminUserIds.filter((x):x is string=>typeof x==="string"):[],retainManagerUserIds:Array.isArray(input.retainManagerUserIds)?input.retainManagerUserIds.filter((x):x is string=>typeof x==="string"):[],retainSalesUserIds:Array.isArray(input.retainSalesUserIds)?input.retainSalesUserIds.filter((x):x is string=>typeof x==="string"):[],idempotencyKey:key},cartRevision);
 }
 
 export async function mobileCancelPendingOrder(p:MobilePrincipal,raw:unknown){

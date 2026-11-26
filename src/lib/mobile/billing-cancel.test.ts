@@ -4,7 +4,7 @@ vi.mock('@/lib/db',()=>({db:{}}));
 vi.mock('./auth',()=>({mobileCan:m.can}));
 vi.mock('@/lib/billing/service',()=>({cancelPendingOrderForActor:m.cancel,currentPrices:vi.fn(),createMobileAccountPackageOrder:vi.fn()}));
 vi.mock('@/lib/billing/unified-sales-team',()=>({createUnifiedMobileSalesTeamOrder:vi.fn(),telecallerQuoteForCompany:vi.fn()}));
-import {mobileBillingContext,mobileBillingQuote,mobileManualOrder,mobileCancelPendingOrder} from './billing';
+import {mobileBillingContext,mobileBillingQuote,mobileOnlineOrder,mobileCancelPendingOrder} from './billing';
 import type {MobilePrincipal} from './auth';
 const actor={id:'owner',companyId:'company',salesRole:'PRIMARY_ADMIN'} as MobilePrincipal;
 const orderId='00000000-0000-4000-8000-000000000001';
@@ -18,6 +18,6 @@ it('denies Account-only billing reads, quotes and orders before accessing billin
  m.can.mockReturnValue(false);
  await expect(mobileBillingContext(actor)).rejects.toMatchObject({code:'FORBIDDEN',status:403});
  await expect(mobileBillingQuote(actor,{})).rejects.toMatchObject({code:'FORBIDDEN',status:403});
- await expect(mobileManualOrder(actor,{})).rejects.toMatchObject({code:'FORBIDDEN',status:403});
+ await expect(mobileOnlineOrder(actor,{})).rejects.toMatchObject({code:'FORBIDDEN',status:403});
  expect(m.cancel).not.toHaveBeenCalled();
 });

@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { platformOrdersPage } from "@/lib/billing/service";
-import { confirmManualPaymentAction } from "@/app/actions/billing";
-import { confirmTelecallerPaymentAction } from "@/app/actions/telecaller-billing";
 import { telecallerOrdersPage } from "@/lib/billing/telecaller";
 import { ACCOUNT_PACKAGE_ORDER_PROVIDER } from "@/lib/billing/account-package";
 import { PLUS_ORDER_PROVIDER } from "@/lib/billing/combined-order";
@@ -98,20 +96,7 @@ export default async function Page({
                 {o.id.slice(0, 8).toUpperCase()} · {fmt(o.createdAt)}
               </span>
             </div>
-            <form action={confirmManualPaymentAction} className="billing-form">
-              <input type="hidden" name="orderId" value={o.id} />
-              <label>
-                Payment reference
-                <input
-                  name="reference"
-                  minLength={3}
-                  maxLength={100}
-                  placeholder="Bank / UPI reference"
-                  required
-                />
-              </label>
-              <button>Approve & Activate Subscription</button>
-            </form>
+            <span>Awaiting verified payment</span>
           </article>
         ))}
         {telePending.map((o) => (
@@ -127,23 +112,7 @@ export default async function Page({
                 {o.id.slice(0, 8).toUpperCase()} · {fmt(o.createdAt)}
               </span>
             </div>
-            <form
-              action={confirmTelecallerPaymentAction}
-              className="billing-form"
-            >
-              <input type="hidden" name="orderId" value={o.id} />
-              <label>
-                Payment reference
-                <input
-                  name="reference"
-                  minLength={3}
-                  maxLength={200}
-                  placeholder="Bank / UPI reference"
-                  required
-                />
-              </label>
-              <button>Approve & Co-term Telecaller Seats</button>
-            </form>
+            <span>Awaiting verified payment</span>
           </article>
         ))}
         {pages(

@@ -5,6 +5,13 @@ import Script from "next/script";
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
 export default function CashfreeButton({ orderId, autoStart = false }: { orderId: string; autoStart?: boolean }) {
   const started = useRef(false);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("paymentDocument")) {
+      url.searchParams.set("paymentDocument","1");
+      window.location.replace(url.href);
+    }
+  }, []);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -40,7 +47,7 @@ export default function CashfreeButton({ orderId, autoStart = false }: { orderId
     } finally { setBusy(false); }
   }
   return <section aria-label="Online payment">
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(true); diagnostic("SDK_READY"); if(autoStart && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
+    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY"); if(autoStart && new URLSearchParams(window.location.search).has("paymentDocument") && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
     <button className="button-link" type="button" disabled={!ready || busy} onClick={() => void run("start")}>Pay Online – Cashfree</button>
     <button className="button-link" type="button" disabled={busy} onClick={() => void run("verify")}>Check payment status</button>

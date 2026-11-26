@@ -1,9 +1,10 @@
+import {bindCartOrderInTx} from "./cart";
 import {PendingOrderConflict} from "./pending-order-intent";
 import {recordedPurchasePurpose,type PurchasePurpose} from "./purchase-purpose";
 import {Prisma,type BillingOrder} from "@prisma/client";
 import {db} from "@/lib/db";
 import {requirePermission} from "@/lib/auth/authorization";
-import {quoteBillingOrder,createBillingOrder,createMobileBillingOrder,confirmManualPayment} from "./service";
+import {quoteBillingOrder,createBillingOrder,createMobileBillingOrder} from "./service";
 import {orderRequestSchema} from "./validation";
 import {TELECALLER_PRICE_SCHEDULE_INR,type TelecallerBillingPeriod} from "./sales-pricing";
 import {telecallerBillingState} from "./telecaller";
@@ -46,14 +47,14 @@ export async function attachTelecallerTargetInTx(tx:Prisma.TransactionClient,ord
  return updated;
 }
 
-export async function createUnifiedSalesTeamOrder(raw:unknown){
+export async function createUnifiedSalesTeamOrder(raw:unknown,cartRevision?:number){
  const target=parsedTarget(raw);
- return createBillingOrder(raw,(tx,order)=>attachTelecallerTargetInTx(tx,order,target));
+ return createBillingOrder(raw,async(tx,order)=>{if(cartRevision!==undefined)await bindCartOrderInTx(tx,order.companyId,cartRevision,order.id);return attachTelecallerTargetInTx(tx,order,target)});
 }
 
-export async function createUnifiedMobileSalesTeamOrder(actor:{id:string;companyId:string},raw:unknown){
+export async function createUnifiedMobileSalesTeamOrder(actor:{id:string;companyId:string},raw:unknown,cartRevision?:number){
  const target=parsedTarget(raw);
- return createMobileBillingOrder(actor,raw,(tx,order)=>attachTelecallerTargetInTx(tx,order,target));
+ return createMobileBillingOrder(actor,raw,async(tx,order)=>{if(cartRevision!==undefined)await bindCartOrderInTx(tx,order.companyId,cartRevision,order.id);return attachTelecallerTargetInTx(tx,order,target)});
 }
 
 function metadataTarget(metadata:Prisma.JsonValue|null):number|null{
@@ -62,7 +63,6 @@ function metadataTarget(metadata:Prisma.JsonValue|null):number|null{
  return typeof value==="number"&&Number.isInteger(value)&&value>=0?value:null;
 }
 
-export async function confirmUnifiedManualPayment(orderId:string,reference:string){return confirmManualPayment(orderId,reference)}
 
 export async function unifiedTelecallerTargetForOrder(orderId:string){
  const marker=await db.billingAuditEvent.findFirst({where:{entityId:orderId,type:"ORDER_CREATED",reason:TELECALLER_AUDIT_REASON},orderBy:{occurredAt:"desc"},select:{metadata:true}});

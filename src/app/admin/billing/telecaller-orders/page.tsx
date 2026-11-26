@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { confirmTelecallerPaymentAction } from "@/app/actions/telecaller-billing";
 import { telecallerOrdersPage } from "@/lib/billing/telecaller";
 
 const money = (value: { toString(): string }) =>
@@ -35,8 +34,7 @@ export default async function TelecallerOrdersAdminPage({
             <p className="eyebrow">Super Admin</p>
             <h1>Telecaller Orders</h1>
             <p>
-              Manual Telecaller payments activate only Telecaller seats and
-              never alter normal Sales/Account subscriptions.
+              Historical Telecaller orders. New purchases use unified online billing.
             </p>
           </div>
           <Link href="/admin/billing/orders">Normal Billing Orders</Link>
@@ -76,24 +74,7 @@ export default async function TelecallerOrdersAdminPage({
                   Reference: {order.paymentReference} · paid {fmt(order.paidAt)}
                 </p>
               ) : null}
-              {order.status === "PENDING" ? (
-                <form
-                  action={confirmTelecallerPaymentAction}
-                  className="employee-form"
-                >
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <label>
-                    Verified payment reference
-                    <input
-                      name="reference"
-                      required
-                      maxLength={200}
-                      placeholder="UPI / bank / transaction reference"
-                    />
-                  </label>
-                  <button>Confirm Payment & Activate Seats</button>
-                </form>
-              ) : null}
+              {order.status === "PENDING" ? <p>Legacy unpaid order</p> : null}
             </article>
           ))}
           {!orders.length ? <p>No Telecaller orders.</p> : null}
