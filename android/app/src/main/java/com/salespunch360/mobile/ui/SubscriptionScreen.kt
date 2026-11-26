@@ -62,7 +62,6 @@ private const val MANUAL_PAYMENT_MOBILE="9611278818"
   item{Button({open("ADD_SALES")},enabled=data.hasSales&&data.sales?.status=="ACTIVE",modifier=Modifier.fillMaxWidth()){Text("Add Sales Team")}}
   item{Button({open("ADD_ACCOUNT")},enabled=data.hasAccount&&(!data.isPlus||(data.sales?.status=="ACTIVE"&&data.account?.status=="ACTIVE")),modifier=Modifier.fillMaxWidth()){Text("Add Account Team")}}
   item{Button({open("RENEWAL")},modifier=Modifier.fillMaxWidth()){Text("Renewal")}}
-  item{Button({open("HISTORY")},modifier=Modifier.fillMaxWidth()){Text("Payment History")}}
  }
 }
 
