@@ -23,7 +23,7 @@ export async function writeBillingCart(companyId:string,raw:unknown){
   if((current?.revision??0)!==revision)throw new Error("CART_REVISION_CONFLICT");
   // Preserve revision even after clearing, preventing stale clients restoring old selections.
   const value=selection??{};
-  return tx.billingCart.upsert({where:{companyId},create:{companyId,selection:value,revision:1},update:{selection:value,revision:{increment:1}},select:{selection:true,revision:true,updatedAt:true}});
+  return tx.billingCart.upsert({where:{companyId},create:{companyId,selection:value,revision:1},update:{selection:value,checkoutOrderId:null,revision:{increment:1}},select:{selection:true,revision:true,updatedAt:true}});
  });
 }
 
