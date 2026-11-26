@@ -39,6 +39,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      ...["/workspace/billing/pending", "/payment/sandbox"].map(source => ({source, headers: [{key:"Content-Security-Policy",value:contentSecurityPolicy(production,undefined,true)}]})),
       {
         source: "/workspace/account/transactions/new",
         headers: [
