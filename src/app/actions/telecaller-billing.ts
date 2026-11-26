@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { mutationGuard } from "@/lib/security/request";
-import { confirmTelecallerManualPayment, createTelecallerBillingOrder } from "@/lib/billing/telecaller";
+import { createTelecallerBillingOrder } from "@/lib/billing/telecaller";
 
 export async function createTelecallerOrderAction(form: FormData) {
   await mutationGuard("telecaller-billing-order", 10);
@@ -22,12 +22,3 @@ export async function createTelecallerOrderAction(form: FormData) {
   redirect(`/workspace/billing/telecaller?order=${orderId}`);
 }
 
-export async function confirmTelecallerPaymentAction(form: FormData) {
-  await mutationGuard("telecaller-payment-confirm", 10);
-  const orderId = String(form.get("orderId") ?? "");
-  const reference = String(form.get("reference") ?? "");
-  await confirmTelecallerManualPayment(orderId, reference);
-  revalidatePath("/admin/billing/telecaller-orders");
-  revalidatePath("/workspace/billing/telecaller");
-  revalidatePath("/workspace/employees");
-}
