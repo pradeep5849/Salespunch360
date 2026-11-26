@@ -29,12 +29,12 @@ export async function startCashfreeCheckout(actor: Actor, orderId: string, chann
   if (!phone || !/^[6-9]\d{9}$/.test(phone)) throw new Error("VALID_PHONE_REQUIRED");
   const url = new URL(channel === "android" ? "/payment/sandbox/complete" : "/workspace/billing/pending", "https://www.salespunch360.com");
   url.searchParams.set("order", order.id);
-  if(channel === "web") url.searchParams.set("online", "1");
+  if(channel === "web") { url.searchParams.set("online", "1"); url.searchParams.set("returned", "1"); }
   return createSandboxOrder({ orderId: order.id, amount: Number(order.totalAmount), customerId: actor.id, customerPhone: phone, returnUrl: url.toString() });
 }
 export async function inspectCashfreeCheckout(actor: Actor, orderId: string) {
   const order = await loadOrder(actor, orderId);
   const verified = await verifyCashfreeSandboxPayment(order);
   if (verified) await activateVerifiedPayment(verified);
-  return { verified: Boolean(verified), activated: Boolean(verified), orderId: order.id };
+  return { verified: Boolean(verified), activated: Boolean(verified), orderId: order.id, paymentId: verified?.providerPaymentId.replace(/^cashfree_sandbox_/, "") ?? null, capturedAt: verified?.capturedAt.toISOString() ?? null, amount: order.totalAmount.toFixed(2) };
 }

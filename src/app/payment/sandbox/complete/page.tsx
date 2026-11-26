@@ -1,3 +1,3 @@
 export default function SandboxPaymentReturn() {
-  return <main><h1>SalesPunch360 test payment</h1><p>Return to the SalesPunch360 app and select Check payment status. Your subscription is activated only after server-side payment verification.</p><p>This page does not confirm payment success.</p></main>;
+ return <main style={{maxWidth:480,margin:"48px auto",padding:24}}><h1>Return to SalesPunch360</h1><p>Your payment attempt has ended. Return to the app to verify your payment and view your receipt.</p><p>Do not pay again until the previous payment status is confirmed.</p><p>Sandbox test payment — no real money is charged.</p></main>;
 }
