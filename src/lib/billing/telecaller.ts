@@ -2,7 +2,7 @@ import {adminOrderQuery,ADMIN_ORDER_PAGE_SIZE} from "./admin-order-query";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { requireGlobalSuperAdmin, requireGlobalSuperAdminForMutation, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
+import { requireGlobalSuperAdmin, requirePermission, requirePermissionForMutation } from "@/lib/auth/authorization";
 import { TELECALLER_PRICE_SCHEDULE_INR, type TelecallerBillingPeriod } from "./sales-pricing";
 
 export const TELECALLER_ORDER_PROVIDER = "TELECALLER_PACKAGE" as const;
@@ -173,31 +173,6 @@ export async function listTelecallerBillingOrdersForAdmin() {
     SELECT o.id,o."companyId",c.name AS "companyName",o."createdByUserId",u.name AS "createdByName",o."billingPeriod",o."addedSeats",o."targetSeats",o."unitPrice",o.subtotal,o."totalAmount",o.status,o."paymentReference",o."coTermStartsAt",o."coTermEndsAt",o."paidAt",o."expiresAt",o."createdAt"
     FROM "telecaller_billing_orders" o JOIN "companies" c ON c.id=o."companyId" JOIN "users" u ON u.id=o."createdByUserId"
     ORDER BY CASE o.status WHEN 'PENDING' THEN 0 ELSE 1 END,o."createdAt" DESC LIMIT 300`);
-}
-
-export async function confirmTelecallerManualPayment(orderId: string, paymentReference: string) {
-  const admin = await requireGlobalSuperAdminForMutation();
-  const reference = paymentReference.trim();
-  if (!reference || reference.length > 200) throw new Error("INVALID_PAYMENT_REFERENCE");
-  return db.$transaction(async tx => {
-    const rows = await tx.$queryRaw<TelecallerBillingOrderRow[]>(Prisma.sql`
-      SELECT id,"companyId","createdByUserId","billingPeriod","addedSeats","targetSeats","unitPrice",subtotal,"totalAmount",status,"paymentReference","coTermStartsAt","coTermEndsAt","paidAt","expiresAt","createdAt"
-      FROM "telecaller_billing_orders" WHERE id=${orderId}::uuid FOR UPDATE`);
-    const order = rows[0];
-    if (!order) throw new Error("ORDER_NOT_FOUND");
-    if (order.status === "PAID") return order;
-    if (order.status !== "PENDING") throw new Error("ORDER_NOT_PENDING");
-    if (order.expiresAt && order.expiresAt <= new Date()) throw new Error("ORDER_EXPIRED");
-    const duplicate = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id FROM "telecaller_billing_orders" WHERE "paymentReference"=${reference} AND id<>${order.id}::uuid LIMIT 1`);
-    if (duplicate.length) throw new Error("PAYMENT_REFERENCE_IN_USE");
-    const now=new Date();
-    const salesTerm=await activeSalesTerm(tx,order.companyId,now);
-    if(!salesTerm)throw new Error("SALES_SUBSCRIPTION_REQUIRED");
-    await syncTelecallerSubscriptionToSalesTerm(tx,{companyId:order.companyId,seats:order.targetSeats,billingPeriod:salesTerm.billingPeriod,startsAt:now,endsAt:salesTerm.endsAt});
-    await tx.$executeRaw(Prisma.sql`UPDATE "telecaller_billing_orders" SET status='PAID',"coTermEndsAt"=${salesTerm.endsAt},"paymentReference"=${reference},"paidAt"=NOW(),"updatedAt"=NOW() WHERE id=${order.id}::uuid`);
-    await tx.billingAuditEvent.create({data:{companyId:order.companyId,actorUserId:admin.id,type:"MANUAL_PAYMENT_CONFIRMED",entityId:order.id,reason:"Telecaller manual payment confirmed",metadata:{kind:"TELECALLER",reference,addedSeats:order.addedSeats,targetSeats:order.targetSeats,period:salesTerm.billingPeriod,coTermEndsAt:salesTerm.endsAt.toISOString()}}});
-    return { ...order, status: "PAID" as const, paymentReference: reference, paidAt: now, coTermEndsAt:salesTerm.endsAt };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function telecallerOrdersPage(raw:unknown){await requireGlobalSuperAdmin();const d=adminOrderQuery.parse(raw);const search=d.q?'%'+d.q.replace(/[\\%_]/g,'\\$&')+'%':null;const rows=await db.$queryRaw<TelecallerBillingOrderRow[]>(Prisma.sql`SELECT o.*,c.name AS "companyName",u.name AS "createdByName" FROM telecaller_billing_orders o JOIN companies c ON c.id=o."companyId" JOIN users u ON u.id=o."createdByUserId" WHERE ${d.pending?Prisma.sql`o.status='PENDING'`:Prisma.sql`o.status<>'PENDING'`} ${search?Prisma.sql`AND (c.name ILIKE ${search} OR o.id::text ILIKE ${search} OR o."paymentReference" ILIKE ${search})`:Prisma.empty} ORDER BY o."createdAt" DESC,o.id DESC LIMIT ${ADMIN_ORDER_PAGE_SIZE+1} OFFSET ${(d.page-1)*ADMIN_ORDER_PAGE_SIZE}`);return {items:rows.slice(0,ADMIN_ORDER_PAGE_SIZE),hasMore:rows.length>ADMIN_ORDER_PAGE_SIZE,page:d.page};}
