@@ -99,7 +99,7 @@ export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown,cartRevisi
  if(input.kind==="ACCOUNT_PACKAGE"){
   const quantity=Number(input.quantity),period=input.billingPeriod;
   if(period!=="SIX_MONTH"&&period!=="YEARLY")throw new MobileCompanyError("INVALID_INPUT");
-  return createMobileAccountPackageOrder({id:p.id,companyId:p.companyId},quantity,period);
+  return createMobileAccountPackageOrder({id:p.id,companyId:p.companyId},quantity,period,cartRevision);
  }
  const key=typeof input.idempotencyKey==="string"?input.idempotencyKey:"";
  return createUnifiedMobileSalesTeamOrder({id:p.id,companyId:p.companyId},{purchaseMode:input.purchaseMode,billingPeriod:input.billingPeriod as "SIX_MONTH"|"YEARLY",adminSeats:Number(input.adminSeats??0),managerSeats:Number(input.managerSeats??0),salesSeats:Number(input.salesSeats??0),telecallerSeats:Number(input.telecallerSeats??0),accountPackages:Number(input.accountPackages??0),retainAdminUserIds:Array.isArray(input.retainAdminUserIds)?input.retainAdminUserIds.filter((x):x is string=>typeof x==="string"):[],retainManagerUserIds:Array.isArray(input.retainManagerUserIds)?input.retainManagerUserIds.filter((x):x is string=>typeof x==="string"):[],retainSalesUserIds:Array.isArray(input.retainSalesUserIds)?input.retainSalesUserIds.filter((x):x is string=>typeof x==="string"):[],idempotencyKey:key},cartRevision);
