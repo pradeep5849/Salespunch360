@@ -5,7 +5,7 @@ import {useRouter} from "next/navigation";
 export default function CartControls({selection,revision,remove=false,edit=false}:{selection?:Record<string,unknown>;revision?:number;remove?:boolean;edit?:boolean}){
  const [draft,setDraft]=useState(selection??{});const router=useRouter();const [busy,setBusy]=useState(false),[error,setError]=useState("");
  const dirty=edit&&JSON.stringify(draft)!==JSON.stringify(selection);
- useEffect(()=>{if(!edit)return;const link=document.querySelector<HTMLAnchorElement>("[data-cart-checkout]");if(!link)return;link.setAttribute("aria-disabled",String(dirty||busy));const block=(e:Event)=>{if(dirty||busy)e.preventDefault();};link.addEventListener("click",block);return()=>{link.removeEventListener("click",block);link.removeAttribute("aria-disabled");};},[dirty,busy,edit]);
+ useEffect(()=>{if(!edit)return;const link=document.querySelector<HTMLButtonElement>("[data-cart-checkout]");if(!link)return;link.disabled=dirty||busy;link.setAttribute("aria-disabled",String(dirty||busy));const block=(e:Event)=>{if(dirty||busy)e.preventDefault();};link.addEventListener("click",block);return()=>{link.removeEventListener("click",block);link.disabled=false;link.removeAttribute("aria-disabled");};},[dirty,busy,edit]);
  async function save(){setBusy(true);setError("");try{
  const current=await fetch("/api/billing/cart",{cache:"no-store"});if(!current.ok)throw new Error("Unable to load cart.");
  const cart=await current.json();
