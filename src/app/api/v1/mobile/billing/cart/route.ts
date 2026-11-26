@@ -1,3 +1,4 @@
+import {MobileCompanyError} from "@/lib/mobile/company";
 import {z} from "zod";
 import {authenticateMobileSalesToken,mobileCan} from "@/lib/mobile/auth";
 import {mobileBillingQuote} from "@/lib/mobile/billing";
@@ -13,6 +14,7 @@ async function view(p:Awaited<ReturnType<typeof principal>>){
  return {revision:cart?.revision??0,selection:selection.success?selection.data:null,quote:selection.success?await mobileBillingQuote(p,selection.data):null};
 }
 function failure(e:unknown){
+ if(e instanceof MobileCompanyError)return mobileJson({error:e.code},e.status);
  if(e instanceof z.ZodError)return mobileJson({error:"INVALID_INPUT"},400);
  if(e instanceof Error&&e.message==="CART_REVISION_CONFLICT")return mobileJson({error:"CART_REVISION_CONFLICT"},409);
  return mobileUnauthorized(e)??mobileUnexpected("MOBILE_BILLING_CART",e);
