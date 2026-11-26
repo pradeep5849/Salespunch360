@@ -66,7 +66,7 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
     }, 0);
     return () => window.clearTimeout(timer);
   }, [ready,run]);
-  return <section className={styles.payment} aria-label="Online payment">
+  return <section className={styles.payment} aria-label="Online payment" style={{display:"grid",gap:12}}>
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(new URLSearchParams(window.location.search).has("paymentDocument")); diagnostic("SDK_READY");  }} onError={() => {diagnostic("SDK_ERROR");setMessage("Payment SDK could not load.");}}/>
     <p>Sandbox test payment — no real money is charged.</p>
     {(!autoStart || message) && <button className={`button-link ${styles.checkout}`} type="button" disabled={!ready || busy !== null} onClick={() => void run("start")}>{busy === "start" ? "Opening Cashfree…" : "Pay Now – Cashfree"}</button>}
