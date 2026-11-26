@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Script from "next/script";
 
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<unknown> };
-export default function CashfreeButton({ orderId }: { orderId: string }) {
+export default function CashfreeButton({ orderId, autoStart = false }: { orderId: string; autoStart?: boolean }) {
+  const started = useRef(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -27,7 +28,7 @@ export default function CashfreeButton({ orderId }: { orderId: string }) {
     } finally { setBusy(false); }
   }
   return <section aria-label="Online payment">
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => setReady(true)} onError={() => setMessage("Payment SDK could not load.")}/>
+    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" onReady={() => { setReady(true); if(autoStart && !started.current && !sessionStorage.getItem("cashfree-start:"+orderId)){started.current=true;sessionStorage.setItem("cashfree-start:"+orderId,"1");void run("start");} }} onError={() => setMessage("Payment SDK could not load.")}/>
     <p>Sandbox test payment — no real money is charged.</p>
     <button type="button" disabled={!ready || busy} onClick={() => void run("start")}>Pay Online – Cashfree</button>
     <button type="button" disabled={busy} onClick={() => void run("verify")}>Check payment status</button>
