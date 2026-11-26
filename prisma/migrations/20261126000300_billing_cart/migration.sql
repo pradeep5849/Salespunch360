@@ -4,3 +4,5 @@ CREATE TABLE "billing_carts" (
  "revision" INTEGER NOT NULL DEFAULT 1 CHECK ("revision" > 0),
  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE "billing_carts" ADD COLUMN "checkoutOrderId" UUID;
