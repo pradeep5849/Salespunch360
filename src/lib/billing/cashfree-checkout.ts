@@ -36,5 +36,5 @@ export async function inspectCashfreeCheckout(actor: Actor, orderId: string) {
   const order = await loadOrder(actor, orderId);
   const verified = await verifyCashfreeSandboxPayment(order);
   if (verified) await activateVerifiedPayment(verified);
-  return { verified: Boolean(verified), activated: Boolean(verified), orderId: order.id };
+  return { verified: Boolean(verified), activated: Boolean(verified), orderId: order.id, paymentId: verified?.providerPaymentId.replace(/^cashfree_sandbox_/, "") ?? null, capturedAt: verified?.capturedAt.toISOString() ?? null, amount: order.totalAmount.toFixed(2) };
 }
