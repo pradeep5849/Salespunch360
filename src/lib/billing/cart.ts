@@ -30,3 +30,5 @@ export async function writeBillingCart(companyId:string,raw:unknown){
 export async function associateCartOrder(companyId:string,revision:number,orderId:string){
  await db.billingCart.updateMany({where:{companyId,revision},data:{checkoutOrderId:orderId}});
 }
+
+export async function bindCartOrderInTx(tx:import("@prisma/client").Prisma.TransactionClient,companyId:string,revision:number,orderId:string){const result=await tx.billingCart.updateMany({where:{companyId,revision},data:{checkoutOrderId:orderId}});if(result.count!==1)throw new Error("CART_REVISION_CONFLICT");}
