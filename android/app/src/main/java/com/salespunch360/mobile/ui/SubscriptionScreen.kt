@@ -215,7 +215,7 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
    message="Test receipt saved."
   }catch(e:Exception){message="Unable to save receipt. Try again."}finally{busy=false}}}
  }
- OutlinedButton({launcher.launch("sandbox-receipt-"+orderId+".pdf")},enabled=!busy){Text(if(busy)"Downloading..." else "Download test receipt (PDF)")}
+ OutlinedButton({launcher.launch("sandbox-receipt-"+orderId+".pdf")},enabled=!busy,modifier=Modifier.fillMaxWidth()){Text(if(busy)"Downloading..." else "Download test receipt (PDF)")}
  message?.let{Text(it)}
 }
 
@@ -255,7 +255,7 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
   }
  }
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  item{
+  item{Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
    val verified=result
    Text(if(verified!=null)"Payment successful" else if(opening)"Opening secure payment…" else "Verifying payment",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
    if(verified!=null){
@@ -264,14 +264,15 @@ private fun periodLabel(value:String)=when(value){"SIX_MONTH"->"6 Month";"YEARLY
     Text("Payment ID: "+(verified["paymentId"]?.jsonPrimitive?.contentOrNull?:""))
     Text("Payment date: "+(verified["capturedAt"]?.jsonPrimitive?.contentOrNull?:""))
     Text("Paid · Subscription activated")
+    Button(back,Modifier.fillMaxWidth()){Text("Back to Billing & Subscription")}
     CashfreeReceiptButton(order.id)
    }else{
     if(opening||checking)CircularProgressIndicator()
     launchError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
     message?.let{Text(it)}
-    if(!opening&&!checking)OutlinedButton({retry++}){Text("Check payment status")}
+    if(!opening&&!checking)Button({retry++},modifier=Modifier.fillMaxWidth()){Text("Check payment status")}
+    OutlinedButton(back,Modifier.fillMaxWidth()){Text("Back to Billing & Subscription")}
    }
-   Button(back,Modifier.fillMaxWidth()){Text("Back to Billing & Subscription")}
-  }
+  }}
  }
 }
