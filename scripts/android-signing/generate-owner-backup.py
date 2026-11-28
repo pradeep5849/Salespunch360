@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate only after recipient validation; export signing material encrypted."""
+"""Generate only after archive preflight; export with password-based 7z AES-256."""
 import base64
 import hashlib
 import json
@@ -9,7 +9,7 @@ import re
 import shutil
 import ssl
 import subprocess
-import tarfile
+import py7zr
 import tempfile
 
 
@@ -26,6 +26,30 @@ def run(command, *, data=None, env=None):
         raise SigningError("Signing tool failed; private diagnostics suppressed.") from None
 
 
+def encrypt_bundle(bundle, archive, password):
+    """Passwords stay in memory, never subprocess arguments or command output."""
+    try:
+        with py7zr.SevenZipFile(archive, "w", password=password, header_encryption=True,
+                               filters=[{"id": py7zr.FILTER_LZMA2, "preset": 6},
+                                        {"id": py7zr.FILTER_CRYPTO_AES256_SHA256}]) as encrypted:
+            for entry in sorted(bundle.iterdir()):
+                encrypted.write(entry, arcname=entry.name)
+        with tempfile.TemporaryDirectory(prefix="verify-", dir=bundle.parent) as temporary:
+            destination = Path(temporary)
+            with py7zr.SevenZipFile(archive, "r", password=password) as encrypted:
+                if not encrypted.needs_password() or "7zAES" not in encrypted.archiveinfo().method_names:
+                    raise ValueError("AES-256 encryption is required")
+                expected = {entry.name for entry in bundle.iterdir()}
+                if set(encrypted.getnames()) != expected:
+                    raise ValueError("Archive members do not match")
+                encrypted.extractall(destination)
+            for entry in bundle.iterdir():
+                if (destination / entry.name).read_bytes() != entry.read_bytes():
+                    raise ValueError("Archive verification failed")
+    except Exception:
+        raise SigningError("Encrypted export failed; private diagnostics suppressed.") from None
+
+
 def generate(environment=None):
     env = dict(os.environ if environment is None else environment)
     if env.get("GITHUB_ACTIONS") != "true":
@@ -37,48 +61,30 @@ def generate(environment=None):
     if any(len(env.get(k, "")) < 32 for k in
            ("ANDROID_KEYSTORE_PASSWORD", "ANDROID_KEY_PASSWORD")):
         raise SigningError("Both existing signing password secrets must have at least 32 characters.")
-    fingerprint = env.get("RECIPIENT_FINGERPRINT", "").upper()
-    if not re.fullmatch(r"(?:[0-9A-F]{40}|[0-9A-F]{64})", fingerprint):
-        raise SigningError("Provide the full public-key fingerprint without spaces.")
-    try:
-        public_key = base64.b64decode(env.get("RECIPIENT_PUBLIC_KEY_BASE64", ""), validate=True)
-    except ValueError:
-        raise SigningError("Recipient public-key Base64 is invalid.") from None
-    if not public_key or len(public_key) > 65536:
-        raise SigningError("Recipient public key must be between 1 and 65536 bytes.")
-    if any(not shutil.which(tool) for tool in ("gpg", "keytool")):
-        raise SigningError("GnuPG and Java keytool must be installed.")
+    export_password = env.get("ANDROID_KEYSTORE_EXPORT_PASSWORD", "")
+    if len(export_password) < 32:
+        raise SigningError("Existing export password secret must have at least 32 characters.")
+    if export_password in (env["ANDROID_KEYSTORE_PASSWORD"], env["ANDROID_KEY_PASSWORD"]):
+        raise SigningError("Export password must differ from both signing passwords.")
+    if not shutil.which("keytool"):
+        raise SigningError("Java keytool must be installed.")
     os.umask(0o077)
     runner_temp = Path(env["RUNNER_TEMP"])
     output = runner_temp / "salespunch360-signing-export"
     if output.exists():
         raise SigningError("Export directory already exists; refusing overwrite.")
-    # Recipient preparation must not receive Android signing credentials.
-    public_env = {k: v for k, v in env.items() if not k.startswith("ANDROID_")}
     try:
         with tempfile.TemporaryDirectory(prefix="sp360-signing-private-", dir=runner_temp) as directory:
             work = Path(directory)
-            home = work / "gnupg"
-            home.mkdir(mode=0o700)
-            gpg = ["gpg", "--no-options", "--homedir", str(home), "--batch", "--no-tty"]
-            recipient_file = work / "recipient.asc"
-            recipient_file.write_bytes(public_key)
-            listed = run(gpg + ["--with-colons", "--import-options", "show-only",
-                                "--import", str(recipient_file)], env=public_env).decode()
-            records = [line.split(":") for line in listed.splitlines()]
-            if any(r[0] in ("sec", "ssb") for r in records):
-                raise SigningError("Supply only an OpenPGP PUBLIC key, never a private key.")
-            if sum(r[0] == "pub" for r in records) != 1:
-                raise SigningError("Exactly one owner public key is required.")
-            primary = next((r[9] for r in records if r[0] == "fpr"), "")
-            if primary != fingerprint:
-                raise SigningError("Owner public-key fingerprint does not match.")
-            run(gpg + ["--import", str(recipient_file)], env=public_env)
-            encrypt = gpg + ["--trust-model", "always", "--no-encrypt-to", "--recipient", fingerprint,
-                             "--cipher-algo", "AES256", "--encrypt"]
-            # Prove the public key can encrypt (not revoked/expired/sign-only) BEFORE key generation.
-            run(encrypt, data=b"SalesPunch360 owner recipient validation\n", env=public_env)
-            signing_env = {k: v for k, v in env.items() if k != "ANDROID_KEYSTORE_BASE64"}
+            # Prove password encryption and extraction work BEFORE generating any signing key.
+            probe = work / "preflight"
+            probe.mkdir(mode=0o700)
+            (probe / "probe.txt").write_bytes(b"SalesPunch360 archive validation\n")
+            encrypt_bundle(probe, work / "preflight.7z", export_password)
+            shutil.rmtree(probe)
+            (work / "preflight.7z").unlink()
+            signing_env = {k: v for k, v in env.items()
+                           if k not in ("ANDROID_KEYSTORE_BASE64", "ANDROID_KEYSTORE_EXPORT_PASSWORD")}
             bundle = work / "bundle"
             bundle.mkdir(mode=0o700)
             keystore = bundle / "salespunch360.jks"
@@ -106,19 +112,18 @@ def generate(environment=None):
                 "Add salespunch360.jks.base64 to ANDROID_KEYSTORE_BASE64 manually.\n"
                 "Passwords/alias match the existing repository secrets at generation time.\n"
                 "Do not upload this plaintext directory or credentials to GitHub.\n")
-            archive = work / "owner-backup.tar.gz"
-            with tarfile.open(archive, "w:gz") as tar:
-                for entry in sorted(bundle.iterdir()):
-                    tar.add(entry, arcname=entry.name)
             output.mkdir(mode=0o700)
-            # No plaintext or unencrypted archive is ever placed in the artifact directory.
-            run(encrypt + ["--output", str(output / "salespunch360-owner-backup.tar.gz.gpg"),
-                            str(archive)], env=public_env)
+            archive = output / "salespunch360-owner-backup.7z"
+            # The artifact directory receives ciphertext only, never plaintext credentials.
+            encrypt_bundle(bundle, archive, export_password)
+            archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+            checksum = f"{archive_hash}  {archive.name}\n"
+            (output / "salespunch360-owner-backup.7z.sha256").write_text(checksum)
             (output / "certificate-fingerprints.txt").write_text(fingerprints)
-            print(fingerprints, end="")  # Public certificate metadata only.
+            print(fingerprints + "Archive SHA-256: " + archive_hash)  # Public metadata only.
             if env.get("GITHUB_STEP_SUMMARY"):
                 with open(env["GITHUB_STEP_SUMMARY"], "a") as summary:
-                    summary.write("### Public signing certificate fingerprints\n\n```text\n" + fingerprints + "```\n")
+                    summary.write("### Public signing certificate fingerprints\n\n```text\n" + fingerprints + "```\n\nEncrypted archive SHA-256: `" + archive_hash + "`\n")
     except BaseException:
         shutil.rmtree(output, ignore_errors=True)
         raise

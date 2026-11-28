@@ -3,20 +3,12 @@ name: One-time Android signing key generation
 on:
   workflow_dispatch:
     inputs:
-      recipient_public_key_base64:
-        description: "Base64 of the owner's OpenPGP PUBLIC key (never upload the private key)"
-        required: true
-        type: string
-      recipient_fingerprint:
-        description: "Full owner public-key fingerprint, without spaces, verified offline"
-        required: true
-        type: string
       confirmation:
         description: "Type GENERATE_NEW_SALESPUNCH360_KEY only if no production key exists anywhere"
         required: true
         type: string
       owner_ready:
-        description: "I control the recipient private key and will download and verify the offline backup"
+        description: "I have safely stored the export password and will download and verify the offline backup"
         required: true
         default: false
         type: boolean
@@ -75,22 +67,33 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Validate owner recipient and generate encrypted backup
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install checksum-locked archive encryption library
+        run: >-
+          python -m pip --isolated install --index-url https://pypi.org/simple
+          --require-hashes --only-binary=:all: --disable-pip-version-check
+          -r scripts/android-signing/requirements.txt
+
+      - name: Validate encrypted archive export and generate owner backup
         env:
-          RECIPIENT_PUBLIC_KEY_BASE64: ${{ inputs.recipient_public_key_base64 }}
-          RECIPIENT_FINGERPRINT: ${{ inputs.recipient_fingerprint }}
+          ANDROID_KEYSTORE_EXPORT_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_EXPORT_PASSWORD }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        run: python3 scripts/android-signing/generate-owner-backup.py
+        run: python scripts/android-signing/generate-owner-backup.py
 
       - name: Upload encrypted owner backup and public fingerprints
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: salespunch360-signing-owner-backup
           path: |
-            ${{ runner.temp }}/salespunch360-signing-export/salespunch360-owner-backup.tar.gz.gpg
+            ${{ runner.temp }}/salespunch360-signing-export/salespunch360-owner-backup.7z
+            ${{ runner.temp }}/salespunch360-signing-export/salespunch360-owner-backup.7z.sha256
             ${{ runner.temp }}/salespunch360-signing-export/certificate-fingerprints.txt
           if-no-files-found: error
           retention-days: 7
