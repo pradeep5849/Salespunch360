@@ -60,6 +60,12 @@ export async function startCashfreeCheckout(
     url.searchParams.set("online", "1");
     url.searchParams.set("returned", "1");
   }
+  // Atomically exclude cancellation before the gateway may accept money. A timeout stays uncertain, never unpaid-by-assumption.
+  const started = await db.billingOrder.updateMany({
+    where: { id: order.id, companyId: actor.companyId, status: "PENDING" },
+    data: { providerOrderId: order.id },
+  });
+  if (started.count !== 1) throw new Error("ORDER_NOT_PAYABLE");
   const session = await createCashfreeOrder({
     orderId: order.id,
     amount: Number(order.totalAmount),

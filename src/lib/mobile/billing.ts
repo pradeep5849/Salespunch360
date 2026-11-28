@@ -27,7 +27,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
  const hasSales=editionAllowsSales(company.productEdition),hasAccount=editionAllowsAccount(company.productEdition),isPlus=company.productEdition==="SALESPUNCH360_PLUS";
  const pageSize=10,safePage=Number.isInteger(page)&&page>0?page:1;const [prices,orders,orderCount,entitlement,telecaller,accountSeatUsers,activeSubs,salesSeatUsers]=await Promise.all([
   currentPrices(),
-  db.billingOrder.findMany({where:{companyId},orderBy:[{createdAt:"desc"},{id:"desc"}],skip:(safePage-1)*pageSize,take:pageSize,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,createdAt:true,expiresAt:true,paidAt:true,payments:{where:{companyId},select:paymentDetailSelect}}}),
+  db.billingOrder.findMany({where:{companyId},orderBy:[{createdAt:"desc"},{id:"desc"}],skip:(safePage-1)*pageSize,take:pageSize,select:{id:true,status:true,billingPeriod:true,adminSeats:true,managerSeats:true,salesSeats:true,accountPackages:true,totalAmount:true,currency:true,provider:true,providerOrderId:true,createdAt:true,expiresAt:true,paidAt:true,payments:{where:{companyId},select:paymentDetailSelect}}}),
   db.billingOrder.count({where:{companyId}}),
   hasSales?effectiveEntitlement(companyId,now):Promise.resolve(null),
   hasSales?telecallerBillingState(db,companyId,now):Promise.resolve({subscription:null,used:0,limit:0,available:0}),
@@ -44,7 +44,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
  return{
   hasSales,hasAccount,isPlus,teamStructure:company.teamStructure,
   prices:prices.map(x=>({...x,amount:x.amount.toFixed(2)})),
-  orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2),telecallerSeats:telecallerTargets.get(x.id)??null,payments:x.payments.map(payment=>({...payment,amount:payment.amount.toFixed(2)}))})),
+  orders:orders.map(x=>({...x,canCancel:x.status==="PENDING"&&!x.providerOrderId,totalAmount:x.totalAmount.toFixed(2),telecallerSeats:telecallerTargets.get(x.id)??null,payments:x.payments.map(payment=>({...payment,amount:payment.amount.toFixed(2)}))})),
   onlinePaymentAvailable:cashfreeAvailable(),salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
   sales:entitlement?{
    status:operationalSalesStatus(entitlement),
@@ -111,5 +111,5 @@ export async function mobileCancelPendingOrder(p:MobilePrincipal,raw:unknown){
  const parsed=z.object({action:z.literal("CANCEL_PENDING_ORDER"),orderId:z.string().guid(),confirmed:z.literal(true)}).strict().safeParse(raw);
  if(!parsed.success)throw new MobileCompanyError("INVALID_INPUT",400);
  try{await cancelPendingOrderForActor(p,parsed.data.orderId);return{ok:true};}
- catch(error){const code=error instanceof Error?error.message:"";if(code==="NOT_FOUND")throw new MobileCompanyError(code,404);if(code==="ORDER_NOT_PENDING")throw new MobileCompanyError(code,409);throw error;}
+ catch(error){const code=error instanceof Error?error.message:"";if(code==="NOT_FOUND")throw new MobileCompanyError(code,404);if(code==="ORDER_NOT_PENDING"||code==="PAYMENT_RECONCILIATION_REQUIRED")throw new MobileCompanyError(code,409);throw error;}
 }

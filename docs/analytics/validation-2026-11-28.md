@@ -1,4 +1,6 @@
-# Analytics validation — 28 November 2026
+# Initial analytics validation — 28 November 2026
+
+Historical tracking-only stage. Superseded for production payment scope by cashfree-production-rollout.md and the coordinated implementation evidence.
 
 Application source commit: `b14d863e`. Unchanged-main baseline: `dfc7e2dfab8291ceaae729c77616107e488a567e`. Later documentation-only commits do not alter the tested application source.
 

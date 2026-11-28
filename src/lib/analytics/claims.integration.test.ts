@@ -209,7 +209,8 @@ describe.skipIf(!enabled)("real PostgreSQL conversion receipts", () => {
     expect(Number(visible[0].count)).toBe(0);
   });
   it("commits exactly one real live activation and receipt authority under concurrent callbacks", async () => {
-    const { activateVerifiedPayment } = await import("@/lib/billing/service");
+    const { activateVerifiedPayment, cancelPendingOrderForActor } =
+      await import("@/lib/billing/service");
     const id = randomUUID();
     const capturedAt = new Date();
     await slot.client.billingOrder.create({
@@ -228,10 +229,14 @@ describe.skipIf(!enabled)("real PostgreSQL conversion receipts", () => {
         subtotal: "99.75",
         totalAmount: "99.75",
         idempotencyKey: "live-" + id,
+        providerOrderId: id,
         createdAt: new Date(Date.now() - 60000),
         expiresAt: new Date(Date.now() + 3600000),
       },
     });
+    await expect(cancelPendingOrderForActor(actor, id)).rejects.toThrow(
+      "PAYMENT_RECONCILIATION_REQUIRED",
+    );
     const verified = {
       provider: "CASHFREE",
       providerPaymentId: "cashfree_live_" + Date.now(),

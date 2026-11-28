@@ -81,7 +81,8 @@ export async function cancelPendingOrderForActor(u:{id:string;companyId:string},
   const order=await tx.billingOrder.findFirst({where:{id:orderId,companyId:u.companyId}});
   if(!order)throw new Error("NOT_FOUND");
   if(order.status!=="PENDING")throw new Error("ORDER_NOT_PENDING");
-  const result=await tx.billingOrder.updateMany({where:{id:order.id,companyId:u.companyId,status:"PENDING"},data:{status:"CANCELLED"}});
+  if(order.providerOrderId)throw new Error("PAYMENT_RECONCILIATION_REQUIRED");
+  const result=await tx.billingOrder.updateMany({where:{id:order.id,companyId:u.companyId,status:"PENDING",providerOrderId:null},data:{status:"CANCELLED"}});
   if(result.count!==1)throw new Error("ORDER_NOT_PENDING");
   await tx.billingAuditEvent.create({data:{companyId:u.companyId,actorUserId:u.id,type:"ORDER_CANCELLED",entityId:order.id,reason:"Explicit cancellation confirmed by company administrator"}});
  });

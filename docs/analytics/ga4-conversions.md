@@ -11,7 +11,7 @@ Tracking is OFF by default. Before setting `ANALYTICS_ENABLED=true` on the serve
 3. Apply the included Prisma migration through the normal deployment process and rebuild with the client flag. Keep APP_URL exactly `https://www.salespunch360.com`.
 4. Verify consent and events in GA4 DebugView/Realtime with a controlled production transaction. No real payment or Google collection request was made during automated validation.
 
-The existing gateway is sandbox-only. Sandbox, manual and test payments are deliberately ineligible for production purchase conversions. This change does not enable live Cashfree. A separate live-provider implementation is required before real subscription purchase tracking can be exercised end to end.
+Cashfree now supports explicit production and sandbox environments. Sandbox, manual and test payments remain ineligible for production purchase conversions. See cashfree-production-rollout.md for the coordinated migration, dashboard setup and controlled live-verification requirements.
 
 ## Events and payment confirmation
 
@@ -41,12 +41,12 @@ Mark the derived events as key events and import them into Ads. Avoid importing 
 
 ## Android
 
-Existing Android configuration uses Firebase messaging/authentication; no explicit Analytics event implementation was found. No Android files are changed. Future Android events should use the same event names, currency/value/plan schema and server claim authority. Do not import both Android/Firebase and web copies of the same purchase into one primary Ads goal.
+Native Firebase Analytics now uses explicit billing consent, default-denied collection and the authenticated global server claim authority. Debug collection is disabled. Confirm that the existing Firebase project’s Android stream is linked to the intended GA4 property. See cashfree-production-rollout.md for distribution policy and setup details.
 
 ## Validation
 
 Run the analytics-validation workflow: isolated Postgres migration, focused policy/API/payment/SQL concurrency tests, lint, typecheck, production build and consent browser tests on mobile/desktop. Browser tests stub Google requests and use the local production build under the canonical test origin. They verify no pre-consent traffic, rejection persistence, navigation sanitization, withdrawal and GPC. They do not prove external GA4/Ads account configuration or live Cashfree delivery.
 
-## Future live Cashfree switch
+## Live Cashfree migration
 
-Tracking is prepared now; keep sandbox enabled until the live gateway change is explicitly approved. The future gateway must select the real Cashfree endpoint/SDK mode using validated server configuration, keep server-side verification and activation authoritative, and pass provider `CASHFREE` through the existing activation service with `CASHFREE_ENV=production`. That service records the activation proof consumed here. Existing sandbox provider records and checkout proof snapshots stay ineligible even after the environment changes. Configure live credentials on Hostinger through the normal secure process; do not put credentials into this tracking PR. Then exercise a controlled verified live payment, confirm the actual transaction value in GA4 and verify the filtered Ads import. The event/claim implementation does not need to be rewritten for that switch.
+Production support is implemented in this coordinated PR. The owner supplied production configuration in Hostinger. Merchant webhook/domain setup, GA4/Ads dashboard linking and a controlled owner-approved real payment remain required; see cashfree-production-rollout.md.
