@@ -175,7 +175,7 @@ export async function claimCheckout(
   actor: { id: string; companyId: string },
   orderId: string,
 ) {
-  // The existing provider is sandbox-only. It must never produce production conversion events.
+  // Production checkout requires an immutable production proof; sandbox snapshots remain excluded after a mode switch.
   if (process.env.CASHFREE_ENV !== "production") return null;
   const order = await db.billingOrder.findFirst({
     where: {

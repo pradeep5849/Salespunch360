@@ -1,4 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+// Next may still be prefetching links when an assertion completes. Drain proxy handlers before closing the page.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: "wait" });
+});
 const canonical = "https://www.salespunch360.com";
 async function fixture(page: Page) {
   const scripts: string[] = [];
