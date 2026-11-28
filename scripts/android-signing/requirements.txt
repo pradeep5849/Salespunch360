@@ -1,0 +1,12 @@
+# Python 3.12 / Linux x86_64. Official PyPI wheel SHA-256 hashes.
+# Install with --require-hashes --only-binary=:all:.
+backports.zstd==1.8.1 --hash=sha256:bdb1f64046867fbb8a798a771c9a7326fc45d92f43e72dc46ad0b75191cce70e
+brotli==1.2.1 --hash=sha256:4b9dd0173ca5e01d1eb307d3c184fe8c09bdc168ede560889b1018d216d38c61
+inflate64==1.0.4 --hash=sha256:62d1aac3aba094ae42e27ce7581b414c90f218248be0953b6aeb11a127225e5d
+multivolumefile==0.2.3 --hash=sha256:237f4353b60af1703087cf7725755a1f6fcaeeea48421e1896940cd1c920d678
+psutil==7.2.2 --hash=sha256:076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9
+py7zr==1.1.4 --hash=sha256:f6f868a457a6bd485b78d26e619045718bcd0b7720a6bf97d5fe86a1523423e8
+pybcj==1.0.8 --hash=sha256:a50b58f9b9d9978c55e3219b6816a1021a778b028a810b36aa754407591cb5ae
+pycryptodomex==3.24.2 --hash=sha256:e340408a601003f235b50117cd16f87b2a5b4760765aafe93340eeaadeb0414d
+pyppmd==1.3.1 --hash=sha256:1bd6d179ad39b6191ca0cbe62fb9592f33f49277b4384ad7bc5eb0e6ca27ebee
+texttable==1.7.4 --hash=sha256:3ec756f1e7ecec163cbe17ccae24de1f39f3078c0bef6d331b709f42b543e23a

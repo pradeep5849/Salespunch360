@@ -1,0 +1,74 @@
+name: Validate Android signing export workflow
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/android-signing-keygen.yml
+      - .github/workflows/android-signing-keygen-validation.yml
+      - scripts/android-signing/**
+      - docs/android-signing/owner-backup-generation.md
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/android-signing-keygen.yml
+      - .github/workflows/android-signing-keygen-validation.yml
+      - scripts/android-signing/**
+      - docs/android-signing/owner-backup-generation.md
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    name: Signing export boundary tests (no key generation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install checksum-locked encryption test dependencies
+        run: >-
+          python -m pip --isolated install --index-url https://pypi.org/simple
+          --require-hashes --only-binary=:all: --disable-pip-version-check
+          -r scripts/android-signing/requirements.txt
+      - name: Test archive guards, encryption, extraction and failure cleanup
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s scripts/android-signing -p 'test_*.py' -v
+      - name: Validate workflow definitions with checksum-pinned actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_directory="$(mktemp -d)"
+          trap 'rm -rf "$tool_directory"' EXIT
+          curl --fail --silent --show-error --location \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            -o "$tool_directory/actionlint.tar.gz"
+          printf '%s  %s\n' \
+            8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 \
+            "$tool_directory/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$tool_directory/actionlint.tar.gz" -C "$tool_directory" actionlint
+          "$tool_directory/actionlint" \
+            .github/workflows/android-signing-keygen.yml \
+            .github/workflows/android-signing-keygen-validation.yml
+      - name: Verify independent 7-Zip compatibility using synthetic files only
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          tool_directory="$(mktemp -d)"
+          trap 'rm -rf "$tool_directory"' EXIT
+          curl --fail --silent --show-error --location \
+            https://github.com/ip7z/7zip/releases/download/26.06/7z2606-linux-x64.tar.xz \
+            -o "$tool_directory/7zip.tar.xz"
+          printf '%s  %s\n' \
+            2b539cf067b2ad48e1baa5093dbaa8818b73542d1222a0ffde9dc5f2922ea62e \
+            "$tool_directory/7zip.tar.xz" | sha256sum --check
+          tar -xJf "$tool_directory/7zip.tar.xz" -C "$tool_directory" 7zz
+          SEVENZIP_BIN="$tool_directory/7zz" python scripts/android-signing/verify-sevenzip-compatibility.py

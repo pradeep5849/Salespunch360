@@ -1,0 +1,107 @@
+name: One-time Android signing key generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type GENERATE_NEW_SALESPUNCH360_KEY only if no production key exists anywhere"
+        required: true
+        type: string
+      owner_ready:
+        description: "I have safely stored the export password and will download and verify the offline backup"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: salespunch360-one-time-signing-key
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: android-signing-key-generation
+    steps:
+      - name: Require owner, main, first attempt and explicit acknowledgement
+        shell: bash
+        env:
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          REF: ${{ github.ref }}
+          ATTEMPT: ${{ github.run_attempt }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          OWNER_READY: ${{ inputs.owner_ready }}
+        run: |
+          set -euo pipefail
+          test "$ACTOR" = "$OWNER"
+          test "$REF" = refs/heads/main
+          test "$ATTEMPT" = 1
+          test "$CONFIRMATION" = GENERATE_NEW_SALESPUNCH360_KEY
+          test "$OWNER_READY" = true
+
+      - name: Refuse previous generation or existing backup artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prior_runs="$(gh api "repos/$GH_REPO/actions/workflows/android-signing-keygen.yml/runs?status=success&per_page=1" --jq .total_count)"
+          test "$prior_runs" = 0
+          prior_artifacts="$(gh api "repos/$GH_REPO/actions/artifacts?name=salespunch360-signing-owner-backup&per_page=1" --jq .total_count)"
+          test "$prior_artifacts" = 0
+
+      - name: Check out reviewed main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 17
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install checksum-locked archive encryption library
+        run: >-
+          python -m pip --isolated install --index-url https://pypi.org/simple
+          --require-hashes --only-binary=:all: --disable-pip-version-check
+          -r scripts/android-signing/requirements.txt
+
+      - name: Validate encrypted archive export and generate owner backup
+        env:
+          ANDROID_KEYSTORE_EXPORT_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_EXPORT_PASSWORD }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: python scripts/android-signing/generate-owner-backup.py
+
+      - name: Upload encrypted owner backup and public fingerprints
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: salespunch360-signing-owner-backup
+          path: |
+            ${{ runner.temp }}/salespunch360-signing-export/salespunch360-owner-backup.7z
+            ${{ runner.temp }}/salespunch360-signing-export/salespunch360-owner-backup.7z.sha256
+            ${{ runner.temp }}/salespunch360-signing-export/certificate-fingerprints.txt
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Remove runner signing material on success or failure
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf -- "$RUNNER_TEMP"/sp360-signing-private-* "$RUNNER_TEMP/salespunch360-signing-export"
