@@ -42,7 +42,7 @@ export async function processFieldJobs(limit=10){
     if(await db.user.findFirst({where:{id:event.actorUserId,companyId:job.companyId},select:{id:true}}))await deliverFieldEvent(event,new Date(),true,job.id);
    }else if(job.kind==='BILLING_EMAIL'||job.kind==='BILLING_PUSH'){
     const {orderId}=z.object({orderId:z.string().uuid()}).parse(job.payload);
-    const payment=await db.paymentTransaction.findFirst({where:{orderId,companyId:job.companyId,provider:"CASHFREE_SANDBOX",status:"CAPTURED"},select:{providerPaymentId:true}});
+    const payment=await db.paymentTransaction.findFirst({where:{orderId,companyId:job.companyId,provider:{in:["CASHFREE","CASHFREE_SANDBOX"]},status:"CAPTURED"},select:{providerPaymentId:true}});
     if(payment){
      if(job.kind==='BILLING_EMAIL'){const {notifyCashfreePaymentCaptured}=await import('@/lib/billing/cashfree-payment-email');await notifyCashfreePaymentCaptured(orderId,payment.providerPaymentId);}
      else {const {notifyCashfreePush}=await import('@/lib/billing/cashfree-push');await notifyCashfreePush(job.companyId,orderId);}

@@ -34,12 +34,26 @@ it("keeps static marketing pages free of per-request nonces", () => {
   ).toBeNull();
 });
 
-it("allows Cashfree only on sandbox billing checkout", () => {
+it("isolates sandbox and production Cashfree to checkout pages", () => {
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("CASHFREE_ENV", "sandbox");
-  const policy = (path: string) => proxy(new NextRequest("https://www.salespunch360.com" + path)).headers.get("content-security-policy");
-  expect(policy("/workspace/billing/pending")).toContain("https://sandbox.cashfree.com");
+  const policy = (path: string) =>
+    proxy(new NextRequest("https://www.salespunch360.com" + path)).headers.get(
+      "content-security-policy",
+    );
+  expect(policy("/workspace/billing/pending")).toContain(
+    "https://sandbox.cashfree.com",
+  );
   expect(policy("/sign-in")).not.toContain("cashfree.com");
   vi.stubEnv("CASHFREE_ENV", "production");
-  expect(policy("/workspace/billing/pending")).not.toContain("cashfree.com");
+  expect(policy("/workspace/billing/pending")).toContain(
+    "https://payments.cashfree.com",
+  );
+  expect(policy("/workspace/billing/pending")).not.toContain(
+    "https://sandbox.cashfree.com",
+  );
+  expect(policy("/payment/checkout")).toContain(
+    "https://payments.cashfree.com",
+  );
+  expect(policy("/workspace/leads")).not.toContain("cashfree.com");
 });

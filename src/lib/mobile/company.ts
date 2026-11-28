@@ -6,7 +6,7 @@ import { companyOperationsSchema } from "@/lib/attendance/validation";
 import { geofenceSettingsSchema } from "@/lib/geofence/validation";
 import { effectiveEntitlement } from "@/lib/billing/entitlement";
 import { currentPrices } from "@/lib/billing/service";
-import { PAYMENT_PROVIDER_STATUS } from "@/lib/billing/provider";
+import { cashfreeAvailable, cashfreeConfig } from "@/lib/billing/cashfree-config";
 import { processCompanyLogo } from "@/lib/company/logo";
 import { profileComplete } from "@/lib/company/profile";
 import { lockBillingCompany } from "@/lib/billing/company-lock";
@@ -74,8 +74,8 @@ export async function mobileCompanyContext(principal: MobilePrincipal) {
     },
     entitlement,
     prices,
-    paymentProvider: PAYMENT_PROVIDER_STATUS,
-    paymentMessage: "Online payment is currently unavailable.",
+    paymentProvider: cashfreeAvailable() ? cashfreeConfig().provider : "UNCONFIGURED",
+    paymentMessage: cashfreeAvailable() ? (cashfreeConfig().environment === "production" ? "Secure online payment via Cashfree." : "Sandbox test payment — no real money is charged.") : "Online payment is currently unavailable.",
   };
 }
 

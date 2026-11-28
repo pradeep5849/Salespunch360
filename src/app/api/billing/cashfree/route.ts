@@ -1,3 +1,6 @@
+import { queueCheckoutAnalytics } from "@/lib/analytics/server";
+import { BILLING_CONFIRMATION_COOKIE, CONSENT_COOKIE, parseConsent } from "@/lib/analytics/policy";
+import { cookies } from "next/headers";
 import { requirePermissionForMutation } from "@/lib/auth/authorization";
 import { startCashfreeCheckout, inspectCashfreeCheckout } from "@/lib/billing/cashfree-checkout";
 import { z } from "zod";
@@ -22,12 +25,16 @@ export async function POST(request: Request) {
     const result = parsed.data.action === "start"
       ? await startCashfreeCheckout(identity, parsed.data.orderId)
       : await inspectCashfreeCheckout(identity, parsed.data.orderId);
+    if (parsed.data.action === "start") { try { await queueCheckoutAnalytics(actor.id, actor.companyId, parsed.data.orderId, parseConsent((await cookies()).get(CONSENT_COOKIE)?.value).analytics); } catch { /* Optional measurement cannot fail checkout. */ } }
     console.info(JSON.stringify({category:"CASHFREE_API",action:parsed.data.action,status:"OK"}));
+    if (parsed.data.action === "verify" && "activated" in result && result.activated) {
+      (await cookies()).set(BILLING_CONFIRMATION_COOKIE, parsed.data.orderId, { httpOnly: true, secure: true, sameSite: "lax", path: "/workspace/billing/success", maxAge: 1800 });
+    }
     return Response.json(result, { headers });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
-    console.warn(JSON.stringify({category:"CASHFREE_API",status:"FAILED",code:/^(CASHFREE_REQUEST_FAILED_\d{3}|VALID_PHONE_REQUIRED|ORDER_NOT_PAYABLE|CASHFREE_SANDBOX_UNAVAILABLE|INVALID_CASHFREE_RESPONSE|NOT_FOUND)$/.test(code)?code:"CHECKOUT_FAILED"}));
-    const safe = ["ORDER_NOT_PAYABLE", "VALID_PHONE_REQUIRED", "CASHFREE_SANDBOX_UNAVAILABLE", "NOT_FOUND"].includes(code);
+    console.warn(JSON.stringify({category:"CASHFREE_API",status:"FAILED",code:/^(CASHFREE_REQUEST_FAILED_\d{3}|VALID_PHONE_REQUIRED|ORDER_NOT_PAYABLE|CASHFREE_UNAVAILABLE|INVALID_CASHFREE_RESPONSE|NOT_FOUND)$/.test(code)?code:"CHECKOUT_FAILED"}));
+    const safe = ["ORDER_NOT_PAYABLE", "VALID_PHONE_REQUIRED", "CASHFREE_UNAVAILABLE", "PAYMENT_ENVIRONMENT_MISMATCH", "CASHFREE_CONFIGURATION_INVALID", "NOT_FOUND"].includes(code);
     return Response.json({ error: safe ? code : "CHECKOUT_FAILED" }, { status: safe ? 400 : 403, headers });
   }
 }

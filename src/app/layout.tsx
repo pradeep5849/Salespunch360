@@ -1,3 +1,4 @@
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
 import "./(marketing)/public-shared.css";
 import type { Metadata, Viewport } from "next";
 import "./pwa.css";
@@ -25,5 +26,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0f172a" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}<PwaInstall /><PwaRegister /></body></html>;
+  return <html lang="en"><body>{children}<PwaInstall /><PwaRegister /><AnalyticsProvider /></body></html>;
 }

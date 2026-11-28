@@ -1,4 +1,5 @@
 "use server";
+import { queueRegistrationAnalytics } from "@/lib/analytics/server";
 
 import { redirect } from "next/navigation";
 import { createSession } from "@/lib/auth/session";
@@ -44,6 +45,7 @@ export async function register(_: RegistrationState, formData: FormData): Promis
     const { user } = await registerCompany(parsed.data,logo);
     try { await issueEmailVerification(user.id, user.email); } catch { /* Account remains usable; authenticated resend is available. */ }
     await createSession(user.id);
+    if (user.companyId) await queueRegistrationAnalytics(user.id, user.companyId);
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "LOGO_INVALID") {

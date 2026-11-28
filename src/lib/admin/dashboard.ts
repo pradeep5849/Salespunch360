@@ -10,7 +10,7 @@ export async function getAdminDashboard() {
     db.company.groupBy({ by: ["subscriptionStatus"], _count: { _all: true } }),
     db.company.findMany({ select: companyIdentitySelect, orderBy: { createdAt: "desc" }, take: 8 }),
     db.billingOrder.count({where:{status:"PENDING"}}),
-    db.paymentTransaction.aggregate({where:{status:"CAPTURED",provider:{not:"CASHFREE_SANDBOX"}},_count:{_all:true},_sum:{amount:true}}),
+    db.paymentTransaction.aggregate({where:{status:"CAPTURED",provider:{notIn:["CASHFREE_SANDBOX","TEST"]}},_count:{_all:true},_sum:{amount:true}}),
     db.$queryRaw<{pending:bigint;captured:bigint;revenue:Prisma.Decimal}[]>(Prisma.sql`SELECT COUNT(*) FILTER (WHERE status='PENDING')::bigint AS pending,COUNT(*) FILTER (WHERE status='PAID')::bigint AS captured,COALESCE(SUM("totalAmount") FILTER (WHERE status='PAID'),0)::numeric AS revenue FROM "telecaller_billing_orders"`),
     db.user.count({where:{isActive:true,companyId:{not:null}}}),
   ]);

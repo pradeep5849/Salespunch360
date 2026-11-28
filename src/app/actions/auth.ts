@@ -1,4 +1,5 @@
 "use server";
+import { queueLoginAnalytics } from "@/lib/analytics/server";
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -32,6 +33,7 @@ export async function signIn(_: SignInState, formData: FormData): Promise<SignIn
     return {error:"No access. Please log in using the SalesPunch360 app."};
   }
   await createSession(user.id, formData.get("remember") === "true", user.passwordHash);
+  if (user.companyId) await queueLoginAnalytics(user.id,user.companyId);
   if (process.env.FIRST_USE_PHONE_VERIFICATION_ENABLED === "true" && user.companyId && user.role !== "SUPER_ADMIN" && !user.phoneVerifiedAt) {
     return redirect("/verify-mobile");
   }
