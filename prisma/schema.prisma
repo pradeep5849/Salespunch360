@@ -1627,6 +1627,7 @@ model BillingOrder {
   taxAmount              Decimal              @default(0) @db.Decimal(18, 2)
   totalAmount            Decimal              @db.Decimal(18, 2)
   status                 BillingOrderStatus   @default(PENDING)
+  paymentEnvironment     String?              @db.VarChar(16)
   provider               String               @default("UNCONFIGURED") @db.VarChar(40)
   providerOrderId        String?              @unique @db.VarChar(200)
   idempotencyKey         String               @unique @db.VarChar(100)

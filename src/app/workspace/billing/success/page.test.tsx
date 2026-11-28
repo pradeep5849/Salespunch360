@@ -17,13 +17,24 @@ vi.mock("@/components/analytics/purchase-conversion", () => ({
     <span data-conversion-order={orderId} />
   ),
 }));
+vi.mock("@/lib/billing/unified-sales-team", () => ({
+  unifiedTelecallerTargetForOrder: async () => 2,
+}));
 import Page from "./page";
 const id = "2ca57402-472d-45ba-81f5-d204b7ef5dcc";
 beforeEach(() => {
   vi.clearAllMocks();
   m.cookie.mockReturnValue(undefined);
   m.confirmed.mockResolvedValue({
-    order: { id, currency: "INR" },
+    order: {
+      id,
+      currency: "INR",
+      billingPeriod: "YEARLY",
+      adminSeats: 1,
+      managerSeats: 1,
+      salesSeats: 2,
+      accountPackages: 0,
+    },
     payment: {
       amount: "1499.75",
       provider: "CASHFREE",
@@ -61,7 +72,15 @@ it("redirects unverified, failed, cancelled, expired and foreign-tenant orders w
 });
 it("keeps sandbox receipts and success UI without a production conversion component", async () => {
   m.confirmed.mockResolvedValue({
-    order: { id, currency: "INR" },
+    order: {
+      id,
+      currency: "INR",
+      billingPeriod: "YEARLY",
+      adminSeats: 1,
+      managerSeats: 1,
+      salesSeats: 2,
+      accountPackages: 0,
+    },
     payment: {
       amount: "1499.75",
       provider: "CASHFREE_SANDBOX",

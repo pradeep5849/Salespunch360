@@ -2,6 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android"); id(
 if (file("google-services.json").exists()) apply(plugin="com.google.gms.google-services")
 android { namespace="com.salespunch360.mobile"; compileSdk=35
  defaultConfig { applicationId="com.salespunch360.mobile"; minSdk=26; targetSdk=35; versionCode=2; versionName="0.9.0"; testInstrumentationRunner="androidx.test.runner.AndroidJUnitRunner"; buildConfigField("String","API_BASE_URL","\"https://www.salespunch360.com/\""); manifestPlaceholders["cleartextTraffic"]="false" }
+ defaultConfig { buildConfigField("boolean","PLAY_DISTRIBUTION",providers.gradleProperty("playDistribution").orElse("false").get()) }
  buildFeatures { compose=true; buildConfig=true }
  val releaseStore=System.getenv("ANDROID_KEYSTORE_PATH");val releaseAlias=System.getenv("ANDROID_KEY_ALIAS");val releaseStorePassword=System.getenv("ANDROID_KEYSTORE_PASSWORD");val releaseKeyPassword=System.getenv("ANDROID_KEY_PASSWORD")
  if(listOf(releaseStore,releaseAlias,releaseStorePassword,releaseKeyPassword).all{!it.isNullOrBlank()})signingConfigs.create("production"){storeFile=file(releaseStore!!);keyAlias=releaseAlias;storePassword=releaseStorePassword;keyPassword=releaseKeyPassword}
@@ -11,7 +12,7 @@ android { namespace="com.salespunch360.mobile"; compileSdk=35
 dependencies {
  implementation("androidx.camera:camera-camera2:1.4.1"); implementation("androidx.camera:camera-lifecycle:1.4.1"); implementation("androidx.camera:camera-view:1.4.1"); implementation("com.google.zxing:core:3.5.3")
  implementation("androidx.browser:browser:1.8.0")
- implementation(platform("com.google.firebase:firebase-bom:33.9.0")); implementation("com.google.firebase:firebase-messaging")
+ implementation(platform("com.google.firebase:firebase-bom:33.9.0")); implementation("com.google.firebase:firebase-messaging"); implementation("com.google.firebase:firebase-analytics")
  implementation(platform("androidx.compose:compose-bom:2025.01.00")); implementation("androidx.activity:activity-compose:1.10.0"); implementation("androidx.fragment:fragment-ktx:1.8.5"); implementation("androidx.compose.material3:material3"); implementation("androidx.compose.material:material-icons-extended"); implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"); implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1"); implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"); implementation("com.squareup.okhttp3:okhttp:4.12.0"); implementation("io.coil-kt.coil3:coil-compose:3.1.0"); implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0"); implementation("com.google.android.gms:play-services-location:21.3.0"); implementation("androidx.work:work-runtime-ktx:2.10.0"); implementation("androidx.security:security-crypto:1.1.0-alpha06")
  implementation("org.osmdroid:osmdroid-android:6.1.20")

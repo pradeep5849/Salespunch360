@@ -1,3 +1,4 @@
+import { unifiedTelecallerTargetForOrder } from "@/lib/billing/unified-sales-team";
 import { cookies } from "next/headers";
 import { BILLING_CONFIRMATION_COOKIE } from "@/lib/analytics/policy";
 import Link from "next/link";
@@ -25,6 +26,7 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
       `/workspace/billing/pending?order=${encodeURIComponent(parsed.data)}`,
     );
   const { order, payment } = confirmed;
+  const telecaller = await unifiedTelecallerTargetForOrder(order.id);
   const sandbox = payment.provider === "CASHFREE_SANDBOX";
   const button = {
     display: "block",
@@ -53,7 +55,10 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
           </article>
           <article>
             <strong>
-              {payment.providerPaymentId.replace(/^cashfree_sandbox_/, "")}
+              {payment.providerPaymentId.replace(
+                /^cashfree_(sandbox|live)_/,
+                "",
+              )}
             </strong>
             <span>Cashfree payment ID</span>
           </article>
@@ -71,6 +76,12 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
             <span>Payment status</span>
           </article>
         </div>
+        <p>
+          {order.billingPeriod.replace("_", " ")} · Admins {order.adminSeats} ·
+          Managers {order.managerSeats} · Sales {order.salesSeats} · Telecallers{" "}
+          {telecaller ?? "Not recorded"} · Account packages{" "}
+          {order.accountPackages}
+        </p>
         {sandbox && <p>Sandbox test payment — no real money charged.</p>}
         <div style={{ display: "grid", gap: 12, marginTop: 20 }}>
           <Link
@@ -79,6 +90,8 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
           >
             Back to Billing &amp; Subscription
           </Link>
+          <Link href="/workspace/billing/history">Payment history</Link>
+          <Link href="/workspace">Return to dashboard</Link>
           <a
             href={`/api/billing/cashfree/receipt?order=${encodeURIComponent(order.id)}`}
             download

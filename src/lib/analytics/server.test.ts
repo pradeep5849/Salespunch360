@@ -36,6 +36,7 @@ function order() {
     id,
     companyId: "tenant",
     status: "PAID",
+    paymentEnvironment: "production",
     totalAmount: new Prisma.Decimal("1499.75"),
     currency: "INR",
     paidAt: capturedAt,

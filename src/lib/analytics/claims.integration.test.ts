@@ -48,6 +48,8 @@ describe.skipIf(!enabled)("real PostgreSQL conversion receipts", () => {
     vi.stubEnv("APP_URL", "https://www.salespunch360.com");
     vi.stubEnv("ANALYTICS_ENABLED", "true");
     vi.stubEnv("CASHFREE_ENV", "production");
+    vi.stubEnv("CASHFREE_APP_ID", "isolated-fixture");
+    vi.stubEnv("CASHFREE_SECRET_KEY", "isolated-fixture-not-production");
     vi.stubEnv("ANALYTICS_INTERNAL_COMPANY_IDS", "");
     const capturedAt = new Date(Date.now() - 1000);
     await slot.client.company.create({
@@ -72,6 +74,7 @@ describe.skipIf(!enabled)("real PostgreSQL conversion receipts", () => {
     });
     const base = {
       companyId,
+      paymentEnvironment: "production",
       createdByUserId: userId,
       billingPeriod: "YEARLY" as const,
       managerSeats: 1,
@@ -89,6 +92,7 @@ describe.skipIf(!enabled)("real PostgreSQL conversion receipts", () => {
         ...base,
         id: orderId,
         status: "PAID",
+        paymentEnvironment: "production",
         paidAt: capturedAt,
         idempotencyKey: "analytics-" + orderId,
       },
@@ -203,5 +207,64 @@ describe.skipIf(!enabled)("real PostgreSQL conversion receipts", () => {
       );
     });
     expect(Number(visible[0].count)).toBe(0);
+  });
+  it("commits exactly one real live activation and receipt authority under concurrent callbacks", async () => {
+    const { activateVerifiedPayment } = await import("@/lib/billing/service");
+    const id = randomUUID();
+    const capturedAt = new Date();
+    await slot.client.billingOrder.create({
+      data: {
+        id,
+        companyId,
+        createdByUserId: userId,
+        paymentEnvironment: "production",
+        status: "PENDING",
+        billingPeriod: "YEARLY",
+        managerSeats: 1,
+        salesSeats: 1,
+        managerUnitPrice: "49.75",
+        salesUnitPrice: "50.00",
+        currency: "INR",
+        subtotal: "99.75",
+        totalAmount: "99.75",
+        idempotencyKey: "live-" + id,
+        createdAt: new Date(Date.now() - 60000),
+        expiresAt: new Date(Date.now() + 3600000),
+      },
+    });
+    const verified = {
+      provider: "CASHFREE",
+      providerPaymentId: "cashfree_live_" + Date.now(),
+      orderId: id,
+      amount: "99.75",
+      currency: "INR" as const,
+      capturedAt,
+    };
+    await Promise.all(
+      Array.from({ length: 5 }, () => activateVerifiedPayment(verified)),
+    );
+    expect(
+      await slot.client.paymentTransaction.count({ where: { orderId: id } }),
+    ).toBe(1);
+    expect(
+      await slot.client.companySubscription.count({
+        where: { sourceOrderId: id },
+      }),
+    ).toBe(1);
+    expect(
+      await slot.client.billingOrder.findUnique({ where: { id } }),
+    ).toMatchObject({ status: "PAID", paymentEnvironment: "production" });
+    expect(
+      await slot.client.fieldJob.count({
+        where: {
+          companyId,
+          key: { in: ["BILLING_EMAIL:" + id, "BILLING_PUSH:" + id] },
+        },
+      }),
+    ).toBe(2);
+    const evidence = await confirmedOrderForActor(actor, id);
+    expect(evidence?.evidence.activated).toBe(true);
+    expect((await claimPurchase(actor, id))?.transaction_id).toBe(id);
+    expect(await claimPurchase(actor, id)).toBeNull();
   });
 });

@@ -37,7 +37,7 @@ export function analyticsWindow() {
   return window as unknown as AnalyticsWindow;
 }
 export async function claimAndSend(
-  eventName: "sign_up" | "begin_checkout" | "purchase",
+  eventName: "sign_up" | "login" | "begin_checkout" | "purchase",
   orderId?: string,
 ) {
   const target = analyticsWindow();
@@ -76,4 +76,26 @@ export async function claimAndSend(
 }
 export function captureCheckout(orderId: string) {
   void claimAndSend("begin_checkout", orderId);
+}
+
+export function trackFunnel(
+  eventName: "view_item" | "add_to_cart",
+  value?: number,
+) {
+  const target = analyticsWindow();
+  if (!browserAnalyticsAllowed() || !target.__sp360GaReady) return;
+  target.gtag?.("event", eventName, {
+    send_to: GA4_MEASUREMENT_ID,
+    currency: "INR",
+    ...(Number.isFinite(value) && Number(value) > 0 ? { value } : {}),
+    items: [
+      { item_id: "subscription", item_name: "SalesPunch360 subscription" },
+    ],
+    page_location: safePageLocation(
+      window.location.href,
+      browserConsent().advertising,
+    ),
+    page_title: "SalesPunch360",
+    page_referrer: "",
+  });
 }

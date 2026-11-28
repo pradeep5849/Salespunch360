@@ -3,7 +3,7 @@ import {renderToStaticMarkup} from "react-dom/server";
 const m=vi.hoisted(()=>({dashboard:vi.fn()}));
 vi.mock("@/lib/billing/service",()=>({billingDashboard:m.dashboard}));
 vi.mock("@/app/actions/billing",()=>({createAccountPackageOrderAction:vi.fn()}));
-vi.mock("next/navigation",()=>({redirect:()=>{throw new Error("REDIRECT")}}));
+vi.mock("next/navigation",()=>({useRouter:()=>({push:vi.fn(),refresh:vi.fn()}),redirect:()=>{throw new Error("REDIRECT")}}));
 import Page from "./page";
 beforeEach(()=>{m.dashboard.mockResolvedValue({hasAccount:true,company:{productEdition:"SALESPUNCH360_ACCOUNT"},account:{sixMonthUnitPrice:600.25,yearlyUnitPrice:900.75}})});
 it("reviews configured paise prices instead of default constants",async()=>{const html=renderToStaticMarkup(await Page({searchParams:Promise.resolve({quantity:"2",billingPeriod:"SIX_MONTH"})}));expect(html).toContain("600.25");expect(html).toContain("1,200.50")});

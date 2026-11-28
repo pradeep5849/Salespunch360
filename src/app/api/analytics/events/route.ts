@@ -18,7 +18,7 @@ import {
 
 const schema = z
   .object({
-    eventName: z.enum(["sign_up", "begin_checkout", "purchase"]),
+    eventName: z.enum(["sign_up", "login", "begin_checkout", "purchase"]),
     orderId: z.string().uuid().optional(),
   })
   .strict();
@@ -45,13 +45,13 @@ export async function POST(request: Request) {
       return new Response(null, { status: 204, headers });
     const { eventName, orderId } = parsed.data;
     let params;
-    if (eventName === "sign_up") {
+    if (eventName === "sign_up" || eventName === "login") {
       if (orderId)
         return Response.json(
           { error: "INVALID_REQUEST" },
           { status: 400, headers },
         );
-      params = await claimRegistration(user.id);
+      params = await claimRegistration(user.id, eventName);
     } else {
       if (!orderId)
         return Response.json(

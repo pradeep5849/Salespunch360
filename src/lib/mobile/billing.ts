@@ -1,3 +1,4 @@
+import { cashfreeAvailable } from "@/lib/billing/cashfree-config";
 import {purchasePurposeForCompany} from "@/lib/billing/purchase-purpose";
 import {z} from "zod";
 import {cancelPendingOrderForActor} from "@/lib/billing/service";
@@ -44,7 +45,7 @@ export async function mobileBillingContext(p:MobilePrincipal,page=1){
   hasSales,hasAccount,isPlus,teamStructure:company.teamStructure,
   prices:prices.map(x=>({...x,amount:x.amount.toFixed(2)})),
   orders:orders.map(x=>({...x,totalAmount:x.totalAmount.toFixed(2),telecallerSeats:telecallerTargets.get(x.id)??null,payments:x.payments.map(payment=>({...payment,amount:payment.amount.toFixed(2)}))})),
-  onlinePaymentAvailable:process.env.CASHFREE_ENV==='sandbox' && Boolean(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY),salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
+  onlinePaymentAvailable:cashfreeAvailable(),salesSeatUsers,orderPage:safePage,orderTotalPages:Math.max(1,Math.ceil(orderCount/pageSize)),hasMoreOrders:safePage*pageSize<orderCount,
   sales:entitlement?{
    status:operationalSalesStatus(entitlement),
    endsAt:entitlement.subscription?.endsAt??company.trialEndsAt,
@@ -95,7 +96,7 @@ export async function billingQuoteForCompany(companyId:string,raw:unknown){
 
 export async function mobileOnlineOrder(p:MobilePrincipal,raw:unknown,cartRevision?:number){
  access(p);const input=(raw&&typeof raw==="object"?raw:{}) as Record<string,unknown>;
- if(!(process.env.CASHFREE_ENV==="sandbox"&&process.env.CASHFREE_APP_ID&&process.env.CASHFREE_SECRET_KEY))throw new MobileCompanyError("ONLINE_PAYMENT_UNAVAILABLE",503);
+ if(!(cashfreeAvailable()))throw new MobileCompanyError("ONLINE_PAYMENT_UNAVAILABLE",503);
  if(input.kind==="ACCOUNT_PACKAGE"){
   const quantity=Number(input.quantity),period=input.billingPeriod;
   if(period!=="SIX_MONTH"&&period!=="YEARLY")throw new MobileCompanyError("INVALID_INPUT");

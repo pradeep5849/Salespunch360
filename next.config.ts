@@ -39,7 +39,27 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
-      ...["/workspace/billing/pending", "/payment/sandbox"].map(source => ({source, headers: [{key:"Content-Security-Policy",value:contentSecurityPolicy(production,undefined,true)}]})),
+      ...[
+        "/workspace/billing/pending",
+        "/payment/sandbox",
+        "/payment/checkout",
+      ].map((source) => ({
+        source,
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: contentSecurityPolicy(
+              production,
+              undefined,
+              process.env.CASHFREE_ENV === "production"
+                ? "production"
+                : process.env.CASHFREE_ENV === "sandbox"
+                  ? "sandbox"
+                  : false,
+            ),
+          },
+        ],
+      })),
       {
         source: "/workspace/account/transactions/new",
         headers: [

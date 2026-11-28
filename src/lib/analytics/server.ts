@@ -87,7 +87,12 @@ export async function confirmedOrderForActor(
       p.status === "CAPTURED" &&
       ["CASHFREE", "CASHFREE_SANDBOX"].includes(p.provider),
   );
-  if (!payment) return null;
+  if (
+    !payment ||
+    (payment.provider === "CASHFREE" &&
+      order.paymentEnvironment !== "production")
+  )
+    return null;
   const capture = await db.billingAuditEvent.findFirst({
     where: {
       companyId: actor.companyId,
@@ -134,18 +139,31 @@ export async function confirmedOrderForActor(
         : "unknown",
     internalTest: metadata.internalTest === true,
   };
-  return paymentConfirmed(evidence) ? { order, payment, evidence } : null;
+  const category = [
+    "new_subscription",
+    "renewal",
+    "additional_users",
+    "account_package",
+  ].includes(String(metadata.purchaseCategory))
+    ? String(metadata.purchaseCategory)
+    : "subscription";
+  return paymentConfirmed(evidence)
+    ? { order, payment, evidence, purchaseCategory: category }
+    : null;
 }
 export async function confirmedBillingSuccess(orderId: string) {
   const actor = await requirePermission("SALES_BILLING");
   if (!actor.companyId) return null;
   return confirmedOrderForActor({ companyId: actor.companyId }, orderId);
 }
-export async function claimRegistration(userId: string) {
+export async function claimRegistration(
+  userId: string,
+  eventName: "sign_up" | "login" = "sign_up",
+) {
   const result = await db.analyticsEventReceipt.updateMany({
     where: {
-      keyHash: receiptKey("sign_up", userId),
-      eventName: "sign_up",
+      keyHash: receiptKey(eventName, userId),
+      eventName,
       claimedAt: null,
       createdAt: { gte: new Date(Date.now() - 86_400_000) },
     },
@@ -219,6 +237,29 @@ export async function claimPurchase(
     skipDuplicates: true,
   });
   return result.count === 1
-    ? { ...params, transaction_id: confirmed.order.id }
+    ? {
+        ...params,
+        transaction_id: confirmed.order.id,
+        purchase_category: confirmed.purchaseCategory,
+      }
     : null;
+}
+
+export async function queueLoginAnalytics(userId: string, companyId: string) {
+  try {
+    if (
+      !productionAnalytics() ||
+      internalCompany(companyId) ||
+      !parseConsent((await cookies()).get(CONSENT_COOKIE)?.value).analytics
+    )
+      return;
+    const keyHash = receiptKey("login", userId);
+    await db.analyticsEventReceipt.upsert({
+      where: { keyHash },
+      create: { keyHash, eventName: "login" },
+      update: { claimedAt: null, createdAt: new Date() },
+    });
+  } catch {
+    /* Authentication never depends on optional analytics. */
+  }
 }

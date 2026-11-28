@@ -33,8 +33,8 @@ export async function POST(request: Request) {
     return Response.json(result, { headers });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
-    console.warn(JSON.stringify({category:"CASHFREE_API",status:"FAILED",code:/^(CASHFREE_REQUEST_FAILED_\d{3}|VALID_PHONE_REQUIRED|ORDER_NOT_PAYABLE|CASHFREE_SANDBOX_UNAVAILABLE|INVALID_CASHFREE_RESPONSE|NOT_FOUND)$/.test(code)?code:"CHECKOUT_FAILED"}));
-    const safe = ["ORDER_NOT_PAYABLE", "VALID_PHONE_REQUIRED", "CASHFREE_SANDBOX_UNAVAILABLE", "NOT_FOUND"].includes(code);
+    console.warn(JSON.stringify({category:"CASHFREE_API",status:"FAILED",code:/^(CASHFREE_REQUEST_FAILED_\d{3}|VALID_PHONE_REQUIRED|ORDER_NOT_PAYABLE|CASHFREE_UNAVAILABLE|INVALID_CASHFREE_RESPONSE|NOT_FOUND)$/.test(code)?code:"CHECKOUT_FAILED"}));
+    const safe = ["ORDER_NOT_PAYABLE", "VALID_PHONE_REQUIRED", "CASHFREE_UNAVAILABLE", "PAYMENT_ENVIRONMENT_MISMATCH", "CASHFREE_CONFIGURATION_INVALID", "NOT_FOUND"].includes(code);
     return Response.json({ error: safe ? code : "CHECKOUT_FAILED" }, { status: safe ? 400 : 403, headers });
   }
 }

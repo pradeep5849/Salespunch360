@@ -39,13 +39,26 @@ function passThrough(request: NextRequest) {
     return response;
   }
   if (
-    !/^\/(workspace|admin)(\/|$)|^\/(sign-in|register)(\/|$)/.test(
+    !/^\/(workspace|admin)(\/|$)|^\/(sign-in|register|payment)(\/|$)/.test(
       request.nextUrl.pathname,
     )
   )
     return NextResponse.next();
   const nonce = randomBytes(24).toString("base64");
-  const policy = contentSecurityPolicy(true, nonce, process.env.CASHFREE_ENV === "sandbox" && request.nextUrl.pathname === "/workspace/billing/pending");
+  const policy = contentSecurityPolicy(
+    true,
+    nonce,
+    [
+      "/workspace/billing/pending",
+      "/payment/checkout",
+      "/payment/sandbox",
+    ].includes(request.nextUrl.pathname) &&
+      (process.env.CASHFREE_ENV === "production"
+        ? "production"
+        : process.env.CASHFREE_ENV === "sandbox"
+          ? "sandbox"
+          : false),
+  );
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
   headers.set("content-security-policy", policy);

@@ -25,6 +25,6 @@ export default async function Page({searchParams}:{searchParams:Promise<Record<s
  </section>
  <aside className={`billing-card ${styles.panel}`}><h2>Order summary</h2><div className={styles.line}><span>Billing period</span><strong>{s.billingPeriod==="YEARLY"?"12 months":"6 months"}</strong></div>
  {total!==null?<><div className={styles.total}><span>Estimated total</span><strong>{new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR"}).format(total)}</strong></div><p className="muted">Final pricing and proration are confirmed at checkout.</p><form action={s.kind==="ACCOUNT_PACKAGE"?createAccountPackageOrderAction:createOrderAction}><input type="hidden" name="cartRevision" value={cart?.revision}/><button type="submit" data-cart-checkout className={`button-link ${styles.checkout}`}>Proceed to Payment</button></form></>:<p role="status">Pricing unavailable. Update your selection before checkout.</p>}
- <p className={styles.note}>Secure online payment via Cashfree · Sandbox</p></aside>
+ <p className={styles.note}>Secure online payment via Cashfree</p></aside>
  </div></main>;
 }

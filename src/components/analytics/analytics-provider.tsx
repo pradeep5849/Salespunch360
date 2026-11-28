@@ -6,6 +6,7 @@ import {
   browserAnalyticsAllowed,
   browserConsent,
   claimAndSend,
+  trackFunnel,
 } from "@/lib/analytics/client";
 import {
   CONSENT_COOKIE,
@@ -146,6 +147,11 @@ export function AnalyticsProvider() {
     );
     if (lastPage.current !== pathname) {
       lastPage.current = pathname;
+      if (
+        pathname === "/pricing" ||
+        pathname?.startsWith("/workspace/billing/checkout")
+      )
+        trackFunnel("view_item");
       analyticsWindow().gtag?.("set", {
         page_location: page,
         page_title: "SalesPunch360",
@@ -161,6 +167,7 @@ export function AnalyticsProvider() {
     if (!signupChecked.current && pathname?.startsWith("/workspace")) {
       signupChecked.current = true;
       void claimAndSend("sign_up");
+      void claimAndSend("login");
     }
     window.dispatchEvent(new Event("sp360-analytics-ready"));
   }, [pathname, ready, consent]);
