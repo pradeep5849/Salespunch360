@@ -46,3 +46,7 @@ Existing Android configuration uses Firebase messaging/authentication; no explic
 ## Validation
 
 Run the analytics-validation workflow: isolated Postgres migration, focused policy/API/payment/SQL concurrency tests, lint, typecheck, production build and consent browser tests on mobile/desktop. Browser tests stub Google requests and use the local production build under the canonical test origin. They verify no pre-consent traffic, rejection persistence, navigation sanitization, withdrawal and GPC. They do not prove external GA4/Ads account configuration or live Cashfree delivery.
+
+## Future live Cashfree switch
+
+Tracking is prepared now; keep sandbox enabled until the live gateway change is explicitly approved. The future gateway must select the real Cashfree endpoint/SDK mode using validated server configuration, keep server-side verification and activation authoritative, and pass provider `CASHFREE` through the existing activation service with `CASHFREE_ENV=production`. That service records the activation proof consumed here. Existing sandbox provider records and checkout proof snapshots stay ineligible even after the environment changes. Configure live credentials on Hostinger through the normal secure process; do not put credentials into this tracking PR. Then exercise a controlled verified live payment, confirm the actual transaction value in GA4 and verify the filtered Ads import. The event/claim implementation does not need to be rewritten for that switch.
