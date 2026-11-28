@@ -6,11 +6,22 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: android-production-test-apk
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Require repository owner for permanent signing
+        shell: bash
+        env:
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+        run: test "$ACTOR" = "$OWNER"
+
       - name: Check out requested revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -28,6 +39,14 @@ jobs:
 
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Validate permanent keystore, both passwords and pinned fingerprints
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: python3 scripts/android-signing/permanent-apk.py prepare
 
       - name: Inject Firebase configuration
         shell: bash
@@ -51,46 +70,12 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease
 
-      - name: Zip-align, temporarily sign, and verify release APK
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          readonly BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/35.0.0"
-          readonly UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
-          readonly ALIGNED_APK="$RUNNER_TEMP/SalesPunch360-production-test-aligned.apk"
-          readonly KEYSTORE="$RUNNER_TEMP/SalesPunch360-production-test.p12"
-          readonly FINAL_APK="$GITHUB_WORKSPACE/SalesPunch360-production-test.apk"
-          readonly KEY_ALIAS="production-test"
-          trap 'rm -f "$KEYSTORE" "$ALIGNED_APK"' EXIT
-
-          export KEYSTORE_PASSWORD="$(openssl rand -hex 32)"
-          export KEY_PASSWORD="$(openssl rand -hex 32)"
-          echo "::add-mask::$KEYSTORE_PASSWORD"
-          echo "::add-mask::$KEY_PASSWORD"
-
-          keytool -genkeypair -noprompt \
-            -keystore "$KEYSTORE" \
-            -storetype JKS \
-            -storepass "$KEYSTORE_PASSWORD" \
-            -keypass "$KEY_PASSWORD" \
-            -alias "$KEY_ALIAS" \
-            -keyalg RSA \
-            -keysize 3072 \
-            -validity 30 \
-            -dname "CN=SalesPunch360 Temporary Test, OU=CI, O=SalesPunch360, C=US"
-
-          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
-          "$BUILD_TOOLS/apksigner" sign \
-            --ks "$KEYSTORE" \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass env:KEYSTORE_PASSWORD \
-            --key-pass env:KEY_PASSWORD \
-            --out "$FINAL_APK" \
-            "$ALIGNED_APK"
-
-          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$FINAL_APK"
-          "$BUILD_TOOLS/zipalign" -c -p 4 "$FINAL_APK"
+      - name: Zip-align, permanently sign, and verify release APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: python3 scripts/android-signing/permanent-apk.py sign
 
       - name: Verify production connection and network security
         shell: bash
@@ -115,11 +100,15 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: SalesPunch360-production-test-apk
-          path: SalesPunch360-production-test.apk
+          path: |
+            SalesPunch360-production-test.apk
+            SalesPunch360-production-test-certificate.txt
           if-no-files-found: error
           retention-days: 7
 
-      - name: Remove Firebase configuration
+      - name: Remove signing material and Firebase configuration
         if: always()
-        run: rm -f android/app/google-services.json
+        run: |
+          rm -rf -- "$RUNNER_TEMP/salespunch360-permanent-signing"
+          rm -f android/app/google-services.json
 
