@@ -152,3 +152,71 @@ test("GPC prevents loading analytics and disables optional grant buttons", async
   expect(seen.scripts).toHaveLength(0);
   expect(seen.claims).toHaveLength(0);
 });
+
+test("production Android browser handoff uses production SDK mode and scoped CSP", async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.route("https://sdk.cashfree.com/**", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: `window.__paymentCalls=[];window.Cashfree=function(options){return {checkout:async function(input){window.__paymentCalls.push({mode:options.mode,session:input.paymentSessionId});}}};`,
+    }),
+  );
+  const response = await page.goto(
+    canonical + "/payment/checkout#session=synthetic-session",
+  );
+  await expect(
+    page.getByRole("heading", { name: "SalesPunch360 payment", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Sandbox only. No real money is charged."),
+  ).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __paymentCalls?: unknown[] }).__paymentCalls,
+      ),
+    )
+    .toEqual([{ mode: "production", session: "synthetic-session" }]);
+  expect(response?.headers()["content-security-policy"]).toContain(
+    "https://payments.cashfree.com",
+  );
+  expect(response?.headers()["content-security-policy"]).not.toContain(
+    "https://sandbox.cashfree.com",
+  );
+});
+test("invalid handoff cannot launch checkout", async ({ page }) => {
+  await fixture(page);
+  await page.route("https://sdk.cashfree.com/**", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: "window.__paymentCalls=[];window.Cashfree=function(){return {checkout:async function(){window.__paymentCalls.push(true)}}};",
+    }),
+  );
+  await page.goto(canonical + "/payment/checkout");
+  await expect(page.getByRole("status")).toHaveText("Invalid payment session.");
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __paymentCalls: unknown[] }).__paymentCalls,
+    ),
+  ).toHaveLength(0);
+});
+test("legacy sandbox handoff refuses production and return screen never claims success", async ({
+  page,
+}) => {
+  const seen = await fixture(page);
+  await page.goto(canonical + "/payment/sandbox#session=synthetic");
+  await expect(
+    page.getByRole("heading", { name: "Update SalesPunch360" }),
+  ).toBeVisible();
+  await page.goto(canonical + "/payment/complete?order=synthetic");
+  await expect(
+    page.getByText("Your payment attempt has ended.", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Payment successful" }),
+  ).toHaveCount(0);
+  expect(seen.claims).toHaveLength(0);
+});

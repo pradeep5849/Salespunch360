@@ -67,6 +67,9 @@ jobs:
         run: npx playwright test e2e/analytics-consent.spec.ts
         env:
           E2E_PRODUCTION: "1"
+          CASHFREE_ENV: production
+          CASHFREE_APP_ID: isolated-browser-fixture
+          CASHFREE_SECRET_KEY: isolated-browser-fixture-not-production
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
