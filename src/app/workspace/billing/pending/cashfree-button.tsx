@@ -1,10 +1,13 @@
 "use client";
+import { captureCheckout } from "@/lib/analytics/client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Script from "next/script";
+import { useRouter } from "next/navigation";
 import styles from "../cart/cart.module.css";
 
 type CashfreeFactory = (options: { mode: "sandbox" }) => { checkout(options: { paymentSessionId: string; redirectTarget: "_self" }): Promise<{ error?: { message?: string } } | undefined> };
 export default function CashfreeButton({ orderId, autoStart }: { orderId: string; autoStart?: boolean }) {
+  const router = useRouter();
   useEffect(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has("paymentDocument")) {
@@ -33,11 +36,12 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
       const data = await response.json();
       if (!response.ok) throw new Error(data.error === "VALID_PHONE_REQUIRED" ? "Add a valid mobile number to your profile or company contact details before paying." : "Unable to complete checkout. Please try again.");
       if (action === "verify") {
-        if (data.activated) { window.location.reload(); return; }
+        if (data.activated) { router.push("/workspace/billing/success"); return; }
         setMessage(data.verified ? "Sandbox payment verified. Subscription activated." : "Payment has not been confirmed yet.");
       } else {
         const factory = (window as unknown as { Cashfree?: CashfreeFactory }).Cashfree;
         if (!factory || typeof data.paymentSessionId !== "string") throw new Error("Checkout is unavailable.");
+        captureCheckout(orderId);
         diagnostic("CHECKOUT_START");
         const result = await factory({ mode: "sandbox" }).checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
         diagnostic("CHECKOUT_RETURN");
@@ -48,7 +52,7 @@ export default function CashfreeButton({ orderId, autoStart }: { orderId: string
       if (action === "start") { diagnostic("CHECKOUT_ERROR"); sessionStorage.removeItem("cashfree-start:"+orderId); }
       setMessage(error instanceof Error ? error.message : "Checkout failed.");
     } finally { setBusy(null); }
-  },[orderId,diagnostic]);
+  },[orderId,diagnostic,router]);
   useEffect(() => {
     if (attempted.current || !new URLSearchParams(window.location.search).has("paymentDocument")) return;
     const q = new URLSearchParams(window.location.search);

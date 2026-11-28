@@ -1,0 +1,56 @@
+.analytics-privacy-button {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 80;
+  background: #fff;
+  color: #334155;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.analytics-consent {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 46px;
+  z-index: 1000;
+  max-width: 740px;
+  padding: 18px;
+  margin: auto;
+  border: 1px solid #94a3b8;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 4px 24px #0f172a25;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+}
+.analytics-consent p {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 17px;
+}
+.analytics-consent a {
+  display: block;
+  color: #1d4ed8;
+  margin: 10px 0;
+  text-decoration: underline;
+}
+.analytics-consent div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.analytics-consent button {
+  padding: 9px 12px;
+  border: 1px solid #64748b;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+}

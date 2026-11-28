@@ -1,0 +1,75 @@
+name: Analytics validation
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/lib/analytics/**"
+      - "src/components/analytics/**"
+      - "src/app/api/analytics/**"
+      - "src/app/api/billing/cashfree/**"
+      - "src/app/workspace/billing/**"
+      - "src/app/actions/register.ts"
+      - "src/app/layout.tsx"
+      - "src/lib/billing/service.ts"
+      - "prisma/**"
+      - "e2e/analytics-consent.spec.ts"
+      - ".github/workflows/analytics-validation.yml"
+permissions:
+  contents: read
+jobs:
+  analytics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: analytics_fixture
+          POSTGRES_PASSWORD: isolated_ga4_fixture
+          POSTGRES_DB: analytics_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U analytics_fixture -d analytics_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://analytics_fixture:isolated_ga4_fixture@127.0.0.1:5432/analytics_ci
+      DIRECT_URL: postgresql://analytics_fixture:isolated_ga4_fixture@127.0.0.1:5432/analytics_ci
+      ANALYTICS_INTEGRATION_DATABASE_URL: postgresql://analytics_fixture:isolated_ga4_fixture@127.0.0.1:5432/analytics_ci
+      AUTH_SECRET: isolated-analytics-validation-secret-at-least-forty-eight-characters-not-production
+      APP_URL: https://www.salespunch360.com
+      HOSTINGER_STORAGE_PATH: /tmp/sp360-ga4-storage
+      SMTP_HOST: smtp.hostinger.com
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_USER: fixture@example.invalid
+      SMTP_PASSWORD: isolated-ga4-password
+      MAIL_FROM: fixture@example.invalid
+      ANALYTICS_ENABLED: "true"
+      NEXT_PUBLIC_ANALYTICS_ENABLED: "true"
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate && npm run prisma:validate
+      - run: npm run db:migrate:deploy
+      - name: Analytics, payment and real database regressions
+        run: npx vitest run src/lib/analytics src/app/api/analytics/events/route.test.ts src/app/workspace/billing/success/page.test.tsx src/app/api/billing/cashfree/route.test.ts src/lib/billing/cashfree-verification.test.ts src/lib/billing/cashfree-sandbox.test.ts src/lib/billing/service-concurrency.test.ts src/lib/security/headers.test.ts --maxWorkers=1
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Consent and navigation on mobile and desktop
+        run: npx playwright test e2e/analytics-consent.spec.ts
+        env:
+          E2E_PRODUCTION: "1"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: analytics-browser-results
+          path: test-results
+          retention-days: 7

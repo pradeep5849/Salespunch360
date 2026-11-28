@@ -3947,3 +3947,15 @@ model BillingCart {
   updatedAt DateTime @updatedAt
   @@map("billing_carts")
 }
+
+/// Backend-only proof/claim ledger. No analytics payload or raw source identifier.
+model AnalyticsEventReceipt {
+  keyHash   String    @id @db.Char(64)
+  eventName String    @db.VarChar(32)
+  context   String?   @db.VarChar(32)
+  createdAt DateTime  @default(now())
+  claimedAt DateTime?
+
+  @@index([createdAt])
+  @@map("analytics_event_receipts")
+}
