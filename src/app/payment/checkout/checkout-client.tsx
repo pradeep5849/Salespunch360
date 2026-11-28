@@ -1,6 +1,6 @@
 "use client";
 import Script from "next/script";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 export default function CashfreeCheckoutPage({
   environment,
 }: {
@@ -9,13 +9,7 @@ export default function CashfreeCheckoutPage({
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
   const launched = useRef(false);
-  useEffect(() => {
-    if (ready && !launched.current) {
-      launched.current = true;
-      void pay();
-    }
-  }, [ready]);
-  async function pay() {
+  const pay = useCallback(async () => {
     const session = new URLSearchParams(window.location.hash.slice(1)).get(
       "session",
     );
@@ -42,7 +36,13 @@ export default function CashfreeCheckoutPage({
     } catch {
       setMessage("Checkout could not open. Return to the app and retry.");
     }
-  }
+  }, [environment]);
+  useEffect(() => {
+    if (ready && !launched.current) {
+      launched.current = true;
+      void pay();
+    }
+  }, [ready, pay]);
   return (
     <main>
       <h1>SalesPunch360 payment</h1>

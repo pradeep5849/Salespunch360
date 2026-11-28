@@ -34,7 +34,7 @@ object BillingAnalytics {
    for(key in listOf("transaction_id","currency","subscription_plan","billing_period","purchase_category","environment"))params[key]?.jsonPrimitive?.contentOrNull?.let{bundle.putString(key,it)}
    params["value"]?.jsonPrimitive?.doubleOrNull?.let{bundle.putDouble("value",it)}
    params["ads_eligible"]?.jsonPrimitive?.longOrNull?.let{bundle.putLong("ads_eligible",it)}
-   val items=params["items"]?.jsonArray?.map{item->Bundle().apply{val obj=item.jsonObject;for(key in listOf("item_id","item_name"))obj[key]?.jsonPrimitive?.contentOrNull?.let{putString(key,it)};obj["price"]?.jsonPrimitive?.doubleOrNull?.let{putDouble("price",it)};obj["quantity"]?.jsonPrimitive?.longOrNull?.let{putLong("quantity",it)}}
+   val items=params["items"]?.jsonArray?.map{item->Bundle().apply{val obj=item.jsonObject;for(key in listOf("item_id","item_name"))obj[key]?.jsonPrimitive?.contentOrNull?.let{putString(key,it)};obj["price"]?.jsonPrimitive?.doubleOrNull?.let{putDouble("price",it)};obj["quantity"]?.jsonPrimitive?.longOrNull?.let{putLong("quantity",it)}}}
    if(items!=null)bundle.putParcelableArray("items",items.toTypedArray())
    sdk.logEvent(eventName,bundle)
   }

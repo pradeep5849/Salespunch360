@@ -58,7 +58,7 @@ jobs:
       - run: npm run prisma:generate && npm run prisma:validate
       - run: npm run db:migrate:deploy
       - name: Analytics, payment and real database regressions
-        run: npx vitest run src/lib/analytics src/app/api/analytics/events/route.test.ts src/app/workspace/billing/success/page.test.tsx src/app/api/billing/cashfree/route.test.ts src/lib/billing/cashfree-verification.test.ts src/lib/billing/cashfree-sandbox.test.ts src/lib/billing/cashfree-production.test.ts src/app/api/billing/cashfree/webhook/route.test.ts src/app/api/v1/mobile/analytics/route.test.ts src/proxy.csp.test.ts src/lib/billing/service-concurrency.test.ts src/lib/security/headers.test.ts --maxWorkers=1
+        run: npx vitest run src/lib/analytics src/lib/billing src/app/workspace/billing src/app/api/billing src/app/api/v1/mobile/billing src/app/api/analytics/events/route.test.ts src/app/workspace/billing/success/page.test.tsx src/app/api/billing/cashfree/route.test.ts src/lib/billing/cashfree-verification.test.ts src/lib/billing/cashfree-sandbox.test.ts src/lib/billing/cashfree-production.test.ts src/app/api/billing/cashfree/webhook/route.test.ts src/app/api/v1/mobile/analytics/route.test.ts src/proxy.csp.test.ts src/lib/billing/service-concurrency.test.ts src/lib/security/headers.test.ts --maxWorkers=1
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
